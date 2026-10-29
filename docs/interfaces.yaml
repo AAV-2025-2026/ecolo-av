@@ -161,9 +161,9 @@ topics:
   /control/gazebo/actuator_cmd:
     type: ackermann_msgs/msg/AckermannDriveStamped
     pub: [output_mux]
-    sub: [gazebo_adapter, spine_bridge]
+    sub: [gazebo_adapter, spine_bridge, legacy_uart_bridge]
     live: [sim]
-    note: Gazebo's commands, from output_mux target:=gazebo, while every source is SIM. Exactly one backend reads it - gazebo_adapter, or in the spine profile (spine:=true) spine_bridge with source sim.
+    note: Gazebo's commands, from output_mux target:=gazebo, while every source is SIM. Exactly one backend reads it - gazebo_adapter, or in the spine profile (spine:=true) spine_bridge with source sim, or with today's car in the loop (esp32:=true) legacy_uart_bridge, remapped from /control/car/actuator_cmd, with source sim.
   /control/gazebo/heartbeat:
     type: aav_interfaces/msg/Heartbeat
     pub: [output_mux]
@@ -229,9 +229,9 @@ topics:
   /vehicle/odom:
     type: nav_msgs/msg/Odometry
     pub: [spine_bridge, encoder_udp, turtlesim_adapter, gazebo_adapter, carla_adapter]
-    sub: [ekf_local, ekf_global, actuator_test, sensor_watchdog, gps_heading]
+    sub: [ekf_local, ekf_global, actuator_test, sensor_watchdog, gps_heading, legacy_uart_bridge]
     live: [turtle, sim, car, replay, bench]
-    note: Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK. With today's wiring (car.launch.py actuators:=uart, spine_bridge role:=sensors on the Orin) only from the two wheels while both are fresh, with no yaw rate (covariance 1e3 - the steering angle isn't on the bus). In Gazebo's spine profile spine_bridge publishes it from spine_sim's frames, as on the car; /vehicle/status, steering, throttle, brake and wheels likewise.
+    note: Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK. With today's wiring (car.launch.py actuators:=uart, spine_bridge role:=sensors on the Orin) only from the two wheels while both are fresh, with no yaw rate (covariance 1e3 - the steering angle isn't on the bus). In Gazebo's spine profile spine_bridge publishes it from spine_sim's frames, as on the car; /vehicle/status, steering, throttle, brake and wheels likewise. legacy_uart_bridge reads it only with speed_loop.mode pi, to close its speed loop on vx.
   /vehicle/status:
     type: aav_interfaces/msg/VehicleStatus
     pub: [spine_bridge, gazebo_adapter, turtlesim_adapter, carla_adapter, legacy_uart_bridge]
@@ -516,6 +516,12 @@ topics:
     sub: [gazebo_adapter]
     live: [spine]
     note: Gazebo's spine profile only (sim.launch.py spine:=true). What the spine's logic (spine-core, in spine_sim) writes to its actuator drivers each tick, 100 Hz on Gazebo's clock - throttle and brake (0..1), reverse, the steering target (rad). On the car these never reach ROS. gazebo_adapter's actuator model turns them into what Gazebo's car does; silent for 0.2 s, it brakes fully.
+  /vehicle/gazebo/esp32_outputs:
+    type: aav_interfaces/msg/SpineOutputs
+    pub: [gazebo_esp32]
+    sub: [gazebo_adapter]
+    live: []
+    note: Gazebo with today's car in the loop only (sim.launch.py esp32:=true). What gazebo_esp32 - the 2025-26 C++ ESP32 firmware's logic, standing in behind the real legacy_uart_bridge - drives, 50 Hz - throttle (its DAC over 700, ramped 6 up and 12 down per frame), brake (the Jrk's travel past 400), reverse, the steering target (rad). gazebo_adapter's actuator model turns them into what Gazebo's car does, and still publishes /vehicle/odom itself, as the wheel sensors on today's car. Like the C++, no command timeout - the outputs stay when frames stop.
   /vehicle/gazebo/wheels:
     type: aav_interfaces/msg/WheelSpeeds
     pub: [gazebo_adapter]

@@ -103,6 +103,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Gazebo backend (`aav_gazebo`) | The car in 3D with Ackermann steering, an IMU and GPS, to test Nav2 before the car | Ben | 2026-10-09 | sim |
 | Today's car over UART (`aav_legacy`) | Drives the 2025-26 ESP32 through the Motor Pi, and reads its wheel encoder, before the CAN spine exists | Ben | 2026-10-09 | built |
 | Uplink from the ESP32 (`legacy_uart_bridge`) | Brings the car's mode, faults, steering and brake positions and RC sticks back into ROS | Ben | 2026-10-24 | built |
+| Speed loop in the UART bridge (`speed_loop.mode: pi`, `speed_control.py`) | Today's ESP32 drives open loop and brakes only standing still, so the car coasts past B; feed-forward plus PI on the wheel speed, out as throttle or brake, stops it where ego planned | Ben | 2026-10-29 | built |
 | CAN spine bridge (`spine_bridge`): Rust by default, Python as an option | ego's commands become CAN frames, decoded by the firmware's own code at both ends | Ben | 2026-10-09 | sim |
 | [CARLA adapter](carla.md) (`aav_carla`) | Realistic camera pictures, once the NVIDIA computer runs CARLA | Ben | 2026-10-15 | built |
 
@@ -131,6 +132,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Actuator model | Lag and limits between ego and Gazebo, so the simulated car answers like a real one | Ben | 2026-10-15 | sim |
 | [Bench mode](bench.md) (`aav_bench`, `aav_spine_sim`) | The car's own software on one laptop, with the spine's logic and pretend sensors | Ben | 2026-10-10 | sim |
 | The spine in the loop (`sim spine:=true`) | Gazebo drives through the spine's real logic, so its stops and e-stops get tested | Ben | 2026-10-15 | sim |
+| Today's car in the loop (`sim esp32:=true`, `gazebo_esp32`) | Today's car runs the 2025-26 C++ ESP32, not the spine: Gazebo drives through the real UART bridge and that firmware's throttle ramp and brake, so its speed loop is tested before car day | Ben | 2026-10-29 | sim |
 | `sim-check` and `bench-check` | One command proves the whole chain drives, stops and keeps its lane | Ben | 2026-10-10 | sim |
 | Sensor failures on purpose (`pixi run sim-fault`) | Breaks a sensor in Gazebo, to prove the watchdog catches it | Ben | 2026-10-15 | sim |
 | [Ghost obstacles](ghost-obstacles.md) (`aav_ghost`) | A pretend person only Nav2 sees, to test stopping with nothing real to hit | Ben | 2026-10-16 | sim |

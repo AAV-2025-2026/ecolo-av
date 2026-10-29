@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">53 min read · 4 sections</div></header>
+<div class="meta">54 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -309,9 +309,9 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/control/gazebo/actuator_cmd</code></td>
 <td><code>ackermann_msgs/msg/AckermannDriveStamped</code></td>
 <td><code>output_mux</code></td>
-<td><code>gazebo_adapter</code>, <code>spine_bridge</code></td>
+<td><code>gazebo_adapter</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code></td>
 <td>sim</td>
-<td>Gazebo's commands, from output_mux target:=gazebo, while every source is SIM. Exactly one backend reads it - gazebo_adapter, or in the spine profile (spine:=true) spine_bridge with source sim.</td>
+<td>Gazebo's commands, from output_mux target:=gazebo, while every source is SIM. Exactly one backend reads it - gazebo_adapter, or in the spine profile (spine:=true) spine_bridge with source sim, or with today's car in the loop (esp32:=true) legacy_uart_bridge, remapped from /control/car/actuator_cmd, with source sim.</td>
 </tr>
 <tr>
 <td><code>/control/gazebo/heartbeat</code></td>
@@ -397,9 +397,9 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/vehicle/odom</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>spine_bridge</code>, <code>encoder_udp</code>, <code>turtlesim_adapter</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
-<td><code>ekf_local</code>, <code>ekf_global</code>, <code>actuator_test</code>, <code>sensor_watchdog</code>, <code>gps_heading</code></td>
+<td><code>ekf_local</code>, <code>ekf_global</code>, <code>actuator_test</code>, <code>sensor_watchdog</code>, <code>gps_heading</code>, <code>legacy_uart_bridge</code></td>
 <td>turtle, sim, car, replay, bench</td>
-<td>Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK. With today's wiring (car.launch.py actuators:=uart, spine_bridge role:=sensors on the Orin) only from the two wheels while both are fresh, with no yaw rate (covariance 1e3 - the steering angle isn't on the bus). In Gazebo's spine profile spine_bridge publishes it from spine_sim's frames, as on the car; /vehicle/status, steering, throttle, brake and wheels likewise.</td>
+<td>Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK. With today's wiring (car.launch.py actuators:=uart, spine_bridge role:=sensors on the Orin) only from the two wheels while both are fresh, with no yaw rate (covariance 1e3 - the steering angle isn't on the bus). In Gazebo's spine profile spine_bridge publishes it from spine_sim's frames, as on the car; /vehicle/status, steering, throttle, brake and wheels likewise. legacy_uart_bridge reads it only with speed_loop.mode pi, to close its speed loop on vx.</td>
 </tr>
 <tr>
 <td><code>/vehicle/status</code></td>
@@ -792,6 +792,14 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>gazebo_adapter</code></td>
 <td>spine</td>
 <td>Gazebo's spine profile only (sim.launch.py spine:=true). What the spine's logic (spine-core, in spine_sim) writes to its actuator drivers each tick, 100 Hz on Gazebo's clock - throttle and brake (0..1), reverse, the steering target (rad). On the car these never reach ROS. gazebo_adapter's actuator model turns them into what Gazebo's car does; silent for 0.2 s, it brakes fully.</td>
+</tr>
+<tr>
+<td><code>/vehicle/gazebo/esp32_outputs</code></td>
+<td><code>aav_interfaces/msg/SpineOutputs</code></td>
+<td><code>gazebo_esp32</code></td>
+<td><code>gazebo_adapter</code></td>
+<td>-</td>
+<td>Gazebo with today's car in the loop only (sim.launch.py esp32:=true). What gazebo_esp32 - the 2025-26 C++ ESP32 firmware's logic, standing in behind the real legacy_uart_bridge - drives, 50 Hz - throttle (its DAC over 700, ramped 6 up and 12 down per frame), brake (the Jrk's travel past 400), reverse, the steering target (rad). gazebo_adapter's actuator model turns them into what Gazebo's car does, and still publishes /vehicle/odom itself, as the wheel sensors on today's car. Like the C++, no command timeout - the outputs stay when frames stop.</td>
 </tr>
 <tr>
 <td><code>/vehicle/gazebo/wheels</code></td>

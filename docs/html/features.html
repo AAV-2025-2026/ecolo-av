@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">21 min read · 14 sections</div></header>
+<div class="meta">22 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -595,6 +595,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>built</td>
 </tr>
 <tr>
+<td>Speed loop in the UART bridge (<code>speed_loop.mode: pi</code>, <code>speed_control.py</code>)</td>
+<td>Today's ESP32 drives open loop and brakes only standing still, so the car coasts past B; feed-forward plus PI on the wheel speed, out as throttle or brake, stops it where ego planned</td>
+<td>Ben</td>
+<td>2026-10-29</td>
+<td>built</td>
+</tr>
+<tr>
 <td>CAN spine bridge (<code>spine_bridge</code>): Rust by default, Python as an option</td>
 <td>ego's commands become CAN frames, decoded by the firmware's own code at both ends</td>
 <td>Ben</td>
@@ -748,6 +755,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Gazebo drives through the spine's real logic, so its stops and e-stops get tested</td>
 <td>Ben</td>
 <td>2026-10-15</td>
+<td>sim</td>
+</tr>
+<tr>
+<td>Today's car in the loop (<code>sim esp32:=true</code>, <code>gazebo_esp32</code>)</td>
+<td>Today's car runs the 2025-26 C++ ESP32, not the spine: Gazebo drives through the real UART bridge and that firmware's throttle ramp and brake, so its speed loop is tested before car day</td>
+<td>Ben</td>
+<td>2026-10-29</td>
 <td>sim</td>
 </tr>
 <tr>

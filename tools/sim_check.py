@@ -30,6 +30,10 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
                                             in the empty world: two more runs, 8 more minutes;
                                             --drive-to-point-only skips the road world's run;
                                             --goto and --goto-only, the old names, still work)
+    pixi run sim-check --esp32 pi|open     (every run with today's car in the loop instead,
+                                            esp32:=true: the car's legacy_uart_bridge, its
+                                            speed_loop.mode pi or open, and gazebo_esp32,
+                                            the 2025-26 C++ firmware standing in)
     pixi run sim-check --speed-steps       (the speed loop's steps, TODO 27: reverse 0.5,
                                             then 1.0 and 2.0 m/s, in the empty world: one
                                             more run, 3 more minutes; --speed-steps-only
@@ -1903,6 +1907,15 @@ def main():
             return 2
         profile = args[at + 1]
         EVERY_RUN.append(f'speed_loop:={profile}')
+    if '--esp32' in args:
+        at = args.index('--esp32')
+        if at + 1 >= len(args) or args[at + 1] not in ('pi', 'open'):
+            print('--esp32 takes pi or open', file=sys.stderr)
+            return 2
+        if spine:
+            print('--esp32 and --spine are two backends: pick one', file=sys.stderr)
+            return 2
+        EVERY_RUN.extend(['esp32:=true', f'esp32_loop:={args[at + 1]}'])
     log = os.environ.get('AAV_SIM_LOG', '/tmp/aav-sim-check.log')
     logs = [log]
     if '--drive-to-point-only' not in args and '--speed-steps-only' not in args:

@@ -10,6 +10,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [reversing:=true] [controller:=mppi]
       [plan_around:=true]
       [watchdog:=true] [watch_hud:=false] [faults:=false] [spine:=false] [arm:=true]
+      [esp32:=false] [esp32_loop:=pi]
       [bridge:=rust|python]
       [ghost:=false]
   pixi run sim world:=road                         the road: the car's camera and radar
@@ -70,6 +71,11 @@ bench's argument names:
                       model -> Gazebo; Gazebo's measurements back as CAN frames ->
                       spine_bridge -> /vehicle/*. arm:=true arms it after 12 s;
                       bridge:=python runs aav_spine's Python spine_bridge, not the Rust one
+  esp32:=true         today's car in the loop: ego -> legacy_uart_bridge (the car's own)
+                      -> 13-byte frames over local TCP -> gazebo_esp32 (the 2025-26 C++
+                      firmware's logic: its throttle ramp, brake, no timeout) -> the
+                      actuator model -> Gazebo. esp32_loop:= is the bridge's
+                      speed_loop.mode: pi (the default here) or open (the 2025-26 mapping)
   ghost:=true        a pretend person in Nav2's view (aav_ghost), for stopping tests
                       with nothing in Gazebo: pixi run ghost ahead 10, pixi run ghost off.
                       Its own costmap layer and collision_monitor source: it only adds
@@ -141,7 +147,8 @@ def launch_setup(context):
                 lidar=arg('lidar'), radar=arg('radar'),
                 actuator_model=arg('actuator_model'), speed_loop=arg('speed_loop'),
                 faults=flag['faults'],
-                spine=arg('spine'), arm=arg('arm'), bridge=arg('bridge')),
+                spine=arg('spine'), arm=arg('arm'), bridge=arg('bridge'),
+                esp32=arg('esp32'), esp32_loop=arg('esp32_loop')),
         include(context, 'aav_command_mux', 'mux.launch.py', use_sim_time='true',
                 sensor_lock=flag['watchdog']),
         include(context, 'aav_ego', 'ego.launch.py', use_sim_time='true',
@@ -282,6 +289,12 @@ def generate_launch_description():
                                           'actuator model'),
         DeclareLaunchArgument('arm', default_value='true',
                               description='with spine:=true: arm the spine after 12 s'),
+        DeclareLaunchArgument('esp32', default_value='false',
+                              description="today's car in the loop: legacy_uart_bridge and "
+                                          'gazebo_esp32, the C++ firmware standing in'),
+        DeclareLaunchArgument('esp32_loop', default_value='pi',
+                              description="with esp32:=true: the bridge's speed_loop.mode, "
+                                          'pi or open'),
         DeclareLaunchArgument('bridge', default_value=bridges.DEFAULT,
                               description='with spine:=true: spine_bridge in rust '
                                           '(aav_spine_bridge) or python (aav_spine)'),
