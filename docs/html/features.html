@@ -635,7 +635,7 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 </tr>
 <tr>
 <td>Speed loop in the UART bridge (<code>speed_loop.mode: pi</code>, <code>speed_control.py</code>)</td>
-<td>Today's ESP32 drives open loop and brakes only standing still, so the car coasts past B; feed-forward plus PI on the wheel speed, out as throttle or brake, stops it where ego planned</td>
+<td>Today's ESP32 drives open loop and brakes only standing still, so the car coasts past B; feed-forward plus PI on the wheel speed, out as throttle or brake, stops it where ego planned; a smooth stop (Autoware's design) eases the last of the braking so the car stops without a jolt, then holds it firmly</td>
 <td>Ben</td>
 <td>2026-10-29</td>
 <td>built</td>
@@ -752,6 +752,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Ben</td>
 <td>2026-10-25</td>
 <td>sim</td>
+</tr>
+<tr>
+<td>Speed LQI in <code>spine-core</code> (<code>speed_loop:=lqi</code>, TODO 3)</td>
+<td>One signed acceleration for throttle and brake (never both), its gains worked out from the model on a laptop, so it can be scored against today's PI and P-only brake; the PI stays the default</td>
+<td>Ben</td>
+<td>2026-10-29</td>
+<td>built</td>
 </tr>
 </tbody>
 </table></div>

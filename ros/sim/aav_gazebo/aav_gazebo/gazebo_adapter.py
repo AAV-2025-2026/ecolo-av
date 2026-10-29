@@ -52,7 +52,7 @@ car's /vehicle/* from the spine's CAN frames. Exactly one backend still takes eg
 commands: spine_bridge. If spine_sim goes quiet for cmd_timeout s, the car brakes fully.
 
 Parameters  actuator_model (true), speed_loop (default: the actuator model's speed loop
-            profile, 'default' or 'smooth', TODO 27), spine (false), rate_hz (50),
+            profile, 'default', 'smooth' or 'lqi': TODO 27, 3), spine (false), rate_hz (50),
             cmd_timeout (0.2 s), wheelbase,
             wheel_radius, rendered (the world renders cameras), radar, lidar (what
             /system/source announces), fault.odom (ok), speed_variance

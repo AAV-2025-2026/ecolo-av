@@ -1096,6 +1096,13 @@ Each cell is the worst of 6 runs (0.5, 1 and 2 m/s; lag 0.1 s with 30 ms of dela
 <td><strong>8 %, reaches 2 m/s</strong></td>
 <td><strong>42°</strong></td>
 </tr>
+<tr>
+<td><code>lqi</code> (TODO 3, 29 Oct): LQI, throttle and brake</td>
+<td>0 %</td>
+<td>5.0 s</td>
+<td>15 %, reaches 2 m/s</td>
+<td>44°</td>
+</tr>
 </tbody>
 </table></div>
 <p>Why not the others:</p>
@@ -1270,6 +1277,11 @@ Three runs of each profile on Ben's Mac, beside two other helpers' simulators:</
 <p>Both copies of the loop, the Rust and Gazebo's Python, check the same examples
 (<code>firmware/spine/speed_loop_vectors.txt</code>, both profiles). Where to try it on the car:
 <a href="actuator-tests.html#the-speed-loops-profile-todo-27">Actuator tests</a>.</p>
+<h4 id="the-lqi-todo-3">The LQI (TODO 3)</h4>
+<p><code>spine-core</code> also has an LQI (<code>speed_loop:=lqi</code>): one signed acceleration for throttle
+and brake, its gains from this model by the discrete Riccati equation
+(<code>VehicleModel.speed_lqi</code>). It sits in the study above as <code>'lqi'</code>, and in the figure.
+The design and the results: <a href="controllers.html#2a-lqi-against-the-pi-results-29-oct">Controllers, 2a</a>.</p>
 <h4 id="pole-placement-after-the-car-day">Pole placement, after the car day</h4>
 <p>Match the closed loop (no throttle lag) to the poles you want:</p>
 <pre class="highlight"><code class="language-text">s² + (d + a_max·kp) s + a_max·ki  =  s² + 2ζωn s + ωn²
@@ -1315,7 +1327,8 @@ section 6), then compare the same step in both: that's the sim-versus-real repor
 <section class="card"><h2 id="run-it">Run it</h2>
 <pre class="highlight"><code class="language-bash">pixi run vehicle-model                  # the tables, and the three figures
 pixi run vehicle-model --no-figures     # the tables only
-pixi run vehicle-model --speed-loop     # TODO 27: the speed loop's designs, the uncertainty</code></pre>
+pixi run vehicle-model --speed-loop     # TODO 27: the speed loop's designs, the uncertainty
+pixi run vehicle-model --lqi            # TODO 3: the speed LQI's gains, as spine-core's constants</code></pre>
 <div class="table-wrap"><table>
 <thead>
 <tr>

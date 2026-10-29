@@ -108,7 +108,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Gazebo backend (`aav_gazebo`) | The car in 3D with Ackermann steering, an IMU and GPS, to test Nav2 before the car | Ben | 2026-10-09 | sim |
 | Today's car over UART (`aav_legacy`) | Drives the 2025-26 ESP32 through the Motor Pi, and reads its wheel encoder, before the CAN spine exists | Ben | 2026-10-09 | built |
 | Uplink from the ESP32 (`legacy_uart_bridge`) | Brings the car's mode, faults, steering and brake positions and RC sticks back into ROS | Ben | 2026-10-24 | built |
-| Speed loop in the UART bridge (`speed_loop.mode: pi`, `speed_control.py`) | Today's ESP32 drives open loop and brakes only standing still, so the car coasts past B; feed-forward plus PI on the wheel speed, out as throttle or brake, stops it where ego planned | Ben | 2026-10-29 | built |
+| Speed loop in the UART bridge (`speed_loop.mode: pi`, `speed_control.py`) | Today's ESP32 drives open loop and brakes only standing still, so the car coasts past B; feed-forward plus PI on the wheel speed, out as throttle or brake, stops it where ego planned; a smooth stop (Autoware's design) eases the last of the braking so the car stops without a jolt, then holds it firmly | Ben | 2026-10-29 | built |
 | CAN spine bridge (`spine_bridge`): Rust by default, Python as an option | ego's commands become CAN frames, decoded by the firmware's own code at both ends | Ben | 2026-10-09 | sim |
 | [CARLA adapter](carla.md) (`aav_carla`) | Realistic camera pictures, once the NVIDIA computer runs CARLA | Ben | 2026-10-15 | built |
 
@@ -128,6 +128,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | ESP32 actuator firmware in C++ (`aav_umod_esp32`) | It drives today's car, so it stays until its Rust version is proven | the 2025-26 team | 2026-10-09 | car |
 | Wheel encoder and status display Pico 2s in Rust | The 2025-26 C++ boards move to Rust, as decided, sending the same packets | Ben | 2026-10-15 | built |
 | Speed loop's `smooth` profile | Today's gains overshoot about 15%; this one starts smoother, ready to try on stands | Ben | 2026-10-25 | sim |
+| Speed LQI in `spine-core` (`speed_loop:=lqi`, TODO 3) | One signed acceleration for throttle and brake (never both), its gains worked out from the model on a laptop, so it can be scored against today's PI and P-only brake; the PI stays the default | Ben | 2026-10-29 | built |
 
 ## Simulation
 

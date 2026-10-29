@@ -5,7 +5,7 @@ Bench mode: the real car's software on one computer, with stand-ins for the hard
       [perception:=false] [lane:=false|true|fake] [hud:=false] [arm:=true] [foxglove:=false]
       [start_y:=0.0] [start_yaw:=0.0] [bend_radius:=] [obstacle:=false]
       [camera_obstacles:=false] [reversing:=true] [lidar:=false] [plan_around:=true]
-      [bridge:=rust|python] [speed_loop:=default|smooth]
+      [bridge:=rust|python] [speed_loop:=default|smooth|lqi]
   pixi run bench                            (the same)
   pixi run bench bridge:=python             (aav_spine's Python spine_bridge, not the Rust one)
   pixi run -e ml bench perception:=true     (adds YOLO and the stop-sign watcher)
@@ -234,6 +234,6 @@ def generate_launch_description():
                                           '(aav_spine)'),
         DeclareLaunchArgument('speed_loop', default_value='default',
                               description="spine_sim's speed loop profile: default (today's "
-                                          'gains) or smooth (TODO 27, docs/vehicle-model.md)'),
+                                          'gains), smooth (TODO 27) or lqi (TODO 3)'),
         OpaqueFunction(function=launch_setup),
     ])

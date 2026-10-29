@@ -21,6 +21,9 @@ command timeout: if the bridge dies, the last throttle stays on. So with
 `pi` never sends throttle and brake together, and with no fresh wheel speed it runs on
 feed-forward alone. Its PI compares the car with ego's speed delayed by `response_lag`
 (the actuators' lag), so it doesn't brake harder to win back a lag it expects.
+The **smooth stop** (Autoware's design, Apache-2.0, our own code): when ego reaches 0 the car
+keeps slowing as it was, then the slowing fades with the speed, so it stops without a
+jolt; stopped, the brake rises gently to `stopped_brake` and holds.
 In Gazebo: `pixi run sim esp32:=true`, the C++ firmware standing in (`aav_gazebo`). The design: `docs/designs/2026-10-27_control-plan.md`, step 1.
 
 ### The no-timeout lock
@@ -79,6 +82,7 @@ it never locks.
 | bridge | `speed_loop.max_accel`, `max_brake`, `drag` | from `vehicle.yaml` `actuators:` | m/s², m/s², 1/s |
 | bridge | `speed_loop.response_lag` | 0.3 (guess): how far behind ego the car is expected to run | s |
 | bridge | `speed_loop.hold_brake`, `speed_loop.odom_timeout` | 0.2, 0.3 | 0..1, s |
+| bridge | `speed_loop.smooth_stop_speed`, `smooth_stop_rate`, `weak_stop_decel`, `weak_stop_time`, `strong_stop_decel`, `stopped_brake`, `stopped_brake_rate` | 0.3 (0: off), 1.5, 0.2, 2.0, 1.0, 0.5, 1.0 (guesses) | m/s, 1/s, m/s², s, m/s², 0..1, per s |
 | encoder | `port`, `bind_address` | 10111, 0.0.0.0 | |
 | encoder | `wheel_diameter`, `counts_per_rev` | from `vehicle.yaml` | m, counts |
 | encoder | `window_s`, `timeout_s` | 0.5, 0.3 | s |
@@ -96,7 +100,7 @@ and `aav_rc`'s `rc_driver` beside the bridge.
 | `legacy_uart_bridge.py`, `encoder_udp.py` | yes | the nodes |
 | `legacy_protocol.py` | no | the frames: `pack_frame` (v1, 13 bytes), `pack_frame_v2` (17 bytes), `unpack_uplink` (35 bytes), `UplinkParser`, `to_legacy`, `from_pedals`, `stop_command`, `EncoderSpeed` |
 | `uart_relay.py` | no | `Relay`: what to write each tick; `programs_locked`: the no-timeout lock |
-| `speed_control.py` | no | `SpeedControl`: feed-forward from ego's speed profile plus PI on the wheel speed, out as throttle or brake |
+| `speed_control.py` | no | `SpeedControl`: feed-forward from ego's speed profile plus PI on the wheel speed, out as throttle or brake; the smooth stop |
 | `uplink_reader.py` | no | `UplinkReader`, `status_fields`, `steering_state`, `brake_state`, `rc_fields` |
 
 ## Invariants

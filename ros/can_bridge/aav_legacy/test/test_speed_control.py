@@ -49,9 +49,80 @@ def drive(car, loop, targets, feedback=True):
     return planned
 
 
+TODAY = SpeedControlConfig(smooth_stop_speed=0.0)   # no smooth stop: the stop before 29 Oct
+
+
 def test_standing_still_with_a_zero_target_holds_the_brake():
-    p = SpeedControl().update(0.0, 0.0, DT)
+    p = SpeedControl(TODAY).update(0.0, 0.0, DT)
     assert (p.throttle, p.brake) == (0.0, C.hold_brake)
+
+
+def test_standing_still_the_smooth_stop_raises_the_brake_gently_to_firm():
+    loop = SpeedControl()
+    brakes = [loop.update(0.0, 0.0, DT).brake for _ in range(50)]
+    assert brakes[0] == pytest.approx(C.stopped_brake_rate * DT)
+    assert all(b2 >= b1 for b1, b2 in zip(brakes, brakes[1:]))
+    assert all(b2 - b1 <= C.stopped_brake_rate * DT + 1e-9 for b1, b2 in zip(brakes, brakes[1:]))
+    assert brakes[-1] == C.stopped_brake
+    # It holds, even if the wheel speed twitches, until ego asks to move.
+    assert loop.update(0.0, 0.08, DT).brake == C.stopped_brake
+    assert loop.update(0.5, 0.0, DT).brake == 0.0
+
+
+def stop_from(top, cfg=C, car=None):
+    """Return the car's speeds, its distance and ego's, for a stop at 1.5 m/s^2 from top."""
+    car = car or Car(lag=0.2)
+    loop = SpeedControl(cfg)
+    speeds = []
+    planned = 0.0
+    for target in ramp(top=top, accel=1.0, decel=1.5, hold=4.0):
+        p = loop.update(target, car.speed, DT)
+        assert p.throttle == 0.0 or p.brake == 0.0
+        car.step(p.throttle, p.brake)
+        speeds.append(car.speed)
+        planned += target * DT
+    return speeds, car.position, planned
+
+
+def decel_at_the_stop(speeds, window=0.1):
+    """Return the slowing (m/s^2) over the last `window` s before standstill: the jolt."""
+    stop = max(i for i, v in enumerate(speeds) if v > 0.0)
+    n = int(window / DT)
+    return (speeds[stop - n] - speeds[stop + 1]) / ((n + 1) * DT)
+
+
+@pytest.mark.parametrize('top', [1.0, 3.0])
+def test_the_smooth_stop_halves_the_jolt_and_stops_close(top):
+    smooth, at, planned = stop_from(top)
+    today, at_today, _ = stop_from(top, TODAY)
+    assert smooth[-1] == 0.0 and today[-1] == 0.0
+    assert decel_at_the_stop(smooth) < 0.6 * decel_at_the_stop(today)
+    assert at == pytest.approx(at_today, abs=0.1)
+    assert at == pytest.approx(planned, abs=0.2)
+
+
+def test_the_smooth_stop_keeps_slowing_through_egos_zero():
+    # No step down in the brake when ego reaches 0 and the car still rolls behind it.
+    loop = SpeedControl()
+    for _ in range(100):
+        loop.update(1.0, 1.0, DT)
+    v = 1.0
+    while v > 0.0:
+        v = max(0.0, v - 1.5 * DT)
+        before = loop.update(v, v + 0.4, DT)
+    after = loop.update(0.0, 0.4, DT)
+    assert after.brake == pytest.approx(before.brake, abs=0.05)
+
+
+def test_the_smooth_stop_never_creeps_and_firms_up_on_a_slope():
+    loop = SpeedControl()
+    for _ in range(50):
+        loop.update(0.2, 0.2, DT)
+    weak = loop.update(0.0, 0.01 + C.stopped_speed, DT)
+    assert weak.brake > 0.0 and weak.accel <= -C.weak_stop_decel
+    for _ in range(int(C.weak_stop_time / DT) + 1):
+        p = loop.update(0.0, 0.1, DT)         # held at 0.1 m/s: a slope pushes it
+    assert p.accel <= -C.strong_stop_decel
 
 
 def test_open_loop_holds_a_speed_with_the_throttle_that_matches_drag():
@@ -101,9 +172,10 @@ def test_without_feedback_the_weaker_car_falls_short():
     assert car.speed < 0.6             # why the loop is worth closing
 
 
-def test_a_to_b_stops_near_where_ego_planned():
+@pytest.mark.parametrize('cfg', [C, TODAY])
+def test_a_to_b_stops_near_where_ego_planned(cfg):
     car = Car()
-    planned = drive(car, SpeedControl(), ramp())
+    planned = drive(car, SpeedControl(cfg), ramp())
     assert car.speed == 0.0
     assert car.position == pytest.approx(planned, abs=0.15)
 
