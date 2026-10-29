@@ -1665,4 +1665,111 @@ mod tests {
             assert_eq!(out.throttle, 0.0);
         }
     }
+
+    // The boot self-test, with each fault it must catch injected.
+
+    /// The faults that stop the car: each one alone must hold the self-test.
+    const STOP_FAULTS: [u16; 4] = [
+        faults::STEERING_DRIVER,
+        faults::BRAKE_DRIVER,
+        faults::THROTTLE_DAC,
+        faults::WHEEL_ENCODER,
+    ];
+
+    #[test]
+    fn the_self_test_catches_each_stop_fault() {
+        for fault in STOP_FAULTS {
+            let mut car = Car::new();
+            let faulty = Inputs {
+                driver_faults: fault,
+                ..Default::default()
+            };
+            for _ in 0..5 {
+                let out = car.tick(faulty);
+                assert_eq!((out.throttle, out.brake), (0.0, 1.0), "{fault}");
+                assert_ne!(out.faults & fault, 0, "{fault}");
+            }
+            assert_eq!(car.state().lifecycle, Lifecycle::SelfTest, "{fault}");
+            assert_eq!(car.state().safety, Safety::Faulted, "{fault}");
+            // The computer's arming edge, while the device is still faulty: no drive.
+            for armed in [false, false, true, true, true] {
+                let cmd = car.cmd(1.0, 0.0, armed);
+                let out = car.tick(Inputs {
+                    drive_cmd: Some(cmd),
+                    ..faulty
+                });
+                assert_ne!(out.mode, Mode::Computer, "{fault}");
+                assert_eq!(out.throttle, 0.0, "{fault}");
+            }
+            // Nor the test mode.
+            for req in [TestRequest::Exit, TestRequest::Exit, TestRequest::Enter] {
+                car.tick(Inputs {
+                    test_cmd: Some(req),
+                    ..faulty
+                });
+            }
+            assert!(!car.state().authority.in_test(), "{fault}");
+            assert_eq!(car.state().lifecycle, Lifecycle::SelfTest, "{fault}");
+        }
+    }
+
+    #[test]
+    fn the_self_test_passes_once_the_fault_clears_and_still_needs_an_arm() {
+        for fault in STOP_FAULTS {
+            let mut car = Car::new();
+            for _ in 0..3 {
+                car.tick(Inputs {
+                    driver_faults: fault,
+                    ..Default::default()
+                });
+            }
+            car.tick(Inputs::default());
+            assert_eq!(car.state().lifecycle, Lifecycle::Running, "{fault}");
+            // Armed commands alone don't drive: the fault latched.
+            assert_eq!(car.drive(1.0, 0.0, true, 3).mode, Mode::Manual, "{fault}");
+            car.arm();
+            assert_eq!(car.drive(1.0, 0.0, true, 3).mode, Mode::Computer, "{fault}");
+        }
+    }
+
+    #[test]
+    fn a_fault_on_the_first_tick_alone_still_latches() {
+        // The Boot tick moves to SelfTest whatever it sees, but the fault still latches.
+        let mut car = Car::new();
+        car.tick(Inputs {
+            driver_faults: faults::BRAKE_DRIVER,
+            ..Default::default()
+        });
+        assert!(car.spine.latch.fault);
+        car.tick(Inputs::default());
+        assert_eq!(car.state().lifecycle, Lifecycle::Running);
+        assert_eq!(car.drive(1.0, 0.0, true, 3).mode, Mode::Manual);
+    }
+
+    #[test]
+    fn faults_that_do_not_stop_the_car_do_not_hold_the_self_test() {
+        // CAN_BUS and the RC are not devices that stop the car (`faults::STOP`).
+        let mut car = Car::new();
+        for _ in 0..2 {
+            car.tick(Inputs {
+                driver_faults: faults::CAN_BUS,
+                ..Default::default()
+            });
+        }
+        assert_eq!(car.state().lifecycle, Lifecycle::Running);
+    }
+
+    #[test]
+    fn a_fault_after_the_self_test_is_the_safety_regions_not_a_new_test() {
+        let mut car = Car::new();
+        car.arm();
+        car.drive(1.0, 0.0, true, 10);
+        let out = car.tick(Inputs {
+            driver_faults: faults::THROTTLE_DAC,
+            ..Default::default()
+        });
+        assert_eq!((out.throttle, out.brake), (0.0, 1.0));
+        assert_eq!(car.state().lifecycle, Lifecycle::Running);
+        assert_eq!(car.state().safety, Safety::Faulted);
+    }
 }
