@@ -15,7 +15,7 @@ from aav_track.trackers.lqr import LQR
 import pytest
 from sim_car import arc, follow, LIMITS, MODEL, straight, tracker, uturn, widest
 
-TRACKERS = ['pure_pursuit', 'stanley', 'lqr', 'mpc']
+TRACKERS = ['pure_pursuit', 'stanley', 'lqr', 'mpc', 'mpc_full']
 
 
 def check_limits(run, period=0.05):
@@ -48,7 +48,7 @@ def test_a_step_offset_converges(name, speed):
 
 # The worst off-path in the bend, m. Stanley's has no feed-forward for the bend: the front
 # axle sits on the path, so base_link cuts the corner (L^2 / 2R, about 0.15 m on an 8 m bend).
-BEND = {'pure_pursuit': 0.25, 'stanley': 0.25, 'lqr': 0.1, 'mpc': 0.05}
+BEND = {'pure_pursuit': 0.25, 'stanley': 0.25, 'lqr': 0.1, 'mpc': 0.05, 'mpc_full': 0.1}
 
 
 @pytest.mark.parametrize('name', TRACKERS)
@@ -98,7 +98,7 @@ def test_lqr_previews_a_bend_ahead():
 # in a 14 m lane, at 1 m/s. At the planner's radius (full lock x 1.25: 3.6 m) and at full
 # lock itself (2.88 m), where nothing is left to correct with: the worst off the path, m.
 UTURN = {'pure_pursuit': (0.2, 0.35), 'stanley': (0.5, 0.6), 'lqr': (0.1, 0.35),
-         'mpc': (0.1, 0.4)}
+         'mpc': (0.1, 0.4), 'mpc_full': (0.15, 0.25)}
 FULL_LOCK = LIMITS.wheelbase / math.tan(LIMITS.max_steer)
 
 
@@ -156,3 +156,48 @@ def test_no_steering_wanted_at_the_end_of_a_straight():
     run = follow(trk, straight(10.0), (0.0, 0.0, 0.0))
     assert run.reached and abs(run.steers()[-1]) < 1e-6
     assert math.isfinite(run.rows[-1][4])
+
+
+# --- mpc_full: its own speed, within the same limits ---------------------------------------
+
+def check_speed(run, cruise, period=0.05, throttle=1.0, brake=3.0):
+    """Check every speed asked: within [0, cruise], changing within throttle and full brake."""
+    assert min(run.asked) >= 0.0 and max(run.asked) <= cruise + 1e-9
+    for a, b in zip([0.0] + run.asked, run.asked):
+        assert -brake * period - 1e-9 <= b - a <= throttle * period + 1e-9
+
+
+def test_mpc_full_slows_itself_to_swing_the_steering():
+    # 2 m/s into a U-turn at full lock: the bend alone allows 1.7 m/s (lateral_accel 1.0);
+    # it goes slower than that where the steering swings from one lock to the other.
+    run = follow(tracker('mpc_full'), uturn(FULL_LOCK), (0.0, 0.0, 0.0), cruise=2.0)
+    assert run.reached
+    assert min(run.asked[100:]) < 1.55
+    assert max(run.asked[-20:]) > 1.9
+    assert widest(run) < 5.0
+    check_limits(run)
+    check_speed(run, 2.0)
+
+
+def test_mpc_full_stops_on_the_goal_as_the_policy_does():
+    # Never faster than the planned braking (1.5 m/s^2) allows to stop at the path's end.
+    run = follow(tracker('mpc_full'), straight(12.0), (0.0, 0.0, 0.0), cruise=3.0)
+    assert run.reached
+    for row, v in zip(run.rows, run.asked):
+        assert v <= math.sqrt(2 * 1.5 * max(12.0 - row[1], 0.0)) + 0.1
+    check_speed(run, 3.0)
+
+
+def test_mpc_full_plans_inside_a_tick():
+    # Loose, for a busy laptop.
+    run = follow(tracker('mpc_full'), uturn(), (0.0, 0.0, 0.0), cruise=1.0)
+    mean = statistics.mean(run.step_ms)
+    print(f'\nmpc_full step: {mean:.2f} ms mean, {max(run.step_ms):.1f} ms worst')
+    assert mean < 15.0
+
+
+def test_mpc_full_refuses_bad_numbers():
+    with pytest.raises(ValueError):
+        tracker('mpc_full', cruise=0.0)
+    with pytest.raises(ValueError):
+        tracker('mpc_full', horizon=1)

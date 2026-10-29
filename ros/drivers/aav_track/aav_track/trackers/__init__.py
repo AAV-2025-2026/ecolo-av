@@ -13,6 +13,7 @@ cmd = tracker.step(state, dt)          # Command(steer, speed_cap=None, debug={}
 | `stanley` | `stanley.py` | heading error + atan(k e / v), at the front axle |
 | `lqr` | `lqr.py` | -K x on [e_y, e_theta, delta], gains scheduled by speed, + feed-forward |
 | `mpc` | `mpc.py` | a 1.5 s plan of steering commands, within the steering's limits |
+| `mpc_full` | `mpc_full.py` | a 9 m plan of speed and steering together (its own speed) |
 
 Every tracker keeps its command within full lock and the steering rate (`Limits`); the
 node then turns it into (v, w = v tan(steer) / L) with the one speed policy (`speed.py`).
@@ -56,6 +57,8 @@ class Limits:
 class Command:
     steer: float                         # rad, + left
     speed_cap: Optional[float] = None    # m/s: a tracker that wants it slower
+    # m/s: a tracker that plans its own speed (mpc_full); the shared policy is then skipped
+    speed: Optional[float] = None
     debug: Dict[str, float] = field(default_factory=dict)
 
 
@@ -110,20 +113,28 @@ class SteerLag:
         return self.angle
 
 
+# The trackers that need the vehicle model.
+MODEL_TRACKERS = ('lqr', 'mpc', 'mpc_full')
+
+
 def make(name: str, limits: Limits, model=None, **params) -> Tracker:
-    """Return the tracker called `name`; lqr and mpc need `model` (aav_ego VehicleModel)."""
+    """Return the tracker called `name`; MODEL_TRACKERS need `model` (aav_ego VehicleModel)."""
     if name == 'pure_pursuit':
         from aav_track.trackers.pure_pursuit import PurePursuit
         return PurePursuit(limits, **params)
     if name == 'stanley':
         from aav_track.trackers.stanley import Stanley
         return Stanley(limits, **params)
-    if name in ('lqr', 'mpc'):
+    if name in MODEL_TRACKERS:
         if model is None:
             raise ValueError(f'{name} needs the vehicle model')
         if name == 'lqr':
             from aav_track.trackers.lqr import LQR
             return LQR(limits, model, **params)
+        if name == 'mpc_full':
+            from aav_track.trackers.mpc_full import MPCFull
+            return MPCFull(limits, model, **params)
         from aav_track.trackers.mpc import MPC
         return MPC(limits, model, **params)
-    raise ValueError(f'no tracker called {name!r}: pure_pursuit, stanley, lqr or mpc')
+    raise ValueError(f'no tracker called {name!r}: pure_pursuit, stanley, lqr, mpc or '
+                     'mpc_full')

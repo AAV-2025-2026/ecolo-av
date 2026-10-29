@@ -22,3 +22,10 @@ track:
       r: 2.0                  # on the command's distance from the bend's own steering
       r_rate: 1.0             # on each tick's change of command
       min_speed: 0.5          # m/s
+    mpc_full:                 # speed and steering together; its limits are the policy's
+      ds: 0.3                 # m a step: the plan is over distance
+      horizon: 30             # steps: 9 m
+      q: [1.0, 2.0, 0.05]     # as LQR's
+      r: 0.2                  # on the command's distance from the bend's own steering
+      r_rate: 1.0             # on each step's change of command
+      q_speed: 0.2            # on (v^2 / cruise^2 - 1)^2: how much it minds going slower

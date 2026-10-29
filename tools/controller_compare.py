@@ -105,7 +105,7 @@ TRACK_EVERY = 0.5       # s between the saved track's points
 MAP_SPEC = os.path.join(ROOT, 'ros', 'drivers', 'aav_navigation', 'maps',
                         'example_lot.spec.yaml')
 COLOURS = {'rpp': '#1f6fb4', 'mppi': '#e8590c', 'pure_pursuit': '#2b8a3e', 'stanley': '#862e9c',
-           'lqr': '#c92a2a', 'mpc': '#e67700'}
+           'lqr': '#c92a2a', 'mpc': '#e67700', 'mpc_full': '#5f3dc4'}
 # The process to time for each kind of follower (its command line, in the run's group).
 PROCESS = {'controller': 'controller_server', 'tracker': 'lib/aav_track/track'}
 
@@ -549,7 +549,7 @@ def main():
                         help="Nav2's followers (default: both, unless --trackers is given)")
     parser.add_argument('--trackers', nargs='+', type=tracker_names, default=None,
                         help='the trial trackers (aav_track, docs/trials.md): pure_pursuit, '
-                             'stanley, lqr, mpc; spaces or commas between. Forward only')
+                             'stanley, lqr, mpc, mpc_full; spaces or commas between. Forward only')
     parser.add_argument('--runs', type=int, default=1,
                         help='drive each follower this many times (default 1; 3 for a real '
                              'comparison: the mean and spread)')
