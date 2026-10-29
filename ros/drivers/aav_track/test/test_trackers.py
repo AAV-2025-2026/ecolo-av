@@ -201,3 +201,13 @@ def test_mpc_full_refuses_bad_numbers():
         tracker('mpc_full', cruise=0.0)
     with pytest.raises(ValueError):
         tracker('mpc_full', horizon=1)
+
+
+@pytest.mark.parametrize('name', TRACKERS)
+def test_seen_late_it_still_settles(name):
+    # The car seen 0.2 s late (the EKF, DDS, a busy computer): a 1 m offset still settles
+    # without a weave, and the U-turn at the planner's radius is still made in the lane.
+    run = follow(tracker(name), straight(), (0.0, 1.0, 0.0), cruise=1.0, delay=0.2)
+    assert run.reached and max(run.cross(beyond=20.0)) < 0.05
+    run = follow(tracker(name), uturn(1.25 * FULL_LOCK), (0.0, 0.0, 0.0), delay=0.2)
+    assert run.reached and widest(run) < 5.0

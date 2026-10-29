@@ -6,6 +6,7 @@ The same chain as aav_drive_to_point's fake_car.py (ego -> gazebo_adapter's actu
 ego and the car at 100 Hz in between. No ROS, no Gazebo.
 """
 
+from collections import deque
 from dataclasses import dataclass, field
 import math
 import time
@@ -44,8 +45,13 @@ class Run:
         return [r[5] for r in self.rows]
 
 
-def follow(trk, poses, start, cruise=1.0, period=0.05, max_time=120.0, physics=0.01):
-    """Drive the pretend car along `poses` (x, y, yaw) with `trk`, from `start` (x, y, yaw)."""
+def follow(trk, poses, start, cruise=1.0, period=0.05, max_time=120.0, physics=0.01,
+           delay=0.0):
+    """
+    Drive the pretend car along `poses` (x, y, yaw) with `trk`, from `start` (x, y, yaw).
+
+    delay: s by which the tracker's view of the car is late (the EKF, DDS, a busy computer).
+    """
     path = Path(poses)
     trk.reset(path)
     if getattr(trk, 'plans_speed', False):
@@ -58,6 +64,7 @@ def follow(trk, poses, start, cruise=1.0, period=0.05, max_time=120.0, physics=0
     x, y, yaw = start
     speed = asked = steer = 0.0
     t, run, hint = 0.0, Run(), 0
+    seen = deque(maxlen=round(delay / period) + 1)      # seen[0]: delay s ago
     while t < max_time:
         foot = path.project((x, y), hint)
         hint = foot.index
@@ -65,7 +72,8 @@ def follow(trk, poses, start, cruise=1.0, period=0.05, max_time=120.0, physics=0
             run.reached = True
             return run
         t0 = time.perf_counter()
-        cmd = trk.step(State(x, y, yaw, speed, steer=steer), period)
+        seen.append((x, y, yaw, speed))
+        cmd = trk.step(State(*seen[0], steer=steer), period)
         run.step_ms.append(1000.0 * (time.perf_counter() - t0))
         steer = cmd.steer
         if cmd.speed is None:
