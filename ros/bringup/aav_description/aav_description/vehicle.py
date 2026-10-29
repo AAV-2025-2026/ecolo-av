@@ -252,6 +252,7 @@ def final_approach(v):
     r = plan_turning_radius(v)
     return s_bend_length(r, 2.0 * r)
 
+
 # Nav2's path followers (docs/path-followers.md): rpp, Regulated Pure Pursuit, chases a point
 # ahead on the path; mppi samples thousands of futures through its Ackermann model. MPPI is
 # the default since 22 Oct: in Gazebo it did at least as well in every run, and it turns to

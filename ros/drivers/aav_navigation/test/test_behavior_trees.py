@@ -18,7 +18,7 @@ PACKAGE = Path(__file__).resolve().parents[1]
 # aav_description's vehicle.py (no ROS), from the source tree: tools/test.sh runs these
 # tests without the workspace.
 sys.path.insert(0, str(PACKAGE.parents[1] / 'bringup' / 'aav_description'))
-from aav_description import vehicle  # noqa: E402
+from aav_description import vehicle  # noqa: E402, I100
 TREES = PACKAGE / 'behavior_trees'
 VEHICLE = PACKAGE.parents[1] / 'bringup' / 'aav_description' / 'config' / 'vehicle.yaml'
 NAV2 = PACKAGE / 'config' / 'nav2.yaml'
