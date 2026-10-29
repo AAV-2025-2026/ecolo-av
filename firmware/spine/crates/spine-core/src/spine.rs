@@ -412,7 +412,16 @@ impl Spine {
         if driver_fault {
             self.latch.trip_fault();
         }
-        if self.authority == Authority::Drive && !fresh && !estop {
+        // Like the computer's disarm, the test mode's Exit counts only after the latest
+        // e-stop, fault or lost RC.
+        if estop || driver_fault || rc_lost {
+            self.seen_test_exit = false;
+        }
+        // The computer went silent while armed: a timeout, whoever drove meanwhile (RC
+        // direct may have taken over), so it must re-arm after a crash or a reboot.
+        let computer_armed = self.authority == Authority::Drive
+            || (!self.latch.latched && self.last_cmd.is_some_and(|cmd| cmd.armed()));
+        if computer_armed && !fresh && !estop {
             self.latch.trip_timeout();
         }
 
@@ -448,6 +457,8 @@ impl Spine {
             && !rc_lost
             && !rc_direct
             && self.authority != Authority::Drive
+            // Nor on the tick the computer's arm releases the latch.
+            && (!armed_request || self.latch.latched)
             && i.measured_speed.abs() < crate::fsm::STANDSTILL_SPEED
         {
             // Exit, then Enter, while nothing stops the car and nobody drives it.
@@ -1771,5 +1782,83 @@ mod tests {
         assert_eq!((out.throttle, out.brake), (0.0, 1.0));
         assert_eq!(car.state().lifecycle, Lifecycle::Running);
         assert_eq!(car.state().safety, Safety::Faulted);
+    }
+
+    // Bugs found in review of the state machine, each with the test that showed it.
+
+    #[test]
+    fn no_test_mode_on_the_tick_the_computer_arms() {
+        // The entry check looked at last tick's authority (Idle), so an Enter on the very
+        // tick the computer's arm released the latch went into the test mode, armed.
+        let mut car = Car::new();
+        car.test(TestRequest::Exit, 1);
+        car.drive(0.0, 0.0, false, 2);
+        let cmd = car.cmd(1.0, 0.0, true);
+        let out = car.tick(Inputs {
+            drive_cmd: Some(cmd),
+            test_cmd: Some(TestRequest::Enter),
+            ..Default::default()
+        });
+        assert_eq!(out.mode, Mode::Computer);
+        assert!(!car.state().authority.in_test());
+    }
+
+    #[test]
+    fn an_exit_before_an_estop_does_not_count_for_the_entry_after_it() {
+        // Like the computer's disarm, the first half of the entry must come after the
+        // latest e-stop or fault: an old Exit must not complete a new Enter.
+        let unsafe_inputs = [
+            Inputs {
+                hw_estop: true,
+                ..Default::default()
+            },
+            Inputs {
+                driver_faults: faults::STEERING_DRIVER,
+                ..Default::default()
+            },
+        ];
+        for bad in unsafe_inputs {
+            let mut car = Car::new();
+            car.tick(Inputs::default());
+            car.test(TestRequest::Exit, 1);
+            for _ in 0..3 {
+                car.tick(bad);
+            }
+            car.tick(Inputs::default());
+            let out = car.test(TestRequest::Enter, 1);
+            assert_eq!(out.mode, Mode::Manual, "{bad:?}");
+            // A fresh Exit, then Enter, still works.
+            assert_eq!(car.enter_test().mode, Mode::Test, "{bad:?}");
+        }
+    }
+
+    #[test]
+    fn the_computer_stopping_while_rc_direct_drives_still_latches() {
+        // The timeout latched only while the computer drove. Armed, then overridden by RC
+        // direct, then silent, it came back on the computer position without a re-arm.
+        let mut car = Car::new();
+        let computer = Some(sticks(RcSwitch::Computer));
+        car.drive_with_rc(0.0, false, computer, 2);
+        car.drive_with_rc(1.0, true, computer, 10);
+        // The person takes over; the computer's stream stops (a crash, a reboot).
+        let direct = RcInput {
+            throttle: 0.0,
+            ..sticks(RcSwitch::Direct)
+        };
+        for _ in 0..30 {
+            car.tick(Inputs {
+                rc: Some(direct),
+                ..Default::default()
+            });
+        }
+        // Back on the computer position; the computer sends armed commands again.
+        let out = car.drive_with_rc(1.0, true, computer, 5);
+        assert_eq!((out.mode, out.throttle), (Mode::Manual, 0.0));
+        assert_ne!(out.faults & faults::CMD_TIMEOUT, 0);
+        car.drive_with_rc(0.0, false, computer, 2);
+        assert_eq!(
+            car.drive_with_rc(1.0, true, computer, 5).mode,
+            Mode::Computer
+        );
     }
 }

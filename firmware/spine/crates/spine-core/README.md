@@ -46,7 +46,7 @@ The test mode (proposal 6.5): `Inputs::test_cmd` carries a `TestRequest`:
 
 | Rule | |
 |---|---|
-| Enter | `Exit`, then `Enter`; only while running, with no e-stop, no fault, no RC direct, the computer not driving, and the car still |
+| Enter | `Exit`, then `Enter`; only while running, with no e-stop, no fault, no RC direct, the computer neither driving nor arming that tick, and the car still. An e-stop, a fault or a lost RC forgets the `Exit`: send it again |
 | In it | one actuator per request, inside the limits; the throttle forward only, at most `TEST_MAX_THROTTLE` (0.15), with the brake off; otherwise throttle 0 and the stop brake |
 | Leave | on an `Exit`, an e-stop, a fault, a lost RC, RC direct, faster than `TEST_MAX_SPEED` (0.5 m/s), or no request for 100 ms (`CMD_TIMEOUT`). Leaving always latches |
 | Not yet | how a request reaches the spine: a new CAN frame, or a bit in DRIVE_CMD, is the team's choice. Until then only tests send them |
@@ -114,7 +114,8 @@ Change one only with the team.
   after an e-stop, after a driver fault, after a command timeout. A glitch or a
   reboot never restarts the car by itself.
 - No valid command for 100 ms while driving: stop, full brake, latched
-  (`CMD_TIMEOUT`).
+  (`CMD_TIMEOUT`). Also while armed but overridden (RC direct): the RC keeps driving,
+  but the computer must re-arm before it drives again.
 - A repeated counter is a stuck sender: not a fresh command.
 - A lost RC signal in either RC position brakes (`RC_SIGNAL_LOST`).
 - Throttle and brake are never both above zero.
