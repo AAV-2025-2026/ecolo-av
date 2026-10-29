@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">35 min read · 5 sections</div></header>
+<div class="meta">36 min read · 5 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -1250,7 +1250,7 @@ hud ... should connect directly to the ros node at the sensor". Design:
 </thead>
 <tbody>
 <tr>
-<td>Cubes (20 cm), coloured by height: dark ground, then teal to pale</td>
+<td>Cubes (20 cm), coloured by height: dark ground, then teal to pale. <strong>Kept</strong> for 2 s and fading darker (key K: this scan's only)</td>
 <td><code>/sensors/lidar/points</code></td>
 <td>lidar_link -&gt; base_link -&gt; odom</td>
 </tr>
@@ -1260,8 +1260,18 @@ hud ... should connect directly to the ros node at the sensor". Design:
 <td>odom</td>
 </tr>
 <tr>
-<td>EKF global (green), AMCL (orange), truth (white, sim): an outline, an arrow, a pole</td>
-<td>their topics</td>
+<td>EKF global (green), AMCL (orange), <strong>NDT (purple)</strong>, truth (white, sim): an outline, an arrow, a pole</td>
+<td>their topics (NDT's: <code>/localization/ndt/pose</code>, good fits only)</td>
+<td>map, through map -&gt; odom</td>
+</tr>
+<tr>
+<td>AMCL's particles: small orange arrows (key A)</td>
+<td><code>/localization/amcl/particles</code></td>
+<td>map, through map -&gt; odom</td>
+</tr>
+<tr>
+<td>NDT's map: faint purple 1 m wireframe cubes (key M)</td>
+<td><code>maps/ndt/test_lot.pcd</code> (<code>ndt_map</code>)</td>
 <td>map, through map -&gt; odom</td>
 </tr>
 <tr>
@@ -1277,6 +1287,16 @@ hud ... should connect directly to the ros node at the sensor". Design:
 <tr>
 <td>Panel: IMU, GPS, lidar, wheels, wheel odom, vehicle, each estimate, map -&gt; odom, tracker</td>
 <td>each topic: OK, STALE or NEVER, and what it said</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Panel, NDT: TRACKING / WAITING / LOST, score per point, ms per match; or "no NDT map at ...: make it with pixi run ndt-map drive"</td>
+<td><code>/localization/ndt/status</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td>Keys, bottom left: each key and its layer's state (key H hides them)</td>
+<td>-</td>
 <td>-</td>
 </tr>
 </tbody>
@@ -1337,6 +1357,22 @@ another tracker, in the simulator only (the design's D3: never an actuator).</p>
 <td>zoom</td>
 </tr>
 <tr>
+<td>K</td>
+<td>cubes: kept and fading (the default), or this scan's only</td>
+</tr>
+<tr>
+<td>M</td>
+<td>NDT's map as wireframes (on when the file is there)</td>
+</tr>
+<tr>
+<td>A</td>
+<td>AMCL's particles</td>
+</tr>
+<tr>
+<td>H</td>
+<td>hide or show the key legend</td>
+</tr>
+<tr>
 <td>C</td>
 <td>CHASE (behind the car) / FOLLOW (fixed angle) / FREE</td>
 </tr>
@@ -1359,7 +1395,9 @@ another tracker, in the simulator only (the design's D3: never an actuator).</p>
 pixi run debug-hud-demo          # pretend data: no ROS (a walled lot, a ray-cast lidar)
 pixi run build &amp;&amp; pixi run debug-hud    # the node alone, beside a running sim</code></pre>
 <p><code>debugdemo</code> is <code>demo</code> with <code>amcl:=true tracker:=pure_pursuit reversing:=false</code>, so AMCL
-and the trial tracker have something to show. Swap the tracker live with keys 1-4, or
+and the trial tracker have something to show; and <code>ndt:=true</code> too when
+<code>maps/ndt/test_lot.pcd</code> is there. No map yet: <code>pixi run ndt-map drive</code> once (about 6
+min, headless; the map stays out of git). Swap the tracker live with keys 1-4, or
 from a terminal: <code>ros2 param set /track tracker lqr</code> (sim only, both ways).</p>
 <h3 id="how-its-built_2">How it's built</h3>
 <div class="table-wrap"><table>
@@ -1380,7 +1418,7 @@ from a terminal: <code>ros2 param set /track tracker lqr</code> (sim only, both 
 </tr>
 <tr>
 <td><code>config/debug_hud.yaml</code></td>
-<td>every topic name, the frames, <code>cube_size</code>, <code>max_cubes</code>, <code>pose_window</code>, <code>stale_after</code></td>
+<td>every topic name, the frames, <code>cube_size</code>, <code>max_cubes</code>, <code>pose_window</code>, <code>stale_after</code>, <code>keep_cubes_for</code>, <code>ndt_map</code>, <code>ndt_map_cell</code></td>
 </tr>
 <tr>
 <td>PointCloud2 reader</td>
