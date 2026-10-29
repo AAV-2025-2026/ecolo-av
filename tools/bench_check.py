@@ -172,9 +172,11 @@ class Probe(Node):
     def arm_and_hold(self, tries=3):
         """Arm, and wait until the spine has stayed armed for 2 s."""
         # Ego's commands reach spine_bridge only once the output mux is open; armed before
-        # that, the spine's watchdog latches it again at once.
-        self.spin_for(60.0, lambda: self.output_mux.startswith('OPEN'))
+        # that, the spine's watchdog latches it again at once. Wait before every try: a
+        # node that starts late (mock_camera, say) shuts the mux again for 2 s to settle,
+        # and the spine rightly brakes and drops out.
         for _ in range(tries):
+            self.spin_for(60.0, lambda: self.output_mux.startswith('OPEN'))
             self.arm()
             self.spin_for(1.0)
             if self.status.armed and not self.spin_for(2.0, lambda: not self.status.armed):
