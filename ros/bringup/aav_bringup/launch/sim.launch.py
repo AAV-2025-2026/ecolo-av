@@ -211,6 +211,11 @@ def launch_setup(context):
                                live_swap='true',
                                amcl=amcl, amcl_x=0.0, amcl_y=arg('start_y'),
                                amcl_yaw=arg('start_yaw'),
+                               # The test lot's map for AMCL: finer, outlines only
+                               # (maps/README.md). AMCL runs only in the test lot.
+                               amcl_map=(os.path.join(nav_share, 'maps',
+                                                      'example_lot_amcl.yaml')
+                                         if amcl else ''),
                                plan_around=str(flag['plan_around']).lower()))
     if ndt:
         # Scored only (controller-compare --ndt): nothing reads its pose to drive.

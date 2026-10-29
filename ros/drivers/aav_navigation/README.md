@@ -44,6 +44,7 @@ Launch: `ros2 launch aav_navigation navigation.launch.py [args]`
 | `tracker` | `none` | a trial follower (`aav_track`): `pure_pursuit`, `stanley`, `lqr`, `mpc`. It serves `follow_path`; controller_server's becomes `follow_path_unused`. Refused with `reversing:=true` (`docs/trials.md`) |
 | `amcl` | false | true (needs `lidar:=true`): stock AMCL, scored only, on `/localization/amcl/pose` (`config/amcl.yaml`: `tf_broadcast: false`) |
 | `amcl_x`, `amcl_y`, `amcl_yaw` | 0 | AMCL's start pose, map frame (`sim.launch.py` gives the sim's start) |
+| `amcl_map` | empty | empty: AMCL reads Nav2's `/map`; else its own map YAML, on `/localization/amcl/map` (`sim.launch.py`: `maps/example_lot_amcl.yaml`, [why](./maps/README.md#why-amcl-has-a-map-of-its-own)) |
 | `use_sim_time`, `autostart` | false, true | |
 
 Nodes started:
@@ -60,7 +61,7 @@ Nodes started:
 | `collision_monitor` | `/control/cmd_vel_smoothed` -> `/drivers/nav/cmd_vel`; publishes `/safety/collision_monitor/state`, `stop_zone`, `collision_points_marker` |
 | `lidar_scan`, `ghost_obstacle` | with `lidar:=true`, `ghost:=true` |
 | `track` (`aav_track`) | with `tracker:=` on: `follow_path` -> `cmd_vel_nav`, in controller_server's place |
-| `amcl`, `lifecycle_manager_localization` | with `amcl:=true`: AMCL and its own lifecycle manager |
+| `amcl`, `lifecycle_manager_localization` | with `amcl:=true`: AMCL and its own lifecycle manager; with `amcl_map:=`, also `amcl_map_server` |
 | `lifecycle_manager_navigation` | brings the servers up |
 
 Inputs: `/localization/odom/local`, `/tf`, `/goal_pose`, and the obstacle topics above.

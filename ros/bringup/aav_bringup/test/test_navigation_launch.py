@@ -307,6 +307,17 @@ def test_amcl_needs_the_lidar_and_never_publishes_map_to_odom():
     # Its own manager: Nav2's lists only its servers.
     assert list(given(nodes['lifecycle_manager_localization'])['node_names']) == ['amcl']
     assert 'amcl' not in given(nodes['lifecycle_manager_navigation'])['node_names']
+    assert 'amcl_map_server' not in nodes and 'map_topic' not in start   # Nav2's /map
+
+
+def test_amcl_may_have_a_map_of_its_own():
+    nodes = nav_nodes(lidar='true', amcl='true', amcl_map='/maps/lot_amcl.yaml')
+    served = given(nodes['amcl_map_server'])
+    assert served['yaml_filename'] == '/maps/lot_amcl.yaml'
+    assert served['topic_name'] == given(nodes['amcl'])['map_topic'] == '/localization/amcl/map'
+    # Nav2's map_server keeps /map; AMCL's manager brings its map up first.
+    assert list(given(nodes['lifecycle_manager_localization'])['node_names']) == [
+        'amcl_map_server', 'amcl']
 
 
 def test_the_sim_passes_the_trials_on_and_checks_them():
@@ -323,3 +334,6 @@ def test_the_sim_passes_the_trials_on_and_checks_them():
                               start_yaw='1.0')
     assert (sent['amcl'], sent['lidar']) == ('true', 'true')
     assert (sent['amcl_y'], sent['amcl_yaw']) == ('4.0', '1.0')
+    assert sent['amcl_map'].endswith('maps/example_lot_amcl.yaml')
+    assert os.path.exists(sent['amcl_map'])
+    assert sent_to_navigation(SIM, world='test_lot')['amcl_map'] == ''

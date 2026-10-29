@@ -583,6 +583,11 @@ topics:
     pub: [amcl]
     sub: []
     note: AMCL's particles, for RViz or Foxglove (its particle_cloud, renamed). Best effort. amcl:=true only.
+  /localization/amcl/map:
+    type: nav_msgs/msg/OccupancyGrid
+    pub: [amcl_map_server]
+    sub: [amcl]
+    note: AMCL's own map, transient local (latched) - the test lot at 0.05 m, each obstacle only its outline (aav_navigation maps/example_lot_amcl.yaml, from the spec's amcl section; maps/README.md says why). Only with amcl:=true and amcl_map:= (sim.launch.py sets it). Without amcl_map, AMCL reads /map.
   /localization/amcl/initial_pose:
     type: geometry_msgs/msg/PoseWithCovarianceStamped
     pub: []
@@ -614,9 +619,9 @@ topics:
   /map:
     type: nav_msgs/msg/OccupancyGrid
     pub: [map_server]
-    sub: [global_costmap, local_costmap, map, amcl]
+    sub: [global_costmap, local_costmap, map]
     live: [sim]
-    note: Transient local (latched). From aav_navigation/maps. The map window (map, aav_hud) draws it north up, for the big screen.
+    note: Transient local (latched). From aav_navigation/maps. AMCL reads it too when launched without amcl_map:= (the sim gives it /localization/amcl/map). The map window (map, aav_hud) draws it north up, for the big screen.
   /goal_pose:
     type: geometry_msgs/msg/PoseStamped
     pub: [rviz2, map]
