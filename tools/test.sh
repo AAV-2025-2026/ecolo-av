@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Run every test that doesn't need ROS: our packages' Python unit tests, the Rust spine
-# library, the HUD's and the map window's logic (hud-core, map-core), and the check that docs/interfaces.md matches
+# library, the HUD's and the map window's logic (hud-core, map-core), NDT (ndt-core), and the check that docs/interfaces.md matches
 # docs/interfaces.yaml. Where the mcp environment is installed, also the MCP server over
 # stdio (on a private, local domain).
 # Needs Python 3 with pytest and PyYAML; Rust (cargo) for the spine. Works on any OS.
@@ -41,6 +41,8 @@ if command -v cargo >/dev/null; then
   (cd ros/perception/aav_radar_clusters && cargo test -q --locked -p radar-clustering)
   echo "== ros/can_bridge/aav_spine_bridge: the Rust CAN bridge's logic, the shared CAN vectors"
   (cd ros/can_bridge/aav_spine_bridge && cargo test -q --locked -p spine-bridge)
+  echo "== ros/localization/aav_ndt: NDT's maths, the filters, LOST; the design's checks"
+  (cd ros/localization/aav_ndt && cargo test -q --locked -p ndt-core)
   # Only the logic: the window (raylib) needs a screen's libraries, and colcon builds it.
   echo "== ros/hud/aav_hud: the HUD's state, GPS, e-stop and formatting; the map's maths"
   (cd ros/hud/aav_hud && cargo test -q --locked -p hud-core -p map-core)
