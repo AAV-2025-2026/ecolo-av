@@ -94,6 +94,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | The bridge won't arm while the safety gate is shut (`spine_bridge`, `/spine/arm`) | Arming said "armed" and did nothing while no commands could pass; now it refuses and says why | Ben | 2026-10-24 | sim |
 | Orin-to-ESP32 heartbeat (serial frame version 2) | The ESP32 brakes when the Orin stops, even if the Motor Pi still sends: 111-120 ms in QEMU | Ben | 2026-10-24 | built |
 | No-timeout lock (`legacy_uart_bridge`, twist_mux `no_timeout`, priority 60) | Today's ESP32 firmware keeps the last throttle if the Orin or the bridge dies, so on it only people and the actuator tests may drive, never a program | Ben | 2026-10-26 | built |
+| Stop hold (`aav_safety` `stop_hold`, twist_mux `stop_zone`, priority 21) | collision_monitor flickered between stop and go with an obstacle at its zone's edge, and the car crept on; now a stop holds until the zone stays clear for 1 s | Ben | 2026-10-29 | built |
 | Stand-ins stay local (`tools/ros.sh --local`) | A pretend car in the turtle, Gazebo or bench mode can never reach the real one | Ben | 2026-10-10 | sim |
 
 ## Backends
@@ -132,9 +133,11 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | [Gazebo road world](simulation.md) | Lane lines, a stop sign, an obstacle, and the car's camera, radar and roof lidar, to test the whole graph | Ben | 2026-10-11 | sim |
 | Actuator model | Lag and limits between ego and Gazebo, so the simulated car answers like a real one | Ben | 2026-10-15 | sim |
 | [Bench mode](bench.md) (`aav_bench`, `aav_spine_sim`) | The car's own software on one laptop, with the spine's logic and pretend sensors | Ben | 2026-10-10 | sim |
+| Bench GPS that drifts (`aav_bench` `models.GpsError`) | A real receiver's error wanders slowly; fresh noise on every fix made Nav2 weave in a way the car never would (N7) | Ben | 2026-10-29 | built |
 | The spine in the loop (`sim spine:=true`) | Gazebo drives through the spine's real logic, so its stops and e-stops get tested | Ben | 2026-10-15 | sim |
 | Today's car in the loop (`sim esp32:=true`, `gazebo_esp32`) | Today's car runs the 2025-26 C++ ESP32, not the spine: Gazebo drives through the real UART bridge and that firmware's throttle ramp and brake, so its speed loop is tested before car day | Ben | 2026-10-29 | sim |
 | `sim-check` and `bench-check` | One command proves the whole chain drives, stops and keeps its lane | Ben | 2026-10-10 | sim |
+| `bench-check --weave` and `--zone-edge` | Measure the weave on a straight Nav2 drive (N7), and prove a box at the stop zone's edge can't let the car creep on | Ben | 2026-10-29 | built |
 | Sensor failures on purpose (`pixi run sim-fault`) | Breaks a sensor in Gazebo, to prove the watchdog catches it | Ben | 2026-10-15 | sim |
 | [Ghost obstacles](ghost-obstacles.md) (`aav_ghost`) | A pretend person only Nav2 sees, to test stopping with nothing real to hit | Ben | 2026-10-16 | sim |
 | Record and replay a drive | A recorded drive runs through the EKFs again, to check them; they match within 0.03 m | Ben | 2026-10-09 | sim |

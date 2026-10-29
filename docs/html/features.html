@@ -555,6 +555,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>built</td>
 </tr>
 <tr>
+<td>Stop hold (<code>aav_safety</code> <code>stop_hold</code>, twist_mux <code>stop_zone</code>, priority 21)</td>
+<td>collision_monitor flickered between stop and go with an obstacle at its zone's edge, and the car crept on; now a stop holds until the zone stays clear for 1 s</td>
+<td>Ben</td>
+<td>2026-10-29</td>
+<td>built</td>
+</tr>
+<tr>
 <td>Stand-ins stay local (<code>tools/ros.sh --local</code>)</td>
 <td>A pretend car in the turtle, Gazebo or bench mode can never reach the real one</td>
 <td>Ben</td>
@@ -761,6 +768,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>sim</td>
 </tr>
 <tr>
+<td>Bench GPS that drifts (<code>aav_bench</code> <code>models.GpsError</code>)</td>
+<td>A real receiver's error wanders slowly; fresh noise on every fix made Nav2 weave in a way the car never would (N7)</td>
+<td>Ben</td>
+<td>2026-10-29</td>
+<td>built</td>
+</tr>
+<tr>
 <td>The spine in the loop (<code>sim spine:=true</code>)</td>
 <td>Gazebo drives through the spine's real logic, so its stops and e-stops get tested</td>
 <td>Ben</td>
@@ -780,6 +794,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Ben</td>
 <td>2026-10-10</td>
 <td>sim</td>
+</tr>
+<tr>
+<td><code>bench-check --weave</code> and <code>--zone-edge</code></td>
+<td>Measure the weave on a straight Nav2 drive (N7), and prove a box at the stop zone's edge can't let the car creep on</td>
+<td>Ben</td>
+<td>2026-10-29</td>
+<td>built</td>
 </tr>
 <tr>
 <td>Sensor failures on purpose (<code>pixi run sim-fault</code>)</td>
