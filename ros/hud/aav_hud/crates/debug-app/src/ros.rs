@@ -22,6 +22,8 @@
 //!   a late window still gets robot_state_publisher's frames;
 //! - `/system/source`: reliable, transient local, depth 1 (latched), as the HUD;
 //! - the plan: reliable, keep last 1, as the map window;
+//! - AMCL's and NDT's poses: reliable (as they publish);
+//! - AMCL's particles: best effort, as AMCL publishes them;
 //! - everything else: best effort (SensorDataQoS), which takes reliable publishers too.
 //!
 //! Keys 1-4 call aav_track's own parameter service (`track_parameters_service`,
@@ -45,6 +47,7 @@ use debug_core::{
     config::{DebugConfig, Frame, Number, Topic, NODE_NAME},
     cubes::{CubeScan, CubeSettings},
     frames::{frame_name, Stamp, StaticFrames, Transform3},
+    ndt::NdtStatus,
     poses::PoseBuffer,
     scan::{self, ScanError},
     state::{Localizer, Source, Update},
@@ -64,6 +67,7 @@ use ros_env::diagnostic_msgs::msg::DiagnosticStatus;
 use ros_env::geometry_msgs::msg::{
     Pose as PoseMsg, PoseWithCovarianceStamped, Quaternion as QuaternionMsg,
 };
+use ros_env::nav2_msgs::msg::ParticleCloud;
 use ros_env::nav_msgs::msg::{Odometry, Path};
 use ros_env::rcl_interfaces::msg::{Parameter, ParameterType, ParameterValue};
 use ros_env::rcl_interfaces::srv::{SetParameters, SetParameters_Request, SetParameters_Response};
@@ -388,6 +392,39 @@ fn spin(
             )
         }
     })?;
+    let _ndt = node.create_subscription(topic(Topic::NdtPose).as_str().reliable(), {
+        let tx = tx.clone();
+        move |m: PoseWithCovarianceStamped| {
+            send(
+                &tx,
+                Update::Pose {
+                    who: Localizer::Ndt,
+                    pose: pose(&m.pose.pose),
+                    frame: m.header.frame_id,
+                    speed: None,
+                },
+            )
+        }
+    })?;
+    let _ndt_status =
+        node.create_subscription(topic(Topic::NdtStatus).as_str().sensor_data_qos(), {
+            let tx = tx.clone();
+            move |m: DiagnosticStatus| send(&tx, Update::Ndt(ndt_status(&m)))
+        })?;
+    let _particles =
+        node.create_subscription(topic(Topic::AmclParticles).as_str().sensor_data_qos(), {
+            let tx = tx.clone();
+            move |m: ParticleCloud| {
+                let poses = m.particles.iter().map(|p| pose(&p.pose)).collect();
+                send(
+                    &tx,
+                    Update::Particles {
+                        poses,
+                        frame: m.header.frame_id,
+                    },
+                )
+            }
+        })?;
     let plans = QoSProfile::topics_default().reliable().keep_last(1);
     let _plan = node.create_subscription(topic(Topic::Plan).as_str().qos(plans), {
         let tx = tx.clone();
@@ -550,6 +587,15 @@ fn swap_reply(asked: &'static str, response: &SetParameters_Response) -> Update 
     Update::SwapReply(Reply { asked, outcome })
 }
 
+/// `/localization/ndt/status` in plain words.
+fn ndt_status(m: &DiagnosticStatus) -> NdtStatus {
+    let values = m
+        .values
+        .iter()
+        .map(|kv| (kv.key.as_str(), kv.value.as_str()));
+    NdtStatus::from_message(m.level, &m.message, values)
+}
+
 fn heard(source: Source, detail: String) -> Update {
     Update::Heard { source, detail }
 }
@@ -671,6 +717,12 @@ impl Params {
             .read_only()?;
         config.track_parameters_service = service.get().to_string();
         names.push(service);
+        let map = node
+            .declare_parameter::<Arc<str>>("ndt_map")
+            .default(config.ndt_map.as_str().into())
+            .read_only()?;
+        config.ndt_map = map.get().to_string();
+        names.push(map);
         let mut numbers = Vec::new();
         for n in Number::ALL {
             let p = node
@@ -999,6 +1051,15 @@ mod tests {
             state.map_to_odom.odom_in_map,
             state.plan_in_odom().len()
         );
+        println!(
+            "kept cubes {} ({} cut); NDT status {:?}; AMCL particles in odom {}",
+            state.kept.len(),
+            state.kept.cut(),
+            state.ndt,
+            state.particles_in_odom().count()
+        );
+        let map = debug_core::ndt::MapFile::read(&config.ndt_map, config.ndt_map_cell);
+        println!("NDT map: {map}");
         println!(
             "banner {:?}; tracker {:?}",
             state.origins.banner(),

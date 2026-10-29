@@ -165,12 +165,12 @@ impl NdtStatus {
             parts.push(format!("{i} steps"));
         }
         if let Some(r) = self.restarts {
-            parts.push(format!("{r} restarts"));
+            parts.push(format!("{r} restart{}", if r == 1 { "" } else { "s" }));
         }
         if let Some(d) = self.clouds_dropped.filter(|&d| d > 0) {
             parts.push(format!("{d} clouds dropped"));
         }
-        parts.join(" · ")
+        parts.join(", ")
     }
 }
 
@@ -321,7 +321,7 @@ mod tests {
         assert_eq!((s.fit, s.state), (Fit::Good, Some(NdtState::Tracking)));
         assert_eq!(s.headline(), "TRACKING");
         assert_eq!(s.numbers(), "3.41 per point   12.3 ms");
-        assert_eq!(s.details(), "overlap 87% · 7 steps · 1 restarts");
+        assert_eq!(s.details(), "overlap 87%, 7 steps, 1 restart");
         assert_eq!(s.points, Some(812));
     }
 

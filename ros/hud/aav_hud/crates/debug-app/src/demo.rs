@@ -1,5 +1,6 @@
 //! Pretend data for `--demo`: a walled lot with boxes, a car driving a loop, a 16-beam
-//! lidar ray-cast against it, and the localizers a little apart. No ROS.
+//! lidar ray-cast against it, and the localizers a little apart (NDT too, LOST for a
+//! moment every 30 s), AMCL's particles, and the lot itself as NDT's map. No ROS.
 //!
 //! `--bench-cubes N` swaps the lidar for N cubes spread round the car: the drawing test.
 
@@ -11,6 +12,7 @@ use std::{
 use debug_core::{
     cubes::{self, Cube, CubeScan, CubeSettings},
     frames::{Stamp, Transform3},
+    ndt::{MapCells, NdtStatus},
     state::{Localizer, Source, Update},
     swap::{Reply, Tracker},
     track::TrackStatus,
@@ -122,6 +124,88 @@ fn sweep(car: Pose) -> Vec<[f32; 3]> {
     points
 }
 
+/// The lot as NDT's map: points on every box's sides and top, 0.25 m apart, in the
+/// map frame, above 0.3 m (as `ndt-map` leaves the ground out).
+fn lot_map(size: f64) -> MapCells {
+    let step = 0.25;
+    let along = |a: f64, b: f64| {
+        let n = ((b - a) / step).ceil() as usize;
+        (0..=n).map(move |i| (a + i as f64 * step).min(b))
+    };
+    let points = WORLD.iter().flat_map(|w| {
+        let (min, max) = (w.min, w.max);
+        along(min[0], max[0]).flat_map(move |x| {
+            along(min[1], max[1]).flat_map(move |y| {
+                along(min[2].max(0.3), max[2]).filter_map(move |z| {
+                    let on_side = [x == min[0] || x == max[0], y == min[1] || y == max[1]];
+                    (on_side.iter().any(|&b| b) || z == max[2]).then(|| {
+                        let p = ODOM_IN_MAP.transform(Point::new(x, y));
+                        [p.x, p.y, z]
+                    })
+                })
+            })
+        })
+    });
+    MapCells::from_points(points, size)
+}
+
+/// A number from -1 to 1 that looks random, the same for the same `i`.
+fn jitter(i: u64) -> f64 {
+    let mut x = i
+        .wrapping_mul(0x9E37_79B9_7F4A_7C15)
+        .wrapping_add(0x2545_F491_4F6C_DD1D);
+    x ^= x >> 29;
+    x = x.wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    x ^= x >> 32;
+    (x % 20_001) as f64 / 10_000.0 - 1.0
+}
+
+/// AMCL's particles round its pose: 300, spread about 0.4 m and 4 degrees.
+fn particles(amcl: Pose, t: f64) -> Vec<Pose> {
+    let tick = (t * 2.0) as u64;
+    (0..300u64)
+        .map(|i| {
+            let k = tick * 1000 + i * 3;
+            Pose::new(
+                amcl.position.x + 0.4 * jitter(k),
+                amcl.position.y + 0.4 * jitter(k + 1),
+                amcl.yaw + 0.07 * jitter(k + 2),
+            )
+        })
+        .collect()
+}
+
+/// NDT's status at `t`: tracking, but LOST for 2 s every 30 s, so the panel shows both.
+fn ndt_status(t: f64) -> NdtStatus {
+    let lost = t % 30.0 > 28.0;
+    let restarts = (t / 30.0) as u64;
+    if lost {
+        return NdtStatus::from_message(
+            2,
+            "LOST: a poor fit (score per point too low)",
+            [
+                ("score_per_point", "1.31"),
+                ("match_ms", "21.40"),
+                ("restarts", &restarts.to_string()),
+            ],
+        );
+    }
+    let score = format!("{:.3}", 3.3 + 0.2 * (t * 0.9).sin());
+    let ms = format!("{:.2}", 9.0 + 2.0 * (t * 1.7).cos());
+    NdtStatus::from_message(
+        0,
+        "TRACKING",
+        [
+            ("score_per_point", score.as_str()),
+            ("match_ms", ms.as_str()),
+            ("overlap", "0.880"),
+            ("iterations", "6"),
+            ("restarts", &restarts.to_string()),
+            ("clouds_dropped", "0"),
+        ],
+    )
+}
+
 /// The car on its loop at `t` seconds: base_link in odom.
 fn car_at(t: f64) -> Pose {
     let angle = SPEED * t / RADIUS;
@@ -225,6 +309,12 @@ impl DataSource for Demo {
             truth.position.y + 0.1 * (t * 2.3).cos(),
             truth.yaw - 0.01,
         );
+        let ndt = Pose::new(
+            truth.position.x + 0.03 * (t * 1.3).sin(),
+            truth.position.y - 0.02,
+            truth.yaw + 0.003,
+        );
+        let ndt_lost = t % 30.0 > 28.0;
         let pose = |who, pose, frame: &str| Update::Pose {
             who,
             pose,
@@ -250,6 +340,11 @@ impl DataSource for Demo {
             pose(Localizer::Global, global, "map"),
             pose(Localizer::Truth, truth, "map"),
             pose(Localizer::Amcl, amcl, "map"),
+            Update::Particles {
+                poses: particles(amcl, t),
+                frame: "map".into(),
+            },
+            Update::Ndt(ndt_status(t)),
             Update::Plan {
                 points: plan,
                 frame: "map".into(),
@@ -280,7 +375,15 @@ impl DataSource for Demo {
                 left: None,
             }),
         ]);
+        // NDT publishes a pose only for a good fit.
+        if !ndt_lost {
+            news.push(pose(Localizer::Ndt, ndt, "map"));
+        }
         news
+    }
+
+    fn built_in_map(&self) -> Option<MapCells> {
+        Some(lot_map(1.0))
     }
 
     fn swap_tracker(&mut self, tracker: Tracker) -> anyhow::Result<()> {
@@ -341,6 +444,23 @@ mod tests {
         assert!(scan.cubes.len() > 1000, "{}", scan.cubes.len());
         assert!(scan.cubes.iter().any(|c| c.band == cubes::Band::Ground));
         assert!(scan.cubes.iter().any(|c| c.band != cubes::Band::Ground));
+    }
+
+    #[test]
+    fn the_lot_is_its_own_map() {
+        let map = lot_map(1.0);
+        // The four walls alone are about 150 m long and 3 cells high.
+        assert!(map.len() > 300, "{}", map.len());
+        assert!(map.centres.iter().all(|c| c[2] > 0.0));
+    }
+
+    #[test]
+    fn ndt_is_lost_for_a_moment() {
+        assert_eq!(ndt_status(5.0).headline(), "TRACKING");
+        assert_eq!(ndt_status(29.0).headline(), "LOST");
+        assert!(particles(Pose::default(), 0.0)
+            .iter()
+            .all(|p| p.position.x.abs() <= 0.4));
     }
 
     #[test]

@@ -2,8 +2,9 @@
 //!
 //! What the car sees and what it thinks (docs/designs/2026-10-29_debug-hud.md): the
 //! lidar's cubes round the car in 3D, where each localizer puts the car (EKF local and
-//! global, AMCL, Gazebo's truth), Nav2's plan, and a panel of every sensor and actuator
-//! straight from its own topic.
+//! global, AMCL, NDT, Gazebo's truth), Nav2's plan, AMCL's particles, NDT's map, and a
+//! panel of every sensor and actuator straight from its own topic. The cubes are kept
+//! in odom and fade when not seen for 2 s (key K: this scan's only).
 //!
 //! Subscribes  (names from config/debug_hud.yaml, or ROS parameters)
 //!             lidar_topic           sensor_msgs/PointCloud2     reliable, keep last 1: the cubes
@@ -11,6 +12,9 @@
 //!             global_odom_topic     nav_msgs/Odometry           map: EKF global
 //!             truth_topic           nav_msgs/Odometry           map: Gazebo's truth (sim)
 //!             amcl_topic            geometry_msgs/PoseWithCovarianceStamped  map: AMCL
+//!             amcl_particles_topic  nav2_msgs/ParticleCloud     best effort, map: AMCL's particles
+//!             ndt_pose_topic        geometry_msgs/PoseWithCovarianceStamped  map: NDT (purple)
+//!             ndt_status_topic      diagnostic_msgs/DiagnosticStatus  the panel: NDT's score, ms, LOST
 //!             plan_topic            nav_msgs/Path               Nav2's plan
 //!             tf_topic, tf_static_topic  tf2_msgs/TFMessage     map -> odom; base_link -> lidar_link
 //!             imu_topic             sensor_msgs/Imu             the panel
@@ -24,7 +28,9 @@
 //! Calls       track_parameters_service  rcl_interfaces/SetParameters  keys 1-4: aav_track's
 //!                                       tracker, only while /system/source says SIM
 //! Parameters  the topics above; odom_frame, base_frame, map_frame; stale_after (s),
-//!             cube_size (m), max_cubes, pose_window (s), ground_height (m)
+//!             cube_size (m), max_cubes, pose_window (s), ground_height (m),
+//!             keep_cubes_for (s), ndt_map (a PCD file, key M), ndt_map_cell (m)
+//! Reads       ndt_map at start-up, if it is there (else the panel says how to make it)
 //!
 //! raylib owns the main thread (macOS needs that); rclrs spins on its own thread; clouds
 //! go to a thread of their own through a newest-only slot (ros.rs). `--demo` swaps the
@@ -48,6 +54,8 @@ use std::{
 use anyhow::{bail, Context as _, Result};
 use debug_core::{
     config::DebugConfig,
+    keys::Action,
+    ndt::MapFile,
     orbit::Orbit,
     state::DebugState,
     swap::{self, Reply, Tracker},
@@ -80,8 +88,9 @@ usage: debug_hud [--demo] [--fullscreen] [--monitor NAME|N] [--list-monitors]
   --ros-args ...     passed to ROS, e.g. --ros-args -p lidar_topic:=/x
 
 keys: drag turn, right-drag (or shift-drag) move, wheel zoom, C chase / follow / free,
-      R reset the camera, 1-4 swap the trial tracker (sim only: pure pursuit, Stanley,
-      LQR, MPC), F11 full screen";
+      R reset the camera, K kept (fading) cubes or this scan's, M NDT's map,
+      A AMCL's particles, H hide the key legend, 1-4 swap the trial tracker (sim only:
+      pure pursuit, Stanley, LQR, MPC), F11 full screen";
 
 /// The drawing test: settle, then measure for this long.
 const BENCH_SETTLE: Duration = Duration::from_secs(2);
@@ -228,6 +237,18 @@ fn run(
     window::place(&mut rl, opts.monitor.as_ref(), opts.fullscreen)?;
     let mut ui = Ui::new(&mut rl, &thread, car, config.cube_size as f32);
     let mut state = DebugState::new(config);
+    // NDT's map: the demo's own lot, or the file; shown from the start when there is one.
+    let map = match source.built_in_map() {
+        Some(cells) => MapFile::Loaded {
+            path: "the demo's lot".into(),
+            cells,
+        },
+        None => MapFile::read(&config.ndt_map, config.ndt_map_cell),
+    };
+    if let MapFile::Unreadable { .. } = &map {
+        eprintln!("debug_hud: {map}");
+    }
+    state.layers.ndt_map = map.cells().is_some();
     let mut orbit = Orbit::default();
     let started = Instant::now();
     let screenshot_after = Duration::from_secs_f64(opts.after.unwrap_or(4.0));
@@ -260,14 +281,16 @@ fn run(
         if over_view && wheel != 0.0 {
             orbit.zoom(WHEEL_ZOOM.powf(-wheel));
         }
-        if rl.is_key_pressed(KeyboardKey::KEY_C) {
-            orbit.switch_mode();
-        }
-        if rl.is_key_pressed(KeyboardKey::KEY_R) {
-            orbit.reset();
-        }
-        if rl.is_key_pressed(KeyboardKey::KEY_F11) {
-            window::toggle_fullscreen(&mut rl);
+        for action in Action::ALL {
+            if !rl.is_key_pressed(key_of(action)) {
+                continue;
+            }
+            match action {
+                Action::Camera => orbit.switch_mode(),
+                Action::ResetCamera => orbit.reset(),
+                Action::FullScreen => window::toggle_fullscreen(&mut rl),
+                other => state.layers.apply(other),
+            }
         }
         // Keys 1-4: swap the trial tracker, only in the simulator (the design's D3).
         let digits = [
@@ -302,6 +325,7 @@ fn run(
             orbit: &orbit,
             fps,
             bench: opts.bench_cubes,
+            map: &map,
         };
         let mut d = rl.begin_drawing(&thread);
         ui.draw(&mut d, &state, &frame);
@@ -325,6 +349,19 @@ fn run(
         }
     }
     Ok(())
+}
+
+/// raylib's key for each action (debug-core says which letter, for the legend).
+fn key_of(action: Action) -> KeyboardKey {
+    match action {
+        Action::Camera => KeyboardKey::KEY_C,
+        Action::ResetCamera => KeyboardKey::KEY_R,
+        Action::Cubes => KeyboardKey::KEY_K,
+        Action::NdtMap => KeyboardKey::KEY_M,
+        Action::Particles => KeyboardKey::KEY_A,
+        Action::Keys => KeyboardKey::KEY_H,
+        Action::FullScreen => KeyboardKey::KEY_F11,
+    }
 }
 
 /// The drawing test's count: frames drawn after the settle time, over the measure time.
@@ -388,6 +425,22 @@ mod tests {
         assert_eq!(o.after, Some(20.0));
         assert!(Options::parse(&args(&["--after", "2"])).is_err());
         assert!(Options::parse(&args(&["--bogus"])).is_err());
+    }
+
+    #[test]
+    fn each_action_has_its_own_key_and_the_legend_says_it() {
+        let keys: Vec<KeyboardKey> = Action::ALL.into_iter().map(key_of).collect();
+        for (i, k) in keys.iter().enumerate() {
+            assert!(!keys[i + 1..].contains(k), "{:?} twice", Action::ALL[i]);
+        }
+        for a in Action::ALL {
+            let letter = a.key();
+            if letter.len() == 1 {
+                let c = letter.as_bytes()[0];
+                assert_eq!(key_of(a) as u32, u32::from(c), "{a:?}");
+            }
+        }
+        assert!(USAGE.contains("K kept"));
     }
 
     #[test]
