@@ -8,7 +8,7 @@ and is **scored on the same routes**. It becomes the default only once it wins.
 > - **Trackers** (`aav_track`): pure pursuit, Stanley, LQR, MPC, in Nav2's own chain, in controller_server's place. `tracker:=lqr`.
 > - **AMCL** (stock `nav2_amcl`): a particle filter on the map and the lidar, scored against the EKF, never steering. `amcl:=true`.
 > - **Score:** `pixi run controller-compare --trackers pure_pursuit lqr --runs 3`.
-> - **Results:** not run yet.
+> - **Results (29 Oct, Gazebo, 3 runs):** pure pursuit, Stanley and MPC finished every leg; MPPI, RPP and LQR lost legs on the U-turn. AMCL lost itself; the EKF wins. [Results](#results-29-october).
 > - The design: `docs/designs/2026-10-29_trials.md`.
 
 ## What is on trial
@@ -70,3 +70,34 @@ Not run yet. Each run's results go here, with its date and a link to its folder 
   to the GPS `map` frame first.
 - AMCL publishes only after the car moves (`update_min_d`): parked, few samples.
 - The trackers don't read the costmap: MPPI stays for the obstacle tours (design T3).
+
+## Results, 29 October
+
+Gazebo's test lot, 4 legs, 3 runs per follower, forward only, on branch `thursday-29oct`
+(6bfd0021), one after another on a Mac. Run `log/controller-compare/20261029-024252/` (not
+in git). **Every car number is still a guess** (`docs/measure-the-car.md`), so this ranks
+the followers in the sim, not on the car.
+
+| Follower | Legs finished (of 12) | Off the path, mean | Tick, worst | CPU |
+|---|---|---|---|---|
+| **pure pursuit** (ours, the control) | **12** | 0.11-0.13 m | 0.8 ms | 21 % |
+| **Stanley** | **12** | 0.10-0.13 m | 0.8 ms | 21 % |
+| **MPC** | **12** | 0.11-0.12 m | 6.3 ms | 28 % |
+| RPP (Nav2) | 10 | 0.11-0.14 m | - | 7 % |
+| MPPI (Nav2, today's default) | 8 | 0.11-0.14 m | - | 22-30 % |
+| LQR | 8 | 0.11-0.12 m | 0.6 ms | 21 % |
+
+**What it shows:**
+
+- On the straight and the easy bends, every follower stays about 0.12 m off the path: steering law isn't what matters there.
+- **The U-turn** ("turn back", a 14 m lane, forward only) decides it. MPPI, RPP and LQR got collision_monitor stops near the walls and Nav2 gave up (status 6); the failed U-turn then left the next leg ("home") unreachable, so each U-turn failure counts twice.
+- LQR is linearised about driving straight: at full lock it swings wide. A curvature-scheduled LQR or a tighter feed-forward is the next try.
+- MPC never missed a 20 Hz tick (2 ms mean, 6 ms worst) in Python.
+- `aav_track`'s 21 % CPU is mostly rclpy's executor and TF, not the trackers (0.2 ms a tick).
+
+**AMCL** (`--amcl`, one MPPI run): 0.71 m mean off on the first leg (EKF: 0.16 m), then lost
+on the second: 6.9 m mean, 21 m worst. Gazebo's GPS is easy (white noise), so the EKF has the
+advantage here; AMCL's settings are untuned. Run `log/controller-compare/20261029-034402/`.
+
+**Next:** tune LQR for the U-turn; AMCL's laser model and particle count; NDT beside both
+(`docs/designs/2026-10-29_ndt.md`); then the same table on the car once it's measured.
