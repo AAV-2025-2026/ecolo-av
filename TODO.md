@@ -361,7 +361,7 @@ work on." His order, with the work under way:
       revised after its EGM review): `pixi run preflight` (`actuator-test preflight
       --stands`; `--sim`, `--bench`, `--no-drive`, `--skip`). On the car the drive is
       refused until a rear-wheel speed exists (49b): `--no-drive` checks the sensors only.
-      Every actuator test now also stops on 2 s of driving with no measured speed, and on
+      Every actuator test now also stops on 4 s of driving with no measured speed, and on
       a speed rising while the command falls. Left: the car itself (car-day session 9, 3.P)
 - [ ] **Cubes into objects, with names** (Ben, 29 Oct: "merge cubes that related like a
       stop sign or a car"): join touching filled cubes into one object (as

@@ -100,9 +100,9 @@ def test_bench_needs_bench_and_bench_needs_bench_mode():
     assert not safety.decide(Kind.SIM, True, True, 3, bench=True).allowed
 
 
-def test_unseen_speed_stops_after_two_seconds():
-    spinning = [(t / 10, 0.3, 0.0) for t in range(0, 25)]
-    assert safety.unseen(spinning[:15]) is None          # 1.4 s: not yet
+def test_unseen_speed_stops_after_four_seconds():
+    spinning = [(t / 10, 0.3, 0.0) for t in range(0, 45)]
+    assert safety.unseen(spinning[:35]) is None          # 3.4 s: not yet (Hall clicks)
     assert "can't be seen" in safety.unseen(spinning)
     moving = [(t / 10, 0.3, 0.2) for t in range(0, 25)]
     assert safety.unseen(moving) is None

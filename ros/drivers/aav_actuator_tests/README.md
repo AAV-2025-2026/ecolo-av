@@ -71,7 +71,7 @@ agree on what REAL means.
   stands). The person types the test's name to start.
 - Stops (zero commands) on: Ctrl-C, any error, `/safety/estop`, someone else driving
   (twist_mux passing another command for 0.3 s), twist_mux silent for 2 s, the speed,
-  distance or time leaving the test's envelope, `/vehicle/odom` stale for 0.5 s, 2 s of
+  distance or time leaving the test's envelope, `/vehicle/odom` stale for 0.5 s, 4 s of
   driving with no measured speed (`safety.unseen`), the speed rising while the command
   falls (`safety.runaway`), a `must` step timing out.
 - The preflight drives the real car only with a driven-wheel speed (`vehicle.yaml`

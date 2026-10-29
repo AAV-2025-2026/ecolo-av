@@ -101,7 +101,7 @@ then run the rest. Start at walking pace: `--max-speed 0.5`.
 | **Someone takes over** | the joystick or keyboard outranks the test in twist_mux; the script sees it and stops |
 | **Stale speed** | no `/vehicle/odom` for 0.5 s: stop |
 | **Nothing through twist_mux** | 2 s with no `/control/cmd_vel`: stop (a lock, or a mux without the `tests` slot) |
-| **A speed nobody sees** | told to drive, but under 0.05 m/s measured for 2 s: stop. On stands the front wheel sensors read 0 while the rear (driven) wheels spin ([TODO 49b](../TODO.md)), so the speed cap can't work |
+| **A speed nobody sees** | told to drive, but under 0.05 m/s measured for 4 s: stop (4, not 2: a Hall sensor with 8 clicks a turn says nothing until 2 clicks, about 0.24 m, which a slow start takes 2-3 s to roll; seen on the bench, 29 Oct). On stands the front wheel sensors read 0 while the rear (driven) wheels spin ([TODO 49b](../TODO.md)), so the speed cap can't work |
 | **A runaway** | the speed rises 0.1 m/s in 1 s while the command falls or sits at 0 (a stuck throttle): stop |
 | **A cut-short run** | still saves its log and table, but prints no `vehicle.yaml` lines |
 

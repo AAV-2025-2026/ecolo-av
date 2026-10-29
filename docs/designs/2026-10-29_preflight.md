@@ -17,7 +17,7 @@ time**, then one PASS / FAIL line per check, as `car-day-check` prints.
 
 | # | Finding | Now |
 |---|---|---|
-| 1 | The car is rear-wheel drive; the wheel sensors are on the **front**. On stands `/vehicle/odom` reads ~0 while the motor spins: the speed cap can never fire | the drive is refused on the real car unless `vehicle.yaml` says `speed_wheels: rear` (TODO 49b). `--no-drive` checks the sensors alone. Every actuator test now stops after 2 s of "told to drive, measured < 0.05 m/s"; the speed-up and brake steps stop the test when they time out |
+| 1 | The car is rear-wheel drive; the wheel sensors are on the **front**. On stands `/vehicle/odom` reads ~0 while the motor spins: the speed cap can never fire | the drive is refused on the real car unless `vehicle.yaml` says `speed_wheels: rear` (TODO 49b). `--no-drive` checks the sensors alone. Every actuator test now stops after 4 s of "told to drive, measured < 0.05 m/s" (4: an 8-click Hall sensor needs 2-3 s of a slow start to say anything); the speed-up and brake steps stop the test when they time out |
 | 1 | `speed_loop.mode pi` winds the throttle up against a speed it can't see | refused while the legacy bridge runs `pi` |
 | 2 | A lost link with the C++ ESP32 (no command timeout, S3) | refused while the bridge's no-timeout lock is ON; the checklist asks for the Rust firmware with 6c and test 3.9 passed, and a wired link (the Orin over ssh + tmux, or a wired laptop) |
 | 3 | A stuck throttle: the stop gave up after 5 s and said "Stopped" | **NOT STOPPED: E-STOP NOW**, `/safety/estop` true (set, never cleared), zeros for 10 s more, exit 6. Live: the speed rising while the command falls or sits at 0 stops every test |
@@ -93,7 +93,7 @@ tests: `pixi run watchdog-clear` after.
 | The word to type | **`preflight`**, after the checklist is read out loud. No keyboard: refused |
 | Caps | 0.3 m/s (`STANDS_CAP`); `--max-speed` lowers it only. On the car it is always a stands run |
 | Refused on the car | no driven-wheel speed (`speed_wheels` ≠ `rear`, TODO 49b); the no-timeout lock ON (the C++ ESP32); `speed_loop.mode pi`; no `/vehicle/odom`; ego not answering; `/system/source` not REAL |
-| Stops it live | Ctrl-C; `/safety/estop`; a person taking over; twist_mux silent 2 s; `/vehicle/odom` stale 0.5 s; over 0.46 m/s; the envelope's time or distance; **told to drive, < 0.05 m/s for 2 s**; **the speed rising while the command falls**; a must step timing out; on stands, **the IMU says it moves** (over 0.15 m/s in 2 s, or turning over 0.1 rad/s while steering) |
+| Stops it live | Ctrl-C; `/safety/estop`; a person taking over; twist_mux silent 2 s; `/vehicle/odom` stale 0.5 s; over 0.46 m/s; the envelope's time or distance; **told to drive, < 0.05 m/s for 4 s**; **the speed rising while the command falls**; a must step timing out; on stands, **the IMU says it moves** (over 0.15 m/s in 2 s, or turning over 0.1 rad/s while steering) |
 | If it won't stop | 5 s after the stop: NOT STOPPED, `/safety/estop` true, zeros for 10 s, exit 6 |
 | Where it runs | `--sim` Gazebo, `--bench` bench mode: `tools/ros.sh --local`. Neither: the car (not local) |
 
