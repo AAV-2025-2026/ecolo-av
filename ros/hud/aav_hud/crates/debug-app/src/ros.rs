@@ -782,4 +782,153 @@ mod tests {
         };
         assert_eq!(wheels_detail(&m), "+1.50 m/s (2 wheels)");
     }
+
+    /// The node itself, with ROS: a cloud becomes cubes placed by the pose at its stamp
+    /// (from /tf_static and the local EKF), map -> odom arrives, and a tracker swap gets
+    /// the service's answer. Needs ROS sourced; this computer only, on ROS_DOMAIN_ID (94
+    /// unless set), with topics of its own.
+    #[test]
+    fn a_cloud_becomes_cubes_and_a_swap_gets_its_answer() -> Result<()> {
+        use crate::source::DataSource;
+        use ros_env::geometry_msgs::msg::TransformStamped;
+        use ros_env::rcl_interfaces::msg::SetParametersResult;
+        use ros_env::sensor_msgs::msg::PointField;
+
+        if std::env::var_os("ROS_DOMAIN_ID").is_none() {
+            std::env::set_var("ROS_DOMAIN_ID", "94");
+        }
+        std::env::set_var("ROS_AUTOMATIC_DISCOVERY_RANGE", "LOCALHOST");
+        let prefix = format!("/debug_hud_test_{}", std::process::id());
+        let mut config = DebugConfig::default();
+        for t in Topic::ALL {
+            let name = format!("{prefix}{}", config.topic(t));
+            config.set_topic(t, name);
+        }
+        config.track_parameters_service = format!("{prefix}/track/set_parameters");
+        let (mut hud, config) = RosSource::start(vec!["debug_hud".into()], config)?;
+
+        let context = Context::default_from_env()?;
+        let mut executor = context.create_basic_executor();
+        let helper = executor.create_node("debug_hud_test_helper")?;
+        let latched = QoSProfile::topics_default()
+            .reliable()
+            .transient_local()
+            .keep_last(10);
+        let statics: Publisher<TFMessage> =
+            helper.create_publisher(config.topic(Topic::TfStatic).qos(latched))?;
+        let tf: Publisher<TFMessage> = helper.create_publisher(config.topic(Topic::Tf))?;
+        let odom: Publisher<Odometry> = helper.create_publisher(config.topic(Topic::LocalOdom))?;
+        let lidar: Publisher<PointCloud2> = helper.create_publisher(config.topic(Topic::Lidar))?;
+        let _service = helper.create_service::<SetParameters, _>(
+            config.track_parameters_service.as_str(),
+            |request: SetParameters_Request| SetParameters_Response {
+                results: vec![SetParametersResult {
+                    successful: false,
+                    reason: format!(
+                        "live_swap is off ({})",
+                        request.parameters[0].value.string_value
+                    ),
+                }],
+            },
+        )?;
+        let spin = |executor: &mut Executor, ms| {
+            executor.spin(SpinOptions::default().timeout(Duration::from_millis(ms)));
+        };
+        let transform = |parent: &str, child: &str, x: f64, z: f64| {
+            let mut t = TransformStamped::default();
+            t.header.frame_id = parent.into();
+            t.child_frame_id = child.into();
+            t.transform.translation.x = x;
+            t.transform.translation.z = z;
+            t.transform.rotation.w = 1.0;
+            t
+        };
+        spin(&mut executor, 1500);
+        statics.publish(TFMessage {
+            transforms: vec![transform("base_link", "lidar_link", 0.0, 2.0)],
+        })?;
+        // The car drives +x at 1 m/s from x = 0, stamps 10.0 s to 10.5 s; the cloud is
+        // stamped 10.25 s, when the car was at x = 0.25.
+        let pose_at = |t: f64| {
+            let mut m = Odometry::default();
+            m.header.frame_id = "odom".into();
+            m.header.stamp.sec = t as i32;
+            m.header.stamp.nanosec = ((t.fract()) * 1e9).round() as u32;
+            m.pose.pose.position.x = t - 10.0;
+            m.pose.pose.orientation.w = 1.0;
+            m
+        };
+        for i in 0..=10 {
+            odom.publish(pose_at(10.0 + 0.05 * f64::from(i)))?;
+            spin(&mut executor, 20);
+        }
+        tf.publish(TFMessage {
+            transforms: vec![transform("map", "odom", 100.0, 0.0)],
+        })?;
+        let mut cloud = PointCloud2::default();
+        cloud.header.frame_id = "lidar_link".into();
+        cloud.header.stamp.sec = 10;
+        cloud.header.stamp.nanosec = 250_000_000;
+        cloud.fields = ["x", "y", "z"]
+            .iter()
+            .zip(0..)
+            .map(|(&name, i)| PointField {
+                name: name.into(),
+                offset: 4 * i,
+                datatype: 7,
+                count: 1,
+            })
+            .collect();
+        (cloud.width, cloud.height, cloud.point_step, cloud.row_step) = (1, 1, 12, 12);
+        cloud.data = [5.0_f32, 0.0, -1.0]
+            .iter()
+            .flat_map(|v| v.to_le_bytes())
+            .collect();
+        let mut scan = None;
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while scan.is_none() && Instant::now() < deadline {
+            lidar.publish(&cloud)?;
+            spin(&mut executor, 200);
+            scan = hud.take_scan();
+        }
+        let scan = scan.context("no scan from the cloud")?;
+        // 5 m ahead of the lidar, which is over base_link at x = 0.25: x = 5.25, z = 1.
+        let [x, _, z] = scan.cubes[0].centre;
+        assert!(
+            (x - 5.3).abs() < 0.11 && (z - 1.1).abs() < 0.11,
+            "{:?}",
+            scan.cubes
+        );
+        assert!((scan.car.position.x - 0.25).abs() < 1e-6);
+        let news = hud.drain(Instant::now());
+        assert!(
+            news.iter()
+                .any(|u| matches!(u, Update::MapToOdom(p) if (p.position.x - 100.0).abs() < 1e-9)),
+            "no map -> odom"
+        );
+
+        // Keys 1-4: the service's own answer comes back.
+        let mut reply = None;
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while reply.is_none() && Instant::now() < deadline {
+            if hud.swap_tracker(Tracker::Lqr).is_ok() {
+                for _ in 0..10 {
+                    spin(&mut executor, 100);
+                    reply = hud.drain(Instant::now()).into_iter().find_map(|u| match u {
+                        Update::SwapReply(r) => Some(r),
+                        _ => None,
+                    });
+                    if reply.is_some() {
+                        break;
+                    }
+                }
+            } else {
+                spin(&mut executor, 200);
+            }
+        }
+        let reply = reply.context("no answer to the swap")?;
+        assert_eq!(reply.asked, "lqr");
+        assert_eq!(reply.outcome, Err("live_swap is off (lqr)".into()));
+        Ok(())
+    }
 }
