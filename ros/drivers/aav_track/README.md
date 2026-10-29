@@ -57,7 +57,15 @@ ego.yaml; nothing copied):
 | `max_steering_rate` | the lower of vehicle.yaml `steer_rate` and ego.yaml `max_steering_rate` |
 
 From `config/track.yaml`: `lateral_accel` (1.0 m/s², slow for bends), `odom_timeout`, and
-each tracker's gains (`stanley.*`, `lqr.*`, `mpc.*`).
+each tracker's gains (`stanley.*`, `lqr.*`, `mpc.*`; every tracker's are declared).
+
+**Live swap (sim only).** `live_swap` (default false; `sim.launch.py` sets it through
+`navigation.launch.py live_swap:=true`, the car never does): `ros2 param set /track
+tracker lqr` builds the new tracker between ticks, gives it the path and its place on it
+(`hint`), starts lqr's and mpc's steering estimate at the last command (not the wheels'
+measured angle: the node doesn't read it), resets the loop statistics and logs the swap.
+Without `live_swap`, or for an unknown name, the change is refused with its reason. The
+debug HUD's panel shows the tracker from the status topic.
 
 Modules (all but `track_node.py` have no ROS):
 
@@ -102,4 +110,4 @@ runs it). In Gazebo: `pixi run controller-compare --trackers ...`.
 | `test_checks.py` | the goal and progress checks |
 | `test_speed.py` | cruise, slow before a bend, stop at the end |
 | `test_trackers.py` | each tracker on a pretend car (`sim_car.py`: ego's model, Gazebo's actuators): straight, a curve, a 1 m offset, at 1 and 3 m/s; limits; MPC's step time |
-| `test_track_node.py` | the node with ROS, on a free domain: a path to success, a newer path replacing the last without a stop, an empty path refused (skips without the built workspace) |
+| `test_track_node.py` | the node with ROS, on a free domain: a path to success, a newer path replacing the last without a stop, an empty path refused, a live swap refused without `live_swap` and carried out mid-path with it (skips without the built workspace) |

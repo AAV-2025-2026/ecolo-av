@@ -348,6 +348,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "debug-app"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ctrlc",
+ "debug-core",
+ "hud-app",
+ "hud-core",
+ "map-core",
+ "raylib",
+ "rclrs",
+ "ros-env",
+]
+
+[[package]]
+name = "debug-core"
+version = "0.1.0"
+dependencies = [
+ "hud-core",
+ "map-core",
+ "radar-clustering",
+ "serde",
+ "serde_yaml_ng",
+ "thiserror",
+]
+
+[[package]]
 name = "dispatch2"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -986,6 +1013,10 @@ name = "r-efi"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
+
+[[package]]
+name = "radar-clustering"
+version = "0.1.0"
 
 [[package]]
 name = "raylib"

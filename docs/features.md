@@ -68,7 +68,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Reversing, with a stop zone behind the car | Backing up allows a three-point turn, instead of getting stuck facing a wall. Off by default on the car (26 Oct) until the wheel sensors tell direction (H5) | Ben | 2026-10-22 | sim |
 | Obstacles in the costmap, and a stop zone (`collision_monitor`) | Radar and lidar points stop Nav2 before it hits something: 0.3-0.4 m short of a box on the bench | Ben | 2026-10-11 | sim |
 | Plan around obstacles (`plan_around:=true`) | The planner sees the radar and lidar too, so it steers round a box instead of only stopping | Ben | 2026-10-22 | sim |
-| [Trial path followers](trials.md) (`aav_track`, `tracker:=`) | To see what Stanley, LQR and MPC gain over pure pursuit on the same routes, beside MPPI and in Nav2's own chain, before any of them replaces the default | Ben | 2026-10-29 | built |
+| [Trial path followers](trials.md) (`aav_track`, `tracker:=`; in sim, swapped live: `ros2 param set /track tracker lqr`) | To see what Stanley, LQR and MPC gain over pure pursuit on the same routes, beside MPPI and in Nav2's own chain, before any of them replaces the default; the live swap compares them on the same drive, watched in the debug HUD | Ben | 2026-10-29 | built |
 | [Street routes](routes.md) (`aav_routes`, Valhalla) | Turns a destination into GPS waypoints along real streets, for Nav2 to follow | Ben | 2026-10-16 | sim |
 
 ## Control
@@ -154,6 +154,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | GO / STOP panel | The safety drivers get one answer at a glance: may the car move, and if not, why | Ben | 2026-10-24 | built |
 | Map window: offline street map and place search | A big-screen map of Nav2's plan over real streets, and a destination picked by name | Ben | 2026-10-15 | sim |
 | Car screens at login | The HUD and the map start on the car's two screens by themselves | Ben | 2026-10-15 | built |
+| [Debug HUD](hud.md#the-debug-hud) (`debug_hud`, `pixi run debugdemo`): the lidar's cubes in 3D, every localizer's car, every sensor from its own topic; keys 1-4 swap the sim's trial tracker | See what the car sees and what it thinks, side by side, to debug localization and the trackers without RViz | Ben | 2026-10-29 | built |
 
 ## Tools
 

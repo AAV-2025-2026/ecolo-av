@@ -1,11 +1,12 @@
 # The HUD (in-car screen)
 
-Two raylib programs in one package, `ros/hud/aav_hud`, each also its own ROS node:
+Three raylib programs in one package, `ros/hud/aav_hud`, each also its own ROS node:
 
 | Program | Node | Screen | Shows |
 |---|---|---|---|
 | [The HUD](#the-hud-in-rust-raylib) | `hud` | the small ~7" touchscreen | speed, GO / STOP, the e-stop button, the camera, the topics |
 | [The map window](#the-map-window-big-screen) | `map` | the big ~15" monitor | Nav2's map over Ottawa's streets, the plan, place search |
+| [The debug HUD](#the-debug-hud) | `debug_hud` | a laptop, or the Orin's screen | the lidar's cubes in 3D, where each localizer puts the car, every sensor |
 
 **Decided 11 October (Ben):** the HUD is Rust, raylib and rclrs. Its first screen runs
 since 15 October. It replaced the 2025-26 team's Flutter app (Q29), which is now
@@ -467,6 +468,85 @@ Try a search from a terminal: `cargo run --release -p map-core --example search 
 
 The sim's datum is the placeholder near Carleton, so in Gazebo "University Drive" lands
 inside the test lot. On the car, the datum is the real test site.
+
+## The debug HUD
+
+`ros/hud/aav_hud`, binary `debug_hud`: what the car **sees** and what it **thinks**, in
+one window. It only listens: it never touches an actuator. Ben, 29 Oct: "the low level
+hud ... should connect directly to the ros node at the sensor". Design:
+[2026-10-29_debug-hud.md](designs/2026-10-29_debug-hud.md).
+
+### What it shows
+
+| On screen | From | Frame |
+|---|---|---|
+| Cubes (20 cm), coloured by height: dark ground, then teal to pale | `/sensors/lidar/points` | lidar_link -> base_link -> odom |
+| The car: a blue box to scale (`vehicle.yaml`) | `/localization/odom/local` (EKF local) | odom |
+| EKF global (green), AMCL (orange), truth (white, sim): an outline, an arrow, a pole | their topics | map, through map -> odom |
+| Nav2's plan (yellow), the car's trail (grey) | `/plan`; EKF local | map; odom |
+| Legend, top left | each localizer's distance from EKF local, in metres | - |
+| Panel: IMU, GPS, lidar, wheels, wheel odom, vehicle, each estimate, map -> odom, tracker | each topic: OK, STALE or NEVER, and what it said | - |
+
+It publishes nothing. Its one call: keys 1-4 ask aav_track's parameter service for
+another tracker, in the simulator only (the design's D3: never an actuator).
+
+### How the cubes are placed
+
+```
+cloud (stamp t) --/tf_static--> base_link --EKF local's pose AT t--> odom --> 20 cm cubes
+```
+
+| Rule | Why |
+|---|---|
+| The pose at the cloud's **own stamp**, interpolated from the last second of poses | the cloud arrives late: at 3 m/s, 50 ms off moves walls 15 cm |
+| Clouds go through a newest-only slot to their own thread, never the shared queue | a slow window shows the newest scan, never a backlog |
+| Stamps are only compared with stamps | Gazebo stamps sim time; the window runs on wall time |
+| Over `max_cubes` (20,000), the nearest stay; the panel says how many were cut | a full VLP-16 at 100 m makes more |
+| Heights are above base_link; the VLP-16's 0.1 s sweep is ignored | the EKF is 2D; Gazebo's lidar has no sweep |
+
+### Keys
+
+| Key | Does |
+|---|---|
+| drag | turn the view round the car, tilt it |
+| right-drag (or shift-drag) | move (leaves the car: a FREE view) |
+| wheel | zoom |
+| C | CHASE (behind the car) / FOLLOW (fixed angle) / FREE |
+| R | back to CHASE |
+| 1 2 3 4 | swap the trial tracker: pure pursuit, Stanley, LQR, MPC. **Sim only**: refused unless `/system/source` says SIM, and the track node refuses unless `live_swap` is on (`sim.launch.py`). The answer shows under TRACKER |
+| F11 | full screen |
+
+### Run it
+
+```bash
+pixi run debugdemo               # Gazebo, RViz, the HUD, the map window and the debug HUD
+pixi run debug-hud-demo          # pretend data: no ROS (a walled lot, a ray-cast lidar)
+pixi run build && pixi run debug-hud    # the node alone, beside a running sim
+```
+
+`debugdemo` is `demo` with `amcl:=true tracker:=pure_pursuit reversing:=false`, so AMCL
+and the trial tracker have something to show. Swap the tracker live with keys 1-4, or
+from a terminal: `ros2 param set /track tracker lqr` (sim only, both ways).
+
+### How it's built
+
+| Part | What it does |
+|---|---|
+| `crates/debug-core` | the maths, no ROS, no raylib: the pose buffer, the frames, the cubes, the camera. `cargo test -p debug-core` |
+| `crates/debug-app` | the window and the node; the cubes drawn **instanced** (one mesh, one draw per height band) |
+| `config/debug_hud.yaml` | every topic name, the frames, `cube_size`, `max_cubes`, `pose_window`, `stale_after` |
+| PointCloud2 reader | `aav_radar_clusters`' own (`radar-clustering`), shared |
+
+On the car: not yet from a Mac over WiFi (about 9 MB/s of reliable lidar); on the Orin's
+own screen.
+
+### Tested (29 October, a Mac)
+
+| What | Result |
+|---|---|
+| `cargo test`: debug-core 38, debug-app 11 (with ROS: a cloud placed by the pose at its stamp, map -> odom, a swap's answer, through the real node) | all pass |
+| `live_sim` against headless Gazebo, test lot, `amcl:=true tracker:=pure_pursuit`, driving a Nav2 goal | 10 scans a second, ~6,000-7,000 cubes from ~16,000-19,000 points, none cut; every panel row OK; EKF global 0.02 m, truth 0.24 m, AMCL 0.70 m from EKF local; key 3's swap to lqr accepted mid-path, which then drove 9 mm off the path |
+| The window itself, `pixi run debugdemo`, the 20,000-cube drawing test | **untested**: the Mac's screen was locked all night, and no window can open then |
 
 ## The Flutter app (2025-26): archived
 

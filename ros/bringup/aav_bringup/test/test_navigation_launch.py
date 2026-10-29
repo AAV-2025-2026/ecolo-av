@@ -270,6 +270,8 @@ def test_a_tracker_takes_follow_path_with_nav2s_own_checks():
     assert ('cmd_vel', 'cmd_vel_nav') in remaps(nodes['controller_server'])
     p = given(nodes['track'])
     assert p['tracker'] == 'lqr'
+    assert p['live_swap'] is False          # only the sim swaps trackers live
+    assert given(nav_nodes(tracker='lqr', live_swap='true')['track'])['live_swap'] is True
     assert p['cruise_speed'] == 3.0
     assert p['xy_goal_tolerance'] == 1.0 and p['yaw_goal_tolerance'] == 0.75
     assert p['odom_topic'] == '/localization/odom/local'
@@ -309,6 +311,7 @@ def test_amcl_needs_the_lidar_and_never_publishes_map_to_odom():
 
 def test_the_sim_passes_the_trials_on_and_checks_them():
     assert sent_to_navigation(SIM)['tracker'] == 'none'
+    assert sent_to_navigation(SIM)['live_swap'] == 'true'
     assert sent_to_navigation(SIM, tracker='mpc', reversing='false')['tracker'] == 'mpc'
     with pytest.raises(ValueError, match='reversing:=false'):
         sent_to_navigation(SIM, tracker='mpc')          # the sim reverses by default

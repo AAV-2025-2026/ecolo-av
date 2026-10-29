@@ -20,6 +20,7 @@ try:
     from nav_msgs.msg import Odometry
     import rclpy
     from rclpy.action import ActionClient
+    from rclpy.parameter import Parameter
     from rclpy.executors import SingleThreadedExecutor
     HAVE_ROS = True
 except ImportError:      # tools/test.sh, outside pixi's ROS
@@ -71,12 +72,13 @@ def goal(length, y=0.0):
     return g
 
 
-@pytest.fixture
-def ros():
+@pytest.fixture(params=[False])
+def ros(request):
     # This computer only, on a domain nobody else is using (CLAUDE.md: shared machines).
     os.environ['ROS_AUTOMATIC_DISCOVERY_RANGE'] = 'LOCALHOST'
     rclpy.init(domain_id=free_domain())
-    node = Track()
+    overrides = [Parameter('live_swap', value=True)] if request.param else []
+    node = Track(parameter_overrides=overrides)
     helper = rclpy.create_node('track_test')
     executor = SingleThreadedExecutor()
     executor.add_node(node)
@@ -136,3 +138,30 @@ def test_an_empty_path_is_refused(ros):
     result = handle.get_result_async()
     assert run(result.done, 5.0)
     assert result.result().result.error_code == FollowPath.Result.INVALID_PATH
+
+
+def test_the_tracker_is_not_swapped_live_unless_asked(ros):
+    node, _, _, _ = ros
+    result = node.set_parameters([Parameter('tracker', value='lqr')])[0]
+    assert not result.successful and 'live_swap' in result.reason
+    assert node.tracker.name == 'pure_pursuit'
+
+
+@pytest.mark.parametrize('ros', [True], indirect=True)
+def test_a_live_swap_mid_path_carries_on(ros):
+    node, car, client, run = ros
+    handle = send(client, run, goal(30.0))
+    assert run(lambda: car.v > 0.5, 10.0)
+    hint = node.job.hint
+    result = node.set_parameters([Parameter('tracker', value='lqr')])[0]
+    assert result.successful
+    assert node.tracker.name == 'lqr'
+    assert node.tracker.path is node.job.path and node.tracker.hint == hint
+    assert node.tracker.lag.angle == node.steer
+    bad = node.set_parameters([Parameter('tracker', value='mppi')])[0]
+    assert not bad.successful and node.tracker.name == 'lqr'
+    # It keeps driving, with no stop, on the new tracker.
+    run(lambda: False, 1.0)
+    assert car.v > 0.4
+    cancel = handle.cancel_goal_async()
+    assert run(cancel.done, 5.0)

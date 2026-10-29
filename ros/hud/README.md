@@ -10,7 +10,7 @@ Q29). The 2025-26 Flutter app and its Flask back end were archived on 25 Oct
 
 | Package | What it is |
 |---|---|
-| [aav_hud](./aav_hud/README.md) | two raylib screens: `hud` (status, e-stop, GO/STOP) and `map` (Nav2 map, place search, `/goal_pose`). Logic crates: [hud-core](./aav_hud/crates/hud-core/README.md), [map-core](./aav_hud/crates/map-core/README.md) |
+| [aav_hud](./aav_hud/README.md) | three raylib screens: `hud` (status, e-stop, GO/STOP), `map` (Nav2 map, place search, `/goal_pose`) and `debug_hud` (the lidar's cubes, the localizers, every sensor; listens only). Logic crates: [hud-core](./aav_hud/crates/hud-core/README.md), [map-core](./aav_hud/crates/map-core/README.md), [debug-core](./aav_hud/crates/debug-core/README.md) |
 
 ## Invariants
 
@@ -25,4 +25,4 @@ Q29). The 2025-26 Flutter app and its Flask back end were archived on 25 Oct
 
 ## Verification
 
-- Run: `pixi run test` (also runs `cargo test -p hud-core -p map-core`).
+- Run: `pixi run test` (also runs `cargo test -p hud-core -p map-core -p debug-core`).

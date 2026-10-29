@@ -14,6 +14,10 @@ Publishes   cmd_vel_nav                 geometry_msgs/TwistStamped (Twist with s
             drivers/nav/track/status    diagnostic_msgs/DiagnosticStatus, every tick: the
                                         tracker, loop time, missed ticks, cross track, steering
 Serves      nothing else; calls nothing.
+Parameters  tracker can be changed while it runs, only with live_swap:=true (sim.launch.py
+            sets it; the car never): `ros2 param set /track tracker lqr`. The new tracker
+            is built between ticks (one thread), takes the path and its place on it,
+            starts its steering from the last command, and the loop statistics reset.
 
 navigation.launch.py tracker:=pure_pursuit|stanley|lqr|mpc starts it, and renames
 controller_server's own action follow_path_unused, so bt_navigator's FollowPath comes here.
@@ -44,6 +48,7 @@ from diagnostic_msgs.msg import DiagnosticStatus, KeyValue
 from geometry_msgs.msg import Twist, TwistStamped
 from nav2_msgs.action import FollowPath
 from nav_msgs.msg import Odometry
+from rcl_interfaces.msg import SetParametersResult
 import rclpy
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.executors import ExternalShutdownException
@@ -82,8 +87,8 @@ class Job:
 
 class Track(Node):
 
-    def __init__(self):
-        super().__init__('track')
+    def __init__(self, **kwargs):
+        super().__init__('track', **kwargs)
         p = {name: self.declare_parameter(name, default).value for name, default in (
             ('tracker', 'pure_pursuit'), ('rate_hz', 20.0),
             ('odom_topic', '/localization/odom/local'), ('odom_frame', 'odom'),
@@ -98,17 +103,14 @@ class Track(Node):
         name = p['tracker']
         if name not in TRACKER_PARAMS:
             raise ValueError(f'tracker:={name}: pick one of {", ".join(TRACKER_PARAMS)}')
-        own = {k: self.declare_parameter(f'{name}.{k}', v).value
-               for k, v in TRACKER_PARAMS[name].items()}
-        if name == 'pure_pursuit':
-            own = {'lookahead_min': p['lookahead_min'], 'lookahead_max': p['lookahead_max'],
-                   'lookahead_time': p['lookahead_time']}
-        if name == 'mpc':
-            own['period'] = 1.0 / p['rate_hz']
+        # Every tracker's own parameters, so a live swap finds them (config/track.yaml).
+        self.own = {n: {k: self.declare_parameter(f'{n}.{k}', v).value
+                        for k, v in params.items()}
+                    for n, params in TRACKER_PARAMS.items()}
+        self.live_swap = bool(self.declare_parameter('live_swap', False).value)
         self.limits = trackers.Limits(p['wheelbase'], p['max_steering_angle'],
                                       p['max_steering_rate'])
-        model = from_config(vehicle_file.load()) if name in ('lqr', 'mpc') else None
-        self.tracker = trackers.make(name, self.limits, model, **own)
+        self.tracker = self.build_tracker(name)
         self.speed = SpeedPolicy(cruise=p['cruise_speed'], accel=p['acceleration'],
                                  max_brake=p['max_brake'], lateral_accel=p['lateral_accel'])
         self.goal = GoalCheck(p['xy_goal_tolerance'], p['yaw_goal_tolerance'])
@@ -137,10 +139,61 @@ class Track(Node):
             goal_callback=lambda _: GoalResponse.ACCEPT,
             cancel_callback=lambda _: CancelResponse.ACCEPT)
         self.create_timer(self.period, self.tick)
+        self.add_on_set_parameters_callback(self.on_parameters)
         self.get_logger().info(
             f'{name} follows Nav2\'s paths at {p["rate_hz"]:g} Hz, up to '
             f'{p["cruise_speed"]:g} m/s; done within {p["xy_goal_tolerance"]:g} m and '
             f'{p["yaw_goal_tolerance"]:g} rad')
+
+    # --- the tracker, and swapping it live (sim only) -----------------------------------
+
+    def build_tracker(self, name):
+        """Return a new tracker called `name`, with its parameters as declared at start."""
+        own = dict(self.own[name])
+        p = self.p
+        if name == 'pure_pursuit':
+            own = {'lookahead_min': p['lookahead_min'], 'lookahead_max': p['lookahead_max'],
+                   'lookahead_time': p['lookahead_time']}
+        if name == 'mpc':
+            own['period'] = 1.0 / p['rate_hz']
+        model = from_config(vehicle_file.load()) if name in ('lqr', 'mpc') else None
+        return trackers.make(name, self.limits, model, **own)
+
+    def on_parameters(self, params):
+        """Refuse a new tracker unless live_swap is on; otherwise swap to it at once."""
+        for param in params:
+            if param.name != 'tracker':
+                continue
+            name = param.value
+            if not self.live_swap:
+                return SetParametersResult(
+                    successful=False,
+                    reason='live_swap is off: trackers change only at launch on the car')
+            if name not in TRACKER_PARAMS:
+                return SetParametersResult(
+                    successful=False, reason=f'pick one of {", ".join(TRACKER_PARAMS)}')
+            try:
+                new = self.build_tracker(name)
+            except (ValueError, RuntimeError) as e:
+                return SetParametersResult(successful=False, reason=str(e))
+            self.swap(new)
+        return SetParametersResult(successful=True)
+
+    def swap(self, new):
+        """Put `new` in the old tracker's place: the path, its place on it, the steering."""
+        old = self.tracker
+        job = self.job
+        if job is not None:
+            new.reset(job.path)
+            new.hint = job.hint
+        # lqr and mpc estimate the wheels' angle (SteerLag): start it at the last command.
+        lag = getattr(new, 'lag', None)
+        if lag is not None:
+            lag.angle = self.steer
+        self.tracker = new
+        self.missed, self.loop_max, self.last_tick = 0, 0.0, None
+        self.get_logger().info(f'tracker swapped live: {old.name} -> {new.name}'
+                               f'{" mid-path" if job is not None else ""}')
 
     # --- listening ---------------------------------------------------------------------
 

@@ -8,7 +8,10 @@
 #
 #   pixi run demo                 # windowed
 #   pixi run demo fullscreen      # HUD and map full-screen
-#   Ctrl-C                        # stops all four
+#   pixi run debugdemo            # the same, plus the debug HUD (tools/demo_all.sh debug):
+#                                 # the lidar's cubes, the localizers, every sensor; with
+#                                 # AMCL and a trial tracker on (docs/hud.md)
+#   Ctrl-C                        # stops them all
 #
 # Portable: bash 3.2 (a Mac), no GNU-only flags.
 set -u
@@ -17,7 +20,27 @@ here=$(cd "$(dirname "$0")/.." && pwd)
 cd "$here"
 
 full=false
-[ "${1:-}" = "fullscreen" ] && full=true
+debug=false
+for arg in "$@"; do
+  case "$arg" in
+    fullscreen) full=true ;;
+    debug) debug=true ;;
+    *) echo "usage: tools/demo_all.sh [debug] [fullscreen]" >&2; exit 2 ;;
+  esac
+done
+# The debug HUD's run: AMCL beside the global EKF and a trial tracker, so every layer
+# and the panel's tracker have something to show (docs/designs/2026-10-29_debug-hud.md).
+# The test lot already has nav and the lidar on, as amcl:=true needs.
+sim_args="world:=test_lot"
+steps=4
+if $debug; then
+  sim_args="$sim_args amcl:=true tracker:=pure_pursuit reversing:=false"
+  steps=5
+fi
+
+# Gazebo's transport finds its own parts by multicast, which a Mac on some networks (or
+# none) refuses ("No route to host"); on this computer only, it needs none.
+export GZ_IP="${GZ_IP:-127.0.0.1}"
 
 pids=""
 cleanup() {
@@ -36,20 +59,26 @@ for f in maps/streets/ottawa.pmtiles:get-street-map maps/places/ottawa.db:get-pl
   [ -f "${f%%:*}" ] || echo "note: no ${f%%:*}, so the map window misses it: run pixi run ${f##*:} once"
 done
 
-echo "1/4  Gazebo (the car, in the test lot) — give it ~20s to spawn..."
-start tools/ros.sh --local ros2 launch aav_bringup sim.launch.py world:=test_lot
+echo "1/$steps  Gazebo (the car, in the test lot) — give it ~20s to spawn..."
+# shellcheck disable=SC2086  # sim_args is several words on purpose
+start tools/ros.sh --local ros2 launch aav_bringup sim.launch.py $sim_args
 sleep 20
 
-echo "2/4  nav screen (RViz: map, costmaps, path, car)..."
+echo "2/$steps  nav screen (RViz: map, costmaps, path, car)..."
 start tools/ros.sh --local rviz2 -d ros/bringup/aav_bringup/rviz/drive.rviz
 
-echo "3/4  HUD (in-car screen)..."
+echo "3/$steps  HUD (in-car screen)..."
 start tools/ros.sh --local ros2 launch aav_hud hud.launch.py fullscreen:=$full
 
-echo "4/4  street-map window..."
+echo "4/$steps  street-map window..."
 start tools/ros.sh --local ros2 launch aav_hud map.launch.py fullscreen:=$full
 
+if $debug; then
+  echo "5/$steps  debug HUD (the lidar's cubes, the localizers, every sensor)..."
+  start tools/ros.sh --local ros2 launch aav_hud debug_hud.launch.py
+fi
+
 echo
-echo "All four started, localhost-only (the real car is untouched)."
+echo "All $steps started, localhost-only (the real car is untouched)."
 echo "Press Ctrl-C here to stop everything."
 wait
