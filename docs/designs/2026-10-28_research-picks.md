@@ -26,6 +26,34 @@ fine for us; "no C++ of our own").
 | `mpc_lateral_controller` (and its pure pursuit) | MPC steering, for the plan's step 5 |
 | `ndt_scan_matcher` + `ekf_localizer` | lidar-map localization (pick 2) |
 
+### Our own, in Rust (Ben, 28 Oct)
+
+"Take ideas from that and rebuild them in rust": our own code from their design, not a
+port. Where we follow their design closely, `PROVENANCE.md` says so and keeps their
+Apache-2.0 notice.
+
+| Part | Ours, where | From |
+|---|---|---|
+| Speed: feed-forward + PI, smooth stop | the bridge, then `spine-core` | ours (27 Oct); the smooth stop from Autoware |
+| MPC steering | a crate, then a node (trial: `docs/designs/2026-10-29_trials.md`) | Autoware's design |
+| NDT matching | a crate, then a node | Biber 2003; Magnusson's thesis; Autoware's matcher to check against |
+| Occupancy cubes | `hud-core`, then a node | Tesla's idea; plain geometry, no learning |
+
+The crates, checked on crates.io on 29 Oct:
+
+| Crate | Version | Licence | Last release | For | On the ESP32? |
+|---|---|---|---|---|---|
+| nalgebra | 0.35.0 | Apache-2.0 | May 2026 | matrices, poses | yes (`no_std`) |
+| faer | 0.24.4 | MIT | Jun 2026 | big dense maths | no |
+| argmin | 0.11.0 | MIT or Apache-2.0 | Sep 2025 | NDT's optimiser | no |
+| kiddo | 6.3.0 | MIT or Apache-2.0 | Sep 2026 | k-d tree: ICP, cubes | no |
+| clarabel | 0.11.1 | Apache-2.0 | Jun 2025 | MPC's solver, pure Rust | no |
+| osqp | 1.0.1 | Apache-2.0 | Apr 2025 | MPC's solver, wraps C | no |
+| ros_pointcloud2 | 0.6.0 | MIT or Apache-2.0 | Oct 2026 | PointCloud2 in rclrs | no |
+
+**Picked:** Clarabel over osqp for MPC. It's pure Rust, so there's no C to build, and it's
+more widely used (760k downloads in 90 days against 130k). Every licence fits a public repo.
+
 ## 2. Lidar localization: map the lot with KISS-ICP, then locate in it
 
 No RTK, so the centimetres have to come from what the lidar sees. Our VLP-16 is a 3D

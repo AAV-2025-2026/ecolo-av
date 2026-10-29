@@ -363,7 +363,13 @@ work on." His order, with the work under way:
       runs 2.5. Try again when coremltools passes 9.0: newer numpy, run `export-coreml`.
 - [ ] **Four research picks** (Ben, 28 Oct; details: `docs/designs/2026-10-28_research-picks.md`):
       1. **Autoware**: borrow its designs (PID + feed-forward speed with a smooth stop,
-         MPC steering, NDT + EKF localization), not the whole stack;
+         MPC steering, NDT + EKF localization), not the whole stack. **Our own versions,
+         in Rust** (Ben, 28 Oct: "take ideas from that and rebuild them in rust", "lets
+         write our own version of it all"): the speed loop with a smooth stop
+         (`spine-core`), NDT matching, MPC steering, the occupancy cubes. Cite what we read
+         (Autoware is Apache-2.0; the NDT papers) in `PROVENANCE.md` and the report: the
+         feed-forward + PI was our plan (27 Oct) before we read Autoware; MPC, NDT and the
+         smooth stop came from reading it. Crates, checked 29 Oct: see the research picks;
       2. **lidar localization**: map the lot with KISS-ICP from a VLP-16 bag, then locate
          by NDT or ICP; no RTK on this car, so this is where centimetres come from;
       3. **a safety argument**: Simplex (we have most parts) and RSS (stopping distance
