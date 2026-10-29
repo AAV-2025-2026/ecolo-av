@@ -194,6 +194,9 @@ def launch_setup(context):
                                max_speed=arg('sim_speed'),
                                reversing=str(flag['reversing']).lower(),
                                controller=controller, tracker=tracker,
+                               # A trial tracker may be swapped live here (the debug
+                               # HUD's panel shows which): Gazebo only, never the car.
+                               live_swap='true',
                                amcl=amcl, amcl_x=0.0, amcl_y=arg('start_y'),
                                amcl_yaw=arg('start_yaw'),
                                plan_around=str(flag['plan_around']).lower()))

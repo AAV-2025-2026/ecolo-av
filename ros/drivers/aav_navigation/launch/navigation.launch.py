@@ -5,7 +5,8 @@ Nav2 as one more driver: goals in, /drivers/nav/cmd_vel (TwistStamped) out to tw
       [radar:=false] [lidar:=false] [collision_monitor:=<radar or lidar>]
       [camera_obstacles:=false] [ghost:=false]
       [reversing:=false] [max_speed:=] [controller:=mppi] [plan_around:=true]
-      [tracker:=none] [amcl:=false] [amcl_x:=0.0] [amcl_y:=0.0] [amcl_yaw:=0.0]
+      [tracker:=none] [live_swap:=false] [amcl:=false] [amcl_x:=0.0] [amcl_y:=0.0]
+      [amcl_yaw:=0.0]
       [use_sim_time:=false]
       [autostart:=true]
 
@@ -41,6 +42,8 @@ Trials (docs/trials.md), each beside the default and scored by pixi run controll
                           renamed follow_path_unused. The same planner, smoother,
                           collision_monitor and twist_mux slot. Forward only: refused with
                           reversing:=true. tracker:=none (the default): controller_server
+  live_swap:=true         the tracker can change while it runs (`ros2 param set /track
+                          tracker lqr`); sim.launch.py sets it, the car never does
   amcl:=true              stock nav2_amcl on the map and /sensors/lidar/scan (so only with
                           lidar:=true), from amcl_x, amcl_y, amcl_yaw (map frame), with its
                           own lifecycle manager. tf_broadcast false: ekf_global keeps
@@ -90,6 +93,7 @@ import tempfile
 from aav_description import vehicle
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
+from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.descriptions import ParameterFile
@@ -228,7 +232,9 @@ def nodes(context):
             package='aav_track', executable='track', name='track', output='screen',
             parameters=[own, vehicle.track_params(nav2, cfg, ego,
                                                   float(speed) if speed else None),
-                        {'tracker': tracker, 'use_sim_time': use_sim_time}]))
+                        {'tracker': tracker, 'use_sim_time': use_sim_time,
+                         'live_swap': IfCondition(
+                             LaunchConfiguration('live_swap')).evaluate(context)}]))
     if amcl:
         config = f'{share}/config/amcl.yaml'
         start = {'set_initial_pose': True, 'use_sim_time': use_sim_time}
@@ -308,6 +314,10 @@ def generate_launch_description():
                               description="a trial path follower in controller_server's "
                                           'place (aav_track): ' + ', '.join(vehicle.TRACKERS) +
                                           '. docs/trials.md'),
+        DeclareLaunchArgument('live_swap', default_value='false',
+                              description='true (sim.launch.py sets it): the tracker can be '
+                                          'changed while it runs, `ros2 param set /track '
+                                          'tracker lqr`. Never on the car'),
         DeclareLaunchArgument('amcl', default_value='false',
                               description='true (with lidar:=true): stock AMCL as a trial, '
                                           'scored only: /localization/amcl/pose'),
