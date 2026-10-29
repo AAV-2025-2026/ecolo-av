@@ -325,6 +325,22 @@ work on." His order, with the work under way:
       jog controls, and the stall search. Check the 2025-26 team's clamps first
       (`JRK_STEER_MIN`/`MAX`, `DAC_MAX_CAP` in `hardware_configs.h`). Steering and braking
       limits on the real car are the hardware lead's to sign off.
+- [ ] **Tesla-style cubes on our HUD, then on the camera picture** (Ben, 28 Oct: "I want
+      to see the occupancy network", "put it on a hud like we have", "merge the voxels with
+      the camera feed to figure out what is where"). No new install: not OctoMap, which
+      would bring PCL back (tried 28 Oct, undone). Gazebo first, where every pose is exact:
+      1. **cubes from the lidar:** a voxel grid in Rust in `hud-core` (no ROS, own tests):
+         each `/sensors/lidar/points` point into its 20 cm cube; cubes not seen for a while fade;
+      2. **draw them:** raylib draws 3D cubes; colour by height, like Tesla's view;
+      3. **onto the camera:** project each cube into the HUD's camera picture (`picture.rs`),
+         from where the camera sits relative to the lidar; colour by distance;
+      4. **what is where:** each RF-DETR box gets the distance of the cubes inside it
+         ("stop sign, 14 m").
+      On the car, 3 and 4 need camera-to-lidar calibration (research pick 4). Nav2's own
+      `VoxelLayer` is a separate choice (it changes driving): only if 2D misses something.
+- [ ] **numpy in the `ml` environment** (Ben, 28 Oct: "do we need to upgrade?"): not now.
+      The pin (`<=2.3.5`) keeps `export-coreml` working; the everyday environment already
+      runs 2.5. Try again when coremltools passes 9.0: newer numpy, run `export-coreml`.
 - [ ] **Four research picks** (Ben, 28 Oct; details: `docs/designs/2026-10-28_research-picks.md`):
       1. **Autoware**: borrow its designs (PID + feed-forward speed with a smooth stop,
          MPC steering, NDT + EKF localization), not the whole stack;
