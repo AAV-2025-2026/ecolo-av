@@ -15,6 +15,8 @@ One leg is one Nav2 goal. It records, on Gazebo's clock:
   cpu       percent or None         the follower's share of one core over the leg:
                                     controller_server's, or aav_track's with a tracker
   amcl      [(t, x, y, yaw)]        optional: AMCL's pose (/localization/amcl/pose), a trial
+  ndt       [(t, x, y, yaw)]        optional: NDT's pose (/localization/ndt/pose), a trial
+  ndt_status [(t, ok, match_ms, restarts)]  optional: NDT's status, one per cloud
   loops     [(t, loop_ms, loop_ms_max, missed)]  optional: aav_track's status, each tick
   obstacle  (x, y, side) or None    a square box on the road, m
   body      (length, width, rear_overhang)   the car's outline (vehicle.yaml), m
@@ -205,6 +207,74 @@ def belief_errors(truth, belief):
     return gaps, turns
 
 
+# The localizers' grid (the NDT design: every localizer resampled onto one 10 Hz grid, so
+# one that publishes more often isn't scored on more samples) and "lost": over 1 m off.
+GRID_HZ = 10.0
+LOST_M = 1.0
+
+
+def grid_errors(truth, poses, start, end, hz=GRID_HZ):
+    """
+    Return [(t, gap m or None)]: on a grid from start to end, the newest pose so far.
+
+    Each pose holds until the next (what a reader of the topic would have); None until
+    the first. The gap is from the truth nearest in time.
+    """
+    if not truth or end <= start:
+        return []
+    times = [t for t, *_ in truth]
+    stamps = [t for t, *_ in poses]
+    out = []
+    for k in range(int((end - start) * hz) + 1):
+        t = start + k / hz
+        i = bisect.bisect_right(stamps, t) - 1
+        if i < 0:
+            out.append((t, None))
+            continue
+        _, x, y, _ = poses[i]
+        j = bisect.bisect_left(times, t)
+        near = min((n for n in (j - 1, j) if 0 <= n < len(truth)),
+                   key=lambda n: abs(times[n] - t))
+        _, tx, ty, _ = truth[near]
+        out.append((t, math.hypot(x - tx, y - ty)))
+    return out
+
+
+def lost_time(grid, over=LOST_M, hz=GRID_HZ):
+    """Return (s lost in all, the longest stretch lost s): no pose yet, or over `over` m off."""
+    total = longest = run = 0
+    for _, gap in grid:
+        if gap is None or gap > over:
+            run += 1
+            total += 1
+            longest = max(longest, run)
+        else:
+            run = 0
+    return total / hz, longest / hz
+
+
+def localizer_row(name, truth, poses, start, end):
+    """
+    Return one localizer's numbers, their keys starting with `name`.
+
+    Each pose against the truth (mean, worst, heading worst, how many), and on the 10 Hz
+    grid (mean, time lost over 1 m, the longest of those: the time to recover).
+    """
+    gaps, turns = belief_errors(truth, poses)
+    grid = grid_errors(truth, sorted(poses), start, end)
+    held = [g for _, g in grid if g is not None]
+    lost, recover = lost_time(grid)
+    return {
+        f'{name}_samples': len(gaps),
+        f'{name}_mean_m': sum(gaps) / len(gaps) if gaps else math.nan,
+        f'{name}_max_m': max(gaps) if gaps else math.nan,
+        f'{name}_heading_max_deg': math.degrees(max(turns)) if turns else math.nan,
+        f'{name}_grid_mean_m': sum(held) / len(held) if held else math.nan,
+        f'{name}_lost_s': lost if grid else math.nan,
+        f'{name}_recover_s': recover if grid else math.nan,
+    }
+
+
 def rms_rate(samples):
     """Return the root mean square (per s) of how fast a value changes, from [(t, value)]."""
     rates = [(b[1] - a[1]) / (b[0] - a[0]) for a, b in zip(samples, samples[1:])
@@ -272,16 +342,26 @@ def summary(leg):
         'belief_max_m': max(lost) if lost else math.nan,
         'belief_heading_max_deg': math.degrees(max(turned)) if turned else math.nan,
     }
-    if leg.get('amcl') is not None:
-        # The trial localizer, scored as the EKF is. Few samples parked: it updates only
-        # once the car has moved (AMCL's update_min_d).
-        gaps, turns = belief_errors(truth, leg['amcl'])
+    trials = [n for n in ('amcl', 'ndt') if leg.get(n) is not None]
+    for name in trials:
+        # A trial localizer, scored as the EKF is. AMCL has few samples parked: it updates
+        # only once the car has moved (its update_min_d).
+        row.update(localizer_row(name, truth, leg[name], leg['start'], leg['end']))
+    if trials:
+        # The EKF on the same grid, to be fair to both.
+        ekf = localizer_row('belief', truth, leg.get('belief', []), leg['start'], leg['end'])
+        row.update({k: ekf[k] for k in ('belief_mean_m', 'belief_grid_mean_m',
+                                        'belief_lost_s')})
+    status = leg.get('ndt_status')
+    if status:
+        # One status per cloud: the share that gave a pose, and the match's own time
+        # (wall clock: simulated time could hide a slow match).
+        times = [ms for _, _, ms, _ in status]
         row.update({
-            'amcl_samples': len(gaps),
-            'amcl_mean_m': sum(gaps) / len(gaps) if gaps else math.nan,
-            'amcl_max_m': max(gaps) if gaps else math.nan,
-            'amcl_heading_max_deg': math.degrees(max(turns)) if turns else math.nan,
-            'belief_mean_m': sum(lost) / len(lost) if lost else math.nan,
+            'ndt_available': sum(1 for _, ok, _, _ in status if ok) / len(status),
+            'ndt_match_ms_mean': sum(times) / len(times),
+            'ndt_match_ms_max': max(times),
+            'ndt_restarts': max(r for *_, r in status) - min(r for *_, r in status),
         })
     loops = leg.get('loops')
     if loops:
@@ -328,6 +408,22 @@ COLUMNS = [
     ('amcl_max_m', 'Where AMCL put the car: off, worst (m)', '{:.2f}'),
     ('amcl_heading_max_deg', "AMCL's heading: off, worst (deg)", '{:.0f}'),
     ('amcl_samples', 'AMCL poses', '{:d}'),
+    ('ndt_mean_m', 'Where NDT put the car: off, mean (m)', '{:.3f}'),
+    ('ndt_max_m', 'Where NDT put the car: off, worst (m)', '{:.2f}'),
+    ('ndt_heading_max_deg', "NDT's heading: off, worst (deg)", '{:.1f}'),
+    ('ndt_samples', 'NDT poses', '{:d}'),
+    ('ndt_available', 'NDT: share of clouds that gave a pose', '{:.0%}'),
+    ('ndt_match_ms_mean', "NDT's match: mean (ms, wall clock)", '{:.1f}'),
+    ('ndt_match_ms_max', "NDT's match: worst (ms, wall clock)", '{:.1f}'),
+    ('ndt_restarts', 'NDT restarts after LOST', '{:d}'),
+    ('belief_grid_mean_m', 'The EKF on the 10 Hz grid: off, mean (m)', '{:.2f}'),
+    ('amcl_grid_mean_m', 'AMCL on the 10 Hz grid: off, mean (m)', '{:.2f}'),
+    ('ndt_grid_mean_m', 'NDT on the 10 Hz grid: off, mean (m)', '{:.3f}'),
+    ('belief_lost_s', 'The EKF over 1 m off (s)', '{:.1f}'),
+    ('amcl_lost_s', 'AMCL over 1 m off, or none yet (s)', '{:.1f}'),
+    ('ndt_lost_s', 'NDT over 1 m off, or none yet (s)', '{:.1f}'),
+    ('amcl_recover_s', 'AMCL: the longest of those (s)', '{:.1f}'),
+    ('ndt_recover_s', 'NDT: the longest of those (s)', '{:.1f}'),
     ('loop_ms_mean', "The tracker's tick: mean (ms)", '{:.2f}'),
     ('loop_ms_max', "The tracker's tick: worst (ms)", '{:.1f}'),
     ('missed_ticks', 'Missed 20 Hz ticks', '{:d}'),

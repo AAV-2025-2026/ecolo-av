@@ -376,6 +376,40 @@ def test_amcl_and_the_trackers_tick_are_scored_when_recorded():
     assert 'amcl_mean_m' not in plain and 'loop_ms_mean' not in plain
 
 
+def test_the_grid_holds_each_pose_until_the_next_and_counts_time_lost():
+    truth = [(t / 10.0, t / 10.0, 0.0, 0.0) for t in range(101)]      # 1 m/s east, 10 s
+    # A pose at 1 s, then nothing until 5 s: held, it falls behind; then right again.
+    poses = [(1.0, 1.0, 0.0, 0.0), (5.0, 5.0, 0.0, 0.0), (9.0, 9.0, 0.0, 0.0)]
+    grid = m.grid_errors(truth, poses, 0.0, 10.0)
+    assert len(grid) == 101 and grid[0][1] is None
+    assert grid[30][1] == pytest.approx(2.0)          # at 3 s, the 1 s pose: 2 m behind
+    lost, recover = m.lost_time(grid)
+    # None for 0-0.9 s (10 samples), over 1 m for 2.1-4.9 s and 6.1-8.9 s (29 each).
+    assert lost == pytest.approx(1.0 + 2.9 + 2.9)
+    assert recover == pytest.approx(2.9)
+
+
+def test_ndt_is_scored_with_its_availability_match_time_and_the_ekf_on_the_same_grid():
+    truth = [(float(t), float(t), 0.0, 0.0) for t in range(11)]
+    leg = {'truth': truth, 'plans': [(0.0, [(0.0, 0.0), (10.0, 0.0)])], 'steering': [],
+           'asked': [], 'start': 0.0, 'end': 10.0, 'goal': (10.0, 0.0, 0.0),
+           'reached': True, 'body': (2.0, 1.0, 0.2),
+           'belief': [(float(t), t + 0.2, 0.0, 0.0) for t in range(11)],
+           'ndt': [(float(t), t + 0.01, 0.0, 0.0) for t in range(11)],
+           'ndt_status': [(float(t), t != 3, 4.0 + t, 0 if t < 5 else 1) for t in range(10)]}
+    row = m.summary(leg)
+    assert row['ndt_samples'] == 11
+    assert row['ndt_mean_m'] == pytest.approx(0.01)
+    assert row['ndt_available'] == pytest.approx(0.9)
+    assert row['ndt_match_ms_mean'] == pytest.approx(8.5)
+    assert row['ndt_match_ms_max'] == pytest.approx(13.0)
+    assert row['ndt_restarts'] == 1
+    assert row['ndt_lost_s'] == pytest.approx(0.0)
+    assert row['belief_grid_mean_m'] > row['ndt_grid_mean_m']
+    assert 'amcl_mean_m' not in row
+    assert '90%' in m.table([('pure_pursuit', row)])
+
+
 def test_runs_combine_into_a_mean_and_a_spread():
     rows = [{'reached': True, 'time_s': 30.0, 'stops': 1, 'off_path_mean_m': 0.1,
              'end_error_m': 0.5, 'clearance_m': math.nan, 'cpu_percent': None},

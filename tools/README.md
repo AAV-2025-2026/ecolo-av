@@ -83,7 +83,7 @@ The `Task` column is `pixi run <task>`; "-" means run the script itself.
 | `gz_window.sh` | Gazebo's window again, following the car | `gz-window` |
 | `software_gl.sh` | Mesa's software OpenGL, for Gazebo with no GPU | - (put in front) |
 | `fake_vlp16.py` | pretends to be the VLP-16 lidar: its UDP packets | - |
-| `controller_compare.py` | Regulated Pure Pursuit against MPPI, and the trial trackers and AMCL (`--trackers`, `--runs`, `--amcl`), same routes | `controller-compare` |
+| `controller_compare.py` | Regulated Pure Pursuit against MPPI, and the trial trackers, AMCL and NDT (`--trackers`, `--runs`, `--amcl`, `--ndt`), same routes | `controller-compare` |
 | `heading_check.py` | the global EKF's heading against Gazebo's truth | `heading-check` |
 | `ndt_map.py` | NDT's map of the test lot: drive the mapping route, or build from a bag (its maths without ROS) | `ndt-map` |
 | `gazebo_steering.py` | how much later Gazebo's wheels turn than the actuator model's (run with `tools/ros.sh --local`) | - |

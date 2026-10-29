@@ -19,6 +19,9 @@ The trials (docs/trials.md):
     pixi run controller-compare --runs 3           (each follower 3 times: the mean and spread)
     pixi run controller-compare --amcl             (AMCL beside the EKF, amcl:=true: scored
                     against the truth, as the EKF is)
+    pixi run controller-compare --ndt              (NDT beside the EKF, ndt:=true, on the map
+                    pixi run ndt-map drive made: its errors, the share of clouds that gave
+                    a pose, time over 1 m off, each match's wall-clock time)
 
 For each tour and controller it:
 1. starts sim.launch.py world:=test_lot gui:=false rviz:=false controller:=<rpp|mppi>
@@ -29,6 +32,7 @@ For each tour and controller it:
    car really was (/vehicle/gazebo/truth), the planner's paths (/plan), the controller's
    speed (/cmd_vel_nav), ego's steering, the sensor watchdog and collision_monitor; with a
    tracker its tick (/drivers/nav/track/status); with --amcl, /localization/amcl/pose;
+   with --ndt, /localization/ndt/pose and /localization/ndt/status;
 4. stops the simulator by its process group, and clears Fast DDS's shared memory
    (docs/path-followers.md).
 
@@ -106,6 +110,8 @@ MAP_SPEC = os.path.join(ROOT, 'ros', 'drivers', 'aav_navigation', 'maps',
                         'example_lot.spec.yaml')
 COLOURS = {'rpp': '#1f6fb4', 'mppi': '#e8590c', 'pure_pursuit': '#2b8a3e', 'stanley': '#862e9c',
            'lqr': '#c92a2a', 'mpc': '#e67700'}
+# NDT's map of the test lot (tools/ndt_map.py; maps/ is not in git).
+NDT_MAP = os.path.join(ROOT, 'maps', 'ndt', 'test_lot.pcd')
 # The process to time for each kind of follower (its command line, in the run's group).
 PROCESS = {'controller': 'controller_server', 'tracker': 'lib/aav_track/track'}
 
@@ -154,6 +160,7 @@ class Recorder(Node):
         self.recording = False
         self.truth, self.plans, self.steering, self.asked = [], [], [], []
         self.belief, self.amcl, self.loops = [], [], []
+        self.ndt, self.ndt_status = [], []
         self.last_truth = self.glob = None
         self.lock, self.locked, self.states = None, False, set()
         self.monitor, self.monitor_stops = None, 0
@@ -162,6 +169,10 @@ class Recorder(Node):
         self.create_subscription(Path, '/plan', self.on_plan, 10)
         self.create_subscription(PoseWithCovarianceStamped, '/localization/amcl/pose',
                                  self.on_amcl, 10)
+        self.create_subscription(PoseWithCovarianceStamped, '/localization/ndt/pose',
+                                 self.on_ndt, 10)
+        self.create_subscription(DiagnosticStatus, '/localization/ndt/status',
+                                 self.on_ndt_status, 10)
         self.create_subscription(DiagnosticStatus, '/drivers/nav/track/status',
                                  self.on_loop, 10)
         self.create_subscription(AckermannDriveStamped, '/ego/actuator_cmd', self.on_steering,
@@ -177,6 +188,7 @@ class Recorder(Node):
     def start(self):
         self.truth, self.plans, self.steering, self.asked = [], [], [], []
         self.belief, self.amcl, self.loops = [], [], []
+        self.ndt, self.ndt_status = [], []
         self.locked, self.states, self.monitor_stops = False, set(), 0
         self.recording = True
 
@@ -199,6 +211,21 @@ class Recorder(Node):
             p = msg.pose.pose.position
             self.amcl.append((seconds(msg.header.stamp), p.x, p.y,
                               yaw_of(msg.pose.pose.orientation)))
+
+    def on_ndt(self, msg):
+        if self.recording:
+            p = msg.pose.pose.position
+            self.ndt.append((seconds(msg.header.stamp), p.x, p.y,
+                             yaw_of(msg.pose.pose.orientation)))
+
+    def on_ndt_status(self, msg):
+        if self.recording:
+            v = {kv.key: kv.value for kv in msg.values}
+            try:
+                self.ndt_status.append((self.now(), msg.level == DiagnosticStatus.OK,
+                                        float(v['match_ms']), int(v['restarts'])))
+            except (KeyError, ValueError):
+                pass
 
     def on_loop(self, msg):
         if self.recording:
@@ -275,7 +302,7 @@ def ready(rec):
 
 
 def drive_leg(rec, pgid, goal, speed, body, obstacle, process='controller_server',
-              amcl=False):
+              amcl=False, ndt=False):
     """Send one goal and record it; return (drive_metrics leg, notes)."""
     notes = ready(rec)
     x, y, yaw = goal
@@ -321,6 +348,8 @@ def drive_leg(rec, pgid, goal, speed, body, obstacle, process='controller_server
            'obstacle': obstacle, 'body': body}
     if amcl:
         leg['amcl'] = rec.amcl
+    if ndt:
+        leg['ndt'], leg['ndt_status'] = rec.ndt, rec.ndt_status
     if rec.loops:
         leg['loops'] = rec.loops
     return leg, notes
@@ -409,6 +438,8 @@ def session(tour, follower, args, out_dir, body, used, run=1):
                f'reversing:={str(args.reversing).lower()}']
     if args.amcl:
         command.append('amcl:=true')
+    if args.ndt:
+        command += ['ndt:=true', f'ndt_map:={NDT_MAP}']
     if plan['obstacle']:
         command.append('obstacle:=true')
     if args.speed:
@@ -435,7 +466,7 @@ def session(tour, follower, args, out_dir, body, used, run=1):
             for name, x, y, heading in tour_legs(tour, args):
                 leg, notes = drive_leg(rec, launch.pid, (x, y, math.radians(heading)),
                                        args.speed or 1.0, body, obstacle,
-                                       PROCESS[kind], args.amcl)
+                                       PROCESS[kind], args.amcl, args.ndt)
                 row = drive_metrics.summary(leg)
                 # t, x, y, yaw: where the car was, and where the global EKF put it.
                 drawn = {'run': run,
@@ -463,6 +494,10 @@ def session(tour, follower, args, out_dir, body, used, run=1):
                       (f'; AMCL off {row["amcl_mean_m"]:.2f} m mean over '
                        f'{row["amcl_samples"]} poses (EKF {row["belief_mean_m"]:.2f})'
                        if 'amcl_mean_m' in row else '') +
+                      (f'; NDT off {row["ndt_mean_m"]:.3f} m mean, {row["ndt_max_m"]:.2f} '
+                       f'worst, {row["ndt_available"]:.0%} of clouds, '
+                       f'{row["ndt_match_ms_mean"]:.1f} ms a match'
+                       if 'ndt_available' in row and row.get('ndt_samples') else '') +
                       ''.join(f'; {n}' for n in notes), flush=True)
         finally:
             rec.destroy_node()
@@ -490,6 +525,8 @@ def report(results, args, started):
              f'{args.speed or 1.0:g} m/s, ' +
              ('reversing allowed' if args.reversing else 'forward only') +
              (', AMCL beside the EKF' if args.amcl else '') +
+             (", NDT beside the EKF (its map: tools/ndt_map.py; Gazebo's lidar has no sweep, "
+              "the car's does)" if args.ndt else '') +
              f'. {runs}. The trial trackers (docs/trials.md) share one speed policy; '
              "Nav2's "
              'RPP and MPPI set their own. What each number means: '
@@ -555,6 +592,9 @@ def main():
                              'comparison: the mean and spread)')
     parser.add_argument('--amcl', action='store_true',
                         help='run AMCL beside the EKF (amcl:=true) and score its pose too')
+    parser.add_argument('--ndt', action='store_true',
+                        help='run NDT beside the EKF (ndt:=true) and score it too; needs '
+                             'the map: pixi run ndt-map drive')
     parser.add_argument('--tours', nargs='+', choices=list(TOURS), default=list(TOURS))
     parser.add_argument('--speed', type=float, default=None,
                         help="m/s, up to 5: sim_speed:= (the car's own top speed: 1.0)")
@@ -573,6 +613,8 @@ def main():
         parser.error('--trackers drive forwards only: leave out --reversing')
     if args.runs < 1:
         parser.error('--runs must be 1 or more')
+    if args.ndt and not os.path.isfile(NDT_MAP):
+        parser.error(f'--ndt: no map at {NDT_MAP}; make it with pixi run ndt-map drive')
     started = datetime.datetime.now()
     out_dir = args.out or os.path.join(ROOT, 'log', 'controller-compare',
                                        f'{started:%Y%m%d-%H%M%S}')
