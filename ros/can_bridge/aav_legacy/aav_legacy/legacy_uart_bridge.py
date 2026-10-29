@@ -34,6 +34,12 @@ Writes      frames at rate_hz on the serial port (uart_relay, legacy_protocol):
             frame_version 1   the 2025-26 13-byte frame, for the C++ firmware on the car
                               today: no counter, and that firmware has no timeout
 
+port is a device (/dev/ttyAMA0) or any pyserial URL: in Gazebo, socket://127.0.0.1:<n> to
+gazebo_esp32, the C++ firmware's stand-in (sim.launch.py esp32:=true). If it won't open,
+the bridge says so and tries again every second, rather than dying: no frames go out
+until it opens, and the ESP32 keeps (or, from boot, holds) its brake. source (real, the
+default; sim in Gazebo) is what it announces on system/source.
+
 speed_loop.mode picks how ego's speed becomes throttle and brake: open (the default, as the
 2025-26 team drove: speed / full_throttle_speed, the brake only standing still) or pi
 (speed_control: feed-forward from ego's speed profile plus PI on the wheel speed, out as
@@ -72,8 +78,12 @@ class LegacyUartBridge(Node):
 
     def __init__(self):
         super().__init__('legacy_uart_bridge')
-        port = self.declare_parameter('port', '/dev/ttyAMA0').value
-        baud = self.declare_parameter('baud', 115200).value
+        self.port = self.declare_parameter('port', '/dev/ttyAMA0').value
+        self.baud = self.declare_parameter('baud', 115200).value
+        source = self.declare_parameter('source', 'real').value
+        if source not in ('real', 'sim'):
+            raise ValueError(f"source {source!r}: use real, or sim (Gazebo's stand-in)")
+        kind = SensorSource.REAL if source == 'real' else SensorSource.SIM
         rate = self.declare_parameter('rate_hz', 50.0).value
         timeout = self.declare_parameter('cmd_timeout', 0.3).value
         version = self.declare_parameter('frame_version', 2).value
@@ -96,7 +106,9 @@ class LegacyUartBridge(Node):
         if loop:
             self.create_subscription(Odometry, 'vehicle/odom', self.on_odom, 10)
             self.get_logger().info(f'speed_loop.mode pi: closed on /vehicle/odom, {loop.cfg}')
-        self.serial = serial.Serial(port, baud, timeout=0)
+        self.serial = None
+        self.last_open = None
+        self.open_port()
         self.create_subscription(AckermannDriveStamped, 'control/car/actuator_cmd',
                                  self.on_cmd, 10)
         self.create_subscription(Heartbeat, 'control/car/heartbeat', self.on_heartbeat, 10)
@@ -118,10 +130,10 @@ class LegacyUartBridge(Node):
         announcement = DataSource(announcer=self.get_name())
         announcement.header.stamp = self.get_clock().now().to_msg()
         announcement.sensors = [SensorSource(name='actuators', topic='',
-                                             source=SensorSource.REAL)]
+                                             source=kind)]
         if self.uplink:
             announcement.sensors += [
-                SensorSource(name=name, topic=topic, source=SensorSource.REAL)
+                SensorSource(name=name, topic=topic, source=kind)
                 for name, topic in (('vehicle', '/vehicle/status'),
                                     ('steering', '/vehicle/steering'),
                                     ('brake', '/vehicle/brake'), ('rc', '/vehicle/rc'))]
@@ -168,18 +180,37 @@ class LegacyUartBridge(Node):
         if self.relay.set_estop(msg.data):
             self.get_logger().warning('e-stop ON: braking' if msg.data else 'e-stop released')
 
+    def open_port(self):
+        """Open the port (a device or a pyserial URL); on failure, say so and try later."""
+        self.last_open = self.now()
+        try:
+            self.serial = serial.serial_for_url(self.port, baudrate=self.baud, timeout=0)
+            self.get_logger().info(f'serial port {self.port} open')
+        except (serial.SerialException, OSError, ValueError) as e:
+            self.serial = None
+            self.get_logger().error(f'serial port {self.port}: {e}; trying again every second',
+                                    throttle_duration_sec=10.0)
+
     def tick(self):
+        if self.serial is None:
+            if self.now() - self.last_open >= 1.0:
+                self.open_port()
+            return
         try:
             self.serial.write(self.relay.frame(self.now()))
-        except serial.SerialException as e:
-            self.get_logger().error(f'serial write failed: {e}', throttle_duration_sec=2.0)
+        except (serial.SerialException, OSError) as e:
+            self.get_logger().error(f'serial write failed: {e}; reopening',
+                                    throttle_duration_sec=2.0)
+            self.close_port()
 
     def read_uplink(self):
         """Read the ESP32's uplink frames (100 Hz), and publish each one."""
         now = self.now()
+        if self.serial is None:
+            return
         try:
             data = self.serial.read(self.serial.in_waiting or 1)
-        except serial.SerialException as e:
+        except (serial.SerialException, OSError) as e:
             self.get_logger().error(f'serial read failed: {e}', throttle_duration_sec=2.0)
             return
         stamp = self.get_clock().now().to_msg()
@@ -212,13 +243,21 @@ class LegacyUartBridge(Node):
             status.header.frame_id = 'base_link'
             self.status_pub.publish(status)
 
-    def destroy_node(self):
+    def close_port(self):
         try:
-            for _ in range(5):   # leave the car braked
-                self.serial.write(self.relay.stop_frame())
             self.serial.close()
-        except serial.SerialException:
+        except (serial.SerialException, OSError):
             pass
+        self.serial = None
+
+    def destroy_node(self):
+        if self.serial is not None:
+            try:
+                for _ in range(5):   # leave the car braked
+                    self.serial.write(self.relay.stop_frame())
+            except (serial.SerialException, OSError):
+                pass
+            self.close_port()
         super().destroy_node()
 
 

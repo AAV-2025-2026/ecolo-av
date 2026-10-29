@@ -19,7 +19,9 @@ command timeout: if the bridge dies, the last throttle stays on. So with
 | `pi` | feed-forward (the slope of ego's speed) + PI on `/vehicle/odom`, inverted through the car model | the same loop, whenever it asks to slow faster than coasting does |
 
 `pi` never sends throttle and brake together, and with no fresh wheel speed it runs on
-feed-forward alone. The design: `docs/designs/2026-10-27_control-plan.md`, step 1.
+feed-forward alone. Its PI compares the car with ego's speed delayed by `response_lag`
+(the actuators' lag), so it doesn't brake harder to win back a lag it expects.
+In Gazebo: `pixi run sim esp32:=true`, the C++ firmware standing in (`aav_gazebo`). The design: `docs/designs/2026-10-27_control-plan.md`, step 1.
 
 ### The no-timeout lock
 
@@ -75,6 +77,7 @@ it never locks.
 | bridge | `speed_loop.mode` | `open` (the 2025-26 mapping; the car's, for now) or `pi` | |
 | bridge | `speed_loop.kp`, `speed_loop.ki` | 2.0, 0.5 (guesses) | m/s² per m/s, per m/s·s |
 | bridge | `speed_loop.max_accel`, `max_brake`, `drag` | from `vehicle.yaml` `actuators:` | m/s², m/s², 1/s |
+| bridge | `speed_loop.response_lag` | 0.3 (guess): how far behind ego the car is expected to run | s |
 | bridge | `speed_loop.hold_brake`, `speed_loop.odom_timeout` | 0.2, 0.3 | 0..1, s |
 | encoder | `port`, `bind_address` | 10111, 0.0.0.0 | |
 | encoder | `wheel_diameter`, `counts_per_rev` | from `vehicle.yaml` | m, counts |

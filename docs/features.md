@@ -132,6 +132,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Actuator model | Lag and limits between ego and Gazebo, so the simulated car answers like a real one | Ben | 2026-10-15 | sim |
 | [Bench mode](bench.md) (`aav_bench`, `aav_spine_sim`) | The car's own software on one laptop, with the spine's logic and pretend sensors | Ben | 2026-10-10 | sim |
 | The spine in the loop (`sim spine:=true`) | Gazebo drives through the spine's real logic, so its stops and e-stops get tested | Ben | 2026-10-15 | sim |
+| Today's car in the loop (`sim esp32:=true`, `gazebo_esp32`) | Today's car runs the 2025-26 C++ ESP32, not the spine: Gazebo drives through the real UART bridge and that firmware's throttle ramp and brake, so its speed loop is tested before car day | Ben | 2026-10-29 | sim |
 | `sim-check` and `bench-check` | One command proves the whole chain drives, stops and keeps its lane | Ben | 2026-10-10 | sim |
 | Sensor failures on purpose (`pixi run sim-fault`) | Breaks a sensor in Gazebo, to prove the watchdog catches it | Ben | 2026-10-15 | sim |
 | [Ghost obstacles](ghost-obstacles.md) (`aav_ghost`) | A pretend person only Nav2 sees, to test stopping with nothing real to hit | Ben | 2026-10-16 | sim |

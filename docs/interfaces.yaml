@@ -161,9 +161,9 @@ topics:
   /control/gazebo/actuator_cmd:
     type: ackermann_msgs/msg/AckermannDriveStamped
     pub: [output_mux]
-    sub: [gazebo_adapter, spine_bridge]
+    sub: [gazebo_adapter, spine_bridge, legacy_uart_bridge]
     live: [sim]
-    note: Gazebo's commands, from output_mux target:=gazebo, while every source is SIM. Exactly one backend reads it - gazebo_adapter, or in the spine profile (spine:=true) spine_bridge with source sim.
+    note: Gazebo's commands, from output_mux target:=gazebo, while every source is SIM. Exactly one backend reads it - gazebo_adapter, or in the spine profile (spine:=true) spine_bridge with source sim, or with today's car in the loop (esp32:=true) legacy_uart_bridge, remapped from /control/car/actuator_cmd, with source sim.
   /control/gazebo/heartbeat:
     type: aav_interfaces/msg/Heartbeat
     pub: [output_mux]
@@ -516,6 +516,12 @@ topics:
     sub: [gazebo_adapter]
     live: [spine]
     note: Gazebo's spine profile only (sim.launch.py spine:=true). What the spine's logic (spine-core, in spine_sim) writes to its actuator drivers each tick, 100 Hz on Gazebo's clock - throttle and brake (0..1), reverse, the steering target (rad). On the car these never reach ROS. gazebo_adapter's actuator model turns them into what Gazebo's car does; silent for 0.2 s, it brakes fully.
+  /vehicle/gazebo/esp32_outputs:
+    type: aav_interfaces/msg/SpineOutputs
+    pub: [gazebo_esp32]
+    sub: [gazebo_adapter]
+    live: []
+    note: Gazebo with today's car in the loop only (sim.launch.py esp32:=true). What gazebo_esp32 - the 2025-26 C++ ESP32 firmware's logic, standing in behind the real legacy_uart_bridge - drives, 50 Hz - throttle (its DAC over 700, ramped 6 up and 12 down per frame), brake (the Jrk's travel past 400), reverse, the steering target (rad). gazebo_adapter's actuator model turns them into what Gazebo's car does, and still publishes /vehicle/odom itself, as the wheel sensors on today's car. Like the C++, no command timeout - the outputs stay when frames stop.
   /vehicle/gazebo/wheels:
     type: aav_interfaces/msg/WheelSpeeds
     pub: [gazebo_adapter]
