@@ -103,6 +103,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Gazebo backend (`aav_gazebo`) | The car in 3D with Ackermann steering, an IMU and GPS, to test Nav2 before the car | Ben | 2026-10-09 | sim |
 | Today's car over UART (`aav_legacy`) | Drives the 2025-26 ESP32 through the Motor Pi, and reads its wheel encoder, before the CAN spine exists | Ben | 2026-10-09 | built |
 | Uplink from the ESP32 (`legacy_uart_bridge`) | Brings the car's mode, faults, steering and brake positions and RC sticks back into ROS | Ben | 2026-10-24 | built |
+| Speed loop in the UART bridge (`speed_loop.mode: pi`, `speed_control.py`) | Today's ESP32 drives open loop and brakes only standing still, so the car coasts past B; feed-forward plus PI on the wheel speed, out as throttle or brake, stops it where ego planned | Ben | 2026-10-29 | built |
 | CAN spine bridge (`spine_bridge`): Rust by default, Python as an option | ego's commands become CAN frames, decoded by the firmware's own code at both ends | Ben | 2026-10-09 | sim |
 | [CARLA adapter](carla.md) (`aav_carla`) | Realistic camera pictures, once the NVIDIA computer runs CARLA | Ben | 2026-10-15 | built |
 

@@ -10,6 +10,9 @@ Subscribes  control/car/actuator_cmd  ackermann_msgs/AckermannDriveStamped: ego'
             control/car/heartbeat     aav_interfaces/Heartbeat: the output mux's counter, one
                               per command passed on (TODO 50)
             safety/estop      std_msgs/Bool (true: full brake now, until false)
+            vehicle/odom      nav_msgs/Odometry, only with speed_loop.mode pi: the wheel speed
+                              the loop closes on (twist.linear.x). Older than
+                              speed_loop.odom_timeout: feed-forward alone
 Publishes   system/source     aav_interfaces/DataSource, latched: the actuators are REAL
             safety/legacy_uart_bridge/lock  std_msgs/Bool, latched and again at 5 Hz:
                               true with frame_version 1 (no firmware timeout), so
@@ -31,6 +34,13 @@ Writes      frames at rate_hz on the serial port (uart_relay, legacy_protocol):
             frame_version 1   the 2025-26 13-byte frame, for the C++ firmware on the car
                               today: no counter, and that firmware has no timeout
 
+speed_loop.mode picks how ego's speed becomes throttle and brake: open (the default, as the
+2025-26 team drove: speed / full_throttle_speed, the brake only standing still) or pi
+(speed_control: feed-forward from ego's speed profile plus PI on the wheel speed, out as
+throttle or brake; docs/designs/2026-10-27_control-plan.md, step 1). Its gains are
+speed_loop.kp and the rest of SpeedControlConfig; the car model's numbers come from
+vehicle.yaml's actuators: through legacy.launch.py.
+
 The bridge only relays the counter, never makes one: when ego or the output mux go quiet
 it keeps sending its stale-stop frames (brake, no throttle), with the last counter
 unchanged. If the command goes stale (cmd_timeout) or /safety/estop is true, it sends
@@ -46,8 +56,10 @@ from aav_interfaces.msg import (ActuatorState, DataSource, Heartbeat, RcSticks, 
                                 VehicleStatus)
 from aav_legacy import uplink_reader as ur
 from aav_legacy.legacy_protocol import LegacyMapping
+from aav_legacy.speed_control import SpeedControl, SpeedControlConfig
 from aav_legacy.uart_relay import programs_locked, Relay
 from ackermann_msgs.msg import AckermannDriveStamped
+from nav_msgs.msg import Odometry
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
@@ -71,7 +83,19 @@ class LegacyUartBridge(Node):
         defaults = LegacyMapping()
         mapping = LegacyMapping(**{
             k: self.declare_parameter(k, v).value for k, v in vars(defaults).items()})
-        self.relay = Relay(mapping, timeout, version)
+        mode = self.declare_parameter('speed_loop.mode', 'open').value
+        if mode not in ('open', 'pi'):
+            raise ValueError(f'speed_loop.mode {mode!r}: use open (the 2025-26 mapping) or pi')
+        odom_timeout = self.declare_parameter('speed_loop.odom_timeout', 0.3).value
+        loop = None
+        if mode == 'pi':
+            loop = SpeedControl(SpeedControlConfig(**{
+                k: float(self.declare_parameter(f'speed_loop.{k}', float(v)).value)
+                for k, v in vars(SpeedControlConfig()).items()}))
+        self.relay = Relay(mapping, timeout, version, loop, odom_timeout)
+        if loop:
+            self.create_subscription(Odometry, 'vehicle/odom', self.on_odom, 10)
+            self.get_logger().info(f'speed_loop.mode pi: closed on /vehicle/odom, {loop.cfg}')
         self.serial = serial.Serial(port, baud, timeout=0)
         self.create_subscription(AckermannDriveStamped, 'control/car/actuator_cmd',
                                  self.on_cmd, 10)
@@ -133,6 +157,9 @@ class LegacyUartBridge(Node):
 
     def on_cmd(self, msg):
         self.relay.command(msg.drive.speed, msg.drive.steering_angle, self.now())
+
+    def on_odom(self, msg):
+        self.relay.wheel_speed(msg.twist.twist.linear.x, self.now())
 
     def on_heartbeat(self, msg):
         self.relay.heartbeat(msg.counter)
