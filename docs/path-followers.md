@@ -116,6 +116,14 @@ nodes only. The map window waits 25 s, not 3, before NO NEW PLAN there.
 The trackers drove no loop in these runs, but did earlier the same night (pure_pursuit,
 lqr and mpc: 4 of 12, run 02:42): the loop plans were there for them too.
 
+**Whole tours after the fix**, one run each (`log/gcf-tour-fwd`, `log/gcf-tour-rev`): no goal circled.
+
+| | Forward only | Reversing |
+|---|---|---|
+| RPP | 4 of 4 goals; the U-turn 1.22 × its route (as before: 1.18-1.27) | 4 of 4 |
+| MPPI | 2 of 4: the U-turn stopped facing the wall, then home gave up (the known forward-only U-turn, 2 of 3 failed before the fix too) | 4 of 4 |
+| The box in the lane | both past it | - |
+
 ## After the fixes, night of 22 October
 
 Five changes, each found from a run that failed (all in `nav2.yaml` or `vehicle.py`, with

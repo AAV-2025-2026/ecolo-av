@@ -7,7 +7,7 @@
 <!-- Generated from docs/learn-nav2.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Nav2 from zero</h1>
-<div class="meta">12 min read · 11 sections</div></header>
+<div class="meta">13 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -335,6 +335,7 @@ can tell (22 Oct; tighter, the car looped to fix misses it couldn't see). <stron
 standard tree, changed for a car.</p>
 <pre class="highlight"><code class="language-text">Navigate (up to 6 tries)
  ├─ every 1 s: plan a path  ── fails? clear the global costmap, try again
+ │    (not in the last 8 m: keep the path, unless blocked or 20 s old)
  ├─ follow the path         ── fails? clear the local costmap, try again
  └─ still failing? take turns: clear both costmaps, or wait 5 s</code></pre>
 <div class="table-wrap"><table>
@@ -356,6 +357,10 @@ standard tree, changed for a car.</p>
 <tr>
 <td>Server timeouts 1 s, not Nav2's 20 ms</td>
 <td>a busy computer failed whole goals (the bench, 11 Oct)</td>
+</tr>
+<tr>
+<td><strong>Keep the path for the last 8 m</strong></td>
+<td>a path planned a few metres from the goal is often a loop for a car, and each new path resets the goal checker: the car circled goals (<a href="path-followers.html#circling-a-goal-found-and-fixed-29-october-todo-17">TODO 17</a>)</td>
 </tr>
 </tbody>
 </table></div>

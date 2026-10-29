@@ -709,7 +709,7 @@ pixi run map fullscreen:=true monitor:=HDMI-1   # full screen on that monitor</c
 </tr>
 <tr>
 <td><code>config/map.yaml</code></td>
-<td>every topic name, the limits: <code>stale_after</code>, <code>plan_stale_after</code> (3 s), <code>arrive_within</code> (1 m), and <code>street_map</code>, the street map's file</td>
+<td>every topic name, the limits: <code>stale_after</code>, <code>plan_stale_after</code> (3 s; 25 s, <code>plan_kept_for</code>, within <code>final_approach</code> 8 m of the plan's end, where Nav2 keeps its path), <code>arrive_within</code> (1 m), and <code>street_map</code>, the street map's file</td>
 </tr>
 </tbody>
 </table></div>
