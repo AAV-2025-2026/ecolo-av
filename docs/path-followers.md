@@ -9,6 +9,7 @@ second. We have two, and a script that compares them on the same drives in Gazeb
 > - **Switch:** `controller:=rpp` on `sim.launch.py` or `navigation.launch.py`.
 > - **Compare:** `pixi run controller-compare` (about 25 min, headless, on this computer only; `--legs 1` for a quick check).
 > - **Results, night of 22 Oct (Gazebo's lot, four runs):** after five fixes (below), MPPI reached the first goal in 29-30 s in every run; Pure Pursuit looped there in two of three. In the best run both reached all 4 goals. MPPI uses twice the CPU (20% of a Mac core).
+> - **No more circling goals (29 Oct, TODO 17):** Nav2 planned a new path every second, also in the last metres, where a new path is often a loop for a car. Now it keeps its path for the last 8 m ([below](#circling-a-goal-found-and-fixed-29-october-todo-17)).
 
 ## What each one does
 
@@ -77,6 +78,43 @@ What the numbers mean (`tools/drive_metrics.py`):
 | Stops, reversals | stand-stills of 1 s or more; changes of direction |
 | Closest to the box | the car's outline to the box's |
 | Controller CPU | `controller_server`'s share of one core |
+
+## Circling a goal: found and fixed, 29 October (TODO 17)
+
+Now and then the car drove a full loop at a goal it had nearly reached: about 50 m
+for a 21 m leg. Always the first leg (the left turn to 15, 15, facing north), any follower.
+
+**How it was found:** `pixi run controller-compare --tours lot --legs 1 --plans`, 3 runs
+each of RPP, MPPI and `aav_track`'s pure_pursuit and lqr. `--plans` keeps every plan, so
+each plan can be set against where the car really was when it came.
+
+| Why it looped | Detail |
+|---|---|
+| **A new path every second, from wherever the car is** | the tree replanned at 1 Hz, also 1-4 m from the goal |
+| **There, a new path is a loop** | the car runs a little behind on the last bend (heading 50-60°, the path 70-90°). To reach the goal's heading from there at the planner's 3.6 m radius, Smac's only path is a 21-25 m loop. An S-bend back onto the line needs up to 2 radii ahead (`vehicle.final_approach`): 7.2 m |
+| **Each new path resets the goal checker** | `controller_server` resets it with every path (`setPlannerPath`) |
+| Not the cause | the tolerances (1.0 m, 0.75 rad), the EKF's heading (worst 5-16° per leg), the trackers' own goal check (it already survives a new path) |
+
+**The fix** (`navigate_to_pose_car*.xml`): within 8 m of the goal the tree keeps the
+path it has, as long as it still ends at this goal, nothing blocks it (`IsPathValid`) and
+it is under 20 s old. Everywhere else it still replans every second. Stock Nav2 tree
+nodes only. The map window waits 25 s, not 3, before NO NEW PLAN there.
+
+**Before and after**, the first leg, 3 runs each (`log/gcf-before`, `log/gcf-after`):
+
+| | Loop plans (runs) | Loops driven | Driven / the first route | Time (s) | Heading off at the end |
+|---|---|---|---|---|---|
+| RPP, before | 2 of 3 | 1 | 0.97, 0.97, **2.22** | 23, 25, **59** | 20-34° |
+| RPP, after | 0 | 0 | 0.94-0.98 | 24 | 3-26° |
+| MPPI, before | 3 of 3 | 2 | 0.96, **2.26, 2.26** | 29, **64, 65** | 6-38° |
+| MPPI, after | 0 | 0 | 0.96-0.98 | 29-30 | 8-21° |
+| pure_pursuit, before | 3 of 3 | 0 | 0.95-0.99 | 23-24 | 19-41° |
+| pure_pursuit, after | 0 | 0 | 0.96-0.98 | 23 | 9-13° |
+| lqr, before | 2 of 3 | 0 | 0.95-0.97 | 23-24 | 17-31° |
+| lqr, after | 0 | 0 | 0.94-0.97 | 23 | 18-20° |
+
+The trackers drove no loop in these runs, but did earlier the same night (pure_pursuit,
+lqr and mpc: 4 of 12, run 02:42): the loop plans were there for them too.
 
 ## After the fixes, night of 22 October
 

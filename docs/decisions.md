@@ -160,6 +160,12 @@ What we changed, and why.
 | **The Flutter HUD and its Flask back end are archived** (`archive/2026-27-flutter-hud/`); the raylib package takes the name `aav_hud`; the route maths moves to `aav_routes` | Q29: the raylib HUD replaced the app on 15 Oct. Nothing built, tested or started the old one any more | Ben, 25 Oct |
 | **[CONTRIBUTING.md](../CONTRIBUTING.md) is the git rule**: fork, branch, pull request, one approval and green CI, then the merge queue | One way into `main` for everyone, maintainers included | Arsh, 25 Oct |
 
+## Decided on 29 October
+
+| Decision | Why | By |
+|---|---|---|
+| **Nav2 keeps its path for the last 8 m to a goal** (`navigate_to_pose_car*.xml`): it replans every second elsewhere, but near the goal only if the path is blocked, for another goal, or 20 s old. 8 m = `vehicle.final_approach`, 2 of the planner's turning radii | Replanning there made the car circle goals: a new path from a little behind on the last bend is a 21-25 m loop for a car, and each new path resets Nav2's goal checker. Gazebo, first leg, 12 runs each way: loop plans in 10 before, none after; 3 loops driven before, none after ([Path followers](path-followers.md#circling-a-goal-found-and-fixed-29-october-todo-17)) | TODO 17, from the Gazebo runs |
+
 ## Open questions
 
 The design doc numbers 34 questions, and doesn't rank them. **Bold** marks the ones that
