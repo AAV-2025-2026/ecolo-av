@@ -75,7 +75,7 @@ can tell the difference.
 |---|---|---|---|
 | `spine_sim` | `aav_spine_sim` (Rust) | `/can/rx`, `/vehicle/bench/truth` | runs spine-core's `Spine::step` 100 times a second, as the board will, and drives a model car with the outputs |
 | `mock_imu` | `aav_bench` | `/sensors/imu/data_raw`, `/sensors/imu/mag` | the model's turn rate and acceleration, plus noise and a small gyro drift |
-| `mock_gps` | `aav_bench` | `/sensors/gps/fix` | where the antenna is, as latitude and longitude, with 0.5 m of noise, 5 times a second |
+| `mock_gps` | `aav_bench` | `/sensors/gps/fix` | where the antenna is, as latitude and longitude, 5 times a second, with a receiver's error: 0.5 m that drifts slowly (over about 60 s) and 0.05 m of fresh jitter on each fix |
 | `mock_camera` | `aav_bench` | `/sensors/camera/front_left/image_raw` | draws a road, and each stop sign at its real size when it's in view |
 | `mock_battery` | `aav_bench` | `/vehicle/battery` | a 48 V pack draining over two hours (a guess until Q8) |
 | `mock_radar` | `aav_bench` | `/sensors/radar/points` | sees the bench world's boxes as the TI radar would: a few noisy points, out to 8.4 m and 120 degrees wide; an empty cloud when nothing's there |

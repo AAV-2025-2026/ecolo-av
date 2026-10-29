@@ -131,6 +131,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | [Gazebo road world](simulation.md) | Lane lines, a stop sign, an obstacle, and the car's camera, radar and roof lidar, to test the whole graph | Ben | 2026-10-11 | sim |
 | Actuator model | Lag and limits between ego and Gazebo, so the simulated car answers like a real one | Ben | 2026-10-15 | sim |
 | [Bench mode](bench.md) (`aav_bench`, `aav_spine_sim`) | The car's own software on one laptop, with the spine's logic and pretend sensors | Ben | 2026-10-10 | sim |
+| Bench GPS that drifts (`aav_bench` `models.GpsError`) | A real receiver's error wanders slowly; fresh noise on every fix made Nav2 weave in a way the car never would (N7) | Ben | 2026-10-29 | built |
 | The spine in the loop (`sim spine:=true`) | Gazebo drives through the spine's real logic, so its stops and e-stops get tested | Ben | 2026-10-15 | sim |
 | `sim-check` and `bench-check` | One command proves the whole chain drives, stops and keeps its lane | Ben | 2026-10-10 | sim |
 | Sensor failures on purpose (`pixi run sim-fault`) | Breaks a sensor in Gazebo, to prove the watchdog catches it | Ben | 2026-10-15 | sim |

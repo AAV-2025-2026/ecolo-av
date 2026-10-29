@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">53 min read · 4 sections</div></header>
+<div class="meta">54 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -221,9 +221,17 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/safety/collision_monitor/state</code></td>
 <td><code>nav2_msgs/msg/CollisionMonitorState</code></td>
 <td><code>collision_monitor</code></td>
+<td><code>stop_hold</code></td>
 <td>-</td>
-<td>-</td>
-<td>What collision_monitor does, on each change - action_type 0 nothing, 1 stop; polygon_name StopZone, or "invalid source" when the radar or the lidar is silent or its TF is late.</td>
+<td>What collision_monitor does, on each change - action_type 0 nothing, 1 stop; polygon_name StopZone, or "invalid source" when the radar or the lidar is silent or its TF is late. It decides afresh on every command, so it can flicker between the two at the stop zone's edge - stop_hold holds the stop.</td>
+</tr>
+<tr>
+<td><code>/safety/stop_hold/lock</code></td>
+<td><code>std_msgs/msg/Bool</code></td>
+<td><code>stop_hold</code></td>
+<td><code>twist_mux</code></td>
+<td>bench, road</td>
+<td>true from collision_monitor's STOP until it has said anything else for 1 s without a break (aav_safety stop_hold, 10 Hz, wherever navigation.launch.py starts collision_monitor). A twist_mux lock at priority 21 - it holds Nav2 (20) and the AI slot (10) only, never the point driver, a person or a test. Timeout 0 - silence locks nothing (profiles without collision_monitor never publish it), and a stop_hold that dies while true keeps the stop. Without it, an obstacle at the stop zone's edge flickered the monitor between stop and go, and each go let the car creep on.</td>
 </tr>
 <tr>
 <td><code>/safety/collision_monitor/stop_zone</code></td>

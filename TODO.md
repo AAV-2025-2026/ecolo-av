@@ -268,7 +268,9 @@ work on." His order, with the work under way:
             `bench-check --obstacle`. *Passes on `main`, 11 Oct;*
       - [ ] N7, the weave: the bench's pretend GPS adds fresh noise to every fix, unlike a
             real receiver, whose error drifts slowly. Model it as a slow drift, then tune
-            `ekf_global` for the real receiver (Q18);
+            `ekf_global` for the real receiver (Q18). *29 Oct (branch `stop-hold`): the
+            drift is modelled (`aav_bench` `models.GpsError`); `bench-check --weave`
+            measures the weave. Tuning `ekf_global` is left;*
       - [ ] collision_monitor flickers between stop and go at the zone's edge. *29 Oct
             (branch `stop-hold`): `aav_safety`'s `stop_hold` holds each stop until the
             zone stays clear 1 s (twist_mux `stop_zone`, priority 21); `bench-check
