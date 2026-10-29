@@ -3,7 +3,7 @@
 import math
 import os
 
-from aav_safety.geofence import (along_arc, backend_stale, braking, Circle, coasts, COASTING,
+from aav_safety.geofence import (along_arc, backend_stale, braking, Circle, COASTING, coasts,
                                  Geofence, JUMP, LOST, Motion, motion_from, NEAR, OK, OUTSIDE,
                                  Polygon, Pose, reaction_time, Settings, site_fence, STANDS,
                                  STARTING, stopping_distance)
@@ -22,7 +22,7 @@ STRAIGHT = Motion(reaction_time=0.5, braking=1.0, max_accel=0.0, max_speed=1.0,
 
 
 def settled(fence=SQUARE, motion=STRAIGHT, x=0.0, y=0.0, yaw=0.0, **kw):
-    """A geofence that has had 4 s of good poses (and GPS) at (x, y), standing still."""
+    """Return a geofence that has had 4 s of good poses (and GPS) at (x, y), still."""
     g = Geofence(CAR, fence, motion, **kw)
     for i in range(41):
         g.update(i * 0.1, Pose(x, y, yaw, 0.0, 0.2))

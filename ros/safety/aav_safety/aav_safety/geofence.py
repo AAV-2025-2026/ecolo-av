@@ -402,7 +402,7 @@ class Geofence:
         return self._say(False, OK, f'{nearest:.1f} m from the edge at {pose.speed:.1f} m/s')
 
     def clear(self, now: float) -> Tuple[bool, str]:
-        """A person says the car is back in, or a jump was understood. Refused while not."""
+        """Forget OUTSIDE or JUMP: a person says the car is back in. Refused while not."""
         if self.latched is None:
             return True, 'nothing to clear'
         pose = self.pose
@@ -422,7 +422,7 @@ class Geofence:
 
 
 def describe(motion: Motion) -> Dict[str, float]:
-    """Return the stopping distances at the caps, for the log."""
+    """Return the stopping distance at the cap, and its parts, for the log."""
     return {'forward_at_cap': stopping_distance(motion.max_speed, motion.reaction_time,
                                                 motion.max_accel, motion.braking,
                                                 motion.max_speed),

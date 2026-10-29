@@ -49,7 +49,8 @@ Parts and what they start:
                   mux, the sensor watchdog (aav_safety): it stops Nav2 and the AI slot when
                   a sensor they need fails, or the HUD's screen (watch_hud), and they stop
                   too if it goes quiet; and the geofence (aav_safety): every program stops
-                  before the fence's edge, or with no trusted global pose. With ego, the sensor mux and the output mux
+                  before the fence's edge, or with no trusted global pose. With ego,
+                  the sensor mux and the output mux
                   (aav_io_mux, target car): ego's commands reach /control/car/actuator_cmd,
                   and so the backends, only while every source is REAL
   teleop          joystick -> /drivers/joy/cmd_vel, e-stop button -> /safety/estop
@@ -607,7 +608,7 @@ def generate_launch_description():
                                           'first stands still with a good global pose'),
         DeclareLaunchArgument('geofence_site', default_value='',
                               description="a polygon in aav_safety's config/geofence.yaml "
-                                          "(map frame) instead of the circle; empty: the "
+                                          '(map frame) instead of the circle; empty: the '
                                           "machine file's geofence: site:, else the circle"),
         DeclareLaunchArgument('stands', default_value='false',
                               description='true: the wheels are off the ground. The '
