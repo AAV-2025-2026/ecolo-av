@@ -260,14 +260,9 @@ impl Ui {
             Vector3::new(0.0, 0.0, 1.0),
             50.0,
         );
-        // The framebuffer's pixels per window point (2 on a Retina screen).
-        // SAFETY: rlgl getters, on the drawing thread.
-        let (fb_w, fb_h) = unsafe {
-            (
-                raylib::ffi::rlGetFramebufferWidth(),
-                raylib::ffi::rlGetFramebufferHeight(),
-            )
-        };
+        // The framebuffer's pixels per window point (2 on a Retina screen). raylib keeps
+        // the render size up to date on a resize; rlgl's own framebuffer size it doesn't.
+        let (fb_w, fb_h) = (d.get_render_width(), d.get_render_height());
         let k = fb_w as f32 / d.get_screen_width().max(1) as f32;
         let mut d3 = d.begin_mode3D(camera);
         viewport(view_w * k, h * k, 50.0);
@@ -283,7 +278,8 @@ impl Ui {
         for pair in trail.windows(2) {
             d3.draw_line3D(v3(pair[0], 0.03), v3(pair[1], 0.03), TRAIL);
         }
-        let plan = state.plan_in_odom();
+        // Nav2's points are ~5 cm apart: one tube per 0.5 m is plenty.
+        let plan = thin(state.plan_in_odom(), 0.5);
         for pair in plan.windows(2) {
             d3.draw_cylinder_ex(v3(pair[0], 0.06), v3(pair[1], 0.06), 0.07, 0.07, 6, PLAN);
         }
@@ -598,6 +594,23 @@ fn viewport(w: f32, h: f32, fovy_deg: f32) {
         raylib::ffi::rlFrustum(-right, right, -top, top, near, far);
         raylib::ffi::rlMatrixMode(raylib::ffi::RL_MODELVIEW as i32);
     }
+}
+
+/// The points at least `step` metres apart, the last one kept.
+fn thin(points: Vec<Point>, step: f64) -> Vec<Point> {
+    let last = points.last().copied();
+    let mut out: Vec<Point> = Vec::with_capacity(points.len());
+    for p in points {
+        if out.last().is_none_or(|q| q.distance(p).0 >= step) {
+            out.push(p);
+        }
+    }
+    if let (Some(l), Some(&end)) = (last, out.last()) {
+        if end != l {
+            out.push(l);
+        }
+    }
+    out
 }
 
 fn v3(p: Point, z: f32) -> Vector3 {
