@@ -426,3 +426,23 @@ def test_track_params_are_nav2s_own_checks_and_speeds():
     assert p['max_steering_rate'] == min(cfg['actuators']['steer_rate'],
                                          ego['max_steering_rate'])
     assert vehicle.track_params(nav2, cfg, ego, max_speed=3.0)['cruise_speed'] == 3.0
+
+
+def test_an_s_bend_needs_room_ahead():
+    # Two quarter-turns side by side: 2 radii across, 2 radii ahead.
+    assert math.isclose(vehicle.s_bend_length(3.0, 6.0), 6.0)
+    assert vehicle.s_bend_length(3.0, 0.0) == 0.0
+    assert math.isclose(vehicle.s_bend_length(3.0, -1.0), vehicle.s_bend_length(3.0, 1.0))
+    # Over 2 radii sideways no S-bend does it: a loop.
+    assert vehicle.s_bend_length(3.0, 6.1) == math.inf
+    # 1 m sideways at the planner's 3.6 m: 3.6 m ahead, more than the goal checker's circle.
+    assert 3.5 < vehicle.s_bend_length(3.6, 1.0) < 3.8
+
+
+def test_the_final_approach_is_two_planned_turning_radii():
+    v = vehicle.load(CONFIG)['vehicle']
+    r = vehicle.plan_turning_radius(v)
+    assert math.isclose(r, vehicle.min_turning_radius(v) * vehicle.PLAN_TURN_MARGIN)
+    assert math.isclose(vehicle.final_approach(v), 2.0 * r)
+    # The planner gets the same radius.
+    assert vehicle.nav2_rewrites(v)['minimum_turning_radius'] == f'{r:.3f}'

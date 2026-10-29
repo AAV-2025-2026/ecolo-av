@@ -60,7 +60,8 @@ Parameter `stale_after` (1.0 s): a quieter topic shows STALE.
 | sub | `source_topic`: `/system/source` | aav_interfaces/DataSource |
 | sub | `watchdog_topic`: `/safety/sensor_watchdog/state` | std_msgs/String |
 
-Other parameters: `stale_after` (1.0 s), `plan_stale_after` (3.0 s), `arrive_within`
+Other parameters: `stale_after` (1.0 s), `plan_stale_after` (3.0 s; `plan_kept_for`, 25 s, within
+`final_approach`, 8 m, of the plan's end: Nav2 keeps its path there), `arrive_within`
 (1.0 m), `street_map` (`maps/streets/ottawa.pmtiles`), `places` (`maps/places/ottawa.db`).
 
 ### Node `debug_hud` (topic names from `config/debug_hud.yaml`)

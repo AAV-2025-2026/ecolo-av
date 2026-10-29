@@ -221,6 +221,38 @@ def reverse_limit(v, reversing):
 # turn before a goal, arrived 0.5 m off and facing wrong, and drove round again (22 Oct).
 PLAN_TURN_MARGIN = 1.25
 
+
+def plan_turning_radius(v):
+    """Return the turning radius the planner plans with (m): full lock, PLAN_TURN_MARGIN wider."""
+    return min_turning_radius(v) * PLAN_TURN_MARGIN
+
+
+def s_bend_length(radius, offset):
+    """
+    Return how far ahead (m) a car needs to step `offset` m sideways and face the same way.
+
+    Two arcs of `radius`, one each way: the shortest forward move that does it. Beyond
+    2 x radius sideways it can't be done this way: it's a loop (math.inf).
+    """
+    d = abs(offset)
+    if d > 2.0 * radius:
+        return math.inf
+    return math.sqrt(4.0 * radius * d - d * d)
+
+
+def final_approach(v):
+    """
+    Return how near the goal (m) Nav2 must keep its path rather than plan again (TODO 17).
+
+    Planned from a few metres out, a little off the approach line, a car's path to the
+    goal's heading is a loop: an S-bend back onto the line needs more room ahead than is
+    left. The worst S-bend, 2 turning radii sideways, needs 2 radii ahead: within that,
+    a new path may be a loop, so the behaviour trees keep the one they have.
+    """
+    r = plan_turning_radius(v)
+    return s_bend_length(r, 2.0 * r)
+
+
 # Nav2's path followers (docs/path-followers.md): rpp, Regulated Pure Pursuit, chases a point
 # ahead on the path; mppi samples thousands of futures through its Ackermann model. MPPI is
 # the default since 22 Oct: in Gazebo it did at least as well in every run, and it turns to
@@ -304,7 +336,7 @@ def nav2_rewrites(v, reversing=False):
         'footprint': footprint(v),
         'lidar_scan.ros__parameters.min_height': f'{low:.3f}',
         'lidar_scan.ros__parameters.max_height': f'{high:.3f}',
-        'minimum_turning_radius': f'{r * PLAN_TURN_MARGIN:.3f}',  # SmacPlannerHybrid
+        'minimum_turning_radius': f'{plan_turning_radius(v):.3f}',  # SmacPlannerHybrid
         'min_turning_r': f'{r:.3f}',            # MPPI AckermannConstraints: the car's own
         'collision_monitor.ros__parameters.StopZone.forward.points':
             polygon(stop_zone_points(v)),

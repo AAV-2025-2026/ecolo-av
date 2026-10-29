@@ -72,7 +72,7 @@ Files:
 |---|---|
 | `config/nav2.yaml` | every server's parameters |
 | `config/amcl.yaml` | AMCL, the trial (`amcl:=true`): `tf_broadcast: false`, the lidar scan, base_link |
-| `behavior_trees/` | `navigate_to_pose_car.xml`, `navigate_through_poses_car.xml`, and `*_car_reversing.xml` twins with BackUp |
+| `behavior_trees/` | `navigate_to_pose_car.xml`, `navigate_through_poses_car.xml`, and `*_car_reversing.xml` twins with BackUp. The to-pose trees keep their path within 8 m of the goal (`vehicle.final_approach`, TODO 17) |
 | `maps/` | `empty` and `example_lot` maps and their specs ([maps/README.md](./maps/README.md)) |
 
 ## Invariants
@@ -109,6 +109,6 @@ pixi run build && colcon test --packages-select aav_navigation && colcon test-re
 ```
 
 Quick, without ROS: `cd ros/drivers/aav_navigation && python3 -m pytest -q`
-(`tools/test.sh` runs it). `test/test_behavior_trees.py` checks the twins and no spin.
+(`tools/test.sh` runs it). `test/test_behavior_trees.py` checks the twins, no spin, and the final approach.
 `pixi run test` runs everything. In Gazebo: `pixi run sim-check`; to compare the
 controllers: `pixi run controller-compare`.
