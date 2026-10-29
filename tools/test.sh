@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Run every test that doesn't need ROS: our packages' Python unit tests, the Rust spine
-# library, the HUD's and the map window's logic (hud-core, map-core), and the check that docs/interfaces.md matches
+# library, the HUD's, the map window's and the debug HUD's logic (hud-core, map-core,
+# debug-core), and the check that docs/interfaces.md matches
 # docs/interfaces.yaml. Where the mcp environment is installed, also the MCP server over
 # stdio (on a private, local domain).
 # Needs Python 3 with pytest and PyYAML; Rust (cargo) for the spine. Works on any OS.
@@ -43,7 +44,7 @@ if command -v cargo >/dev/null; then
   (cd ros/can_bridge/aav_spine_bridge && cargo test -q --locked -p spine-bridge)
   # Only the logic: the window (raylib) needs a screen's libraries, and colcon builds it.
   echo "== ros/hud/aav_hud: the HUD's state, GPS, e-stop and formatting; the map's maths"
-  (cd ros/hud/aav_hud && cargo test -q --locked -p hud-core -p map-core)
+  (cd ros/hud/aav_hud && cargo test -q --locked -p hud-core -p map-core -p debug-core)
   # Every firmware crate must build without the standard library, for the Pico 2's chip.
   if [[ -d "$(rustc --print target-libdir --target thumbv8m.main-none-eabihf 2>/dev/null)" ]]; then
     echo "== firmware/spine, no_std, for the Pico 2 (thumbv8m.main-none-eabihf)"

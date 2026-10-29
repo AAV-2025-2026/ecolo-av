@@ -97,7 +97,7 @@ Other parameters: `stale_after` (1.0 s), `plan_stale_after` (3.0 s), `arrive_wit
 ## Verification
 
 ```sh
-cd ros/hud/aav_hud && cargo test --locked -p hud-core -p map-core
+cd ros/hud/aav_hud && cargo test --locked -p hud-core -p map-core -p debug-core
 ```
 
 `tools/test.sh` runs that; `pixi run test` runs everything. `colcon build` needs Rust
