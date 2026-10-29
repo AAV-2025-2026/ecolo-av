@@ -3,6 +3,23 @@
 The current work list, newest first. Tick items off as they land; each tick = a commit.
 Ben's messages, word for word: `docs/history/messages-*.md`.
 
+## Thursday 29 October: control (Ben, 27 Oct)
+
+Ben: "investigate LQR and maybe collapse all these various controllers into a single
+controller ... closed loop". The plan: `docs/designs/2026-10-27_control-plan.md`; the ideas: "Ideas to keep" below.
+
+| # | Task | Needs |
+|---|---|---|
+| 0 | **The plan's step 1: the bridge uses ego's acceleration**, feed-forward + PI for throttle and brake (`docs/designs/2026-10-27_control-plan.md`); scored with `atob-score` | Gazebo, bench |
+| 0b | **The spine's state machine (Arsh's #15), follow-up:** the board for today's car (`esp32-umod`) has no wheel speed (`SpeedFeedback::None`), so the test mode's "leave above 0.5 m/s" can't fire there. Refuse throttle tests when Confidence is Degraded, or say so in its docs. (Test requests have no transport yet, so nothing can trigger it today.) Also: the self-test is one tick with no fault | Arsh |
+| 1 | **A page that explains it all:** PID, LQR, MPC and MPPI, with pictures; which loop runs where (ESP32, Jrk, Orin); what each knows. The next chapter of `docs/learn-control.md` ("Control from zero") | nothing |
+| 2 | **LQR for steering:** from `vehicle_model.lateral()`, scheduled by speed; follows the planner's path (Smac), in place of pure pursuit; scored with `atob-score` and `controller-compare` | Gazebo |
+| 3 | **LQR for speed and brake (LQI):** one signed acceleration, in `spine-core`; scored against today's PI and P-only brake | bench, Gazebo |
+| 4 | **MPC for the whole A-to-B:** speed and steering together, with the brake's and steering's limits; scored against 2 and 3, and MPPI | 2, 3 |
+| 5 | Unfinished from 26 Oct: goal circling (TODO 17, `wt/goals-steering`), the F6 geofence, the QEMU and NaN fixes (`small-fixes`), the bench fixes (`bench-fixes`) | |
+
+Every gain still comes from guessed numbers until the car is measured (`docs/measure-the-car.md`).
+
 ## 24 October, night: the car as a linear model
 
 Ben, 24 Oct: "Do we have a mathematical model for the car now for the ego? ... a matrix
@@ -290,6 +307,101 @@ work on." His order, with the work under way:
       - the car on Jazzy (Q24): a Jazzy Mac can't join the car's Humble;
       - the HUD on a Mac: raylib's runs there as it is; the Flutter app needs CocoaPods (archived 25 Oct);
       - the car's WiFi, measured: how late the pictures arrive, and how often it drops.
+- [ ] **A hardware workbench: every sensor and actuator, one at a time** (Ben, 28 Oct,
+      word for word in `docs/history/messages-2026-10-28.md`). Just for us. One screen on
+      the laptop (the HUD), with the RC or the joystick as well, to isolate the hardware:
+      - **each sensor, live:** is it there, how fast, its values (GPS, IMU, lidar,
+        cameras, wheel speed, steering pot, battery);
+      - **each actuator, by hand:** jog the steering, throttle and brake in small capped
+        steps, and see what came back;
+      - **on stands, find the limits:** steer slowly until the motor meets resistance:
+        the Jrk G2 reports its current and position, so a stall shows as current rising
+        while the position stops. Back off a margin: that's the steering limit;
+      - **work out the numbers:** acceleration, braking and steering rate, into
+        `vehicle.yaml`; then check them by driving in the lot.
+      Builds on what we have: `pixi run actuator-test` (its `--stands` tests already measure
+      the steering sweep and rate), the spine's hardware test mode (#15, capped at
+      `TEST_MAX_THROTTLE`), bench mode and the raylib HUD. New: the live sensor page, the
+      jog controls, and the stall search. Check the 2025-26 team's clamps first
+      (`JRK_STEER_MIN`/`MAX`, `DAC_MAX_CAP` in `hardware_configs.h`). Steering and braking
+      limits on the real car are the hardware lead's to sign off.
+- [ ] **Tesla-style cubes on our HUD, then on the camera picture** (Ben, 28 Oct: "I want
+      to see the occupancy network", "put it on a hud like we have", "merge the voxels with
+      the camera feed to figure out what is where"). No new install: not OctoMap, which
+      would bring PCL back (tried 28 Oct, undone). Gazebo first, where every pose is exact:
+      1. **cubes from the lidar:** a voxel grid in Rust in `hud-core` (no ROS, own tests):
+         each `/sensors/lidar/points` point into its 20 cm cube; cubes not seen for a while fade;
+      2. **draw them:** raylib draws 3D cubes; colour by height, like Tesla's view;
+      3. **onto the camera:** project each cube into the HUD's camera picture (`picture.rs`),
+         from where the camera sits relative to the lidar; colour by distance;
+      4. **what is where:** each RF-DETR box gets the distance of the cubes inside it
+         ("stop sign, 14 m").
+      On the car, 3 and 4 need camera-to-lidar calibration (research pick 4). Nav2's own
+      `VoxelLayer` is a separate choice (it changes driving): only if 2D misses something.
+- [ ] **The debug HUD** (Ben, 29 Oct, word for word in `docs/history/messages-2026-10-29.md`):
+      the hardware workbench above, as its own HUD screen. It reads each sensor's and
+      actuator's own node directly (`/sensors/...`, `/vehicle/...`, the spine's status),
+      not what comes out of the muxes, so a fault shows where it starts:
+      - **sensors:** shake the car and watch the IMU; turn a wheel and watch the encoder;
+        GPS, lidar, cameras, battery, the steering pot;
+      - **actuators:** watch the wheels turn, speed up and brake, in the spine's hardware
+        test mode (#15): its caps and the e-stop still apply. Never around the spine;
+      - **what the car thinks:** the lidar's cubes and the NDT match (where the scan sits
+        on the saved map), drawn on the same screen.
+- [ ] **A preflight on stands, before the ground** (Ben, 29 Oct): one scripted run, wheels
+      off the ground: speed up, hold, slow down, brake; steer left, right, centre; and
+      every sensor checked live (rate, values in range) at the same time. PASS or FAIL per
+      line, as `car-day-check` does. Builds on `actuator-test --stands` and bench-check.
+- [ ] **Cubes into objects, with names** (Ben, 29 Oct: "merge cubes that related like a
+      stop sign or a car"): join touching filled cubes into one object (as
+      `radar_clusters` does for the radar); then name it: the RF-DETR box it falls in
+      (needs the camera-to-lidar calibration, research pick 4), or later a small model
+      that reads the cubes' camera crop. Each object: a name, a size, a distance. Shown on
+      the debug HUD first.
+- [ ] **numpy in the `ml` environment** (Ben, 28 Oct: "do we need to upgrade?"): not now.
+      The pin (`<=2.3.5`) keeps `export-coreml` working; the everyday environment already
+      runs 2.5. Try again when coremltools passes 9.0: newer numpy, run `export-coreml`.
+- [ ] **Four research picks** (Ben, 28 Oct; details: `docs/designs/2026-10-28_research-picks.md`):
+      1. **Autoware**: borrow its designs (PID + feed-forward speed with a smooth stop,
+         MPC steering, NDT + EKF localization), not the whole stack. **Our own versions,
+         in Rust** (Ben, 28 Oct: "take ideas from that and rebuild them in rust", "lets
+         write our own version of it all"): the speed loop with a smooth stop
+         (`spine-core`), NDT matching, MPC steering, the occupancy cubes. Cite what we read
+         (Autoware is Apache-2.0; the NDT papers) in `PROVENANCE.md` and the report: the
+         feed-forward + PI was our plan (27 Oct) before we read Autoware; MPC, NDT and the
+         smooth stop came from reading it. Crates, checked 29 Oct: see the research picks;
+      2. **lidar localization**: map the lot with KISS-ICP from a VLP-16 bag, then locate
+         by NDT or ICP; no RTK on this car, so this is where centimetres come from;
+      3. **a safety argument**: Simplex (we have most parts) and RSS (stopping distance
+         from measured braking), for the final report;
+      4. **seeing from above**: inverse perspective mapping (an AprilTag or a mark at B
+         for the last metre) and camera-to-lidar calibration (distances for RF-DETR's boxes).
+- [ ] **AMCL: a particle filter against a lidar map** (Ben, 28 Oct; not sure yet if we
+      need it): Nav2's stock Adaptive Monte Carlo Localization. Thousands of guesses of
+      where the car is; each lidar scan is matched against a map, and unlikely guesses
+      die off as the car moves. ~5-10 cm where the lidar sees features (curbs, posts,
+      walls), against GPS's 1-3 m: it could matter most for the last metres to B. Needs
+      a map first (`slam_toolbox`), and a test site with things to see: a bare lot gives
+      it little. Would sit beside the GPS + EKF, not replace them.
+- [ ] **One model-based controller instead of many** (Ben, 27 Oct): investigate LQR, and
+      collapse today's controllers (pure pursuit, the stopping law in
+      `aav_drive_to_point`, the spine's PI and P-only brake) into one controller built
+      from `vehicle_model.py`, closed loop, maybe running on the ESP32. Questions:
+      - **speed:** throttle and brake as one signed acceleration, LQR with integral action
+        (LQI), on the ESP32 where wheel speed and the actuators are;
+      - **steering:** a lateral LQR on the path errors (sideways, heading, wheel angle),
+        scheduled by speed; it needs the car's pose and path, which live on the Orin;
+      - **stop on B:** distance-to-go as a state; the ESP32 could count the last metres on
+        wheel odometry, independent of GPS lag (a CAN contract change: D4);
+      - **MPC** if the limits matter (brake, steering rate): LQR doesn't know them;
+      - scored with `atob-score` against pure pursuit and MPPI; needs the measured car first.
+      *Saved, not started (`docs/vehicle-model.md`, "After state space").*
+- [ ] **Learned state-space models, Mamba-style** (Ben, 27 Oct): Mamba (and S4 before it)
+      runs the same `x' = Ax + Bu` as `vehicle_model.py`, but learns `A`, `B`, `C` and lets
+      them depend on the input. Its diagonal `A` is a bank of first-order lags (τ = -1/a),
+      like our steering lag. Worth a closer look once hours of car logs exist: a learned
+      model of what the linear one misses (drag, slope, the brake's play), checked against
+      the fits from the actuator tests. *Saved, not started; needs car data first.*
 - [ ] **micro-ROS, again** (Ben, 11 Oct): "lets rethink thinks later after we see the
       hardware". No micro-ROS for now (Tentative).
 
@@ -541,3 +653,15 @@ Ben's messages, word for word: `docs/history/messages-2026-10-09.md`.
 - Measure the car and replace every guessed number in `vehicle.yaml`.
 - Rotate the leaked secrets, and back up the Orin and Pis before any reflash.
 - Answer Q1–Q34 with the team.
+
+## For the 2027-28 team
+
+Learned models: worth knowing, but each needs training data and GPUs we don't have this
+year (Ben, 28 Oct):
+
+- [ ] **Learned BEV** (BEVFusion, BEVFormer): all cameras and the lidar into one top-down view.
+- [ ] **One network for perception, prediction and planning** (UniAD).
+- [ ] **World models** (Wayve's GAIA-1) and **vision-language driving** (Waymo's EMMA).
+- [ ] **Predicting others' paths** (MTR, Wayformer); at 1 m/s, constant velocity is enough today.
+- [ ] **Learned planners** (diffusion planners).
+- [ ] **State-space models** (Mamba): see "Ideas to keep".
