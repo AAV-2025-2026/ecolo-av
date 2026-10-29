@@ -66,7 +66,7 @@ PAGES = [
     ('glossary.md', 'Glossary', 'Every acronym and term, in plain words'),
     ('learn-sensors.md', 'Learn: sensors', 'Every sensor: what, how often, topic, driver'),
     ('learn-gps.md', 'Learn: GPS', 'GNSS, RTK, NavSatFix, the datum, navsat_transform'),
-    ('learn-localization.md', 'Learn: localization', 'Odometry, Kalman, frames, TF, our two EKFs'),
+    ('learn-localization.md', 'Learn: localization', 'Odometry, Kalman, frames, TF, our two EKFs, NDT and ICP'),
     ('learn-control.md', 'Learn: control', 'Feedback loops, PID, Ackermann, limits, timeouts'),
     ('maps-and-position.md', 'Maps and position',
      'From the wheels to OpenStreetMap: frames, the datum, costmaps'),

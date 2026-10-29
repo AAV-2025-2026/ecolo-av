@@ -183,6 +183,7 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 |---|---|
 | `vehicle-model` | the car as a linear model: poles, step responses, Bode margins |
 | `state-space-demo` | the state-space primer's simulator |
+| `ndt-demo` | NDT and ICP from above: the pictures in Learn: localization |
 
 ## What's where
 

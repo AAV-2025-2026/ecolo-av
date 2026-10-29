@@ -2,7 +2,8 @@
 
 * **Author:** Ben
 * **Date:** 2026-10-28
-* **Status:** research list, nothing decided. No RTK on this car (Ben, 28 Oct)
+* **Status:** research list, nothing decided. No RTK on this car (Ben, 28 Oct). Ben likes
+  1, 2 (NDT) and 3; 4 maybe (28 Oct)
 
 Ben's picture of localization, which is how cars do it:
 
@@ -37,15 +38,21 @@ lidar (16 rings, 360°).
 | 3. Locate | match each new scan against that map: **NDT** (Normal Distributions Transform: the map in small cubes, each a blob; find the pose where the scan fits the blobs) or ICP |
 | 4. Fuse | its pose into `ekf_global` beside the GPS |
 
+Pictures of NDT and ICP, step by step: [Learn: localization](../learn-localization.md),
+section 8 (`pixi run ndt-demo`).
+
 **Also:** KISS-ICP's odometry alone, fused into `ekf_local`, is a better dead reckoning
 than wheels at low speed. **Catch:** a bare lot gives the lidar little to match: curbs,
 posts and walls help. Alternatives: FAST-LIO2, LIO-SAM (lidar + IMU), `slam_toolbox`
 (2D), AMCL (a particle filter: "Ideas to keep").
 
-## 3. A safety argument: Simplex, plus RSS
+## 3. A safety argument: runtime assurance (Simplex, plus RSS)
 
-**Simplex:** a clever controller, a simple trusted one, and a monitor that switches to the
-simple one before a rule is broken. We already have most of it:
+The whole idea is called **runtime assurance**: check the car while it runs, and
+fall back to something simple you can trust.
+
+**Simplex** (the classic design, Lui Sha, 2001): a clever controller, a simple trusted
+one, and a monitor that switches to the simple one before a rule is broken. We already have most of it:
 
 | Part | Ours |
 |---|---|
