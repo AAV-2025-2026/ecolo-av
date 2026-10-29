@@ -129,5 +129,14 @@ Other parameters: `odom_frame`, `base_frame`, `map_frame`; `stale_after` (1.0 s)
 cd ros/hud/aav_hud && cargo test --locked -p hud-core -p map-core -p debug-core
 ```
 
-`tools/test.sh` runs that; `pixi run test` runs everything. `colcon build` needs Rust
-1.88 or newer (`pixi run build`).
+The nodes themselves, with ROS (after `pixi run build`; each on its own domain and topics;
+`LIBRARY_PATH` because ros-env links every message package in the workspace):
+
+```sh
+pixi run bash -c 'source install/setup.bash && export ROS_DOMAIN_ID=94 \
+  LIBRARY_PATH=$(ls -d $PWD/install/*/lib | tr "\n" ":")$CONDA_PREFIX/lib \
+  && cd ros/hud/aav_hud && cargo test --release -p hud-app -p debug-app'
+```
+
+`tools/test.sh` runs the logic's tests; `pixi run test` runs everything else.
+`colcon build` needs Rust 1.88 or newer (`pixi run build`).
