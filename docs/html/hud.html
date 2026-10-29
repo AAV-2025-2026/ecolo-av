@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">30 min read · 4 sections</div></header>
+<div class="meta">34 min read · 5 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -92,8 +92,8 @@
 <a href="car_measurements.html">Car numbers</a>
 <a class="here" href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-hud-in-rust-raylib">The HUD in Rust (raylib)</a><a href="#the-map-window-big-screen">The map window (big screen)</a><a href="#the-flutter-app-2025-26-archived">The Flutter app (2025-26): archived</a><a href="#the-place-database">The place database</a></nav>
-<div class="lead"><p>Two raylib programs in one package, <code>ros/hud/aav_hud</code>, each also its own ROS node:</p>
+<nav class="toc"><span>On this page:</span><a href="#the-hud-in-rust-raylib">The HUD in Rust (raylib)</a><a href="#the-map-window-big-screen">The map window (big screen)</a><a href="#the-debug-hud">The debug HUD</a><a href="#the-flutter-app-2025-26-archived">The Flutter app (2025-26): archived</a><a href="#the-place-database">The place database</a></nav>
+<div class="lead"><p>Three raylib programs in one package, <code>ros/hud/aav_hud</code>, each also its own ROS node:</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -115,6 +115,12 @@
 <td><code>map</code></td>
 <td>the big ~15" monitor</td>
 <td>Nav2's map over Ottawa's streets, the plan, place search</td>
+</tr>
+<tr>
+<td><a href="#the-debug-hud">The debug HUD</a></td>
+<td><code>debug_hud</code></td>
+<td>a laptop, or the Orin's screen</td>
+<td>the lidar's cubes in 3D, where each localizer puts the car, every sensor</td>
 </tr>
 </tbody>
 </table></div>
@@ -1227,6 +1233,163 @@ a bug.</p>
 <p><img alt="Gazebo: University Drive, sent by --send-goal, and Nav2 driving there" src="../img/map-search-sim.png" /></p>
 <p>The sim's datum is the placeholder near Carleton, so in Gazebo "University Drive" lands
 inside the test lot. On the car, the datum is the real test site.</p>
+</section>
+<section class="card"><h2 id="the-debug-hud">The debug HUD</h2>
+<p><code>ros/hud/aav_hud</code>, binary <code>debug_hud</code>: what the car <strong>sees</strong> and what it <strong>thinks</strong>, in
+one window. It only listens: it never touches an actuator. Ben, 29 Oct: "the low level
+hud ... should connect directly to the ros node at the sensor". Design:
+<a href="../designs/2026-10-29_debug-hud.md">2026-10-29_debug-hud.md</a>.</p>
+<h3 id="what-it-shows">What it shows</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>On screen</th>
+<th>From</th>
+<th>Frame</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cubes (20 cm), coloured by height: dark ground, then teal to pale</td>
+<td><code>/sensors/lidar/points</code></td>
+<td>lidar_link -&gt; base_link -&gt; odom</td>
+</tr>
+<tr>
+<td>The car: a blue box to scale (<code>vehicle.yaml</code>)</td>
+<td><code>/localization/odom/local</code> (EKF local)</td>
+<td>odom</td>
+</tr>
+<tr>
+<td>EKF global (green), AMCL (orange), truth (white, sim): an outline, an arrow, a pole</td>
+<td>their topics</td>
+<td>map, through map -&gt; odom</td>
+</tr>
+<tr>
+<td>Nav2's plan (yellow), the car's trail (grey)</td>
+<td><code>/plan</code>; EKF local</td>
+<td>map; odom</td>
+</tr>
+<tr>
+<td>Legend, top left</td>
+<td>each localizer's distance from EKF local, in metres</td>
+<td>-</td>
+</tr>
+<tr>
+<td>Panel: IMU, GPS, lidar, wheels, wheel odom, vehicle, each estimate, map -&gt; odom, tracker</td>
+<td>each topic: OK, STALE or NEVER, and what it said</td>
+<td>-</td>
+</tr>
+</tbody>
+</table></div>
+<p>It publishes nothing. Its one call: keys 1-4 ask aav_track's parameter service for
+another tracker, in the simulator only (the design's D3: never an actuator).</p>
+<h3 id="how-the-cubes-are-placed">How the cubes are placed</h3>
+<pre class="highlight"><code>cloud (stamp t) --/tf_static--&gt; base_link --EKF local's pose AT t--&gt; odom --&gt; 20 cm cubes</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The pose at the cloud's <strong>own stamp</strong>, interpolated from the last second of poses</td>
+<td>the cloud arrives late: at 3 m/s, 50 ms off moves walls 15 cm</td>
+</tr>
+<tr>
+<td>Clouds go through a newest-only slot to their own thread, never the shared queue</td>
+<td>a slow window shows the newest scan, never a backlog</td>
+</tr>
+<tr>
+<td>Stamps are only compared with stamps</td>
+<td>Gazebo stamps sim time; the window runs on wall time</td>
+</tr>
+<tr>
+<td>Over <code>max_cubes</code> (20,000), the nearest stay; the panel says how many were cut</td>
+<td>a full VLP-16 at 100 m makes more</td>
+</tr>
+<tr>
+<td>Heights are above base_link; the VLP-16's 0.1 s sweep is ignored</td>
+<td>the EKF is 2D; Gazebo's lidar has no sweep</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="keys_1">Keys</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>drag</td>
+<td>turn the view round the car, tilt it</td>
+</tr>
+<tr>
+<td>right-drag (or shift-drag)</td>
+<td>move (leaves the car: a FREE view)</td>
+</tr>
+<tr>
+<td>wheel</td>
+<td>zoom</td>
+</tr>
+<tr>
+<td>C</td>
+<td>CHASE (behind the car) / FOLLOW (fixed angle) / FREE</td>
+</tr>
+<tr>
+<td>R</td>
+<td>back to CHASE</td>
+</tr>
+<tr>
+<td>1 2 3 4</td>
+<td>swap the trial tracker: pure pursuit, Stanley, LQR, MPC. <strong>Sim only</strong>: refused unless <code>/system/source</code> says SIM, and the track node refuses unless <code>live_swap</code> is on (<code>sim.launch.py</code>). The answer shows under TRACKER</td>
+</tr>
+<tr>
+<td>F11</td>
+<td>full screen</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="run-it_2">Run it</h3>
+<pre class="highlight"><code class="language-bash">pixi run debugdemo               # Gazebo, RViz, the HUD, the map window and the debug HUD
+pixi run debug-hud-demo          # pretend data: no ROS (a walled lot, a ray-cast lidar)
+pixi run build &amp;&amp; pixi run debug-hud    # the node alone, beside a running sim</code></pre>
+<p><code>debugdemo</code> is <code>demo</code> with <code>amcl:=true tracker:=pure_pursuit reversing:=false</code>, so AMCL
+and the trial tracker have something to show. Swap the tracker live with keys 1-4, or
+from a terminal: <code>ros2 param set /track tracker lqr</code> (sim only, both ways).</p>
+<h3 id="how-its-built_2">How it's built</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>crates/debug-core</code></td>
+<td>the maths, no ROS, no raylib: the pose buffer, the frames, the cubes, the camera. <code>cargo test -p debug-core</code></td>
+</tr>
+<tr>
+<td><code>crates/debug-app</code></td>
+<td>the window and the node; the cubes drawn <strong>instanced</strong> (one mesh, one draw per height band)</td>
+</tr>
+<tr>
+<td><code>config/debug_hud.yaml</code></td>
+<td>every topic name, the frames, <code>cube_size</code>, <code>max_cubes</code>, <code>pose_window</code>, <code>stale_after</code></td>
+</tr>
+<tr>
+<td>PointCloud2 reader</td>
+<td><code>aav_radar_clusters</code>' own (<code>radar-clustering</code>), shared</td>
+</tr>
+</tbody>
+</table></div>
+<p>On the car: not yet from a Mac over WiFi (about 9 MB/s of reliable lidar); on the Orin's
+own screen.</p>
 </section>
 <section class="card"><h2 id="the-flutter-app-2025-26-archived">The Flutter app (2025-26): archived</h2>
 <div class="table-wrap"><table>
