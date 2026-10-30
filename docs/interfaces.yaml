@@ -650,7 +650,7 @@ topics:
     type: geometry_msgs/msg/TwistStamped
     pub: [controller_server, behavior_server, track]
     sub: [velocity_smoother]
-    note: Nav2's own name, inside Nav2 - the path follower's command, before the velocity smoother, collision_monitor and /drivers/nav/cmd_vel. controller_server publishes it (tracker:=none, the default), or aav_track's track node with a trial tracker on (tracker:=pure_pursuit|stanley|lqr|mpc, docs/trials.md); never both - the tracker takes /follow_path and controller_server's is renamed /follow_path_unused. behavior_server's Wait and DriveOnHeading too.
+    note: Nav2's own name, inside Nav2 - the path follower's command, before the velocity smoother, collision_monitor and /drivers/nav/cmd_vel. controller_server publishes it (tracker:=none, the default), or aav_track's track node with a trial tracker on (tracker:=pure_pursuit|stanley|lqr|mpc|mpc_full, docs/trials.md); never both - the tracker takes /follow_path and controller_server's is renamed /follow_path_unused. behavior_server's Wait and DriveOnHeading too.
   /drivers/nav/track/status:
     type: diagnostic_msgs/msg/DiagnosticStatus
     pub: [track]
@@ -771,7 +771,7 @@ actions:
   /follow_path:
     type: nav2_msgs/action/FollowPath
     server: controller_server
-    note: bt_navigator's FollowPath - follow one planned path (replaced every second as the planner replans). Served by controller_server (MPPI or RPP) with tracker:=none, the default; with tracker:=pure_pursuit|stanley|lqr|mpc by aav_track's track node instead, and controller_server's own is renamed /follow_path_unused (a launch remapping - rcl_action resolves action names with the node's remappings). The same goal checks either way - nav2.yaml's xy_goal_tolerance and yaw_goal_tolerance, and its progress checker.
+    note: bt_navigator's FollowPath - follow one planned path (replaced every second as the planner replans). Served by controller_server (MPPI or RPP) with tracker:=none, the default; with tracker:=pure_pursuit|stanley|lqr|mpc|mpc_full by aav_track's track node instead, and controller_server's own is renamed /follow_path_unused (a launch remapping - rcl_action resolves action names with the node's remappings). The same goal checks either way - nav2.yaml's xy_goal_tolerance and yaw_goal_tolerance, and its progress checker.
   /navigate_to_pose:
     type: nav2_msgs/action/NavigateToPose
     server: bt_navigator

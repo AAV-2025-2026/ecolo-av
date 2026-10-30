@@ -264,7 +264,7 @@ DEFAULT_CONTROLLER = 'mppi'
 # The trial path followers (docs/trials.md, aav_track): each stands in for controller_server's
 # FollowPath with tracker:=<name>. 'none' keeps controller_server (CONTROLLERS) following.
 # Apart from CONTROLLERS, not in it: nav2_tuned treats anything not mppi as RPP.
-TRACKERS = ('none', 'pure_pursuit', 'stanley', 'lqr', 'mpc')
+TRACKERS = ('none', 'pure_pursuit', 'stanley', 'lqr', 'mpc', 'mpc_full')
 DEFAULT_TRACKER = 'none'
 
 

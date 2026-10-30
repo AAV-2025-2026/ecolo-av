@@ -35,7 +35,7 @@ localization):
   lifecycle_manager brings them all up
 
 Trials (docs/trials.md), each beside the default and scored by pixi run controller-compare:
-  tracker:=pure_pursuit|stanley|lqr|mpc  aav_track's track node follows the path instead
+  tracker:=pure_pursuit|stanley|lqr|mpc|mpc_full  aav_track's track node follows the path instead
                           of controller_server: it serves follow_path (bt_navigator's
                           FollowPath) and publishes cmd_vel_nav; controller_server keeps
                           running (its costmaps, the trees' clear calls) with its own action

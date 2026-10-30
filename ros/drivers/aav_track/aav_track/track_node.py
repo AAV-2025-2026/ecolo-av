@@ -10,7 +10,8 @@ Subscribes  localization/odom/local     nav_msgs/Odometry (odom_topic): where th
 Publishes   cmd_vel_nav                 geometry_msgs/TwistStamped (Twist with stamped:=
                                         false), at rate_hz while a path runs: (v, v tan(steer)
                                         / L), to Nav2's velocity smoother, collision_monitor,
-                                        then /drivers/nav/cmd_vel
+                                        then /drivers/nav/cmd_vel. v from the shared
+                                        speed policy (speed.py), or mpc_full's own plan
             drivers/nav/track/status    diagnostic_msgs/DiagnosticStatus, every tick: the
                                         tracker, loop time, missed ticks, cross track, steering
 Serves      nothing else; calls nothing.
@@ -19,7 +20,7 @@ Parameters  tracker can be changed while it runs, only with live_swap:=true (sim
             is built between ticks (one thread), takes the path and its place on it,
             starts its steering from the last command, and the loop statistics reset.
 
-navigation.launch.py tracker:=pure_pursuit|stanley|lqr|mpc starts it, and renames
+navigation.launch.py tracker:=pure_pursuit|stanley|lqr|mpc|mpc_full starts it, and renames
 controller_server's own action follow_path_unused, so bt_navigator's FollowPath comes here.
 Everything after cmd_vel_nav (the smoother, collision_monitor, twist_mux's slot 20, the
 locks) is unchanged. The checks are Nav2's own (checks.py, with nav2.yaml's numbers):
@@ -61,8 +62,13 @@ import tf2_ros
 TRACKER_PARAMS = {
     'pure_pursuit': {},           # its lookahead comes from nav2.yaml's RPP block
     'stanley': {'gain': 1.0, 'soft_speed': 1.0, 'yaw_rate_gain': 0.0},
-    'lqr': {'q': [1.0, 2.0, 0.05], 'r': 2.0, 'min_speed': 0.5},
+    'lqr': {'q': [1.0, 2.0, 0.05], 'r': 0.2, 'r_rate': 100.0, 'preview': 2.0,
+            'min_speed': 0.5},
     'mpc': {'horizon': 30, 'q': [1.0, 2.0, 0.05], 'r': 2.0, 'r_rate': 1.0, 'min_speed': 0.5},
+    # Its speed limits come from the node's own (cruise_speed, acceleration, max_brake,
+    # lateral_accel) and vehicle.yaml's max_accel: the same as the shared policy's.
+    'mpc_full': {'ds': 0.3, 'horizon': 30, 'q': [1.0, 2.0, 0.05], 'r': 0.2, 'r_rate': 1.0,
+                 'q_speed': 0.2},
 }
 Code = FollowPath.Result
 
@@ -154,9 +160,12 @@ class Track(Node):
         if name == 'pure_pursuit':
             own = {'lookahead_min': p['lookahead_min'], 'lookahead_max': p['lookahead_max'],
                    'lookahead_time': p['lookahead_time']}
-        if name == 'mpc':
+        if name in trackers.MODEL_TRACKERS:
             own['period'] = 1.0 / p['rate_hz']
-        model = from_config(vehicle_file.load()) if name in ('lqr', 'mpc') else None
+        if name == 'mpc_full':
+            own.update(cruise=p['cruise_speed'], accel=p['acceleration'],
+                       max_brake=p['max_brake'], lateral_accel=p['lateral_accel'])
+        model = from_config(vehicle_file.load()) if name in trackers.MODEL_TRACKERS else None
         return trackers.make(name, self.limits, model, **own)
 
     def on_parameters(self, params):
@@ -299,7 +308,11 @@ class Track(Node):
         cmd = self.tracker.step(trackers.State(x, y, yaw, v, yaw_rate, self.steer),
                                 self.period)
         self.steer = cmd.steer
-        self.asked = self.speed.step(path, foot.s, self.asked, v, self.period, cmd.speed_cap)
+        if cmd.speed is None:
+            self.asked = self.speed.step(path, foot.s, self.asked, v, self.period,
+                                         cmd.speed_cap)
+        else:
+            self.asked = cmd.speed        # mpc_full plans its own, within the same limits
         self.publish(self.asked, self.asked * math.tan(self.steer) / self.limits.wheelbase)
         feedback = FollowPath.Feedback()
         feedback.distance_to_goal = float(max(path.left(foot.s), 0.0))
