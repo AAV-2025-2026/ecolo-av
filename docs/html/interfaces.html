@@ -906,9 +906,9 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/localization/amcl/particles</code></td>
 <td><code>nav2_msgs/msg/ParticleCloud</code></td>
 <td><code>amcl</code></td>
+<td><code>debug_hud</code></td>
 <td>-</td>
-<td>-</td>
-<td>AMCL's particles, for RViz or Foxglove (its particle_cloud, renamed). Best effort. amcl:=true only.</td>
+<td>AMCL's particles, for RViz, Foxglove and the debug HUD (small orange arrows; its particle_cloud, renamed). Best effort. amcl:=true only.</td>
 </tr>
 <tr>
 <td><code>/localization/amcl/initial_pose</code></td>
@@ -922,17 +922,17 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/localization/ndt/pose</code></td>
 <td><code>geometry_msgs/msg/PoseWithCovarianceStamped</code></td>
 <td><code>ndt</code></td>
+<td><code>debug_hud</code></td>
 <td>-</td>
-<td>-</td>
-<td>A trial (docs/designs/2026-10-29_ndt.md) - where NDT (aav_ndt, Rust) puts base_link on the saved lidar map, map frame, stamped with the cloud's own stamp. Only good fits (score per point above min_score_per_point, converged); x, y and yaw only, height, roll and pitch held at 0. Covariance - the x, y, yaw block k (-H^-1) with a floor, the rest 1e3. Only with ndt:=true (sim.launch.py world:=test_lot lidar:=true, the map file present). Nothing reads it to drive, and it never publishes TF, until it wins the trials.</td>
+<td>A trial (docs/designs/2026-10-29_ndt.md) - where NDT (aav_ndt, Rust) puts base_link on the saved lidar map, map frame, stamped with the cloud's own stamp. Only good fits (score per point above min_score_per_point, converged); x, y and yaw only, height, roll and pitch held at 0. Covariance - the x, y, yaw block k (-H^-1) with a floor, the rest 1e3. Only with ndt:=true (sim.launch.py world:=test_lot lidar:=true, the map file present). Nothing reads it to drive, and it never publishes TF, until it wins the trials. The debug HUD draws it (a purple car).</td>
 </tr>
 <tr>
 <td><code>/localization/ndt/status</code></td>
 <td><code>diagnostic_msgs/msg/DiagnosticStatus</code></td>
 <td><code>ndt</code></td>
+<td><code>debug_hud</code></td>
 <td>-</td>
-<td>-</td>
-<td>NDT's state after every cloud - name ndt, level OK (a good fit), WARN (a poor fit, or no start yet) or ERROR (LOST), message TRACKING, WAITING or LOST and why; values score_per_point, overlap, iterations, match_ms (wall clock, the match alone), points (after the filters), poor_in_row, restarts (from ekf_global after LOST), clouds_dropped (arrived while one was being matched), x, y, yaw.</td>
+<td>NDT's state after every cloud - name ndt, level OK (a good fit), WARN (a poor fit, or no start yet) or ERROR (LOST), message TRACKING, WAITING or LOST and why; values score_per_point, overlap, iterations, match_ms (wall clock, the match alone), points (after the filters), poor_in_row, restarts (from ekf_global after LOST), clouds_dropped (arrived while one was being matched), x, y, yaw. The debug HUD's panel shows it.</td>
 </tr>
 <tr>
 <td><code>/localization/ndt/initial_pose</code></td>

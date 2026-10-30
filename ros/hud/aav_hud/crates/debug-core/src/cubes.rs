@@ -9,7 +9,7 @@
 
 use std::collections::HashSet;
 
-use map_core::geom::Pose;
+use map_core::geom::{Point, Pose};
 
 use crate::frames::{Stamp, Transform3, Vec3};
 
@@ -134,7 +134,7 @@ pub fn build(
         }
         used += 1;
         let q = to_odom.apply(p.map(f64::from));
-        cells.insert(q.map(|v| cell(v, size)));
+        cells.insert(cell_of(q, size));
     }
     let mut cubes: Vec<Cube> = cells
         .into_iter()
@@ -172,20 +172,37 @@ fn cell(v: f64, size: f64) -> i32 {
 
 /// Keeps the `max` cubes nearest the car (seen from above); returns how many went.
 fn keep_nearest(cubes: &mut Vec<Cube>, car: Pose, max: usize) -> usize {
-    if cubes.len() <= max {
+    keep_nearest_by(cubes, |c| c.centre, car.position, max)
+}
+
+/// Keeps the `max` items whose `centre` is nearest `to` (seen from above); returns how
+/// many went. The order of those kept is not kept.
+pub(crate) fn keep_nearest_by<T>(
+    items: &mut Vec<T>,
+    centre: impl Fn(&T) -> [f32; 3],
+    to: Point,
+    max: usize,
+) -> usize {
+    if items.len() <= max {
         return 0;
     }
-    let (x, y) = (car.position.x as f32, car.position.y as f32);
-    let far = |c: &Cube| {
-        let (dx, dy) = (c.centre[0] - x, c.centre[1] - y);
+    let (x, y) = (to.x as f32, to.y as f32);
+    let far = |c: &T| {
+        let [cx, cy, _] = centre(c);
+        let (dx, dy) = (cx - x, cy - y);
         dx * dx + dy * dy
     };
     if max > 0 {
-        cubes.select_nth_unstable_by(max - 1, |a, b| far(a).total_cmp(&far(b)));
+        items.select_nth_unstable_by(max - 1, |a, b| far(a).total_cmp(&far(b)));
     }
-    let cut = cubes.len() - max;
-    cubes.truncate(max);
+    let cut = items.len() - max;
+    items.truncate(max);
     cut
+}
+
+/// The cube index along one axis of a point (or a cube's centre), `size` apart.
+pub(crate) fn cell_of(p: [f64; 3], size: f64) -> [i32; 3] {
+    p.map(|v| cell(v, size))
 }
 
 #[cfg(test)]

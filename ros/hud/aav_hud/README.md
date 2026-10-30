@@ -9,8 +9,9 @@ node (rclrs):
   throttle and brake, GPS, topic health, the stop-sign alert and the camera;
 - `map`, the big screen's map window: Nav2's map over an offline street map, the car,
   the plan, the goal, the distance left, and a place search;
-- `debug_hud`, the debug screen: the lidar's cubes in 3D, where each localizer puts the
-  car, Nav2's plan, and every sensor from its own topic. It only listens.
+- `debug_hud`, the debug screen: the lidar's cubes in 3D (kept and fading), where each
+  localizer puts the car (NDT too), AMCL's particles, NDT's map, Nav2's plan, and every
+  sensor from its own topic. It only listens.
 
 It was called `aav_hud_raylib` until 25 Oct, when the 2025-26 Flutter app and its Flask
 back end (then `aav_hud`) went to `archive/2026-27-flutter-hud/` and this package took
@@ -29,7 +30,7 @@ docs/car-screens.md.
 | [`map-core`](./crates/map-core/README.md) | the map window's logic: no ROS, no raylib |
 | `crates/hud-app` | binary `hud`: the window (`ui.rs`) and the node (`ros.rs`, feature `ros`) |
 | `crates/map-app` | binary `map`: the same shape, plus the street map and place search |
-| [`debug-core`](./crates/debug-core/README.md) | the debug HUD's logic: cubes, frames, poses at a stamp, the camera; no ROS, no raylib |
+| [`debug-core`](./crates/debug-core/README.md) | the debug HUD's logic: cubes (kept, fading), frames, poses at a stamp, NDT's status and map, the keys, the camera; no ROS, no raylib |
 | `crates/debug-app` | binary `debug_hud`: the window (`ui.rs`, instanced cubes), the node (`ros.rs`), `--demo` |
 
 ### Node `hud` (topic names from `config/hud.yaml`)
@@ -70,7 +71,9 @@ Other parameters: `stale_after` (1.0 s), `plan_stale_after` (3.0 s; `plan_kept_f
 |---|---|---|
 | sub | `lidar_topic`: `/sensors/lidar/points` (reliable, keep last 1) | sensor_msgs/PointCloud2 |
 | sub | `local_odom_topic`: `/localization/odom/local`; `global_odom_topic`: `/localization/odom/global`; `truth_topic`: `/vehicle/gazebo/truth`; `wheel_odom_topic`: `/vehicle/odom` | nav_msgs/Odometry |
-| sub | `amcl_topic`: `/localization/amcl/pose` | geometry_msgs/PoseWithCovarianceStamped |
+| sub | `amcl_topic`: `/localization/amcl/pose`; `ndt_pose_topic`: `/localization/ndt/pose` (purple) | geometry_msgs/PoseWithCovarianceStamped |
+| sub | `amcl_particles_topic`: `/localization/amcl/particles` (best effort; small orange arrows) | nav2_msgs/ParticleCloud |
+| sub | `ndt_status_topic`: `/localization/ndt/status` (the panel's NDT section) | diagnostic_msgs/DiagnosticStatus |
 | sub | `plan_topic`: `/plan` | nav_msgs/Path |
 | sub | `tf_topic`: `/tf`; `tf_static_topic`: `/tf_static` (latched) | tf2_msgs/TFMessage |
 | sub | `imu_topic`: `/sensors/imu/data`; `gps_topic`: `/sensors/gps/fix` | sensor_msgs/Imu, NavSatFix |
@@ -80,7 +83,9 @@ Other parameters: `stale_after` (1.0 s), `plan_stale_after` (3.0 s; `plan_kept_f
 | call | `track_parameters_service`: `/track/set_parameters` (keys 1-4: `tracker`; only while `/system/source` says SIM) | rcl_interfaces/SetParameters |
 
 Other parameters: `odom_frame`, `base_frame`, `map_frame`; `stale_after` (1.0 s),
-`cube_size` (0.2 m), `max_cubes` (20,000), `pose_window` (1.0 s), `ground_height` (0.25 m).
+`cube_size` (0.2 m), `max_cubes` (20,000), `pose_window` (1.0 s), `ground_height` (0.25 m),
+`keep_cubes_for` (2.0 s: key K's cubes fade over it), `ndt_map` (`maps/ndt/test_lot.pcd`,
+relative to where it starts; key M) and `ndt_map_cell` (1.0 m).
 
 ### Launch and commands
 
@@ -115,12 +120,15 @@ Other parameters: `odom_frame`, `base_frame`, `map_frame`; `stale_after` (1.0 s)
 - `debug_hud`'s clouds never go through the shared queue: a newest-only slot to the
   `cubes` thread, then a newest-only slot to the screen. Each is placed with the local
   EKF's pose at its own stamp.
+- Kept cubes age by the clouds' stamps, never the window's clock: when the lidar stops,
+  they stop fading (and the lidar row says STALE).
 
 ## Side Effects
 
 - Opens a window: it needs a screen, and fails without one.
 - Publishes `/safety/estop`, `/hud/heartbeat` and `/goal_pose` (a goal drives the car).
-- `map` reads the PMTiles and SQLite files from disk.
+- `map` reads the PMTiles and SQLite files from disk; `debug_hud` reads `ndt_map` (a PCD)
+  once at start-up, if it is there.
 - On Linux the build needs X11 and OpenGL headers; without them CMake skips this
   package with a warning.
 
@@ -141,7 +149,7 @@ pixi run bash -c 'source install/setup.bash && export ROS_DOMAIN_ID=94 \
 
 The drawing test (the design's pass mark: 20,000 cubes at 30 fps or more, release build,
 a team Mac): `pixi run debug-hud-demo --bench-cubes 20000` prints the frame rate over 10 s.
-Measured: **not yet** (29 Oct: the Mac's screen was locked, so no window could open).
+Measured 29 Oct on Ben's Mac: **358 fps** (kept cubes, NDT's map and AMCL's particles on).
 
 `tools/test.sh` runs the logic's tests; `pixi run test` runs everything else.
 `colcon build` needs Rust 1.88 or newer (`pixi run build`).

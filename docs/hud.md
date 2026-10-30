@@ -480,12 +480,16 @@ hud ... should connect directly to the ros node at the sensor". Design:
 
 | On screen | From | Frame |
 |---|---|---|
-| Cubes (20 cm), coloured by height: dark ground, then teal to pale | `/sensors/lidar/points` | lidar_link -> base_link -> odom |
+| Cubes (20 cm), coloured by height: dark ground, then teal to pale. **Kept** for 2 s and fading darker (key K: this scan's only) | `/sensors/lidar/points` | lidar_link -> base_link -> odom |
 | The car: a blue box to scale (`vehicle.yaml`) | `/localization/odom/local` (EKF local) | odom |
-| EKF global (green), AMCL (orange), truth (white, sim): an outline, an arrow, a pole | their topics | map, through map -> odom |
+| EKF global (green), AMCL (orange), **NDT (purple)**, truth (white, sim): an outline, an arrow, a pole | their topics (NDT's: `/localization/ndt/pose`, good fits only) | map, through map -> odom |
+| AMCL's particles: small orange arrows (key A) | `/localization/amcl/particles` | map, through map -> odom |
+| NDT's map: faint purple 1 m wireframe cubes (key M) | `maps/ndt/test_lot.pcd` (`ndt_map`) | map, through map -> odom |
 | Nav2's plan (yellow), the car's trail (grey) | `/plan`; EKF local | map; odom |
 | Legend, top left | each localizer's distance from EKF local, in metres | - |
 | Panel: IMU, GPS, lidar, wheels, wheel odom, vehicle, each estimate, map -> odom, tracker | each topic: OK, STALE or NEVER, and what it said | - |
+| Panel, NDT: TRACKING / WAITING / LOST, score per point, ms per match; or "no NDT map at ...: make it with pixi run ndt-map drive" | `/localization/ndt/status` | - |
+| Keys, bottom left: each key and its layer's state (key H hides them) | - | - |
 
 It publishes nothing. Its one call: keys 1-4 ask aav_track's parameter service for
 another tracker, in the simulator only (the design's D3: never an actuator).
@@ -511,6 +515,10 @@ cloud (stamp t) --/tf_static--> base_link --EKF local's pose AT t--> odom --> 20
 | drag | turn the view round the car, tilt it |
 | right-drag (or shift-drag) | move (leaves the car: a FREE view) |
 | wheel | zoom |
+| K | cubes: kept and fading (the default), or this scan's only |
+| M | NDT's map as wireframes (on when the file is there) |
+| A | AMCL's particles |
+| H | hide or show the key legend |
 | C | CHASE (behind the car) / FOLLOW (fixed angle) / FREE |
 | R | back to CHASE |
 | 1 2 3 4 | swap the trial tracker: pure pursuit, Stanley, LQR, MPC. **Sim only**: refused unless `/system/source` says SIM, and the track node refuses unless `live_swap` is on (`sim.launch.py`). The answer shows under TRACKER |
@@ -525,7 +533,9 @@ pixi run build && pixi run debug-hud    # the node alone, beside a running sim
 ```
 
 `debugdemo` is `demo` with `amcl:=true tracker:=pure_pursuit reversing:=false`, so AMCL
-and the trial tracker have something to show. Swap the tracker live with keys 1-4, or
+and the trial tracker have something to show; and `ndt:=true` too when
+`maps/ndt/test_lot.pcd` is there. No map yet: `pixi run ndt-map drive` once (about 6
+min, headless; the map stays out of git). Swap the tracker live with keys 1-4, or
 from a terminal: `ros2 param set /track tracker lqr` (sim only, both ways).
 
 ### How it's built
@@ -534,7 +544,7 @@ from a terminal: `ros2 param set /track tracker lqr` (sim only, both ways).
 |---|---|
 | `crates/debug-core` | the maths, no ROS, no raylib: the pose buffer, the frames, the cubes, the camera. `cargo test -p debug-core` |
 | `crates/debug-app` | the window and the node; the cubes drawn **instanced** (one mesh, one draw per height band) |
-| `config/debug_hud.yaml` | every topic name, the frames, `cube_size`, `max_cubes`, `pose_window`, `stale_after` |
+| `config/debug_hud.yaml` | every topic name, the frames, `cube_size`, `max_cubes`, `pose_window`, `stale_after`, `keep_cubes_for`, `ndt_map`, `ndt_map_cell` |
 | PointCloud2 reader | `aav_radar_clusters`' own (`radar-clustering`), shared |
 
 On the car: not yet from a Mac over WiFi (about 9 MB/s of reliable lidar); on the Orin's
@@ -546,7 +556,21 @@ own screen.
 |---|---|
 | `cargo test`: debug-core 38, debug-app 11 (with ROS: a cloud placed by the pose at its stamp, map -> odom, a swap's answer, through the real node) | all pass |
 | `live_sim` against headless Gazebo, test lot, `amcl:=true tracker:=pure_pursuit`, driving a Nav2 goal | 10 scans a second, ~6,000-7,000 cubes from ~16,000-19,000 points, none cut; every panel row OK; EKF global 0.02 m, truth 0.24 m, AMCL 0.70 m from EKF local; key 3's swap to lqr accepted mid-path, which then drove 9 mm off the path |
-| The window itself, `pixi run debugdemo`, the 20,000-cube drawing test | **untested**: the Mac's screen was locked all night, and no window can open then |
+| The window itself, `pixi run debugdemo`, the 20,000-cube drawing test | **untested** that night: the Mac's screen was locked |
+
+### Tested (29 October, later: step 5, Ben's Mac, screen unlocked)
+
+| What | Result |
+|---|---|
+| `cargo test`: debug-core 52, debug-app 14 (with ROS) | all pass |
+| `--demo` window, screenshot | kept cubes fading, NDT's purple car and section, particles, the lot as NDT's map, the key legend: all drawn |
+| `--demo --bench-cubes 20000`, release | **358 fps** (pass mark 30) |
+| The node's window against headless Gazebo, test lot, `amcl:=true tracker:=pure_pursuit ndt:=true` (`maps/ndt/test_lot.pcd`), a Nav2 goal at (40, -4) | 58 fps; NDT TRACKING, 3.1-3.2 per point, 1.7-1.8 ms per match, overlap 100%, 0.11-0.12 m from EKF local; AMCL 0.7-1.1 m off with its particles round it; the map's 2,502 cubes sit on the walls; every panel row OK while driving |
+| Kept cubes while driving | they hit `max_cubes` (20,000; 11,000 cut): mostly old ground rings |
+
+**Not yet seen:** NDT's LOST and WAITING on the live window (only in `--demo`); `pixi run
+debugdemo` itself (RViz, the HUD and the map window as well: run here piece by piece);
+the keys pressed by hand (K, M, A, H: their logic is tested, the window wasn't clicked).
 
 ## The Flutter app (2025-26): archived
 

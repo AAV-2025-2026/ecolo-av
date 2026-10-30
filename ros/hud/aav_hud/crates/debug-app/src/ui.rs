@@ -4,22 +4,28 @@
 //! +-------------------------------------------------+-----------------+
 //! | LEGEND (localizers, offsets; cube heights)  fps | DEBUG HUD   SIM |
 //! |                                                 | SENSORS         |
-//! |        cubes, the car, the localizers,          |  IMU    OK 0.0s |
-//! |        Nav2's plan, the trail                   |  ...            |
-//! |                                                 | VEHICLE         |
-//! |                                                 | TRACKER         |
-//! | keys                                            | LIDAR           |
+//! |        cubes (kept, fading), the car, the       |  IMU    OK 0.0s |
+//! |        localizers, AMCL's particles, NDT's      |  ...            |
+//! |        map, Nav2's plan, the trail              | VEHICLE         |
+//! | KEYS (H hides them)                             | TRACKER         |
+//! |  K cubes      kept, fading                      | NDT             |
+//! |  M NDT's map  on ...                            | LIDAR           |
 //! +-------------------------------------------------+-----------------+
 //! ```
 //!
 //! The world is odom, z up. The cubes are drawn instanced: one cube mesh, one draw per
-//! height band, a small shader that shades each face by its normal.
+//! height band and fade step, a small shader that shades each face by its normal. A
+//! fading cube is drawn darker (towards the background), not see-through, so nothing
+//! needs sorting. NDT's map is drawn through map -> odom with rlgl's matrix stack.
 
 use std::time::Instant;
 
 use debug_core::{
-    cubes::{Band, CubeScan},
+    cubes::Band,
+    keys::CubeView,
+    ndt::{Fit, MapCells, MapFile, NdtState},
     orbit::Orbit,
+    persist::{Fade, FadedCube},
     state::{DebugState, Localizer, Source},
 };
 use hud_core::{health::Health, vehicle::VehicleStatus};
@@ -46,16 +52,37 @@ const GRID: Color = Color::new(34, 39, 50, 255);
 const GRID_MAJOR: Color = Color::new(50, 57, 72, 255);
 const PLAN: Color = Color::new(255, 220, 60, 255);
 const TRAIL: Color = Color::new(120, 125, 140, 255);
+/// NDT's map: faint purple wireframes.
+const NDT_MAP: Color = Color::new(150, 110, 220, 70);
+/// AMCL's particles: small orange arrows, a little fainter than AMCL's own car.
+const PARTICLE: Color = Color::new(255, 150, 40, 170);
+/// The most NDT map cubes drawn, nearest the car (the test lot has about 2,500).
+const MAX_MAP_CUBES: usize = 6000;
+/// A particle's arrow, metres.
+const PARTICLE_LEN: f32 = 0.45;
 
 /// Each localizer's colour (the design's: local blue, global green, truth white, AMCL
-/// orange).
+/// orange; NDT purple).
 pub fn localizer_colour(who: Localizer) -> Color {
     match who {
         Localizer::Local => Color::new(80, 130, 255, 255),
         Localizer::Global => Color::new(70, 225, 100, 255),
         Localizer::Truth => Color::new(245, 245, 245, 255),
         Localizer::Amcl => Color::new(255, 150, 40, 255),
+        Localizer::Ndt => Color::new(190, 110, 255, 255),
     }
+}
+
+/// A band's colour at a fade step: darker, towards the background, as it fades.
+pub fn faded_colour(band: Band, fade: Fade) -> Color {
+    let (c, k) = (band_colour(band), fade.brightness());
+    let mix = |a: u8, b: u8| (f32::from(a) * k + f32::from(b) * (1.0 - k)).round() as u8;
+    Color::new(
+        mix(c.r, BACKGROUND.r),
+        mix(c.g, BACKGROUND.g),
+        mix(c.b, BACKGROUND.b),
+        255,
+    )
 }
 
 /// Each height band's colour: a cool ramp, dark ground to pale tops, so the
@@ -128,10 +155,11 @@ impl UiFont {
     }
 }
 
-/// One instanced draw per band: its material (the shader, the band's colour), and the
-/// transforms gathered this frame.
+/// One instanced draw per band and fade step: its material (the shader, the colour),
+/// and the transforms gathered this frame.
 struct BandBatch {
     band: Band,
+    fade: Fade,
     material: WeakMaterial,
     transforms: Vec<Matrix>,
 }
@@ -144,6 +172,8 @@ pub struct Frame<'a> {
     pub fps: u32,
     /// The drawing test: say so on screen.
     pub bench: Option<usize>,
+    /// NDT's map, or why there is none.
+    pub map: &'a MapFile,
 }
 
 /// The screen: its font, the cube mesh and shader.
@@ -181,15 +211,17 @@ impl Ui {
         let shader = rl.load_shader_from_memory(thread, Some(CUBE_VS), Some(CUBE_FS));
         let batches = Band::ALL
             .iter()
-            .map(|&band| {
+            .flat_map(|&band| Fade::ALL.iter().map(move |&fade| (band, fade)))
+            .map(|(band, fade)| {
                 let mut material = rl.load_material_default(thread);
                 // SAFETY: a copy of the shader's handle; `_shader` keeps it loaded for as
                 // long as the materials (and so the window) live.
                 *material.shader_mut() = unsafe { WeakShader::from_raw(*shader.as_ref()) };
                 material.maps_mut()[MaterialMapIndex::MATERIAL_MAP_ALBEDO as usize].color =
-                    band_colour(band);
+                    faded_colour(band, fade);
                 BandBatch {
                     band,
+                    fade,
                     material,
                     transforms: Vec::new(),
                 }
@@ -213,31 +245,41 @@ impl Ui {
         d.clear_background(BACKGROUND);
         let (w, h) = (d.get_screen_width() as f32, d.get_screen_height() as f32);
         let view_w = (w - PANEL_W).max(200.0);
-        self.gather(state.scan.as_ref());
-        self.world(d, state, f.orbit, view_w, h);
-        self.legend(d, state, f, view_w, h);
+        let size = state.scan.as_ref().map_or(self.cube_size, |s| s.size);
+        self.gather(state.drawn_cubes(), size);
+        self.world(d, state, f, view_w, h);
+        self.legend(d, state, f, view_w);
+        if state.layers.keys {
+            self.key_legend(d, state, f, h);
+        } else {
+            self.text(d, "H: keys", 16.0, h - 34.0, 18.0, DIM);
+        }
         self.panel(d, state, f, view_w, w, h);
     }
 
-    /// This frame's cube transforms, by band.
-    fn gather(&mut self, scan: Option<&CubeScan>) {
+    /// This frame's cube transforms, by band and fade step. `size`: the cubes' edge.
+    fn gather(&mut self, cubes: impl Iterator<Item = FadedCube>, size: f32) {
         for b in &mut self.batches {
             b.transforms.clear();
         }
-        let Some(scan) = scan else { return };
         let k = if self.cube_size > 0.0 {
-            scan.size / self.cube_size
+            size / self.cube_size
         } else {
             1.0
         };
-        for c in &scan.cubes {
+        let fades = Fade::ALL.len();
+        for c in cubes {
             let [x, y, z] = c.centre;
             let m = if (k - 1.0).abs() < 1e-3 {
                 Matrix::translate(x, y, z)
             } else {
                 Matrix::scale(k, k, k) * Matrix::translate(x, y, z)
             };
-            if let Some(b) = self.batches.iter_mut().find(|b| b.band == c.band) {
+            // The batches go band by band, each with every fade step in order.
+            let band = Band::ALL.iter().position(|&b| b == c.band).unwrap_or(0);
+            let fade = Fade::ALL.iter().position(|&f| f == c.fade).unwrap_or(0);
+            if let Some(b) = self.batches.get_mut(band * fades + fade) {
+                debug_assert!(b.band == c.band && b.fade == c.fade);
                 b.transforms.push(m);
             }
         }
@@ -248,10 +290,11 @@ impl Ui {
         &self,
         d: &mut RaylibDrawHandle,
         state: &DebugState,
-        orbit: &Orbit,
+        f: &Frame<'_>,
         view_w: f32,
         h: f32,
     ) {
+        let orbit = f.orbit;
         let [px, py, pz] = orbit.position();
         let [tx, ty, tz] = orbit.target;
         let camera = Camera3D::perspective(
@@ -268,6 +311,11 @@ impl Ui {
         viewport(view_w * k, h * k, 50.0);
 
         ground_grid(&mut d3, orbit.target, orbit.distance);
+        if state.layers.ndt_map {
+            if let Some(cells) = f.map.cells() {
+                ndt_map(&mut d3, state, cells);
+            }
+        }
         for b in &self.batches {
             if !b.transforms.is_empty() {
                 d3.draw_mesh_instanced(&self.cube, b.material.clone(), &b.transforms);
@@ -283,10 +331,20 @@ impl Ui {
         for pair in plan.windows(2) {
             d3.draw_cylinder_ex(v3(pair[0], 0.06), v3(pair[1], 0.06), 0.07, 0.07, 6, PLAN);
         }
+        if state.layers.particles {
+            for p in state.particles_in_odom() {
+                particle(&mut d3, p);
+            }
+        }
         // The localizers: map-frame ones first, so the local EKF's car sits on top.
-        for (i, who) in [Localizer::Truth, Localizer::Amcl, Localizer::Global]
-            .into_iter()
-            .enumerate()
+        for (i, who) in [
+            Localizer::Truth,
+            Localizer::Amcl,
+            Localizer::Ndt,
+            Localizer::Global,
+        ]
+        .into_iter()
+        .enumerate()
         {
             if let Some(pose) = state.pose_in_odom(who) {
                 marker(
@@ -308,17 +366,10 @@ impl Ui {
     }
 
     /// Over the 3D view: what each colour means, the camera, the keys.
-    fn legend(
-        &self,
-        d: &mut RaylibDrawHandle,
-        state: &DebugState,
-        f: &Frame<'_>,
-        view_w: f32,
-        h: f32,
-    ) {
+    fn legend(&self, d: &mut RaylibDrawHandle, state: &DebugState, f: &Frame<'_>, view_w: f32) {
         let x = 16.0;
         let mut y = 16.0;
-        let box_h = 34.0 + 30.0 * 4.0 + 12.0 + 26.0 * 3.0;
+        let box_h = 34.0 + 30.0 * Localizer::ALL.len() as f32 + 12.0 + 26.0 * 3.0;
         d.draw_rectangle_rounded(
             Rectangle::new(x - 6.0, y - 6.0, 330.0, box_h),
             0.06,
@@ -345,14 +396,11 @@ impl Ui {
             y += 30.0;
         }
         y += 8.0;
-        self.text(
-            d,
-            "CUBES: HEIGHT ABOVE THE GROUND",
-            x + 6.0,
-            y,
-            16.0,
-            CAPTION,
-        );
+        let caption = match state.layers.cubes {
+            CubeView::Kept => "CUBES: HEIGHT (DARKER = OLDER)",
+            CubeView::Scan => "CUBES: HEIGHT, THIS SCAN",
+        };
+        self.text(d, caption, x + 6.0, y, 16.0, CAPTION);
         y += 24.0;
         for (i, band) in Band::ALL.into_iter().enumerate() {
             let col = i % 3;
@@ -377,10 +425,31 @@ impl Ui {
             let sw = self.font.measure(&s, 26.0);
             self.text(d, &s, (view_w - sw) / 2.0, 16.0, 26.0, WARN);
         }
+    }
 
-        // Bottom: the keys.
-        let keys = "drag: turn    right-drag: move    wheel: zoom    C: camera    R: reset    1-4: tracker (sim)    F11";
-        self.text(d, keys, 16.0, h - 34.0, 18.0, DIM);
+    /// Bottom left of the view: every key, what it does, and what it is now.
+    fn key_legend(&self, d: &mut RaylibDrawHandle, state: &DebugState, f: &Frame<'_>, h: f32) {
+        let lines = state.layers.legend(f.orbit.mode, f.map.cells().is_some());
+        let row = 24.0;
+        let box_h = 30.0 + row * lines.len() as f32 + 6.0;
+        let (x, top) = (16.0, h - box_h - 10.0);
+        d.draw_rectangle_rounded(
+            Rectangle::new(x - 6.0, top, 500.0, box_h),
+            0.06,
+            8,
+            Color::new(16, 18, 26, 215),
+        );
+        self.text(d, "KEYS (H HIDES THEM)", x + 6.0, top + 6.0, 16.0, CAPTION);
+        let mut y = top + 30.0;
+        for line in &lines {
+            self.text(d, line.key, x + 6.0, y, 17.0, TEXT);
+            self.text(d, line.what, x + 80.0, y, 17.0, CAPTION);
+            if !line.now.is_empty() {
+                let colour = if line.now == "no map" { WARN } else { TEXT };
+                self.text(d, &line.now, x + 266.0, y, 17.0, colour);
+            }
+            y += row;
+        }
     }
 
     /// The panel: every sensor from its own topic, the vehicle, the tracker, the lidar.
@@ -413,17 +482,17 @@ impl Ui {
         y = self.section(d, "SENSORS AND ESTIMATES", x0, y, w);
         for source in Source::PANEL {
             let health = state.health(source, f.now);
-            self.text(d, source.label(), x, y, 21.0, TEXT);
+            self.text(d, source.label(), x, y, 19.0, TEXT);
             let (word, colour) = health_word(health);
-            let pill = Rectangle::new(x + 148.0, y + 1.0, 78.0, 26.0);
+            let pill = Rectangle::new(x + 148.0, y + 1.0, 78.0, 22.0);
             d.draw_rectangle_rounded(pill, 0.4, 6, colour);
-            let ww = self.font.measure(word, 17.0);
+            let ww = self.font.measure(word, 15.0);
             self.text(
                 d,
                 word,
                 pill.x + (pill.width - ww) / 2.0,
                 y + 4.0,
-                17.0,
+                15.0,
                 Color::BLACK,
             );
             let detail = match (health.age(), state.detail(source)) {
@@ -431,16 +500,16 @@ impl Ui {
                 (Some(age), _) => format!("{:.1} s ago", age.as_secs_f32()),
                 (None, _) => String::new(),
             };
-            let detail = fit(&self.font, &detail, right - (x + 240.0), 18.0);
+            let detail = fit(&self.font, &detail, right - (x + 240.0), 17.0);
             self.text(
                 d,
                 &detail,
                 x + 240.0,
-                y + 3.0,
-                18.0,
+                y + 2.0,
+                17.0,
                 if health.is_ok() { CAPTION } else { DIM },
             );
-            y += 31.0;
+            y += 26.0;
         }
 
         y = self.section(d, "VEHICLE", x0, y + 4.0, w);
@@ -485,23 +554,27 @@ impl Ui {
             y += 26.0;
         }
 
+        y = self.ndt(d, state, f, x0, y + 4.0, w);
+
         y = self.section(d, "LIDAR CUBES", x0, y + 4.0, w);
         match &state.scan {
             Some(scan) => {
                 let rate = state
                     .scan_rate()
                     .map_or_else(String::new, |hz| format!("   {hz:.0} Hz"));
+                let (drawn, cut) = state.drawn_count();
                 let s = format!(
-                    "{} cubes from {} points{rate}",
-                    scan.cubes.len(),
+                    "{drawn} cubes ({}) from {} points{rate}",
+                    state.layers.cubes.label(),
                     scan.points
                 );
-                self.text(d, &s, x, y, 20.0, TEXT);
-                y += 28.0;
-                if scan.cut > 0 {
-                    let s = format!("{} far cubes cut (max_cubes)", scan.cut);
-                    self.text(d, &s, x, y, 18.0, WARN);
-                    y += 26.0;
+                let s = fit(&self.font, &s, right - x, 19.0);
+                self.text(d, &s, x, y, 19.0, TEXT);
+                y += 26.0;
+                if cut > 0 {
+                    let s = format!("{cut} far cubes cut (max_cubes)");
+                    self.text(d, &s, x, y, 17.0, WARN);
+                    y += 24.0;
                 }
             }
             None => {
@@ -518,7 +591,79 @@ impl Ui {
             y += 24.0;
         }
         let note = "heights above base_link (a 2D EKF)";
-        self.text(d, note, x, h - 30.0, 15.0, DIM);
+        if y < h - 34.0 {
+            self.text(d, note, x, h - 30.0, 15.0, DIM);
+        }
+    }
+
+    /// The NDT section: its state, score per point, ms per match; or why it isn't
+    /// running and how to start it. Returns where the next section starts.
+    fn ndt(
+        &self,
+        d: &mut RaylibDrawHandle,
+        state: &DebugState,
+        f: &Frame<'_>,
+        x0: f32,
+        y: f32,
+        w: f32,
+    ) -> f32 {
+        let mut y = self.section(d, "NDT (A TRIAL: NEVER DRIVES)", x0, y, w);
+        let (x, right) = (x0 + 18.0, w - 18.0);
+        let fresh = state.health(Source::NdtStatus, f.now).is_ok();
+        match &state.ndt {
+            Some(s) => {
+                let (word, colour) = if !fresh {
+                    ("STALE", DIM)
+                } else {
+                    let colour = match (s.headline(), s.fit) {
+                        ("LOST", _) => BAD,
+                        ("TRACKING", Fit::Good) => GOOD,
+                        _ => WARN,
+                    };
+                    (s.headline(), colour)
+                };
+                let ww = self.font.measure(word, 17.0);
+                let pill = Rectangle::new(x, y, ww + 20.0, 26.0);
+                d.draw_rectangle_rounded(pill, 0.4, 6, colour);
+                self.text(d, word, x + 10.0, y + 4.0, 17.0, Color::BLACK);
+                let nx = x + ww + 34.0;
+                let numbers = fit(&self.font, &s.numbers(), right - nx, 19.0);
+                self.text(d, &numbers, nx, y + 2.0, 19.0, TEXT);
+                y += 32.0;
+                let details = s.details();
+                if !details.is_empty() {
+                    let details = fit(&self.font, &details, right - x, 16.0);
+                    self.text(d, &details, x, y, 16.0, CAPTION);
+                    y += 22.0;
+                }
+                if s.fit != Fit::Good && !s.why.is_empty() {
+                    let why = fit(&self.font, &s.why, right - x, 16.0);
+                    self.text(d, &why, x, y, 16.0, WARN);
+                    y += 22.0;
+                }
+                if s.state == Some(NdtState::Waiting) {
+                    let hint = fit(&self.font, "no start pose yet", right - x, 16.0);
+                    self.text(d, &hint, x, y, 16.0, DIM);
+                    y += 22.0;
+                }
+            }
+            None => {
+                let s = match f.map {
+                    MapFile::Loaded { .. } => "not running: start the sim with ndt:=true",
+                    _ => "not running",
+                };
+                self.text(d, s, x, y, 19.0, DIM);
+                y += 26.0;
+            }
+        }
+        // The map: where it is, or how to make it (key M draws it).
+        let colour = if f.map.cells().is_some() { DIM } else { WARN };
+        let line = f.map.to_string();
+        for l in wrap(&self.font, &line, right - x, 16.0).into_iter().take(3) {
+            self.text(d, &l, x, y, 16.0, colour);
+            y += 21.0;
+        }
+        y
     }
 
     fn vehicle(
@@ -691,6 +836,60 @@ fn marker(d: &mut impl RaylibDraw3D, car: &CarShape, pose: Pose, colour: Color, 
     pole(d, pose, colour);
 }
 
+/// NDT's map: each occupied cell as a faint wireframe cube, from the map frame into
+/// odom through map -> odom (none without it); at most [`MAX_MAP_CUBES`], the nearest
+/// the car.
+fn ndt_map(d: &mut impl RaylibDraw3D, state: &DebugState, cells: &MapCells) {
+    let Some(odom_in_map) = state.map_to_odom.odom_in_map else {
+        return;
+    };
+    let car_in_map = state
+        .car()
+        .map_or(odom_in_map.position, |c| odom_in_map.transform(c.position));
+    let near = if cells.len() > MAX_MAP_CUBES {
+        cells.nearest(car_in_map, MAX_MAP_CUBES)
+    } else {
+        cells.centres.clone()
+    };
+    let edge = cells.size * 0.96;
+    // SAFETY: rlgl's matrix stack, on the drawing thread inside begin_mode3D; pushed
+    // here and popped below. A vertex v on the map goes to R(-yaw) (v - odom's
+    // position): odom.
+    unsafe {
+        raylib::ffi::rlPushMatrix();
+        raylib::ffi::rlRotatef((-odom_in_map.yaw).to_degrees() as f32, 0.0, 0.0, 1.0);
+        raylib::ffi::rlTranslatef(
+            -odom_in_map.position.x as f32,
+            -odom_in_map.position.y as f32,
+            0.0,
+        );
+    }
+    for [x, y, z] in near {
+        d.draw_cube_wires(Vector3::new(x, y, z), edge, edge, edge, NDT_MAP);
+    }
+    // SAFETY: pops the matrix pushed above, on the same thread.
+    unsafe { raylib::ffi::rlPopMatrix() };
+}
+
+/// One of AMCL's particles: a short arrow on the ground, pointing its way.
+fn particle(d: &mut impl RaylibDraw3D, p: Pose) {
+    let (s, c) = (p.yaw.sin() as f32, p.yaw.cos() as f32);
+    let (x, y, z) = (p.position.x as f32, p.position.y as f32, 0.08);
+    let tip = Vector3::new(x + c * PARTICLE_LEN, y + s * PARTICLE_LEN, z);
+    d.draw_line3D(Vector3::new(x, y, z), tip, PARTICLE);
+    // The head: two short strokes back from the tip, 25 degrees each side.
+    let back = PARTICLE_LEN * 0.35;
+    for side in [0.44_f32, -0.44] {
+        let (hs, hc) = side.sin_cos();
+        let (dx, dy) = (c * hc - s * hs, s * hc + c * hs);
+        d.draw_line3D(
+            tip,
+            Vector3::new(tip.x - dx * back, tip.y - dy * back, z),
+            PARTICLE,
+        );
+    }
+}
+
 /// A thin pole with a ball on top over base_link: seen from far off.
 fn pole(d: &mut impl RaylibDraw3D, pose: Pose, colour: Color) {
     let p = pose.position;
@@ -704,6 +903,28 @@ fn health_word(h: Health) -> (&'static str, Color) {
         Health::Stale(_) => ("STALE", WARN),
         Health::Never => ("NEVER", DIM),
     }
+}
+
+/// `s` in lines that fit `width` at `size`, broken between words.
+fn wrap(font: &UiFont, s: &str, width: f32, size: f32) -> Vec<String> {
+    let mut lines: Vec<String> = Vec::new();
+    let mut line = String::new();
+    for word in s.split_whitespace() {
+        let longer = if line.is_empty() {
+            word.to_owned()
+        } else {
+            format!("{line} {word}")
+        };
+        if line.is_empty() || font.measure(&longer, size) <= width {
+            line = longer;
+        } else {
+            lines.push(std::mem::replace(&mut line, word.to_owned()));
+        }
+    }
+    if !line.is_empty() {
+        lines.push(line);
+    }
+    lines
 }
 
 /// `s`, cut with "..." to fit `width` at `size`.

@@ -599,8 +599,8 @@ topics:
   /localization/amcl/particles:
     type: nav2_msgs/msg/ParticleCloud
     pub: [amcl]
-    sub: []
-    note: AMCL's particles, for RViz or Foxglove (its particle_cloud, renamed). Best effort. amcl:=true only.
+    sub: [debug_hud]
+    note: AMCL's particles, for RViz, Foxglove and the debug HUD (small orange arrows; its particle_cloud, renamed). Best effort. amcl:=true only.
   /localization/amcl/initial_pose:
     type: geometry_msgs/msg/PoseWithCovarianceStamped
     pub: []
@@ -609,13 +609,13 @@ topics:
   /localization/ndt/pose:
     type: geometry_msgs/msg/PoseWithCovarianceStamped
     pub: [ndt]
-    sub: []
-    note: A trial (docs/designs/2026-10-29_ndt.md) - where NDT (aav_ndt, Rust) puts base_link on the saved lidar map, map frame, stamped with the cloud's own stamp. Only good fits (score per point above min_score_per_point, converged); x, y and yaw only, height, roll and pitch held at 0. Covariance - the x, y, yaw block k (-H^-1) with a floor, the rest 1e3. Only with ndt:=true (sim.launch.py world:=test_lot lidar:=true, the map file present). Nothing reads it to drive, and it never publishes TF, until it wins the trials.
+    sub: [debug_hud]
+    note: A trial (docs/designs/2026-10-29_ndt.md) - where NDT (aav_ndt, Rust) puts base_link on the saved lidar map, map frame, stamped with the cloud's own stamp. Only good fits (score per point above min_score_per_point, converged); x, y and yaw only, height, roll and pitch held at 0. Covariance - the x, y, yaw block k (-H^-1) with a floor, the rest 1e3. Only with ndt:=true (sim.launch.py world:=test_lot lidar:=true, the map file present). Nothing reads it to drive, and it never publishes TF, until it wins the trials. The debug HUD draws it (a purple car).
   /localization/ndt/status:
     type: diagnostic_msgs/msg/DiagnosticStatus
     pub: [ndt]
-    sub: []
-    note: NDT's state after every cloud - name ndt, level OK (a good fit), WARN (a poor fit, or no start yet) or ERROR (LOST), message TRACKING, WAITING or LOST and why; values score_per_point, overlap, iterations, match_ms (wall clock, the match alone), points (after the filters), poor_in_row, restarts (from ekf_global after LOST), clouds_dropped (arrived while one was being matched), x, y, yaw.
+    sub: [debug_hud]
+    note: NDT's state after every cloud - name ndt, level OK (a good fit), WARN (a poor fit, or no start yet) or ERROR (LOST), message TRACKING, WAITING or LOST and why; values score_per_point, overlap, iterations, match_ms (wall clock, the match alone), points (after the filters), poor_in_row, restarts (from ekf_global after LOST), clouds_dropped (arrived while one was being matched), x, y, yaw. The debug HUD's panel shows it.
   /localization/ndt/initial_pose:
     type: geometry_msgs/msg/PoseWithCovarianceStamped
     pub: []

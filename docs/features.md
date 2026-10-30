@@ -157,7 +157,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | GO / STOP panel | The safety drivers get one answer at a glance: may the car move, and if not, why | Ben | 2026-10-24 | built |
 | Map window: offline street map and place search | A big-screen map of Nav2's plan over real streets, and a destination picked by name | Ben | 2026-10-15 | sim |
 | Car screens at login | The HUD and the map start on the car's two screens by themselves | Ben | 2026-10-15 | built |
-| [Debug HUD](hud.md#the-debug-hud) (`debug_hud`, `pixi run debugdemo`): the lidar's cubes in 3D, every localizer's car, every sensor from its own topic; keys 1-4 swap the sim's trial tracker | See what the car sees and what it thinks, side by side, to debug localization and the trackers without RViz | Ben | 2026-10-29 | built |
+| [Debug HUD](hud.md#the-debug-hud) (`debug_hud`, `pixi run debugdemo`): the lidar's cubes in 3D, kept and fading (the occupancy-network look), every localizer's car (NDT purple, with its score and LOST in the panel), AMCL's particles, NDT's map as wireframes, every sensor from its own topic; keys 1-4 swap the sim's trial tracker; a key legend on screen | See what the car sees and what it thinks, side by side, to debug localization (NDT, AMCL) and the trackers without RViz | Ben | 2026-10-29 | built |
 
 ## Tools
 
