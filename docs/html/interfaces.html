@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">66 min read · 4 sections</div></header>
+<div class="meta">67 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -989,7 +989,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>planner_server</code></td>
 <td><code>map</code>, <code>debug_hud</code></td>
 <td>-</td>
-<td>The planned path, for RViz/Foxglove, and the map window (map, aav_hud) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives.</td>
+<td>The planned path, for RViz/Foxglove, and the map window (map, aav_hud) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives. Which planner makes it is navigation.launch.py planner:= (docs/controllers.md, Planners) - hybrid (SmacPlannerHybrid, the default) or lattice (SmacPlannerLattice, our own primitives) keep to the car's turning radius; smac2d, navfn and theta_star, trials in sim and bench only, don't. Always the plugin GridBased, so the behaviour trees never change.</td>
 </tr>
 <tr>
 <td><code>/cmd_vel_nav</code></td>
@@ -1198,6 +1198,12 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>nav2_msgs/action/FollowPath</code></td>
 <td><code>controller_server</code></td>
 <td>bt_navigator's FollowPath - follow one planned path (replaced every second as the planner replans). Served by controller_server (MPPI or RPP) with tracker:=none, the default; with tracker:=pure_pursuit</td>
+</tr>
+<tr>
+<td><code>/compute_path_to_pose</code></td>
+<td><code>nav2_msgs/action/ComputePathToPose</code></td>
+<td><code>planner_server</code></td>
+<td>Nav2's own - one path from the car to a pose, planner_id GridBased (whichever planner:= runs). bt_navigator calls it every second while it drives; controller_compare (tools/controller_compare.py --planners) calls it once before each leg, to score the planner alone - its planning_time, the path's length and tightest turn. Planning only, nothing moves.</td>
 </tr>
 <tr>
 <td><code>/navigate_to_pose</code></td>

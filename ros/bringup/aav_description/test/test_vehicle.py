@@ -1,3 +1,4 @@
+import json
 import math
 from pathlib import Path
 import re
@@ -446,3 +447,65 @@ def test_the_final_approach_is_two_planned_turning_radii():
     assert math.isclose(vehicle.final_approach(v), 2.0 * r)
     # The planner gets the same radius.
     assert vehicle.nav2_rewrites(v)['minimum_turning_radius'] == f'{r:.3f}'
+
+
+LATTICE_JSON = ROOT / 'ros/drivers/aav_navigation/config/lattice_ackermann.json'
+SEARCH_MODEL = 'planner_server.ros__parameters.GridBased.motion_model_for_search'
+
+
+def test_planners_hybrid_by_default_and_only_car_shaped_ones_on_the_car():
+    assert vehicle.DEFAULT_PLANNER == 'hybrid'
+    assert set(vehicle.CAR_PLANNERS) < set(vehicle.PLANNERS)
+    assert set(vehicle.PLANNER_BLOCKS) == set(vehicle.PLANNERS)
+    assert vehicle.check_planner(' Lattice ') == 'lattice'
+    assert vehicle.check_planner('navfn') == 'navfn'
+    assert vehicle.check_planner('lattice', real=True) == 'lattice'
+    for name in ('smac2d', 'navfn', 'theta_star'):
+        with pytest.raises(ValueError, match='turning radius'):
+            vehicle.check_planner(name, real=True)
+    with pytest.raises(ValueError, match='pick one of'):
+        vehicle.check_planner('rrt')
+
+
+def test_every_planner_has_its_block_in_nav2_yaml():
+    plans = yaml.safe_load(NAV2_YAML.read_text())['planner_server']['ros__parameters']
+    for planner, block in vehicle.PLANNER_BLOCKS.items():
+        assert 'plugin' in plans[block], planner
+
+
+@pytest.mark.parametrize('planner', vehicle.PLANNERS)
+def test_nav2_tuned_puts_the_planner_under_gridbased(planner):
+    nav2 = yaml.safe_load(NAV2_YAML.read_text())
+    v = vehicle.load(CONFIG)['vehicle']
+    lattice = '/x/lattice.json' if planner == 'lattice' else None
+    plans = vehicle.nav2_tuned(nav2, v, planner=planner,
+                               lattice_file=lattice)['planner_server']['ros__parameters']
+    want = nav2['planner_server']['ros__parameters'][vehicle.PLANNER_BLOCKS[planner]]
+    assert plans['GridBased']['plugin'] == want['plugin']
+    assert set(plans) & set(vehicle.PLANNER_BLOCKS.values()) == {'GridBased'}
+    # The search model is Hybrid's alone: a whole-path rewrite would add it to any other.
+    assert (SEARCH_MODEL in vehicle.nav2_rewrites(v, planner=planner)) == (planner == 'hybrid')
+    # nav2.yaml itself is left as it was.
+    assert 'Lattice' in nav2['planner_server']['ros__parameters']
+
+
+def test_lattice_needs_its_file_and_reverses_only_with_reversing():
+    nav2 = yaml.safe_load(NAV2_YAML.read_text())
+    v = vehicle.load(CONFIG)['vehicle']
+    with pytest.raises(ValueError, match='lattice_file'):
+        vehicle.nav2_tuned(nav2, v, planner='lattice')
+    for reversing in (False, True):
+        grid = vehicle.nav2_tuned(nav2, v, reversing=reversing, planner='lattice',
+                                  lattice_file='/x/l.json')['planner_server'][
+                                      'ros__parameters']['GridBased']
+        assert grid['lattice_filepath'] == '/x/l.json'
+        assert grid['allow_reverse_expansion'] is reversing
+
+
+def test_the_committed_lattice_fits_the_car():
+    v = vehicle.load(CONFIG)['vehicle']
+    meta = json.loads(LATTICE_JSON.read_text())['lattice_metadata']
+    assert vehicle.lattice_problems(meta, v, 0.25) == []
+    wider = dict(v, max_steering_angle=v['max_steering_angle'] * 0.8)
+    assert 'turning radius' in vehicle.lattice_problems(meta, wider, 0.25)[0]
+    assert 'cells' in vehicle.lattice_problems(meta, v, 0.05)[0]

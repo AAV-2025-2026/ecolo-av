@@ -7,7 +7,7 @@
 <!-- Generated from docs/trials.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Trials: new path followers and localizers beside the main ones</h1>
-<div class="meta">18 min read · 9 sections</div></header>
+<div class="meta">22 min read · 10 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -49,7 +49,6 @@
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
 <a href="path-followers.html">Path followers</a>
-<a href="switches.html">Switches</a>
 <a class="here" href="trials.html">Trials</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
@@ -94,7 +93,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#what-is-on-trial">What is on trial</a><a href="#where-a-tracker-sits">Where a tracker sits</a><a href="#fair-rules">Fair rules</a><a href="#run-it">Run it</a><a href="#results">Results</a><a href="#scoring-a-localizer-fairly">Scoring a localizer fairly</a><a href="#before-a-winner-goes-on-the-car">Before a winner goes on the car</a><a href="#results-29-october">Results, 29 October</a><a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results, 29 October (afternoon): LQR rebuilt, and mpc_full</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#what-is-on-trial">What is on trial</a><a href="#where-a-tracker-sits">Where a tracker sits</a><a href="#fair-rules">Fair rules</a><a href="#run-it">Run it</a><a href="#results">Results</a><a href="#scoring-a-localizer-fairly">Scoring a localizer fairly</a><a href="#before-a-winner-goes-on-the-car">Before a winner goes on the car</a><a href="#results-29-october">Results, 29 October</a><a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results, 29 October (afternoon): LQR rebuilt, and mpc_full</a><a href="#planners-29-oct-hybrid-lattice-and-smac2d">Planners, 29 Oct: hybrid, lattice and smac2d</a></nav>
 <div class="lead"><p>Ben, 29 Oct: "We want to make other nodes or plugins that we can test and then replace
 the main ones if they work." Each trial runs <strong>beside</strong> today's default, chosen at launch,
 and is <strong>scored on the same routes</strong>. It becomes the default only once it wins.</p>
@@ -107,6 +106,7 @@ and is <strong>scored on the same routes</strong>. It becomes the default only o
 - <strong>Results (29 Oct, Gazebo, 3 runs):</strong> pure pursuit, Stanley and MPC finished every leg; MPPI, RPP and LQR lost legs on the U-turn. AMCL lost itself; the EKF wins. <a href="#results-29-october">Results</a>.
 - <strong>NDT</strong>, 29 Oct: about 1-3 cm off on the lot tour, 2 ms a match (below).
 - <strong>Afternoon:</strong> LQR rebuilt with a preview (U-turn 2 of 3 in a quiet run; it weaved on a busy Mac), <code>mpc_full</code> 10 of 12. <a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results</a>.
+- <strong>Planners</strong> (<code>planner:=</code>): Nav2's State Lattice (on our own primitives), Smac 2D, NavFn and Theta<em>, beside Hybrid-A</em>. 29 Oct, one run: <strong>Hybrid-A* 4 of 4 legs</strong>; lattice and Smac 2D 2 of 4, both lost on the U-turn. Hybrid stays. <a href="#planners-29-oct-hybrid-lattice-and-smac2d">Results</a>.
 - The design: <code>docs/designs/2026-10-29_trials.md</code>.</p>
 </blockquote></div>
 <section class="card"><h2 id="what-is-on-trial">What is on trial</h2>
@@ -153,6 +153,16 @@ and is <strong>scored on the same routes</strong>. It becomes the default only o
 <td>NDT on a saved lidar map</td>
 <td>the global EKF, and AMCL</td>
 <td><code>ndt:=true</code> (after <code>pixi run ndt-map drive</code>)</td>
+</tr>
+<tr>
+<td>State Lattice planner, our primitives</td>
+<td>Hybrid-A*</td>
+<td><code>planner:=lattice</code></td>
+</tr>
+<tr>
+<td>Smac 2D, NavFn, Theta* planners (ignore the turning circle: sim and bench only)</td>
+<td>Hybrid-A*</td>
+<td><code>planner:=smac2d</code>, <code>navfn</code>, <code>theta_star</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -716,8 +726,119 @@ U-turn was the planner's clockwise loop, to the south wall.</p>
 <li><code>mpc_full</code> slows only when its model says the steering can't keep up. Should it also
    value slowing for the U-turn at 1 m/s (a cost on the steering's rate per second)?</li>
 <li>The planner's growing loops: replan less often in a U-turn, or keep the old path?</li>
-</ol></section>
-<nav class="prevnext"><a class="prev" href="switches.html"><small>Previous</small>← Switches</a>
+</ol>
+</section>
+<section class="card"><h2 id="planners-29-oct-hybrid-lattice-and-smac2d">Planners, 29 Oct: hybrid, lattice and smac2d</h2>
+<p>What each planner is: <a href="controllers.html#planners">Controllers, Planners</a>.</p>
+<p>The run: Gazebo's test lot, the lot tour (4 legs), <strong>one run each</strong>, MPPI following,
+forward only, 1 m/s. Branch <code>planner-switch</code> (74544111), 23:13, a quiet Mac (load 4).
+Before each leg the planner alone was asked for the path, to time it and measure its
+turns. <code>pixi run controller-compare --planners hybrid lattice smac2d --tours lot</code>;
+results in <code>~/aav-runs/2026-10-29/planners-results/</code> on Ben's Mac (not in git).</p>
+<h3 id="the-whole-tour">The whole tour</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">hybrid (default)</th>
+<th style="text-align: right;">lattice</th>
+<th style="text-align: right;">smac2d</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Legs finished</td>
+<td style="text-align: right;"><strong>4 of 4</strong></td>
+<td style="text-align: right;">2 of 4</td>
+<td style="text-align: right;">2 of 4</td>
+</tr>
+<tr>
+<td>Time, all legs</td>
+<td style="text-align: right;">230 s</td>
+<td style="text-align: right;">141 s</td>
+<td style="text-align: right;">348 s</td>
+</tr>
+<tr>
+<td>Planning time, mean / worst</td>
+<td style="text-align: right;">16 / 52 ms</td>
+<td style="text-align: right;">4 / 10 ms</td>
+<td style="text-align: right;">2 / 4 ms</td>
+</tr>
+<tr>
+<td>Tightest turn in a plan (radius)</td>
+<td style="text-align: right;">3.03 m</td>
+<td style="text-align: right;">3.58 m</td>
+<td style="text-align: right;"><strong>2.65 m</strong></td>
+</tr>
+<tr>
+<td>Plan tighter than full lock (2.87 m)</td>
+<td style="text-align: right;">0 m</td>
+<td style="text-align: right;">0 m</td>
+<td style="text-align: right;"><strong>0.75 m</strong></td>
+</tr>
+<tr>
+<td>Off the path, mean</td>
+<td style="text-align: right;">0.12 m</td>
+<td style="text-align: right;">0.15 m</td>
+<td style="text-align: right;">0.22 m</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="leg-by-leg">Leg by leg</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Leg</th>
+<th>hybrid</th>
+<th>lattice</th>
+<th>smac2d</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a left turn</td>
+<td>30 s</td>
+<td>26 s</td>
+<td>27 s</td>
+</tr>
+<tr>
+<td>round the building</td>
+<td>52 s</td>
+<td>46 s</td>
+<td>46 s</td>
+</tr>
+<tr>
+<td><strong>turn back</strong> (a U-turn in a 14 m lane)</td>
+<td>79 s, a 63 m loop</td>
+<td><strong>lost</strong>: its loop took the car into the north-east corner (45, 45), and from there it found no forward path</td>
+<td><strong>lost</strong>: planned 14 m straight back, as if the car could spin; MPPI looped, collision_monitor stopped it, cancelled at 116 s</td>
+</tr>
+<tr>
+<td>home</td>
+<td>69 s</td>
+<td>no path from the corner</td>
+<td>its plan had 0.75 m tighter than full lock; the car never moved</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="what-it-shows_1">What it shows</h3>
+<ul>
+<li><strong>Hybrid-A* stays the default.</strong> It was the only one to finish the U-turn.</li>
+<li><strong>The lattice is fast and drives well</strong> where there's room: 4 ms a plan, and the
+  smallest error on the first two legs. Every turn kept to 3.58 m, as made. But with
+  only 16 headings its U-turn loop needs more room than Hybrid's 72; it ran the car into
+  a corner it couldn't leave forwards. Next: primitives with 32 headings, and a run
+  with <code>--reversing</code> (the lattice may then back out).</li>
+<li><strong>Smac 2D is the fastest planner and the worst for a car</strong>: it ignores the goal's
+  heading and the turning circle, so a U-turn is a straight line back. This is why the
+  car refuses it.</li>
+<li>The leg after a lost U-turn starts from wherever the car stopped, so one failure costs
+  two legs (as with the trackers).</li>
+<li>Planning times are the planner's own <code>planning_time</code>, on Gazebo's clock; the wall-clock
+  call was within a few ms of it. One run each: <strong>not a ranking yet</strong>. <code>navfn</code> and
+  <code>theta_star</code> weren't run.</li>
+</ul></section>
+<nav class="prevnext"><a class="prev" href="path-followers.html"><small>Previous</small>← Path followers</a>
 <a class="next" href="a-to-b.html"><small>Next</small>A to B →</a></nav>
 </main>
 <footer>Source: <code>docs/trials.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>

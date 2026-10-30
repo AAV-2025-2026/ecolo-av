@@ -10,7 +10,8 @@ bad at, what it needs, and where it would run on our car.
     - **Steering, following a path:** MPC is the leading candidate. Pure pursuit until
       it wins a trial.
     - **The steering motor:** the Jrk G2's own position PID, underneath everything.
-    - **Obstacle tours (Nav2):** Hybrid-A* plans, MPPI follows. No change.
+    - **Obstacle tours (Nav2):** Hybrid-A* plans, MPPI follows. No change. Other
+      planners are on trial beside it (`planner:=`, [Planners](#planners)).
     - **Trials:** LQR, Stanley and MPC run **beside** the defaults, picked at launch
       (`tracker:=`), and scored on the same routes. Planned, not built yet.
     - **Localization** has its own trial: AMCL beside today's EKF (section 8).
@@ -509,6 +510,87 @@ Scored by `controller-compare` and `atob-score`. The design: `docs/designs/2026-
 on branch `trials` (Tentative; `git show trials:docs/designs/2026-10-29_trials.md`).
 **Nothing in it is built yet.**
 
+## Planners
+
+The **planner** draws the path; the **follower** (MPPI, RPP, a tracker) drives it. Nav2
+can use several planners. We picked one with `planner:=`; Hybrid-A* stays the default
+until another wins (`docs/trials.md`, [Planners](trials.md#planners-29-oct-hybrid-lattice-and-smac2d)).
+
+```text
+ goal ─► bt_navigator ─► planner_server: "GridBased" ─► the path ─► follower
+                                │
+             planner:=hybrid (default) | lattice | smac2d | navfn | theta_star
+```
+
+The behaviour trees always ask for `GridBased`. The launch file puts the chosen planner
+behind that name, so nothing else changes.
+
+### Each planner, in plain words
+
+| `planner:=` | Nav2's plugin | How it draws the path | Keeps to the car's turning circle? |
+|---|---|---|---|
+| `hybrid` (default) | SmacPlannerHybrid | searches with real car moves: straight, full left, full right; Dubins curves (Reeds-Shepp with `reversing:=true`) | **yes** |
+| `lattice` | SmacPlannerLattice | joins short car moves from a ready-made list, our **primitives** (below) | **yes** |
+| `smac2d` | SmacPlanner2D | A* on the grid, 8 directions, then smoothed | no |
+| `navfn` | NavfnPlanner | Dijkstra on the grid: Nav2's oldest planner | no |
+| `theta_star` | ThetaStarPlanner | A* that cuts corners with straight lines ("any-angle") | no |
+
+!!! warning "The last three ignore the turning circle"
+    They plan as if the car could turn on the spot. Their paths can have sharp corners.
+    The follower has to round each corner, so the car drives off the path there, or
+    can't make the turn. **The car refuses them**: `car.launch.py` only takes `hybrid`
+    or `lattice`, with no way round it. They are for Gazebo and the bench.
+
+### What each one is good and bad at
+
+| Planner | ✅ | ❌ |
+|---|---|---|
+| hybrid | paths the car can drive; reverses when allowed | slower; replans may pick a new route |
+| lattice | paths the car can drive; moves made for our car | only as good as its primitives; a coarse 16-heading list |
+| smac2d | fast; short paths | corners the car can't turn |
+| navfn | fast; simple | corners; hugs the costmap's low cost, not the car |
+| theta_star | the straightest paths | long straight lines with sharp corners between |
+
+### The lattice's primitives
+
+The lattice needs a list of moves made for **our** car. Nav2 ships lists only for small
+robots (0.5 m and 1 m turning radius). So we make our own with Nav2's own generator:
+
+```bash
+pixi run lattice-primitives          # makes the list again (after pixi run vendor)
+pixi run lattice-primitives --check  # still right for vehicle.yaml?
+```
+
+| Setting | Value | From |
+|---|---|---|
+| turning radius | 3.59 m | full lock (2.87 m) × 1.25, as Hybrid uses (`vehicle.plan_turning_radius`) |
+| cells | 0.25 m | the maps (`maps/*.yaml`); the costmap uses the map's cells |
+| headings | 16 | the generator's advice |
+| moves | 96 | forward only; Nav2 adds the same moves backwards with `reversing:=true` |
+
+![Every move in the list, from the middle: straight lines and arcs of 3.6 m or wider](img/lattice-primitives.png)
+
+The file is `ros/drivers/aav_navigation/config/lattice_ackermann.json`. If someone changes
+the wheelbase, the steering lock or a map's cells, the launch refuses `planner:=lattice`
+until the list is made again; a test fails too.
+
+### Scoring them
+
+```bash
+pixi run controller-compare --planners hybrid lattice smac2d --tours lot
+```
+
+Each planner drives the lot tour behind MPPI. Before each leg, the planner alone is asked
+for the path too, so these are measured without the follower:
+
+| Number | Means |
+|---|---|
+| planning time | how long the planner took (ms) |
+| path length | how long its path is (m) |
+| tightest turn | the smallest circle the path bends round (m) |
+| path tighter than full lock | metres of path the car can't drive as drawn |
+| legs finished | did the car get there |
+
 ## 8. The other trial: localization
 
 Every controller above is only as good as where it thinks the car is. Localization has
@@ -567,5 +649,6 @@ today's ESP32 has no wheel speed, so the 0.5 m/s exit can't fire there (TODO 0b)
 | ego (bicycle model, limits) | `ros/ego/aav_ego/aav_ego/ackermann.py`, `config/ego.yaml` |
 | The model (speed, steering, lateral state space) | `ros/ego/aav_ego/aav_ego/vehicle_model.py` |
 | Our pure pursuit and stopping law | `ros/drivers/aav_drive_to_point/aav_drive_to_point/line.py`, `approach.py` |
-| MPPI, RPP, Hybrid-A* | `ros/drivers/aav_navigation/config/nav2.yaml` |
+| MPPI, RPP, Hybrid-A*, the trial planners | `ros/drivers/aav_navigation/config/nav2.yaml`; `planner:=` in `navigation.launch.py`, `vehicle.check_planner` |
+| The lattice's primitives | `ros/drivers/aav_navigation/config/lattice_ackermann.json`, made by `tools/lattice_primitives.py` |
 | The plan | [Control plan](designs/2026-10-27_control-plan.md) |

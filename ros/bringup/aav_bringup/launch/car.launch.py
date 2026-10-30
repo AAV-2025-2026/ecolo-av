@@ -9,6 +9,10 @@ The real car. One launch file for every machine; a machine file picks the parts.
                            most, where the machine runs something that sees behind: the
                            lidar, or camera_obstacles with a detector on the rear camera
                            that keeps people. Without, it stays forward only and says why)
+      [planner:=hybrid]   (Nav2's planner: hybrid (SmacPlannerHybrid) or lattice
+                           (SmacPlannerLattice, our primitives). Only these two on the car:
+                           smac2d, navfn and theta_star ignore the turning radius, and are
+                           refused here, with no way round it (vehicle.check_planner real)
       [lidar:=true]       (false: no lidar anywhere, whatever the machine file says)
       [ghost:=false]      (true: a pretend person in Nav2's view, where Nav2 runs, for
                            stopping tests with nothing real to hit: pixi run ghost ahead 10)
@@ -535,8 +539,10 @@ def launch_setup(context):
             reversing = False
         # The local costmap reads the sensors this machine runs. Each is passed, on or
         # off, so none can leak in from another file.
+        # Only planners whose paths keep to the turning radius, on real data.
+        planner = vehicle.check_planner(arg('planner'), real=True)
         actions.append(include('aav_navigation', 'navigation.launch.py',
-                               map=arg('map') or empty_map, radar=on('radar'),
+                               map=arg('map') or empty_map, radar=on('radar'), planner=planner,
                                lidar=on('lidar'), ghost=flag('ghost'),
                                collision_monitor=(on('radar') or on('lidar') or flag('ghost')
                                                   or rear_camera),
@@ -633,6 +639,10 @@ def generate_launch_description():
                                           'wheels tell direction, H5); true: Nav2 may back '
                                           'up, with the lidar watching behind '
                                           '(docs/learn-nav2.md)'),
+        DeclareLaunchArgument('planner', default_value=vehicle.DEFAULT_PLANNER,
+                              description=', '.join(vehicle.CAR_PLANNERS) + ": Nav2's "
+                                          'planner on the car; the grid planners (sim and '
+                                          'bench trials) are refused here'),
         DeclareLaunchArgument('bridge', default_value=bridges.DEFAULT,
                               description='spine_bridge in rust (aav_spine_bridge) or python '
                                           '(aav_spine), where the machine runs the spine'),
