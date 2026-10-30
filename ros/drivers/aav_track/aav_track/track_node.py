@@ -80,9 +80,10 @@ def yaw_of(q):
 class Job:
     """One FollowPath goal: its handle, its path in odom, and how it ended."""
 
-    def __init__(self, handle, path):
+    def __init__(self, handle, path, started):
         self.handle = handle
         self.path = path
+        self.started = started        # s: no odometry yet is only an error odom_timeout after
         self.done = Future()          # (outcome, error code, message)
         self.hint = 0
 
@@ -244,7 +245,7 @@ class Track(Node):
             return self.end(handle, 'abort', Code.INVALID_PATH, str(e))
         except tf2_ros.TransformException as e:
             return self.end(handle, 'abort', Code.TF_ERROR, f'no map -> odom: {e}')
-        job = Job(handle, path)
+        job = Job(handle, path, self.seconds())
         old, self.job = self.job, job
         if old is not None:
             # The planner replanned: the newest path carries on, with no stop between.
@@ -292,7 +293,12 @@ class Track(Node):
         self.last_tick = now
         if job.handle.is_cancel_requested:
             return self.stop(job, 'cancel')
-        if self.odom is None or now - self.odom_time > self.p['odom_timeout']:
+        if self.odom is None:
+            if now - job.started <= self.p['odom_timeout']:
+                return                # a goal can arrive before the first odometry
+            return self.stop(job, 'abort', Code.UNKNOWN,
+                             f'no odometry on {self.p["odom_topic"]}')
+        if now - self.odom_time > self.p['odom_timeout']:
             return self.stop(job, 'abort', Code.UNKNOWN,
                              f'no odometry on {self.p["odom_topic"]}')
         x, y, yaw, v, yaw_rate = self.odom
