@@ -11,7 +11,7 @@ controller ... closed loop". The plan: `docs/designs/2026-10-27_control-plan.md`
 | # | Task | Needs |
 |---|---|---|
 | 0 | **The plan's step 1: the bridge uses ego's acceleration**, feed-forward + PI for throttle and brake (`docs/designs/2026-10-27_control-plan.md`); scored with `atob-score` | Gazebo, bench |
-| 0b | **The spine's state machine (Arsh's #15), follow-up:** the board for today's car (`esp32-umod`) has no wheel speed (`SpeedFeedback::None`), so the test mode's "leave above 0.5 m/s" can't fire there. Refuse throttle tests when Confidence is Degraded, or say so in its docs. (Test requests have no transport yet, so nothing can trigger it today.) Also: the self-test is one tick with no fault | Arsh |
+| 0b | **The spine's state machine (Arsh's #15), follow-up:** the board for today's car (`esp32-umod`) has no wheel speed (`SpeedFeedback::None`), so the test mode's "leave above 0.5 m/s" can't fire there. Refusing throttle tests without a wheel speed: done (`spine.rs` turns them into Hold; found by the two-screens review, 29 Oct). (Test requests have no transport yet, so nothing can trigger it today.) Also: the self-test is one tick with no fault | Arsh |
 | 1 | **A page that explains it all:** PID, LQR, MPC and MPPI, with pictures; which loop runs where (ESP32, Jrk, Orin); what each knows. The next chapter of `docs/learn-control.md` ("Control from zero") | ✅ 29 Oct: [Controllers](docs/controllers.md), after Learn: control. The old RPP-vs-MPPI page is now `docs/path-followers.md` |
 | 2 | **LQR for steering:** from `vehicle_model.lateral()`, scheduled by speed; follows the planner's path (Smac), in place of pure pursuit; scored with `atob-score` and `controller-compare` | 🔧 29 Oct, branch `trackers-tuning`: rebuilt about the path's bend (gains by speed and bend), the command's rate in the design, a 2 s preview of the bends ahead. Fake car's full-lock U-turn: 0.80 → 0.29 m off. Gazebo: 10 of 12 legs, U-turn 2 of 3 (04:18, was 8 and 1 of 3); on a busy Mac (15:23) 6 of 12, one run starved, one **weaved**. Left: rerun on a quiet Mac with the status topic logged ([trials](docs/trials.md#results-29-october-afternoon-lqr-rebuilt-and-mpc_full)) |
 | 3 | **LQR for speed and brake (LQI):** one signed acceleration, in `spine-core`; scored against today's PI and P-only brake | ✅ 29 Oct: built (`speed_loop:=lqi`, gains from `pixi run vehicle-model --lqi`); the PI stays the default. No overshoot in Gazebo's steps (today's 10-16 %), settles in 4-5 s (11-13 s); at 3 m/s it stops 0.2-0.4 m past B (the PI 0-0.4): [Controllers, 2a](docs/controllers.md#2a-lqi-against-the-pi-results-29-oct). Also the bridge's smooth stop (Autoware's design): the jolt at standstill halves (2b). Left: a ramp feed-forward for the LQI's stop; nothing tried on the car |
@@ -362,6 +362,8 @@ work on." His order, with the work under way:
       2. **The seeing screen** (today's debug HUD, split): left, big, the 3D cubes; right
          top, a top-down of the lidar map (ICP/KISS-ICP, or the NDT map today) with the
          car on it; right bottom, a top-down of NDT's match (the scan on the map's cells).
+      Design: `docs/designs/2026-10-29_two-screens.md` (EGM-reviewed): `hw_panel`, its own
+      program, twist_mux slot 45, hold-to-drive; `debug_hud` stays read-only.
 - [ ] **A preflight on stands, before the ground** (Ben, 29 Oct): one scripted run, wheels
       off the ground: speed up, hold, slow down, brake; steer left, right, centre; and
       every sensor checked live (rate, values in range) at the same time. PASS or FAIL per
