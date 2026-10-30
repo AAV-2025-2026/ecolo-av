@@ -92,6 +92,75 @@ Each run's results go here, with its date and its folder in `log/controller-comp
   car's does. One run: no spread yet. `covariance_scale` (k) and the score floor are
   not fitted yet.
 
+### 29 Oct, afternoon: AMCL tuned, and why it was lost
+
+Each run: `controller-compare --tours lot --controllers mppi --amcl`, with a bag of the
+scan, the truth and AMCL beside it (`ros2 bag record`, not in git). Off = from Gazebo's truth.
+
+**What the bags showed:**
+
+| Suspect | Finding |
+|---|---|
+| things in the world not in the map | **no**: at the truth, 3 of 83,000 beam ends were over 0.75 m from a wall in `example_lot` |
+| the scan's 0.3-2.0 m band vs the 1.5 m walls | **no**: the lidar's beams (15° down to 15° up) cross the band on every wall from ~2.4 to 30 m |
+| the odometry | **no**: `ekf_local` within 0.3 % of the distance and 0.5° per 4 m |
+| the scan's stamp | small: it fits the truth ~0.07 s earlier (7 cm at 1 m/s) |
+| the scan's directions | **a bug, fixed**: each point went to the direction below it, 0.25° clockwise |
+| AMCL's motion noise (alpha 0.2) | **the main cause**: ~9° of heading noise per particle per 0.25 m driven |
+| AMCL's laser model (z_hit 0.5, 60 beams) | **weak**: a perfect fit scored only ~6x a hopeless one |
+| the 0.25 m solid map | **a bias**: a beam on a wall's face lands in the free cell before it; pushing beams into the building scored better than the truth |
+
+**What changed** (each with its reason in `config/amcl.yaml`):
+
+| Step | Change | Leg 1 / leg 2 off, mean (m) | Worst (m) |
+|---|---|---|---|
+| before | the defaults | 0.69 / 6.98 (lost, 95° off) | 21.1 |
+| A | alpha 0.2 → 0.01-0.05; z_hit 0.9, z_rand 0.1; 180 beams; resample every 2nd scan; the scan's directions | 0.54 / 0.86 | 1.68 |
+| B | A + sigma_hit 0.4 (as wide as the map's cells) | 0.40 / 0.27 | 0.79 (whole tour) |
+
+B, the whole tour, one run (`log/controller-compare/20261029-110651/`):
+
+| Leg | AMCL off, mean (m) | worst (m) |
+|---|---|---|
+| a left turn | 0.40 | 0.63 |
+| round the building | 0.27 | 0.46 |
+| turn back | 0.19 | 0.33 |
+| home | 0.47 | 0.79 |
+
+- Never lost. The worst is in the open (leg 1, home): only one wall within 30 m, so
+  along the car's way nothing pins it, and the solid map's bias pulls it 0.2 m back.
+- **AMCL's own map** (step C): the lot at 0.05 m with each obstacle only its outline
+  (`maps/example_lot_amcl.yaml`, [why](../ros/drivers/aav_navigation/maps/README.md#why-amcl-has-a-map-of-its-own)).
+  Offline, on these bags, its best-scoring pose is 0.07 m from the truth (0.25 m map:
+  0.2-0.3 m). Its run: below.
+
+**Step C: AMCL's own map, sigma_hit 0.2** (`log/controller-compare/20261029-213729/`,
+one run, `--tours lot --controllers mppi --amcl`):
+
+| Leg | AMCL off, mean (m) | worst (m) | B's mean / worst (m) | Lost? |
+|---|---|---|---|---|
+| a left turn | 0.11 | 0.15 | 0.40 / 0.63 | no |
+| round the building | 0.06 | 0.12 | 0.27 / 0.46 | no |
+| turn back | 0.06 | 0.12 | 0.19 / 0.33 | no |
+| home | - | - | 0.47 / 0.79 | not scored: the car never moved |
+
+- **C wins: 3-6x closer than B, and it's the default** for `amcl:=true` (sigma_hit 0.2
+  in `config/amcl.yaml`; `sim.launch.py` always gives AMCL its own map).
+- Heading off: 1° at worst (B: 6°). The first 10 s of leg 1 have no pose yet (AMCL waits
+  for 0.25 m of driving), as in B.
+- Nav2, not AMCL, failed the last two legs: it gave up on the turn back (status 6,
+  collision_monitor stopped it once) and never started home. The Mac was at load ~25 then
+  (another worktree's Gazebo). Run it again on a quiet computer for the home leg.
+- **A bug found on the way:** until this run AMCL never read its own map. Under
+  `sim.launch.py`'s global `use_sim_time`, `amcl.yaml`'s `map_topic: /map` beat the launch
+  file's, so the runs at 11:20 and 19:31 (`20261029-112022/`, `-193140/`) were Nav2's 0.25 m
+  map with sigma 0.2: 0.5-0.8 m mean, 1.8 m worst, worse than B. That shows 0.4 is right on
+  the coarse map, 0.2 only on the fine one. `map_topic` left `amcl.yaml`; the launch test
+  checks that nothing the launch file sets is in the file too.
+- An earlier try at the same setup (`20261029-213056/`), beside another Gazebo: leg 1 0.08 m
+  mean, then AMCL dropped 68 scans (its transforms came late) and published nothing more.
+  With the computer this loaded, AMCL's numbers are only worth what its pose count says.
+
 ## Scoring a localizer fairly
 
 | Number | Why |

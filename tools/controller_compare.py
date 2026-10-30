@@ -564,7 +564,8 @@ def picture(results, tour, args):
     if TOURS[tour]['obstacle']:
         bx, by = worlds.OBSTACLE
         blocks.append((bx - BOX / 2, by - BOX / 2, bx + BOX / 2, by + BOX / 2, '#c92a2a'))
-    runs = [r for r in results if r[0] == tour and r[5]]
+    # A run that never came up has a leg without a track: nothing to draw.
+    runs = [r for r in results if r[0] == tour and r[5] and 'track' in r[5]]
     tracks = []
     for controller in dict.fromkeys(c for _, _, c, *_ in runs):
         legs = [r for r in runs if r[2] == controller]
@@ -573,7 +574,8 @@ def picture(results, tour, args):
                  for n in dict.fromkeys(r[5].get('run', 1) for r in legs)]
         tracks.append((f'{controller}: where the car went', COLOURS.get(controller, 'black'),
                        lines, False))
-    plans = [r[5]['plan'] for r in runs if r[2] == runs[0][2] and r[5].get('run', 1) == 1]
+    plans = [r[5]['plan'] for r in runs
+             if r[2] == runs[0][2] and r[5].get('run', 1) == 1 and 'plan' in r[5]]
     tracks.append(('the first plan of each leg', '#868e96', plans, True))
     marks = [(x, y, name) for name, x, y, _ in tour_legs(tour, args)]
     return drive_metrics.svg((ox, oy, ox + w, oy + h), tracks, blocks, marks)

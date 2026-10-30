@@ -6,7 +6,7 @@ Nav2 as one more driver: goals in, /drivers/nav/cmd_vel (TwistStamped) out to tw
       [camera_obstacles:=false] [ghost:=false]
       [reversing:=false] [max_speed:=] [controller:=mppi] [plan_around:=true]
       [tracker:=none] [live_swap:=false] [amcl:=false] [amcl_x:=0.0] [amcl_y:=0.0]
-      [amcl_yaw:=0.0]
+      [amcl_yaw:=0.0] [amcl_map:=]
       [use_sim_time:=false]
       [autostart:=true]
 
@@ -48,6 +48,8 @@ Trials (docs/trials.md), each beside the default and scored by pixi run controll
                           lidar:=true), from amcl_x, amcl_y, amcl_yaw (map frame), with its
                           own lifecycle manager. tf_broadcast false: ekf_global keeps
                           map -> odom; AMCL's pose, /localization/amcl/pose, is only scored
+  amcl_map:=<yaml>        AMCL's own map (finer, obstacles as outlines: maps/README.md),
+                          from amcl_map_server on /localization/amcl/map; empty: Nav2's /map
 
 Obstacles, from where the sensors are:
   radar:=true             where a radar publishes /sensors/radar/points (the bench; the car
@@ -241,6 +243,18 @@ def nodes(context):
         for axis in ('x', 'y', 'yaw'):
             start[f'initial_pose.{axis}'] = float(
                 LaunchConfiguration(f'amcl_{axis}').perform(context))
+        amcl_map = LaunchConfiguration('amcl_map').perform(context)
+        managed = ['amcl']
+        if amcl_map:
+            # AMCL's own map (maps/README.md: finer cells, obstacles as outlines), from a
+            # map_server of its own; Nav2's planner and costmaps keep /map.
+            start['map_topic'] = '/localization/amcl/map'
+            managed.insert(0, 'amcl_map_server')
+            actions.append(Node(
+                package='nav2_map_server', executable='map_server', name='amcl_map_server',
+                output='screen',
+                parameters=[{'yaml_filename': amcl_map, 'topic_name': '/localization/amcl/map',
+                             'frame_id': 'map', 'use_sim_time': use_sim_time}]))
         actions += [
             Node(package='nav2_amcl', executable='amcl', name='amcl', output='screen',
                  parameters=[config, start],
@@ -253,7 +267,7 @@ def nodes(context):
                  name='lifecycle_manager_localization', output='screen',
                  parameters=[{'use_sim_time': use_sim_time,
                               'autostart': flag(context, 'autostart'),
-                              'node_names': ['amcl']}]),
+                              'node_names': managed}]),
         ]
     actions.append(Node(
         package='nav2_lifecycle_manager',
@@ -327,6 +341,10 @@ def generate_launch_description():
                               description="m, map frame: AMCL's start"),
         DeclareLaunchArgument('amcl_yaw', default_value='0.0',
                               description="rad from east: AMCL's start heading"),
+        DeclareLaunchArgument('amcl_map', default_value='',
+                              description="empty: AMCL reads Nav2's /map; else a map YAML "
+                                          'of its own, on /localization/amcl/map (the '
+                                          "test lot's: maps/example_lot_amcl.yaml)"),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         DeclareLaunchArgument('autostart', default_value='true'),
         OpaqueFunction(function=nodes),
