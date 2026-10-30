@@ -38,11 +38,10 @@ import subprocess
 import sys
 import tempfile
 
-import yaml
-
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, 'ros', 'bringup', 'aav_description'))
 from aav_description import vehicle  # noqa: E402
+import yaml  # noqa: E402
 
 GENERATOR = os.path.join(ROOT, 'vendor', 'ros2-src', 'ecosystem', 'navigation2',
                          'nav2_smac_planner', 'lattice_primitives')
@@ -56,7 +55,7 @@ STOPPING = 5
 SPECS = ('python=3.12', 'numpy', 'matplotlib-base', 'rtree')
 # AMCL's own map is finer (5 cm), but only AMCL reads it, never Nav2's planner.
 NOT_NAV2 = ('example_lot_amcl.yaml',)
-TOLERANCE = 0.005   # m: the file's radius against vehicle.yaml's (3 decimals)
+TOLERANCE = vehicle.LATTICE_TOLERANCE   # m: the file's radius against vehicle.yaml's
 
 
 def nav2_resolution(maps=MAPS):
@@ -82,16 +81,8 @@ def config(v, resolution):
 
 def problems(lattice, v, resolution):
     """Return what is wrong with a primitives file (loaded) for this car and these maps."""
-    meta = lattice['lattice_metadata']
-    want = config(v, resolution)
-    out = []
-    if meta.get('motion_model') != 'ackermann':
-        out.append(f"motion_model {meta.get('motion_model')}, not ackermann")
-    if abs(float(meta['turning_radius']) - want['turning_radius']) > TOLERANCE:
-        out.append(f"turning radius {meta['turning_radius']} m, but the car plans with "
-                   f"{want['turning_radius']} m (vehicle.plan_turning_radius)")
-    if abs(float(meta['grid_resolution']) - resolution) > 1e-9:
-        out.append(f"cells of {meta['grid_resolution']} m, but the maps' are {resolution} m")
+    # The same check navigation.launch.py makes before it starts the lattice planner.
+    out = vehicle.lattice_problems(lattice['lattice_metadata'], v, resolution)
     if not lattice.get('primitives'):
         out.append('no primitives')
     return out

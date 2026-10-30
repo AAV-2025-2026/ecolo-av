@@ -49,6 +49,7 @@ Many values are still `TODO measure` (docs/car_measurements.md).
 | `nav2_rewrites(v, reversing)`, `nav2_tuned(...)` | Nav2's settings from the car |
 | `plan_turning_radius(v)`, `s_bend_length(radius, offset)`, `final_approach(v)` | the planner's radius; the room ahead an S-bend needs; how near the goal Nav2 keeps its path (TODO 17) |
 | `ego_params(cfg)`, `spine_params(v)` | ego's and `spine_bridge`'s parameters |
+| `check_planner(name, real)`, `lattice_problems(meta, v, resolution)` | a planner's name, checked (only `CAR_PLANNERS` with `real`); what's wrong with a lattice primitives file for this car and map |
 | `check_tracker(name, reversing)`, `track_params(nav2, cfg, ego, max_speed)` | a trial tracker's name, checked; `aav_track`'s parameters from nav2.yaml, vehicle.yaml and ego.yaml |
 | `obstacle_heights(v)`, `centre_of_mass(...)` | the lidar's height band; centre of mass from the scales |
 
@@ -57,7 +58,9 @@ Constants: `STOP_ZONE_AHEAD`, `STOP_ZONE_BEHIND`, `STOP_ZONE_MARGIN` (m),
 `CONTROLLERS = ('rpp', 'mppi')` with `DEFAULT_CONTROLLER = 'mppi'` (the default of
 `sim.launch.py`'s `controller`); `TRACKERS = ('none', 'pure_pursuit', 'stanley', 'lqr',
 'mpc', 'mpc_full')` with `DEFAULT_TRACKER = 'none'` (`tracker:=`, `docs/trials.md`), kept apart from
-`CONTROLLERS`.
+`CONTROLLERS`; `PLANNERS = ('hybrid', 'lattice', 'smac2d', 'navfn', 'theta_star')` with
+`DEFAULT_PLANNER = 'hybrid'`, `CAR_PLANNERS = ('hybrid', 'lattice')` (the ones that keep to
+the turning radius) and `PLANNER_BLOCKS` (each one's block in `nav2.yaml`).
 
 ### URDF (`urdf/`)
 

@@ -7,7 +7,8 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [map:=false] [foxglove:=false]
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true] [radar:=true]
       [actuator_model:=true] [speed_loop:=default|smooth|lqi] [sim_speed:=]
-      [reversing:=true] [controller:=mppi] [tracker:=none] [amcl:=false]
+      [reversing:=true] [controller:=mppi] [planner:=hybrid] [tracker:=none]
+      [amcl:=false]
       [ndt:=false] [ndt_map:=maps/ndt/test_lot.pcd]
       [plan_around:=true]
       [watchdog:=true] [geofence:=true] [geofence_radius:=200.0]
@@ -55,6 +56,10 @@ bench's argument names:
                       ego refuses it outside a simulator
   controller:=rpp     Nav2 follows the path with Regulated Pure Pursuit, not MPPI (the
                       default): pixi run controller-compare drives both (docs/path-followers.md)
+  planner:=lattice    Nav2 plans with another planner (navigation.launch.py planner:=):
+                      hybrid (the default) or lattice keep to the car's turning radius;
+                      smac2d, navfn and theta_star don't, trials only. pixi run
+                      controller-compare --planners scores them (docs/controllers.md)
   tracker:=lqr        a trial path follower (aav_track: pure_pursuit, stanley, lqr or mpc)
                       in controller_server's place, on Nav2's same planner, smoother and
                       collision_monitor. Forward only: with reversing:=false (docs/trials.md)
@@ -147,6 +152,7 @@ def launch_setup(context):
     if controller not in vehicle.CONTROLLERS:
         raise ValueError(f'controller:={controller}: pick one of {", ".join(vehicle.CONTROLLERS)}')
     tracker = vehicle.check_tracker(arg('tracker'), flag['reversing'])
+    planner = vehicle.check_planner(arg('planner'))
     amcl = arg('amcl').lower() == 'true'
     ndt = arg('ndt').lower() == 'true'
     gazebo_share = FindPackageShare('aav_gazebo').perform(context)
@@ -211,7 +217,7 @@ def launch_setup(context):
                                camera_obstacles=flag['camera_obstacles'],
                                max_speed=arg('sim_speed'),
                                reversing=str(flag['reversing']).lower(),
-                               controller=controller, tracker=tracker,
+                               controller=controller, tracker=tracker, planner=planner,
                                # A trial tracker may be swapped live here (the debug
                                # HUD's panel shows which): Gazebo only, never the car.
                                live_swap='true',
@@ -376,6 +382,10 @@ def generate_launch_description():
         DeclareLaunchArgument('controller', default_value=vehicle.DEFAULT_CONTROLLER,
                               description='mppi or rpp (Regulated Pure Pursuit): what '
                                           "follows Nav2's path (docs/path-followers.md)"),
+        DeclareLaunchArgument('planner', default_value=vehicle.DEFAULT_PLANNER,
+                              description=', '.join(vehicle.PLANNERS) + ": Nav2's planner. "
+                                          "hybrid and lattice keep to the car's turning "
+                                          'radius; the others are trials (docs/controllers.md)'),
         DeclareLaunchArgument('tracker', default_value=vehicle.DEFAULT_TRACKER,
                               description="a trial path follower in controller_server's "
                                           'place: ' + ', '.join(vehicle.TRACKERS) +

@@ -11,7 +11,8 @@ The launch files use this so the car's measurements live in one file:
     vehicle.rear_stop_zone_points(v) # ... and behind, reversing
     vehicle.blind_behind(reversing, lidar=..., rear_camera=...)  # may Nav2 reverse?
     vehicle.obstacle_heights(v)      # the lidar's band of obstacle heights (lidar_scan)
-    vehicle.nav2_rewrites(v, reversing)         # Nav2's file: forward only, or reversing too
+    vehicle.nav2_rewrites(v, reversing, planner)  # Nav2's file: forward only, or reversing too
+    vehicle.check_planner(name, real)  # planner:=, only the car-shaped ones on the car
     vehicle.nav2_tuned(nav2, v, reversing, max_speed, radar, lidar, ghost,  # what
                        controller)                              # RewrittenYaml can't write
     vehicle.ego_params(vehicle.load())          # ego: the whole file (the actuators too)
@@ -279,6 +280,61 @@ def check_tracker(tracker, reversing=False):
     return name
 
 
+# Nav2's planners (planner:=, docs/controllers.md "Planners"), each under the one plugin name
+# the behaviour trees ask for, GridBased. hybrid (SmacPlannerHybrid, the default) and lattice
+# (SmacPlannerLattice, on our own primitives: tools/lattice_primitives.py) keep to the car's
+# turning radius. smac2d (SmacPlanner2D), navfn (NavfnPlanner) and theta_star
+# (ThetaStarPlanner) plan on the grid as if the car could turn on the spot: their paths may
+# have corners the car can't drive, and the follower must round them. Trials only: refused
+# on the real car (check_planner real=True).
+PLANNERS = ('hybrid', 'lattice', 'smac2d', 'navfn', 'theta_star')
+CAR_PLANNERS = ('hybrid', 'lattice')
+DEFAULT_PLANNER = 'hybrid'
+# Each planner's block in nav2.yaml's planner_server (GridBased is hybrid's own).
+PLANNER_BLOCKS = {'hybrid': 'GridBased', 'lattice': 'Lattice', 'smac2d': 'Smac2D',
+                  'navfn': 'NavFn', 'theta_star': 'ThetaStar'}
+# The lattice's turning radius against plan_turning_radius: the file keeps 3 decimals.
+LATTICE_TOLERANCE = 0.005
+
+
+def check_planner(planner, real=False):
+    """
+    Return the planner's name (lower case), or raise ValueError saying what to pick.
+
+    real: the launch drives the real car (data source REAL, car.launch.py). There only
+    CAR_PLANNERS, whose paths keep to the turning radius: a corner from a grid planner is
+    a path the car can't drive, and the safest answer is not to offer it at all.
+    """
+    name = str(planner).strip().lower()
+    if name not in PLANNERS:
+        raise ValueError(f'planner:={planner}: pick one of {", ".join(PLANNERS)}')
+    if real and name not in CAR_PLANNERS:
+        raise ValueError(f"planner:={name} ignores the car's turning radius: a trial for "
+                         f'sim and bench only. On the car: {", ".join(CAR_PLANNERS)}')
+    return name
+
+
+def lattice_problems(meta, v, resolution):
+    """
+    Return what is wrong with a lattice primitives file for this car and map (empty: fine).
+
+    meta: the file's lattice_metadata; v: vehicle.yaml's vehicle; resolution: the map's
+    cells (m), which the global costmap takes. Nav2 measures the primitives in cells of
+    the file's own size, so another map's cells would stretch or shrink every move.
+    """
+    out = []
+    if meta.get('motion_model') != 'ackermann':
+        out.append(f"motion_model {meta.get('motion_model')}, not ackermann")
+    want = round(plan_turning_radius(v), 3)
+    if abs(float(meta.get('turning_radius', 0.0)) - want) > LATTICE_TOLERANCE:
+        out.append(f"turning radius {meta.get('turning_radius')} m, but the car plans with "
+                   f'{want} m (plan_turning_radius)')
+    if abs(float(meta.get('grid_resolution', 0.0)) - float(resolution)) > 1e-9:
+        out.append(f"cells of {meta.get('grid_resolution')} m, but the map's are "
+                   f'{resolution} m')
+    return out
+
+
 def track_params(nav2, cfg, ego=None, max_speed=None):
     """
     Return aav_track's parameters: the same speed and "done" as Nav2's controllers.
@@ -320,7 +376,7 @@ def track_params(nav2, cfg, ego=None, max_speed=None):
     }
 
 
-def nav2_rewrites(v, reversing=False):
+def nav2_rewrites(v, reversing=False, planner=DEFAULT_PLANNER):
     """
     Values to substitute into aav_navigation/config/nav2.yaml.
 
@@ -329,10 +385,16 @@ def nav2_rewrites(v, reversing=False):
     Reeds-Shepp paths (forward and back), the controller follows them backwards, and MPPI
     may go negative. Without it, the planner plans forward only (Dubins paths). The velocity
     smoother's limit is a list, which RewrittenYaml can't write: see nav2_tuned.
+    A whole path that isn't in the file is added (RewrittenYaml's add_params), so the
+    Hybrid planner's search model is written only with planner hybrid; the other planners'
+    settings are nav2_tuned's.
     """
     r = min_turning_radius(v)
     low, high = obstacle_heights(v)
+    hybrid = ({'planner_server.ros__parameters.GridBased.motion_model_for_search':
+               'REEDS_SHEPP' if reversing else 'DUBIN'} if planner == 'hybrid' else {})
     return {
+        **hybrid,
         'footprint': footprint(v),
         'lidar_scan.ros__parameters.min_height': f'{low:.3f}',
         'lidar_scan.ros__parameters.max_height': f'{high:.3f}',
@@ -342,15 +404,14 @@ def nav2_rewrites(v, reversing=False):
             polygon(stop_zone_points(v)),
         'collision_monitor.ros__parameters.StopZone.backward.points':
             polygon(rear_stop_zone_points(v)),
-        'planner_server.ros__parameters.GridBased.motion_model_for_search':
-            'REEDS_SHEPP' if reversing else 'DUBIN',
         'controller_server.ros__parameters.FollowPath.allow_reversing': str(reversing).lower(),
         'controller_server.ros__parameters.MPPI.vx_min': f'{reverse_limit(v, reversing):.3f}',
     }
 
 
 def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False,
-               ghost=False, controller=DEFAULT_CONTROLLER, plan_around=True, camera=False):
+               ghost=False, controller=DEFAULT_CONTROLLER, plan_around=True, camera=False,
+               planner=DEFAULT_PLANNER, lattice_file=None):
     """
     Return a copy of nav2.yaml's settings (`nav2`, loaded) with what RewrittenYaml can't write.
 
@@ -375,11 +436,27 @@ def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False
     - with `radar` or `lidar` and `plan_around`, the same sensor layers in the planner's
       costmap too, so it plans round what they see (the ghost stays out: the car must stop
       for it). Without plan_around the planner sees only the map, and the car stops for
-      what's in its way: the stop zone's tests.
+      what's in its way: the stop zone's tests;
+    - the planner (PLANNERS, DEFAULT_PLANNER): its block (PLANNER_BLOCKS) becomes GridBased,
+      the name the behaviour trees ask for, and the spare blocks go. lattice also takes
+      `lattice_file` (the primitives) and, with `reversing`, may expand backwards.
     """
     if controller not in CONTROLLERS:
         raise ValueError(f'controller:={controller}: pick one of {", ".join(CONTROLLERS)}')
+    planner = check_planner(planner)
+    if planner == 'lattice' and not lattice_file:
+        raise ValueError('planner:=lattice needs its primitives file (lattice_file)')
     out = copy.deepcopy(nav2)
+    # (A part of nav2.yaml with no planner_server, as some tests give, keeps none.)
+    plans = out.get('planner_server', {}).get('ros__parameters')
+    if plans is not None:
+        chosen = copy.deepcopy(plans[PLANNER_BLOCKS[planner]])
+        for block in PLANNER_BLOCKS.values():
+            plans.pop(block, None)
+        if planner == 'lattice':
+            chosen['lattice_filepath'] = lattice_file
+            chosen['allow_reverse_expansion'] = bool(reversing)
+        plans['GridBased'] = chosen
     servers = out['controller_server']['ros__parameters']
     if controller == 'mppi':
         # A copy, so the MPPI block stays where nav2_rewrites' MPPI.vx_min expects it.
