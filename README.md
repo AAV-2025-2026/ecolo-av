@@ -123,7 +123,7 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 | `check` | the running graph against the contract: `check turtle` (or `sim`, `road`, `spine`, `car`, `replay`, `bench`) |
 | `bench-check` | starts bench mode and tests the whole graph: contract, drive, e-stops (2 min) |
 | `sim-check` | starts Gazebo's road world headless and tests the whole graph in it (2 min) |
-| `controller-compare` | Regulated Pure Pursuit against MPPI on the same routes, headless; the trials too (`--trackers`, `--runs`, `--amcl`, `--ndt`: docs/trials.md) |
+| `controller-compare` | Regulated Pure Pursuit against MPPI on the same routes, headless; the trials too (`--trackers`, `--planners`, `--runs`, `--amcl`, `--ndt`: docs/trials.md) |
 | `ndt-map` | NDT's map of Gazebo's test lot: `drive` the mapping route headless, or `build` from a bag; into `maps/ndt/` |
 | `lattice-primitives` | the State Lattice planner's moves for our car (`planner:=lattice`), from Nav2's own generator; `--check` says if `vehicle.yaml` has changed since |
 | `heading-check` | the global EKF's heading against Gazebo's truth, at walking pace |

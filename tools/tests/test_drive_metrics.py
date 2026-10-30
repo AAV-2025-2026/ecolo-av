@@ -426,3 +426,70 @@ def test_runs_combine_into_a_mean_and_a_spread():
     assert one['runs_reached'] == '1/1' and 'time_s_sd' not in one
     assert m.combine([]) == {}
     assert 'Runs that reached the goal' in m.table([('rpp', out)])
+
+
+def arc(radius, degrees, points=200):
+    """Return a path along a circle of `radius` round (0, radius), from (0, 0), turning left."""
+    return [(radius * math.sin(a), radius * (1.0 - math.cos(a)))
+            for a in (math.radians(degrees) * i / points for i in range(points + 1))]
+
+
+def test_resampling_keeps_the_ends_and_the_spacing():
+    points = m.resample([(0.0, 0.0), (1.0, 0.0), (1.0, 0.6)], step=0.25)
+    assert points[0] == (0.0, 0.0) and points[-1] == (1.0, 0.6)
+    gaps = [math.hypot(b[0] - a[0], b[1] - a[1]) for a, b in zip(points, points[1:-1])]
+    # Along the path, not across the corner: the corner's gap is a chord, shorter.
+    assert all(g == pytest.approx(0.25) or g < 0.25 for g in gaps)
+    assert len(points) == 8      # 1.6 m in 0.25 m steps, the end kept
+
+
+def test_a_circle_through_three_points():
+    assert m.circle_radius((0, 0), (1, 1), (2, 0)) == pytest.approx(1.0)
+    assert math.isinf(m.circle_radius((0, 0), (1, 0), (2, 0)))
+
+
+def test_an_arc_reads_its_own_radius_and_a_grid_corner_reads_tight():
+    radii = [r for _, r in m.turn_radii(arc(3.6, 90.0))]
+    assert radii and min(radii) == pytest.approx(3.6, rel=0.01)
+    corner = [(0.0, 0.0), (5.0, 0.0), (5.0, 5.0)]
+    assert min(r for _, r in m.turn_radii(corner)) < 1.0
+    assert all(math.isinf(r) for _, r in m.turn_radii([(0.0, 0.0), (5.0, 0.0)]))
+
+
+def test_the_planners_numbers_count_what_the_car_cant_drive():
+    lock = 2.87
+    smooth = m.plan_row({'path': arc(3.6, 90.0), 'ms': 40.0, 'wall_ms': 55.0,
+                         'lock_radius': lock})
+    assert smooth['plan_found'] is True and smooth['plan_ms'] == 40.0
+    assert smooth['plan_m'] == pytest.approx(3.6 * math.pi / 2, rel=0.01)
+    assert smooth['plan_too_tight_m'] == 0.0
+    sharp = m.plan_row({'path': [(0.0, 0.0), (5.0, 0.0), (5.0, 5.0)], 'ms': 3.0,
+                        'wall_ms': 9.0, 'lock_radius': lock})
+    assert sharp['plan_too_tight_m'] > 0.0 and sharp['plan_tightest_m'] < lock
+    none = m.plan_row({'path': [], 'ms': 5000.0, 'wall_ms': 5100.0, 'lock_radius': lock})
+    assert none['plan_found'] is False and 'plan_m' not in none
+    # In a leg's summary, only when the leg asked the planner alone.
+    leg = {'truth': straight(), 'plans': [], 'steering': [], 'start': 0.0, 'end': 10.0,
+           'goal': (10.0, 0.0, 0.0), 'reached': True, 'obstacle': None, 'body': BODY}
+    assert 'plan_m' not in m.summary(leg)
+    assert m.summary(dict(leg, planned={'path': arc(3.6, 90.0), 'ms': 1.0, 'wall_ms': 2.0,
+                                        'lock_radius': lock}))['plan_found'] is True
+
+
+def test_a_whole_tour_in_one_row():
+    rows = [{'reached': True, 'time_s': 30.0, 'driven_m': 20.0, 'plan_m': 19.0,
+             'plan_ms': 40.0, 'plan_tightest_m': 3.6, 'plan_too_tight_m': 0.0,
+             'off_path_mean_m': 0.2},
+            {'reached': False, 'time_s': 60.0, 'driven_m': 5.0, 'plan_m': 30.0,
+             'plan_ms': 80.0, 'plan_tightest_m': 0.7, 'plan_too_tight_m': 1.5,
+             'off_path_mean_m': 0.4},
+            None]                                       # a leg never driven
+    out = m.overall(rows)
+    assert out['legs'] == '1/3'
+    assert (out['time_s'], out['driven_m'], out['plan_m']) == (90.0, 25.0, 49.0)
+    assert (out['plan_ms'], out['plan_ms_max']) == (60.0, 80.0)
+    assert out['plan_tightest_m'] == 0.7 and out['turns_ok'] is False
+    assert out['off_path_mean_m'] == pytest.approx(0.3)
+    text = m.table([('hybrid', out)], columns=m.OVERALL)
+    assert 'Legs finished' in text and '**no**' in text
+    assert m.overall([None]) == {'legs': '0/1'}

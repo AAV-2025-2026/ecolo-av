@@ -18,12 +18,17 @@ One leg is one Nav2 goal. It records, on Gazebo's clock:
   ndt       [(t, x, y, yaw)]        optional: NDT's pose (/localization/ndt/pose), a trial
   ndt_status [(t, ok, match_ms, restarts)]  optional: NDT's status, one per cloud
   loops     [(t, loop_ms, loop_ms_max, missed)]  optional: aav_track's status, each tick
+  planned   optional: one plan asked of the planner alone before the leg, from where the
+            car stood (controller_compare.py --planners, /compute_path_to_pose):
+            {'path': [(x, y), ...], 'ms': the planner's own planning_time, 'wall_ms': the
+            whole call by the wall clock, 'lock_radius': the car's full-lock radius, m}
   obstacle  (x, y, side) or None    a square box on the road, m
   body      (length, width, rear_overhang)   the car's outline (vehicle.yaml), m
 
 summary() turns that into one row: see COLUMNS for what each number means. combine()
-turns several runs' rows into one: the mean, and the spread of the main numbers. svg()
-draws the drives on the map.
+turns several runs' rows into one: the mean, and the spread of the main numbers. overall()
+turns a whole tour's legs into one row per column (the planners' table). svg() draws the
+drives on the map.
 
 The A-to-B numbers at the end (stop_error ... final_metre) are tools/atob_score.py's: how
 well the car sped up, held its speed and stopped on point B (docs/a-to-b.md, "Scoring a
@@ -275,6 +280,71 @@ def localizer_row(name, truth, poses, start, end):
     }
 
 
+# How tight a path turns: the circle through three points this far apart along it (m).
+# Over 1 m, a Hybrid or Lattice arc reads its own radius; a grid planner's corner reads
+# well under a metre.
+TURN_SPAN = 1.0
+TURN_STEP = 0.25    # m between the points the path is resampled to
+
+
+def resample(path, step=TURN_STEP):
+    """Return points every `step` m along a path [(x, y)], its first and last kept."""
+    if len(path) < 2:
+        return list(path)
+    out = [path[0]]
+    left = step
+    for (ax, ay), (bx, by) in zip(path, path[1:]):
+        length = math.hypot(bx - ax, by - ay)
+        at = 0.0
+        while length - at >= left:
+            at += left
+            out.append((ax + (bx - ax) * at / length, ay + (by - ay) * at / length))
+            left = step
+        left -= length - at
+    if out[-1] != tuple(path[-1]):
+        out.append(tuple(path[-1]))
+    return out
+
+
+def circle_radius(a, b, c):
+    """Return the radius of the circle through three points (m); inf on a straight line."""
+    ab = math.hypot(b[0] - a[0], b[1] - a[1])
+    bc = math.hypot(c[0] - b[0], c[1] - b[1])
+    ca = math.hypot(a[0] - c[0], a[1] - c[1])
+    cross = abs((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]))
+    return math.inf if cross < 1e-9 else ab * bc * ca / (2.0 * cross)
+
+
+def turn_radii(path, span=TURN_SPAN, step=TURN_STEP):
+    """Return [(metres along, radius)]: how tight the path turns at each resampled point."""
+    points = resample(path, step)
+    k = max(1, round(span / step))
+    return [(i * step, circle_radius(points[i - k], points[i], points[i + k]))
+            for i in range(k, len(points) - k)]
+
+
+def plan_row(planned):
+    """
+    Return the planner's numbers for one plan (controller_compare.py --planners).
+
+    plan_too_tight_m: metres of the path that turn tighter than the car's full lock: a car
+    can't drive them as drawn, and the follower has to cut or round them.
+    """
+    if not planned or not planned.get('path'):
+        return {'plan_found': False, 'plan_ms': (planned or {}).get('ms'),
+                'plan_wall_ms': (planned or {}).get('wall_ms')}
+    path, lock = planned['path'], planned['lock_radius']
+    radii = [r for _, r in turn_radii(path)]
+    return {
+        'plan_found': True,
+        'plan_ms': planned.get('ms'),
+        'plan_wall_ms': planned.get('wall_ms'),
+        'plan_m': path_length(path),
+        'plan_tightest_m': min(radii, default=math.inf),
+        'plan_too_tight_m': sum(1 for r in radii if r < lock) * TURN_STEP,
+    }
+
+
 def rms_rate(samples):
     """Return the root mean square (per s) of how fast a value changes, from [(t, value)]."""
     rates = [(b[1] - a[1]) / (b[0] - a[0]) for a, b in zip(samples, samples[1:])
@@ -370,12 +440,19 @@ def summary(leg):
             'loop_ms_max': max(max(r[1], r[2]) for r in loops),
             'missed_ticks': max(r[3] for r in loops) - min(r[3] for r in loops),
         })
+    if 'planned' in leg:
+        row.update(plan_row(leg['planned']))
     if truth:
         _, x, y, yaw = truth[-1]
         gx, gy, gyaw = leg['goal']
         row['end_error_m'] = math.hypot(gx - x, gy - y)
         row['end_heading_deg'] = abs(math.degrees(angle_diff(gyaw, yaw)))
     return row
+
+
+def radius_cell(value):
+    """Return a turn's radius for a table: 'straight' for a path with no turn."""
+    return 'straight' if math.isinf(value) else f'{value:.2f}'
 
 
 # (key, what it is, format): table()'s rows, in order. "The path" is the planner's newest
@@ -401,6 +478,13 @@ COLUMNS = [
     ('clearance_m', 'Closest to the box (m)', '{:.2f}'),
     ('cpu_percent', 'follower CPU (%): controller_server, or aav_track', '{:.0f}'),
     ('route_switches', 'The planner changed its route (times)', '{:d}'),
+    ('plan_found', 'The planner alone: found a path', lambda v: 'yes' if v else '**no**'),
+    ('plan_ms', "The planner alone: planning time (ms, its own clock: Gazebo's)", '{:.0f}'),
+    ('plan_wall_ms', 'The planner alone: the whole call (ms, wall clock)', '{:.0f}'),
+    ('plan_m', 'The planner alone: path length (m)', '{:.1f}'),
+    ('plan_tightest_m', 'The planner alone: tightest turn (radius, m)', radius_cell),
+    ('plan_too_tight_m', "The planner alone: path tighter than the car's full lock (m)",
+     '{:.2f}'),
     ('belief_max_m', 'Where the EKF put the car: off, worst (m)', '{:.2f}'),
     ('belief_heading_max_deg', "The EKF's heading: off, worst (deg)", '{:.0f}'),
     ('belief_mean_m', 'Where the EKF put the car: off, mean (m)', '{:.2f}'),
@@ -466,6 +550,46 @@ def combine(rows):
     hits = sum(1 for r in rows if r.get('reached'))
     out['reached'] = hits == len(rows)
     out['runs_reached'] = f'{hits}/{len(rows)}'
+    return out
+
+
+# overall()'s rows: a whole tour for each column (controller_compare.py --planners).
+OVERALL = [
+    ('legs', 'Legs finished', '{}'),
+    ('time_s', 'Time, all legs (s)', '{:.0f}'),
+    ('driven_m', 'Driven, all legs (m)', '{:.1f}'),
+    ('plan_m', 'The planner alone: path length, all legs (m)', '{:.1f}'),
+    ('plan_ms', 'The planner alone: planning time, mean (ms)', '{:.0f}'),
+    ('plan_ms_max', 'The planner alone: planning time, worst (ms)', '{:.0f}'),
+    ('plan_tightest_m', 'The planner alone: tightest turn (radius, m)', radius_cell),
+    ('plan_too_tight_m', "Path tighter than the car's full lock, all legs (m)", '{:.2f}'),
+    ('turns_ok', "Kept to the car's turning radius", lambda v: 'yes' if v else '**no**'),
+    ('off_path_mean_m', 'Off the path, mean of the legs (m)', '{:.2f}'),
+]
+
+
+def overall(rows):
+    """Return one row for a whole tour's legs (summary rows; None for a leg never driven)."""
+    done = [r for r in rows if r]
+    out = {'legs': f"{sum(1 for r in done if r.get('reached'))}/{len(rows)}"}
+
+    def numbers(key):
+        return [r[key] for r in done if isinstance(r.get(key), (int, float))
+                and not isinstance(r.get(key), bool) and not math.isnan(r[key])]
+
+    for key in ('time_s', 'driven_m', 'plan_m', 'plan_too_tight_m'):
+        if numbers(key):
+            out[key] = sum(numbers(key))
+    if numbers('plan_ms'):
+        out['plan_ms'] = sum(numbers('plan_ms')) / len(numbers('plan_ms'))
+        out['plan_ms_max'] = max(numbers('plan_ms'))
+    if numbers('plan_tightest_m'):
+        out['plan_tightest_m'] = min(numbers('plan_tightest_m'))
+    if 'plan_too_tight_m' in out:
+        out['turns_ok'] = out['plan_too_tight_m'] == 0.0
+    if numbers('off_path_mean_m'):
+        out['off_path_mean_m'] = (sum(numbers('off_path_mean_m')) /
+                                  len(numbers('off_path_mean_m')))
     return out
 
 

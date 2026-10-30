@@ -22,11 +22,18 @@ The trials (docs/trials.md):
     pixi run controller-compare --ndt              (NDT beside the EKF, ndt:=true, on the map
                     pixi run ndt-map drive made: its errors, the share of clouds that gave
                     a pose, time over 1 m off, each match's wall-clock time)
+    pixi run controller-compare --planners hybrid lattice smac2d --tours lot
+                    Nav2's planners (planner:=), each with MPPI unless --controllers or
+                    --trackers says otherwise. Before each leg it also asks the planner
+                    alone for a path (/compute_path_to_pose): its planning time, the path's
+                    length and its tightest turn against the car's full lock. Then a
+                    table of the whole tour: legs finished, time, path length, planning
+                    time, kept to the turning radius (docs/controllers.md, Planners)
 
 For each tour and controller it:
 1. starts sim.launch.py world:=test_lot gui:=false rviz:=false controller:=<rpp|mppi>
-   (or tracker:=<name>) reversing:=false (forward only, unless --reversing), on a ROS
-   domain and Gazebo partition of its own, on this computer only;
+   (or tracker:=<name>) [planner:=<name>] reversing:=false (forward only, unless
+   --reversing), on a ROS domain and Gazebo partition of its own, on this computer only;
 2. waits for Gazebo's truth, the global EKF and Nav2;
 3. sends each leg's goal in turn, each from where the last one ended, and records where the
    car really was (/vehicle/gazebo/truth), the planner's paths (/plan), the controller's
@@ -76,7 +83,7 @@ from action_msgs.msg import GoalStatus  # noqa: E402
 from diagnostic_msgs.msg import DiagnosticStatus  # noqa: E402
 import drive_metrics  # noqa: E402
 from geometry_msgs.msg import PoseWithCovarianceStamped, TwistStamped  # noqa: E402
-from nav2_msgs.action import NavigateToPose  # noqa: E402
+from nav2_msgs.action import ComputePathToPose, NavigateToPose  # noqa: E402
 from nav2_msgs.msg import CollisionMonitorState  # noqa: E402
 from nav_msgs.msg import Odometry, Path  # noqa: E402
 import rclpy  # noqa: E402
@@ -109,7 +116,11 @@ TRACK_EVERY = 0.5       # s between the saved track's points
 MAP_SPEC = os.path.join(ROOT, 'ros', 'drivers', 'aav_navigation', 'maps',
                         'example_lot.spec.yaml')
 COLOURS = {'rpp': '#1f6fb4', 'mppi': '#e8590c', 'pure_pursuit': '#2b8a3e', 'stanley': '#862e9c',
-           'lqr': '#c92a2a', 'mpc': '#e67700', 'mpc_full': '#5f3dc4'}
+           'lqr': '#c92a2a', 'mpc': '#e67700', 'mpc_full': '#5f3dc4',
+           # --planners: a column is a planner's name when one follower drives them all.
+           'hybrid': '#e8590c', 'lattice': '#1f6fb4', 'smac2d': '#2b8a3e',
+           'navfn': '#862e9c', 'theta_star': '#c92a2a'}
+PLAN_TIME = 15.0        # s (wall) for the planner alone to answer, before each leg
 # NDT's map of the test lot (tools/ndt_map.py; maps/ is not in git).
 NDT_MAP = os.path.join(ROOT, 'maps', 'ndt', 'test_lot.pcd')
 # The process to time for each kind of follower (its command line, in the run's group).
@@ -183,6 +194,7 @@ class Recorder(Node):
         self.create_subscription(CollisionMonitorState, '/safety/collision_monitor/state',
                                  self.on_monitor, 10)
         self.nav = ActionClient(self, NavigateToPose, '/navigate_to_pose')
+        self.planner = ActionClient(self, ComputePathToPose, '/compute_path_to_pose')
         self.clear = self.create_client(Trigger, '/safety/sensor_watchdog/clear')
 
     def start(self):
@@ -290,6 +302,43 @@ class Recorder(Node):
         return handle if handle is not None and handle.accepted else None
 
 
+def plan_alone(rec, goal, lock_radius):
+    """
+    Ask the planner alone for a path from where the car stands; return (planned, notes).
+
+    planned is drive_metrics' leg['planned']: the path, the planner's own time, the call's
+    wall time, and the car's full-lock radius. Nothing moves.
+    """
+    x, y, yaw = goal
+    request = ComputePathToPose.Goal()
+    request.goal.header.frame_id = 'map'
+    request.goal.pose.position.x, request.goal.pose.position.y = x, y
+    request.goal.pose.orientation.z = math.sin(yaw / 2.0)
+    request.goal.pose.orientation.w = math.cos(yaw / 2.0)
+    request.planner_id = 'GridBased'      # whichever planner:= runs behind it
+    request.use_start = False             # from the car, through TF, as bt_navigator asks
+    out = {'path': [], 'ms': None, 'wall_ms': None, 'lock_radius': lock_radius}
+    if not rec.planner.wait_for_server(timeout_sec=5.0):
+        return out, ['the planner alone: no /compute_path_to_pose']
+    wall0 = time.monotonic()
+    handle = rec.wait(rec.planner.send_goal_async(request), 5.0)
+    if handle is None or not handle.accepted:
+        return out, ['the planner alone: refused']
+    done = rec.wait(handle.get_result_async(), PLAN_TIME)
+    out['wall_ms'] = 1000.0 * (time.monotonic() - wall0)
+    if done is None:
+        rec.wait(handle.cancel_goal_async(), 5.0)
+        return out, [f'the planner alone: no answer in {PLAN_TIME:.0f} s']
+    result = done.result
+    took = result.planning_time
+    out['ms'] = took.sec * 1000.0 + took.nanosec * 1e-6
+    out['path'] = [(s.pose.position.x, s.pose.position.y) for s in result.path.poses]
+    if done.status != GoalStatus.STATUS_SUCCEEDED or not out['path']:
+        why = getattr(result, 'error_msg', '') or f'error {getattr(result, "error_code", "?")}'
+        return out, [f'the planner alone found no path: {why}']
+    return out, []
+
+
 def ready(rec):
     """Wait until the sensor watchdog lets Nav2 drive; clear a latch once. Return notes."""
     if rec.spin_for(READY_TIME, lambda: rec.lock is False):
@@ -302,9 +351,18 @@ def ready(rec):
 
 
 def drive_leg(rec, pgid, goal, speed, body, obstacle, process='controller_server',
-              amcl=False, ndt=False):
-    """Send one goal and record it; return (drive_metrics leg, notes)."""
+              amcl=False, ndt=False, lock_radius=None):
+    """
+    Send one goal and record it; return (drive_metrics leg, notes).
+
+    lock_radius (m, --planners): first ask the planner alone for the leg's path, and score
+    its turns against the car's full lock.
+    """
     notes = ready(rec)
+    planned = None
+    if lock_radius is not None:
+        planned, more = plan_alone(rec, goal, lock_radius)
+        notes += more
     x, y, yaw = goal
     here = rec.last_truth.pose.pose.position
     timeout = LEG_TIME + 4.0 * math.hypot(x - here.x, y - here.y) / speed
@@ -352,6 +410,8 @@ def drive_leg(rec, pgid, goal, speed, body, obstacle, process='controller_server
         leg['ndt'], leg['ndt_status'] = rec.ndt, rec.ndt_status
     if rec.loops:
         leg['loops'] = rec.loops
+    if planned is not None:
+        leg['planned'] = planned
     return leg, notes
 
 
@@ -404,13 +464,35 @@ def tour_legs(tour, args):
 
 
 def followers(args):
-    """Return [(kind, name)]: Nav2's controllers, then the trial trackers, as asked."""
+    """
+    Return [(kind, name, planner, label)]: each follower with each planner, as asked.
+
+    Nav2's controllers, then the trial trackers. With --planners alone, the default
+    controller (MPPI) drives behind each planner; without --planners, planner is None (the
+    launch's own default) and the label is the follower's name, as before.
+    """
     controllers = args.controllers
     if controllers is None:
-        # --trackers alone runs only the trackers; neither: both of Nav2's, as before.
-        controllers = [] if args.trackers else list(vehicle.CONTROLLERS)
-    return ([('controller', c) for c in controllers] +
-            [('tracker', t) for t in args.trackers or []])
+        # --trackers alone runs only the trackers; --planners alone, Nav2's default
+        # controller; none of them: both of Nav2's, as before.
+        controllers = ([] if args.trackers else
+                       [vehicle.DEFAULT_CONTROLLER] if args.planners else
+                       list(vehicle.CONTROLLERS))
+    chosen = ([('controller', c) for c in controllers] +
+              [('tracker', t) for t in args.trackers or []])
+    if not args.planners:
+        return [(kind, name, None, name) for kind, name in chosen]
+    return [(kind, name, planner, planner if len(chosen) == 1 else f'{name}+{planner}')
+            for kind, name in chosen for planner in args.planners]
+
+
+def planner_names(text):
+    """Return the planners in a --planners word: comma-separated, or one."""
+    names = [n.strip().lower() for n in text.split(',') if n.strip()]
+    for name in names:
+        if name not in vehicle.PLANNERS:
+            raise argparse.ArgumentTypeError(f'{name}: pick from {", ".join(vehicle.PLANNERS)}')
+    return names
 
 
 def tracker_names(text):
@@ -426,8 +508,8 @@ def tracker_names(text):
 def session(tour, follower, args, out_dir, body, used, run=1):
     """Start the simulator for one tour and follower, drive its legs, stop it."""
     plan = TOURS[tour]
-    kind, controller = follower
-    tag = f'{controller}-{run}' if args.runs > 1 else controller
+    kind, controller, planner, label = follower
+    tag = f'{label}-{run}' if args.runs > 1 else label
     log_path = os.path.join(out_dir, f'sim-{tour}-{tag}.log')
     command = ['ros2', 'launch', 'aav_bringup', 'sim.launch.py', 'world:=test_lot',
                'gui:=false', 'rviz:=false',
@@ -436,6 +518,8 @@ def session(tour, follower, args, out_dir, body, used, run=1):
                # then dithered between forward and back at the start, 22 Oct), unless
                # --reversing: Nav2 may then back out of a dead end.
                f'reversing:={str(args.reversing).lower()}']
+    if planner:
+        command.append(f'planner:={planner}')
     if args.amcl:
         command.append('amcl:=true')
     if args.ndt:
@@ -445,12 +529,14 @@ def session(tour, follower, args, out_dir, body, used, run=1):
     if args.speed:
         command.append(f'sim_speed:={args.speed:g}')
     domain = private(used)
-    print(f'\n== {tour}, {controller}' + (f' (run {run} of {args.runs})' if args.runs > 1
-                                          else '') +
+    print(f'\n== {tour}, {label}' + (f' (run {run} of {args.runs})' if args.runs > 1
+                                     else '') +
           f': starting the test lot on ROS domain {domain} '
           f'(this computer only)...', flush=True)
     rows = []
     obstacle = (*worlds.OBSTACLE, BOX) if plan['obstacle'] else None
+    # The car's full lock: tighter than this, a planned turn can't be driven as drawn.
+    lock = vehicle.min_turning_radius(vehicle.load()['vehicle'])
     with open(log_path, 'w') as log:
         launch = subprocess.Popen(command, cwd=ROOT, env=dict(os.environ), stdout=log,
                                   stderr=subprocess.STDOUT, start_new_session=True)
@@ -460,13 +546,14 @@ def session(tour, follower, args, out_dir, body, used, run=1):
             up = rec.spin_for(UP_TIME, lambda: rec.last_truth is not None and rec.glob)
             if not (up and rec.spin_for(UP_TIME, rec.nav.server_is_ready)):
                 print(f'   it never came up: see {log_path}', flush=True)
-                return [(tour, name, controller, None, ['never came up'], {'run': run})
+                return [(tour, name, label, None, ['never came up'], {'run': run})
                         for name, *_ in tour_legs(tour, args)]
             rec.spin_for(SETTLE)
             for name, x, y, heading in tour_legs(tour, args):
                 leg, notes = drive_leg(rec, launch.pid, (x, y, math.radians(heading)),
                                        args.speed or 1.0, body, obstacle,
-                                       PROCESS[kind], args.amcl, args.ndt)
+                                       PROCESS[kind], args.amcl, args.ndt,
+                                       lock if planner else None)
                 row = drive_metrics.summary(leg)
                 # t, x, y, yaw: where the car was, and where the global EKF put it.
                 drawn = {'run': run,
@@ -485,7 +572,11 @@ def session(tour, follower, args, out_dir, body, used, run=1):
                     drawn['plans'] = [[round(t, 2), [[round(x, 2), round(y, 2)]
                                                      for x, y in pts[::4] + pts[-1:]]]
                                       for t, pts in leg['plans']]
-                rows.append((tour, name, controller, row, notes, drawn))
+                if leg.get('planned', {}).get('path'):
+                    # The planner's own path, from where the car stood (--planners).
+                    drawn['planned'] = [[round(x, 2), round(y, 2)]
+                                        for x, y in leg['planned']['path'][::4]]
+                rows.append((tour, name, label, row, notes, drawn))
                 print(f'   {name}: ' + ('reached' if row['reached'] else 'NOT reached') +
                       f' in {row["time_s"]:.0f} s, {row["driven_m"]:.1f} m, off the path '
                       f'{row["off_path_mean_m"]:.2f} m on average' +
@@ -494,6 +585,9 @@ def session(tour, follower, args, out_dir, body, used, run=1):
                       (f'; AMCL off {row["amcl_mean_m"]:.2f} m mean over '
                        f'{row["amcl_samples"]} poses (EKF {row["belief_mean_m"]:.2f})'
                        if 'amcl_mean_m' in row else '') +
+                      (f'; planned {row["plan_m"]:.1f} m in {row["plan_ms"]:.0f} ms, '
+                       f'tightest turn {drive_metrics.radius_cell(row["plan_tightest_m"])} m'
+                       if row.get('plan_found') else '') +
                       (f'; NDT off {row["ndt_mean_m"]:.3f} m mean, {row["ndt_max_m"]:.2f} '
                        f'worst, {row["ndt_available"]:.0%} of clouds, '
                        f'{row["ndt_match_ms_mean"]:.1f} ms a match'
@@ -527,10 +621,24 @@ def report(results, args, started):
              (', AMCL beside the EKF' if args.amcl else '') +
              (", NDT beside the EKF (its map: tools/ndt_map.py; Gazebo's lidar has no sweep, "
               "the car's does)" if args.ndt else '') +
+             (f', planners: {", ".join(args.planners)} (planner:=; the planner alone '
+              "asked once before each leg, its turns against the car's full lock of "
+              f'{vehicle.min_turning_radius(vehicle.load()["vehicle"]):.2f} m)'
+              if args.planners else '') +
              f'. {runs}. The trial trackers (docs/trials.md) share one speed policy; '
              "Nav2's "
              'RPP and MPPI set their own. What each number means: '
              'tools/drive_metrics.py.', '']
+    for tour in args.tours if args.planners else []:
+        # The whole tour, one column a follower (and run): the planners' table.
+        columns = list(dict.fromkeys((c, drawn.get('run', 1))
+                                     for t, _, c, _, _, drawn in results if t == tour))
+        rows = [(c if args.runs == 1 else f'{c} #{r}',
+                 drive_metrics.overall([row for t, _, c2, row, _, d in results
+                                        if t == tour and c2 == c and d.get('run', 1) == r]))
+                for c, r in columns]
+        lines += [f'## {tour}: the whole tour', '',
+                  drive_metrics.table(rows, columns=drive_metrics.OVERALL), '']
     for tour in args.tours:
         for name, x, y, heading in tour_legs(tour, args):
             legs = [(c, row, notes, drawn.get('run', 1))
@@ -589,6 +697,9 @@ def main():
     parser.add_argument('--trackers', nargs='+', type=tracker_names, default=None,
                         help='the trial trackers (aav_track, docs/trials.md): pure_pursuit, '
                              'stanley, lqr, mpc, mpc_full; spaces or commas between. Forward only')
+    parser.add_argument('--planners', nargs='+', type=planner_names, default=None,
+                        help="Nav2's planners (planner:=): " + ', '.join(vehicle.PLANNERS) +
+                             '; each behind MPPI unless --controllers or --trackers say')
     parser.add_argument('--runs', type=int, default=1,
                         help='drive each follower this many times (default 1; 3 for a real '
                              'comparison: the mean and spread)')
@@ -611,6 +722,8 @@ def main():
     args = parser.parse_args()
     if args.trackers:
         args.trackers = list(dict.fromkeys(t for names in args.trackers for t in names))
+    if args.planners:
+        args.planners = list(dict.fromkeys(p for names in args.planners for p in names))
     if args.trackers and args.reversing:
         parser.error('--trackers drive forwards only: leave out --reversing')
     if args.runs < 1:
