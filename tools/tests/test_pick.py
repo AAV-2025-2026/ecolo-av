@@ -20,7 +20,7 @@ def _read(path):
 
 
 def _all_rows():
-    return pick.FOLLOWERS + pick.LOCALIZERS + pick.SPEED_LOOPS + pick.WORLDS
+    return pick.PLANNERS + pick.FOLLOWERS + pick.LOCALIZERS + pick.SPEED_LOOPS + pick.WORLDS
 
 
 def test_every_switch_is_a_sim_launch_argument():
@@ -63,16 +63,18 @@ def test_every_row_sets_both_localizers():
 def test_enter_takes_the_defaults():
     cmd = pick.questions(read=lambda _: '', say=lambda *_: None)
     assert cmd[:3] == ['pixi', 'run', 'debugdemo']
+    assert 'planner:=hybrid' in cmd
     assert 'controller:=mppi' in cmd and 'tracker:=none' in cmd
     assert 'ndt:=false' in cmd and 'amcl:=false' in cmd
 
 
 def test_sim_with_a_localizer_moves_to_the_test_lot():
-    answers = iter(['3', '3', '6', '4', '2'])  # sim, empty, mpc, both NDT and AMCL, lqi
+    answers = iter(['3', '3', '2', '6', '4', '2'])  # sim, empty, lattice, mpc, both, lqi
     said = []
     cmd = pick.questions(read=lambda _: next(answers), say=said.append)
     assert cmd[2] == 'sim'
     assert 'world:=test_lot' in cmd and 'tracker:=mpc' in cmd and 'speed_loop:=lqi' in cmd
+    assert 'planner:=lattice' in cmd
     assert any('switching the world' in s for s in said)
 
 

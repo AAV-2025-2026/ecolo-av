@@ -81,6 +81,7 @@ PAGES = [
     ('howto-driver.md', 'Build a driver', 'A new driver, from an empty folder to the turtle'),
     ('costmaps.md', 'Costmaps', 'How Nav2 sees obstacles; draw your first map'),
     ('path-followers.md', 'Path followers', 'Regulated Pure Pursuit and MPPI, side by side'),
+    ('switches.md', 'Switches', 'Every part you can swap, and pixi run pick'),
     ('trials.md', 'Trials', 'New path followers and AMCL, beside the main ones'),
     ('a-to-b.md', 'A to B', 'Drive from A to B and stop: three ways, and the point driver'),
     ('routes.md', 'Street routes', 'A destination to GPS waypoints along real streets (Valhalla)'),

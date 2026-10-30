@@ -48,6 +48,18 @@ FOLLOWERS = [
      ['tracker:=mpc_full', 'reversing:=false']),
 ]
 
+# Who draws the route: Nav2's planner (planner:=). Gazebo, 29 Oct, the lot tour, MPPI.
+PLANNERS = [
+    ('hybrid', 'Hybrid-A*: routes a car can drive (default; 4 of 4 legs)', ['planner:=hybrid']),
+    ('lattice', "State Lattice: our car's own moves, fast (2 of 4: lost the U-turn)",
+     ['planner:=lattice']),
+    ('smac2d', 'grid A*: ignores the turning circle (2 of 4)', ['planner:=smac2d']),
+    ('navfn', 'NavFn, the classic: ignores the turning circle (not tried in Gazebo)',
+     ['planner:=navfn']),
+    ('theta_star', 'Theta*: straight lines, ignores the turning circle (not tried)',
+     ['planner:=theta_star']),
+]
+
 # Where-am-I finders that run beside the EKF and are scored (they never steer yet).
 # Every row sets each switch, on or off: debugdemo turns some on, and the last value wins.
 LOCALIZERS = [
@@ -102,6 +114,7 @@ def questions(read=input, say=print):
     rows = []
     if program == 'sim':
         rows.append(ask('Which world?', WORLDS, read, say))
+    rows.append(ask('Who draws the route?', PLANNERS, read, say))
     rows.append(ask('Who steers along the path?', FOLLOWERS, read, say))
     where = ask('Where-am-I finders beside the EKF?', LOCALIZERS, read, say)
     if 'ndt:=true' in where[2] and not (ROOT / NDT_MAP).is_file():
@@ -118,6 +131,7 @@ def listing():
     """Return every question and its choices, for `pick list` and the docs."""
     lines = []
     for title, choices in [('What to start', PROGRAMS), ('World (sim only)', WORLDS),
+                           ('Who draws the route', PLANNERS),
                            ('Who steers', FOLLOWERS), ('Where am I', LOCALIZERS),
                            ('Speed loop', SPEED_LOOPS)]:
         lines.append(title)

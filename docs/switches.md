@@ -4,7 +4,7 @@ Every part we're trying out is a **switch** you give when you start. You don't n
 remember them: **`pixi run pick`** asks, in plain words, and runs it.
 
 ```
-pixi run pick          # a menu: what to start, who steers, where-am-I, speed loop
+pixi run pick          # a menu: what to start, the route, who steers, where-am-I, speed loop
 pixi run pick last     # the same again tomorrow
 pixi run pick list     # every switch, then stop
 ```
@@ -17,6 +17,18 @@ pixi run debugdemo tracker:=mpc reversing:=false ndt:=true ndt_map:=maps/ndt/tes
 
 `sim`, `demo` and `debugdemo` all take switches as `name:=value`. If a switch is given
 twice, the last one wins.
+
+## Who draws the route
+
+| Switch | In plain words | Gazebo, 29 Oct |
+|---|---|---|
+| `planner:=hybrid` (default) | Hybrid-A*: only routes a car can drive | **4 of 4 legs** |
+| `planner:=lattice` | State Lattice: strings our car's own moves together; fast | 2 of 4 (lost the U-turn) |
+| `planner:=smac2d` | A* on the grid: **ignores the turning circle** | 2 of 4 |
+| `planner:=navfn` | NavFn, the classic: ignores the turning circle | not tried |
+| `planner:=theta_star` | Theta*: straight lines: ignores the turning circle | not tried |
+
+The real car takes only `hybrid` or `lattice`. More: [Controllers, Planners](controllers.md).
 
 ## Who steers along the path
 
