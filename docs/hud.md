@@ -680,8 +680,14 @@ same buttons and rules, and prints what was asked and seen.
 | Gazebo: the geofence's lock true (its node stopped) | twist_mux passed nothing; the car **never moved** |
 | Gazebo: the panel frozen (SIGSTOP) while driving | `/drivers/buttons/cmd_vel` went silent; the car read **0.0 m/s** 2-6 s into the freeze (161 samples). Thawed with GO still held, it drove again |
 
-**Not yet seen:** the window itself against Gazebo, and screenshots from Gazebo (the Mac's
-screen was locked: `IOConsoleLocked`); the keys and the mouse pressed by hand; the bench
+| Gazebo (`pixi run debugdemo`), **both windows on screen**, 29 Oct 22:50: `hw_panel --self-test 0.3:8` | asked 0.30, twist_mux 0.300, seen 0.30-0.35 m/s; GO let go: 0.00 about 0.5 s later. Pictures below |
+| The same run, the seeing screen | NDT TRACKING, 3.3 per point, 3.3 ms a match; the lot's map, every localizer's car and the scan on NDT's cells all drawn, 58 fps |
+
+![The seeing screen against Gazebo, NDT tracking](img/debug-hud-seeing-gazebo.png)
+
+![The hardware panel against Gazebo: every sensor OK (Gazebo has no battery)](img/hw-panel-gazebo.png)
+
+**Not yet seen:** the keys and the mouse pressed by hand (macOS blocks scripted keys); the bench
 check (a person's joystick beats the buttons); key L on the live window. Gazebo's output
 mux latched STOP once at start-up (an announcement race) and opened by itself the next
 runs; `pixi run gate-clear` reopens it.

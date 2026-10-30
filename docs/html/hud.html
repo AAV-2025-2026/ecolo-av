@@ -1710,8 +1710,11 @@ same buttons and rules, and prints what was asked and seen.</p>
 </tr>
 </tbody>
 </table></div>
-<p><strong>Not yet seen:</strong> the window itself against Gazebo, and screenshots from Gazebo (the Mac's
-screen was locked: <code>IOConsoleLocked</code>); the keys and the mouse pressed by hand; the bench
+<p>| Gazebo (<code>pixi run debugdemo</code>), <strong>both windows on screen</strong>, 29 Oct 22:50: <code>hw_panel --self-test 0.3:8</code> | asked 0.30, twist_mux 0.300, seen 0.30-0.35 m/s; GO let go: 0.00 about 0.5 s later. Pictures below |
+| The same run, the seeing screen | NDT TRACKING, 3.3 per point, 3.3 ms a match; the lot's map, every localizer's car and the scan on NDT's cells all drawn, 58 fps |</p>
+<p><img alt="The seeing screen against Gazebo, NDT tracking" src="../img/debug-hud-seeing-gazebo.png" /></p>
+<p><img alt="The hardware panel against Gazebo: every sensor OK (Gazebo has no battery)" src="../img/hw-panel-gazebo.png" /></p>
+<p><strong>Not yet seen:</strong> the keys and the mouse pressed by hand (macOS blocks scripted keys); the bench
 check (a person's joystick beats the buttons); key L on the live window. Gazebo's output
 mux latched STOP once at start-up (an announcement race) and opened by itself the next
 runs; <code>pixi run gate-clear</code> reopens it.</p>
