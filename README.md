@@ -144,6 +144,7 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 | `geofence-clear` | a person clears the geofence's OUTSIDE or JUMP, once the car is back inside |
 | `hud`, `map`, `debug-hud` | the in-car screen, the map window and the debug HUD, as ROS nodes (`fullscreen:=true`) |
 | `actuator-test` | the actuator tests, on stands and in a lot: `actuator-test --list` |
+| `preflight` | on stands, before the ground: one run (speed up, hold, slow, brake, steer) with every sensor checked, PASS / FAIL; `--sim`, `--bench`, `--no-drive`, `--skip` |
 | `calibrate-camera` | calibrate a streamed camera: `calibrate-camera board` prints the checkerboard |
 | `doctor` | can this computer join the car's ROS network? Says what to fix |
 | `net-map` | maps the network you're on: machines, ports, ROS domains. Read-only |

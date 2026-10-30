@@ -39,6 +39,10 @@ vehicle:
   tyre_grip: 0.7            # g: the most the tyres push before they slide. GUESS (dry asphalt
                             # 0.7-0.9): TODO test 4.3, if full brake skids the wheels
   encoder_counts_per_rev: 8 # spokes on the encoder wheel (Wheel_Encoders wiznet.ino:29)
+  speed_wheels: front       # which wheels /vehicle/odom measures: front (the Arduino's two
+                            # sensors, docs/learn-speed.md) or rear. The car is rear-wheel
+                            # drive, so on stands only "rear" sees the motor: the preflight
+                            # drives the real car only then. TODO 49b, the hardware lead
 
 # How the car answers its commands: the actuator model in Gazebo (aav_gazebo
 # actuator_model.py; docs/full-simulation.md, step 3). Units: m/s^2, s, rad, 1/s;

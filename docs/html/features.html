@@ -371,6 +371,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>2026-10-24</td>
 <td>built</td>
 </tr>
+<tr>
+<td><a href="actuator-tests.html#the-preflight-on-stands">Preflight on stands</a> (<code>pixi run preflight</code>, <code>actuator-test preflight</code>)</td>
+<td>One run before the car goes on the ground: it speeds up, holds, slows, brakes and steers while every sensor is checked, and says PASS or FAIL per line. Refused on the real car until a rear-wheel speed exists (TODO 49b); <code>--no-drive</code> checks the sensors alone</td>
+<td>Ben</td>
+<td>2026-10-29</td>
+<td>sim</td>
+</tr>
 </tbody>
 </table></div>
 </section>
@@ -575,6 +582,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Today's ESP32 firmware keeps the last throttle if the Orin or the bridge dies, so on it only people and the actuator tests may drive, never a program</td>
 <td>Ben</td>
 <td>2026-10-26</td>
+<td>built</td>
+</tr>
+<tr>
+<td>Actuator tests stop on an unseen speed or a runaway (<code>aav_actuator_tests</code> <code>safety.unseen</code>, <code>runaway</code>)</td>
+<td>On stands the front wheel sensors read 0 while the rear wheels spin, so the speed cap could never fire; now 4 s of driving with no measured speed, or a speed rising while the command falls, stops the test</td>
+<td>Ben</td>
+<td>2026-10-29</td>
 <td>built</td>
 </tr>
 <tr>
