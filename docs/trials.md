@@ -12,6 +12,7 @@ and is **scored on the same routes**. It becomes the default only once it wins.
 > - **Results (29 Oct, Gazebo, 3 runs):** pure pursuit, Stanley and MPC finished every leg; MPPI, RPP and LQR lost legs on the U-turn. AMCL lost itself; the EKF wins. [Results](#results-29-october).
 > - **NDT**, 29 Oct: about 1-3 cm off on the lot tour, 2 ms a match (below).
 > - **Afternoon:** LQR rebuilt with a preview (U-turn 2 of 3 in a quiet run; it weaved on a busy Mac), `mpc_full` 10 of 12. [Results](#results-29-october-afternoon-lqr-rebuilt-and-mpc_full).
+> - **Planners** (`planner:=`): Nav2's State Lattice (on our own primitives), Smac 2D, NavFn and Theta*, beside Hybrid-A*. 29 Oct, one run: **Hybrid-A* 4 of 4 legs**; lattice and Smac 2D 2 of 4, both lost on the U-turn. Hybrid stays. [Results](#planners-29-oct-hybrid-lattice-and-smac2d).
 > - The design: `docs/designs/2026-10-29_trials.md`.
 
 ## What is on trial
@@ -25,6 +26,8 @@ and is **scored on the same routes**. It becomes the default only once it wins.
 | our pure pursuit (the control) | Nav2's RPP and MPPI | `tracker:=pure_pursuit` |
 | AMCL | the global EKF | `amcl:=true` |
 | NDT on a saved lidar map | the global EKF, and AMCL | `ndt:=true` (after `pixi run ndt-map drive`) |
+| State Lattice planner, our primitives | Hybrid-A* | `planner:=lattice` |
+| Smac 2D, NavFn, Theta* planners (ignore the turning circle: sim and bench only) | Hybrid-A* | `planner:=smac2d`, `navfn`, `theta_star` |
 
 ## Where a tracker sits
 
@@ -275,3 +278,50 @@ U-turn was the planner's clockwise loop, to the south wall.
 2. `mpc_full` slows only when its model says the steering can't keep up. Should it also
    value slowing for the U-turn at 1 m/s (a cost on the steering's rate per second)?
 3. The planner's growing loops: replan less often in a U-turn, or keep the old path?
+
+## Planners, 29 Oct: hybrid, lattice and smac2d
+
+What each planner is: [Controllers, Planners](controllers.md#planners).
+
+The run: Gazebo's test lot, the lot tour (4 legs), **one run each**, MPPI following,
+forward only, 1 m/s. Branch `planner-switch` (74544111), 23:13, a quiet Mac (load 4).
+Before each leg the planner alone was asked for the path, to time it and measure its
+turns. `pixi run controller-compare --planners hybrid lattice smac2d --tours lot`;
+results in `~/aav-runs/2026-10-29/planners-results/` on Ben's Mac (not in git).
+
+### The whole tour
+
+| | hybrid (default) | lattice | smac2d |
+|---|---:|---:|---:|
+| Legs finished | **4 of 4** | 2 of 4 | 2 of 4 |
+| Time, all legs | 230 s | 141 s | 348 s |
+| Planning time, mean / worst | 16 / 52 ms | 4 / 10 ms | 2 / 4 ms |
+| Tightest turn in a plan (radius) | 3.03 m | 3.58 m | **2.65 m** |
+| Plan tighter than full lock (2.87 m) | 0 m | 0 m | **0.75 m** |
+| Off the path, mean | 0.12 m | 0.15 m | 0.22 m |
+
+### Leg by leg
+
+| Leg | hybrid | lattice | smac2d |
+|---|---|---|---|
+| a left turn | 30 s | 26 s | 27 s |
+| round the building | 52 s | 46 s | 46 s |
+| **turn back** (a U-turn in a 14 m lane) | 79 s, a 63 m loop | **lost**: its loop took the car into the north-east corner (45, 45), and from there it found no forward path | **lost**: planned 14 m straight back, as if the car could spin; MPPI looped, collision_monitor stopped it, cancelled at 116 s |
+| home | 69 s | no path from the corner | its plan had 0.75 m tighter than full lock; the car never moved |
+
+### What it shows
+
+- **Hybrid-A* stays the default.** It was the only one to finish the U-turn.
+- **The lattice is fast and drives well** where there's room: 4 ms a plan, and the
+  smallest error on the first two legs. Every turn kept to 3.58 m, as made. But with
+  only 16 headings its U-turn loop needs more room than Hybrid's 72; it ran the car into
+  a corner it couldn't leave forwards. Next: primitives with 32 headings, and a run
+  with `--reversing` (the lattice may then back out).
+- **Smac 2D is the fastest planner and the worst for a car**: it ignores the goal's
+  heading and the turning circle, so a U-turn is a straight line back. This is why the
+  car refuses it.
+- The leg after a lost U-turn starts from wherever the car stopped, so one failure costs
+  two legs (as with the trackers).
+- Planning times are the planner's own `planning_time`, on Gazebo's clock; the wall-clock
+  call was within a few ms of it. One run each: **not a ranking yet**. `navfn` and
+  `theta_star` weren't run.

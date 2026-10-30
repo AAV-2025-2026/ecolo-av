@@ -7,7 +7,7 @@
 <!-- Generated from docs/controllers.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Controllers: which one, where, and why</h1>
-<div class="meta">34 min read · 11 sections</div></header>
+<div class="meta">37 min read · 12 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -93,7 +93,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#1-the-layers-which-loop-runs-where">1. The layers: which loop runs where</a><a href="#2-speed-and-brake">2. Speed and brake</a><a href="#3-steering-following-a-path">3. Steering: following a path</a><a href="#4-the-steering-motor-the-jrk-g2s-position-pid">4. The steering motor: the Jrk G2&#x27;s position PID</a><a href="#5-all-of-them-side-by-side">5. All of them, side by side</a><a href="#6-what-we-chose-and-why">6. What we chose, and why</a><a href="#7-trials-a-challenger-runs-beside-the-default">7. Trials: a challenger runs beside the default</a><a href="#8-the-other-trial-localization">8. The other trial: localization</a><a href="#9-how-the-car-gets-measured">9. How the car gets measured</a><a href="#papers-and-sources">Papers and sources</a><a href="#where-this-lives-in-the-code">Where this lives in the code</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#1-the-layers-which-loop-runs-where">1. The layers: which loop runs where</a><a href="#2-speed-and-brake">2. Speed and brake</a><a href="#3-steering-following-a-path">3. Steering: following a path</a><a href="#4-the-steering-motor-the-jrk-g2s-position-pid">4. The steering motor: the Jrk G2&#x27;s position PID</a><a href="#5-all-of-them-side-by-side">5. All of them, side by side</a><a href="#6-what-we-chose-and-why">6. What we chose, and why</a><a href="#7-trials-a-challenger-runs-beside-the-default">7. Trials: a challenger runs beside the default</a><a href="#planners">Planners</a><a href="#8-the-other-trial-localization">8. The other trial: localization</a><a href="#9-how-the-car-gets-measured">9. How the car gets measured</a><a href="#papers-and-sources">Papers and sources</a><a href="#where-this-lives-in-the-code">Where this lives in the code</a></nav>
 <div class="lead"><p>Every controller we use or are looking at, on one page: what it is, what it's good and
 bad at, what it needs, and where it would run on our car.</p>
 <div class="admonition note">
@@ -105,7 +105,8 @@ bad at, what it needs, and where it would run on our car.</p>
 <li><strong>Steering, following a path:</strong> MPC is the leading candidate. Pure pursuit until
   it wins a trial.</li>
 <li><strong>The steering motor:</strong> the Jrk G2's own position PID, underneath everything.</li>
-<li><strong>Obstacle tours (Nav2):</strong> Hybrid-A* plans, MPPI follows. No change.</li>
+<li><strong>Obstacle tours (Nav2):</strong> Hybrid-A* plans, MPPI follows. No change. Other
+  planners are on trial beside it (<code>planner:=</code>, <a href="#planners">Planners</a>).</li>
 <li><strong>Trials:</strong> LQR, Stanley and MPC run <strong>beside</strong> the defaults, picked at launch
   (<code>tracker:=</code>), and scored on the same routes. Planned, not built yet.</li>
 <li><strong>Localization</strong> has its own trial: AMCL beside today's EKF (section 8).</li>
@@ -1222,6 +1223,177 @@ the main ones if they work." A new follower doesn't replace the default. It runs
 on branch <code>trials</code> (Tentative; <code>git show trials:docs/designs/2026-10-29_trials.md</code>).
 <strong>Nothing in it is built yet.</strong></p>
 </section>
+<section class="card"><h2 id="planners">Planners</h2>
+<p>The <strong>planner</strong> draws the path; the <strong>follower</strong> (MPPI, RPP, a tracker) drives it. Nav2
+can use several planners. We picked one with <code>planner:=</code>; Hybrid-A* stays the default
+until another wins (<code>docs/trials.md</code>, <a href="trials.html#planners-29-oct-hybrid-lattice-and-smac2d">Planners</a>).</p>
+<pre class="highlight"><code class="language-text"> goal ─► bt_navigator ─► planner_server: "GridBased" ─► the path ─► follower
+                                │
+             planner:=hybrid (default) | lattice | smac2d | navfn | theta_star</code></pre>
+<p>The behaviour trees always ask for <code>GridBased</code>. The launch file puts the chosen planner
+behind that name, so nothing else changes.</p>
+<h3 id="each-planner-in-plain-words">Each planner, in plain words</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th><code>planner:=</code></th>
+<th>Nav2's plugin</th>
+<th>How it draws the path</th>
+<th>Keeps to the car's turning circle?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hybrid</code> (default)</td>
+<td>SmacPlannerHybrid</td>
+<td>searches with real car moves: straight, full left, full right; Dubins curves (Reeds-Shepp with <code>reversing:=true</code>)</td>
+<td><strong>yes</strong></td>
+</tr>
+<tr>
+<td><code>lattice</code></td>
+<td>SmacPlannerLattice</td>
+<td>joins short car moves from a ready-made list, our <strong>primitives</strong> (below)</td>
+<td><strong>yes</strong></td>
+</tr>
+<tr>
+<td><code>smac2d</code></td>
+<td>SmacPlanner2D</td>
+<td>A* on the grid, 8 directions, then smoothed</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>navfn</code></td>
+<td>NavfnPlanner</td>
+<td>Dijkstra on the grid: Nav2's oldest planner</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>theta_star</code></td>
+<td>ThetaStarPlanner</td>
+<td>A* that cuts corners with straight lines ("any-angle")</td>
+<td>no</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">The last three ignore the turning circle</p>
+<p>They plan as if the car could turn on the spot. Their paths can have sharp corners.
+The follower has to round each corner, so the car drives off the path there, or
+can't make the turn. <strong>The car refuses them</strong>: <code>car.launch.py</code> only takes <code>hybrid</code>
+or <code>lattice</code>, with no way round it. They are for Gazebo and the bench.</p>
+</div>
+<h3 id="what-each-one-is-good-and-bad-at">What each one is good and bad at</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Planner</th>
+<th>✅</th>
+<th>❌</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>hybrid</td>
+<td>paths the car can drive; reverses when allowed</td>
+<td>slower; replans may pick a new route</td>
+</tr>
+<tr>
+<td>lattice</td>
+<td>paths the car can drive; moves made for our car</td>
+<td>only as good as its primitives; a coarse 16-heading list</td>
+</tr>
+<tr>
+<td>smac2d</td>
+<td>fast; short paths</td>
+<td>corners the car can't turn</td>
+</tr>
+<tr>
+<td>navfn</td>
+<td>fast; simple</td>
+<td>corners; hugs the costmap's low cost, not the car</td>
+</tr>
+<tr>
+<td>theta_star</td>
+<td>the straightest paths</td>
+<td>long straight lines with sharp corners between</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-lattices-primitives">The lattice's primitives</h3>
+<p>The lattice needs a list of moves made for <strong>our</strong> car. Nav2 ships lists only for small
+robots (0.5 m and 1 m turning radius). So we make our own with Nav2's own generator:</p>
+<pre class="highlight"><code class="language-bash">pixi run lattice-primitives          # makes the list again (after pixi run vendor)
+pixi run lattice-primitives --check  # still right for vehicle.yaml?</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Value</th>
+<th>From</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>turning radius</td>
+<td>3.59 m</td>
+<td>full lock (2.87 m) × 1.25, as Hybrid uses (<code>vehicle.plan_turning_radius</code>)</td>
+</tr>
+<tr>
+<td>cells</td>
+<td>0.25 m</td>
+<td>the maps (<code>maps/*.yaml</code>); the costmap uses the map's cells</td>
+</tr>
+<tr>
+<td>headings</td>
+<td>16</td>
+<td>the generator's advice</td>
+</tr>
+<tr>
+<td>moves</td>
+<td>96</td>
+<td>forward only; Nav2 adds the same moves backwards with <code>reversing:=true</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="Every move in the list, from the middle: straight lines and arcs of 3.6 m or wider" src="../img/lattice-primitives.png" /></p>
+<p>The file is <code>ros/drivers/aav_navigation/config/lattice_ackermann.json</code>. If someone changes
+the wheelbase, the steering lock or a map's cells, the launch refuses <code>planner:=lattice</code>
+until the list is made again; a test fails too.</p>
+<h3 id="scoring-them">Scoring them</h3>
+<pre class="highlight"><code class="language-bash">pixi run controller-compare --planners hybrid lattice smac2d --tours lot</code></pre>
+<p>Each planner drives the lot tour behind MPPI. Before each leg, the planner alone is asked
+for the path too, so these are measured without the follower:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Number</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>planning time</td>
+<td>how long the planner took (ms)</td>
+</tr>
+<tr>
+<td>path length</td>
+<td>how long its path is (m)</td>
+</tr>
+<tr>
+<td>tightest turn</td>
+<td>the smallest circle the path bends round (m)</td>
+</tr>
+<tr>
+<td>path tighter than full lock</td>
+<td>metres of path the car can't drive as drawn</td>
+</tr>
+<tr>
+<td>legs finished</td>
+<td>did the car get there</td>
+</tr>
+</tbody>
+</table></div>
+</section>
 <section class="card"><h2 id="8-the-other-trial-localization">8. The other trial: localization</h2>
 <p>Every controller above is only as good as where it thinks the car is. Localization has
 trials too. The basics: <a href="learn-localization.html">Learn: localization</a>.</p>
@@ -1380,8 +1552,12 @@ today's ESP32 has no wheel speed, so the 0.5 m/s exit can't fire there (TODO 0b)
 <td><code>ros/drivers/aav_drive_to_point/aav_drive_to_point/line.py</code>, <code>approach.py</code></td>
 </tr>
 <tr>
-<td>MPPI, RPP, Hybrid-A*</td>
-<td><code>ros/drivers/aav_navigation/config/nav2.yaml</code></td>
+<td>MPPI, RPP, Hybrid-A*, the trial planners</td>
+<td><code>ros/drivers/aav_navigation/config/nav2.yaml</code>; <code>planner:=</code> in <code>navigation.launch.py</code>, <code>vehicle.check_planner</code></td>
+</tr>
+<tr>
+<td>The lattice's primitives</td>
+<td><code>ros/drivers/aav_navigation/config/lattice_ackermann.json</code>, made by <code>tools/lattice_primitives.py</code></td>
 </tr>
 <tr>
 <td>The plan</td>
