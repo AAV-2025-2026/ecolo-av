@@ -79,6 +79,7 @@ The `Task` column is `pixi run <task>`; "-" means run the script itself.
 |---|---|---|
 | `ros.sh` | the workspace sourced; `--local` for stand-ins | (most tasks) |
 | `demo_all.sh` | Gazebo, RViz, the HUD and the map window in one go | `demo` |
+| `pick.py` | a plain-words menu of the sim's switches (route, follower, where-am-I, speed loop): prints, saves and runs the command (`docs/switches.md`) | `pick` |
 | `sim_fault.sh` | make a Gazebo sensor fail on purpose, or mend it | `sim-fault` |
 | `gz_window.sh` | Gazebo's window again, following the car | `gz-window` |
 | `software_gl.sh` | Mesa's software OpenGL, for Gazebo with no GPU | - (put in front) |
