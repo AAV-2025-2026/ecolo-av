@@ -7,7 +7,7 @@
 <!-- Generated from docs/trials.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Trials: new path followers and localizers beside the main ones</h1>
-<div class="meta">10 min read · 8 sections</div></header>
+<div class="meta">13 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -73,6 +73,7 @@
 <a href="learn-state-space.html">Learn: state space</a>
 <a href="vehicle-model.html">The car as a linear model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="geofence.html">The geofence</a>
 <a href="sources-and-targets.html">Sources and targets</a>
 <a href="mcp.html">AI apps (MCP)</a>
 <a href="plain-english.html">Plain English</a>
@@ -92,7 +93,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#what-is-on-trial">What is on trial</a><a href="#where-a-tracker-sits">Where a tracker sits</a><a href="#fair-rules">Fair rules</a><a href="#run-it">Run it</a><a href="#results">Results</a><a href="#before-a-winner-goes-on-the-car">Before a winner goes on the car</a><a href="#results-29-october">Results, 29 October</a><a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results, 29 October (afternoon): LQR rebuilt, and mpc_full</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#what-is-on-trial">What is on trial</a><a href="#where-a-tracker-sits">Where a tracker sits</a><a href="#fair-rules">Fair rules</a><a href="#run-it">Run it</a><a href="#results">Results</a><a href="#scoring-a-localizer-fairly">Scoring a localizer fairly</a><a href="#before-a-winner-goes-on-the-car">Before a winner goes on the car</a><a href="#results-29-october">Results, 29 October</a><a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results, 29 October (afternoon): LQR rebuilt, and mpc_full</a></nav>
 <div class="lead"><p>Ben, 29 Oct: "We want to make other nodes or plugins that we can test and then replace
 the main ones if they work." Each trial runs <strong>beside</strong> today's default, chosen at launch,
 and is <strong>scored on the same routes</strong>. It becomes the default only once it wins.</p>
@@ -100,8 +101,10 @@ and is <strong>scored on the same routes</strong>. It becomes the default only o
 <p><strong>The short version</strong>
 - <strong>Trackers</strong> (<code>aav_track</code>): pure pursuit, Stanley, LQR, MPC, and <code>mpc_full</code> (speed and steering together), in Nav2's own chain, in controller_server's place. <code>tracker:=lqr</code>.
 - <strong>AMCL</strong> (stock <code>nav2_amcl</code>): a particle filter on the map and the lidar, scored against the EKF, never steering. <code>amcl:=true</code>.
+- <strong>NDT</strong> (<code>aav_ndt</code>, ours in Rust): the lidar matched to a saved lidar map, scored against the EKF, never steering. <code>ndt:=true</code>.
 - <strong>Score:</strong> <code>pixi run controller-compare --trackers pure_pursuit lqr --runs 3</code>.
 - <strong>Results (29 Oct, Gazebo, 3 runs):</strong> pure pursuit, Stanley and MPC finished every leg; MPPI, RPP and LQR lost legs on the U-turn. AMCL lost itself; the EKF wins. <a href="#results-29-october">Results</a>.
+- <strong>NDT</strong>, 29 Oct: about 1-3 cm off on the lot tour, 2 ms a match (below).
 - <strong>Afternoon:</strong> LQR rebuilt with a preview (U-turn 2 of 3 in a quiet run; it weaved on a busy Mac), <code>mpc_full</code> 10 of 12. <a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results</a>.
 - The design: <code>docs/designs/2026-10-29_trials.md</code>.</p>
 </blockquote></div>
@@ -144,6 +147,11 @@ and is <strong>scored on the same routes</strong>. It becomes the default only o
 <td>AMCL</td>
 <td>the global EKF</td>
 <td><code>amcl:=true</code></td>
+</tr>
+<tr>
+<td>NDT on a saved lidar map</td>
+<td>the global EKF, and AMCL</td>
+<td><code>ndt:=true</code> (after <code>pixi run ndt-map drive</code>)</td>
 </tr>
 </tbody>
 </table></div>
@@ -205,11 +213,100 @@ e-stops.</p>
 <pre class="highlight"><code class="language-bash">pixi run sim world:=test_lot reversing:=false tracker:=mpc      # watch one
 pixi run sim world:=test_lot amcl:=true                         # AMCL beside the EKF
 pixi run controller-compare --trackers pure_pursuit stanley lqr mpc mpc_full --controllers mppi --runs 3
-pixi run controller-compare --amcl                              # score AMCL too</code></pre>
+pixi run controller-compare --amcl                              # score AMCL too
+pixi run ndt-map drive                                          # NDT's map, once (~6 min)
+pixi run controller-compare --amcl --ndt                        # score NDT beside AMCL</code></pre>
 </section>
 <section class="card"><h2 id="results">Results</h2>
-<p>Not run yet. Each run's results go here, with its date and a link to its folder in
-<code>log/controller-compare/</code>.</p>
+<p>Each run's results go here, with its date and its folder in <code>log/controller-compare/</code>.</p>
+<h3 id="29-oct-0400-ndt-and-amcl-beside-the-ekf-one-run-mppi-the-lot-tour">29 Oct, 04:00: NDT and AMCL beside the EKF (one run, MPPI, the lot tour)</h3>
+<p><code>controller-compare --tours lot --controllers mppi --amcl --ndt</code>, on the map
+<code>ndt-map drive</code> made at 03:55 (169,121 points, 2,450 clouds). Off = from Gazebo's truth.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Leg</th>
+<th>EKF off, mean (m)</th>
+<th>AMCL off, mean (m)</th>
+<th>NDT off, mean / worst (m)</th>
+<th>NDT: clouds with a pose</th>
+<th>NDT match, mean / worst (ms)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a left turn</td>
+<td>0.17</td>
+<td>0.66</td>
+<td>0.009 / 0.02</td>
+<td>100 %</td>
+<td>2.6 / 3.9</td>
+</tr>
+<tr>
+<td>round the building</td>
+<td>0.16</td>
+<td>7.1</td>
+<td>0.030 / 0.27</td>
+<td>98 %</td>
+<td>1.7 / 4.7</td>
+</tr>
+<tr>
+<td>turn back</td>
+<td>0.18</td>
+<td>17.7</td>
+<td>0.017 / 0.37</td>
+<td>98 %</td>
+<td>1.7 / 4.7</td>
+</tr>
+<tr>
+<td>home (Nav2 gave up)</td>
+<td>0.17</td>
+<td>35.7</td>
+<td>0.010 / 0.21</td>
+<td>100 %</td>
+<td>2.2 / 14.0</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>NDT was never over 1 m off; one LOST and restart from <code>ekf_global</code> (turn back).
+  Heading off at most 1.0°.</li>
+<li>AMCL lost the car round the building and never found it again: a look at its
+  settings is due before it is scored again.</li>
+<li>The last leg wasn't reached: MPPI and Nav2 gave up, with the EKF 0.17 m off, so that is
+  not the localizers.</li>
+<li>Match times are this Mac's (M4 Max), not the Orin's. Gazebo's lidar has no sweep; the
+  car's does. One run: no spread yet. <code>covariance_scale</code> (k) and the score floor are
+  not fitted yet.</li>
+</ul>
+</section>
+<section class="card"><h2 id="scoring-a-localizer-fairly">Scoring a localizer fairly</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Number</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>off: mean, worst; heading worst</td>
+<td>each pose against the truth at its own stamp</td>
+</tr>
+<tr>
+<td>the same on one 10 Hz grid (each pose held until the next)</td>
+<td>one that publishes more often isn't scored on more samples</td>
+</tr>
+<tr>
+<td>time over 1 m off, or no pose yet; the longest stretch</td>
+<td>lost, and how long it took to recover</td>
+</tr>
+<tr>
+<td>NDT: share of clouds that gave a pose; each match's wall-clock time</td>
+<td>simulated time can hide a slow match</td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="before-a-winner-goes-on-the-car">Before a winner goes on the car</h2>
 <ul>
