@@ -166,6 +166,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 
 | Feature | Why | Who | Date | Status |
 |---|---|---|---|---|
+| [Switch picker](switches.md) (`pixi run pick`) | Every swappable part (who steers, where-am-I, speed loop) as a plain-words menu that prints, saves and runs the command, so nobody has to remember the switches; `demo` and `debugdemo` take them too | Ben | 2026-10-29 | sim |
 | Live graph check (`pixi run check`) | Compares the running graph with `docs/interfaces.yaml`, so a wrong topic shows at once | Ben | 2026-10-09 | sim |
 | Network doctor, network map and machine survey | Tells whether a laptop can join the car's network, and records what's on each computer, read-only | Ben | 2026-10-10 | car |
 | Read-only [MCP server](mcp.md) | An AI app can read the docs, contracts and live graph, but never move the car | Ben | 2026-10-10 | built |

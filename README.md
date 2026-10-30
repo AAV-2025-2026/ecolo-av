@@ -105,6 +105,7 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 | `sim` | Gazebo plays the car (`world:=road`, `hud:=true`, `sim_speed:=3`...) |
 | `demo` | the whole simulated car at once: Gazebo, RViz, the HUD and the map window (`demo fullscreen`) |
 | `debugdemo` | `demo` plus the debug HUD, which opens as the seeing screen: the lidar's cubes, NDT's map and match from above, where each localizer puts the car (key L: every sensor) |
+| `pick` | a menu of the switches (who steers, where-am-I, speed loop), so you needn't remember them: prints the command, saves it, runs it; `pick last` runs it again ([Switches](docs/switches.md)) |
 | `hw-panel` | the hardware panel: every sensor's number, and simple buttons (hold Space to drive) for Gazebo or the bench, beside `sim` or `debugdemo` |
 | `bench` | the real car's software, with stand-ins for the hardware |
 | `view` | the car's model in RViz |

@@ -12,6 +12,9 @@
 #                                 # the lidar's cubes, the localizers, every sensor; with
 #                                 # AMCL, a trial tracker, and NDT (if maps/ndt/test_lot.pcd
 #                                 # is there: pixi run ndt-map drive) on (docs/hud.md)
+#   pixi run debugdemo tracker:=mpc ndt:=false   # any sim.launch.py switch, name:=value:
+#                                 # yours come last, so they win (docs/switches.md)
+#   pixi run pick                 # a menu of the switches, instead of remembering them
 #   Ctrl-C                        # stops them all
 #
 # Portable: bash 3.2 (a Mac), no GNU-only flags.
@@ -22,11 +25,13 @@ cd "$here"
 
 full=false
 debug=false
+extra=""
 for arg in "$@"; do
   case "$arg" in
     fullscreen) full=true ;;
     debug) debug=true ;;
-    *) echo "usage: tools/demo_all.sh [debug] [fullscreen]" >&2; exit 2 ;;
+    *:=*) extra="$extra $arg" ;;
+    *) echo "usage: tools/demo_all.sh [debug] [fullscreen] [name:=value ...]" >&2; exit 2 ;;
   esac
 done
 # The debug HUD's run: AMCL beside the global EKF and a trial tracker, so every layer
@@ -46,6 +51,10 @@ if $debug; then
     echo "NDT: off: no $ndt_map yet. Make it once with: pixi run ndt-map drive (about 6 min, headless)"
   fi
 fi
+
+# The switches you gave come last: ros2 launch keeps the last value of each.
+sim_args="$sim_args$extra"
+echo "switches: $sim_args   (pixi run pick: a menu; docs/switches.md: every switch)"
 
 # Gazebo's transport finds its own parts by multicast, which a Mac on some networks (or
 # none) refuses ("No route to host"); on this computer only, it needs none.
