@@ -354,6 +354,14 @@ work on." His order, with the work under way:
         test mode (#15): its caps and the e-stop still apply. Never around the spine;
       - **what the car thinks:** the lidar's cubes and the NDT match (where the scan sits
         on the saved map), drawn on the same screen.
+- [ ] **Two screens, not one** (Ben, 29 Oct evening, word for word in `docs/history/messages-2026-10-29.md`):
+      1. **The hardware screen**: every sensor live, and **very simple buttons** for the
+         actuators: speed +/-, brake +/-, steering left/right, **centre**. Through the
+         spine's hardware test mode (#15) and its caps, never around them; the e-stop stays
+         the stop. TODO 49b limits the throttle on stands until a rear-wheel speed exists;
+      2. **The seeing screen** (today's debug HUD, split): left, big, the 3D cubes; right
+         top, a top-down of the lidar map (ICP/KISS-ICP, or the NDT map today) with the
+         car on it; right bottom, a top-down of NDT's match (the scan on the map's cells).
 - [ ] **A preflight on stands, before the ground** (Ben, 29 Oct): one scripted run, wheels
       off the ground: speed up, hold, slow down, brake; steer left, right, centre; and
       every sensor checked live (rate, values in range) at the same time. PASS or FAIL per
