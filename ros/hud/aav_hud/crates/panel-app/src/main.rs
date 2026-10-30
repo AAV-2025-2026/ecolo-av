@@ -182,19 +182,27 @@ impl SelfTest {
         })
     }
 
-    /// This frame's presses and whether GO is held. Waits for the speed buttons to be on.
+    /// This frame's presses and whether GO is held. Waits for the speed buttons to be on,
+    /// presses Speed + up to the speed, then holds GO like a person holding Space: it
+    /// never lets go or presses again before the time is up, whatever zeroes the buttons.
     fn frame(&mut self, now: Instant, buttons: &Buttons, gate: &Gate) -> (Option<Press>, bool) {
-        if self.done_at.is_some() || !matches!(gate, Gate::On { .. }) {
+        if self.done_at.is_some() {
+            return (None, false);
+        }
+        if let Some(held_at) = self.held_at {
+            if now.saturating_duration_since(held_at) >= self.hold {
+                self.done_at = Some(now);
+                return (None, false);
+            }
+            return (None, true);
+        }
+        if !matches!(gate, Gate::On { .. }) {
             return (None, false);
         }
         if buttons.asked_speed() + 1e-9 < self.speed {
             return (Some(Press::SpeedUp), false);
         }
-        let held_at = *self.held_at.get_or_insert(now);
-        if now.saturating_duration_since(held_at) >= self.hold {
-            self.done_at = Some(now);
-            return (None, false);
-        }
+        self.held_at = Some(now);
         (None, true)
     }
 
@@ -290,6 +298,103 @@ const PRESS_KEYS: [(KeyboardKey, Press); 10] = [
     (KeyboardKey::KEY_S, Press::Stop),
 ];
 
+/// The panel between the source and the window: news in, where it may drive, the
+/// buttons, what to send. The window adds the keys, the mouse and the drawing; the
+/// Gazebo check drives it without a window.
+struct Panel {
+    state: PanelState,
+    buttons: Buttons,
+    last_kind: Option<Kind>,
+    caps: Caps,
+    vehicle: Vehicle,
+    stands: bool,
+}
+
+impl Panel {
+    fn new(config: &PanelConfig, vehicle: &Vehicle, stands: bool) -> Self {
+        Self {
+            state: PanelState::new(config.stale_after()),
+            buttons: Buttons::new(Steps {
+                speed: config.speed_step,
+                steer: config.steer_step,
+                creep: config.creep,
+                max_steer: vehicle.max_steering_angle,
+                wheelbase: vehicle.wheelbase,
+            }),
+            last_kind: None,
+            caps: Caps {
+                sim: config.sim_cap,
+                stands: config.stands_cap,
+            },
+            vehicle: vehicle.clone(),
+            stands,
+        }
+    }
+
+    /// Takes what arrived; a source change zeroes the buttons (not the first
+    /// announcement). Returns where the speed buttons may drive now.
+    fn news(&mut self, source: &mut dyn DataSource, now: Instant) -> Gate {
+        for update in source.drain(now) {
+            if let Update::Mux(c) = &update {
+                self.buttons.observe_mux(*c, now);
+            }
+            self.state.apply(update, now);
+        }
+        // Unknown to anything is the first announcement, not a change.
+        let kind = self.state.kind();
+        if self
+            .last_kind
+            .is_some_and(|k| k != kind && k != Kind::Unknown)
+        {
+            self.buttons.zero(Zeroed::SourceChanged);
+        }
+        self.last_kind = Some(kind);
+        gate::gate(
+            &Situation {
+                kind,
+                stands: self.stands,
+                speed_wheels: self.vehicle.speed_wheels.as_ref(),
+                no_timeout_lock: self.state.no_timeout_lock,
+                // Not read yet (a parameter of the legacy bridge): unknown.
+                speed_loop_mode: None,
+            },
+            self.caps,
+        )
+    }
+
+    /// This frame's presses and GO; returns what to send now.
+    fn act(
+        &mut self,
+        now: Instant,
+        gate: &Gate,
+        presses: impl IntoIterator<Item = Press>,
+        go: bool,
+    ) -> Option<panel_core::buttons::Command> {
+        for p in presses {
+            self.buttons.press(p, now, gate);
+        }
+        self.buttons.set_go(go, now);
+        self.buttons.command(
+            now,
+            &World {
+                gate,
+                estop: self.state.estop_on(),
+                seen_steer: self.state.seen_steer(now),
+                seen_speed: self.state.seen_speed(now),
+            },
+        )
+    }
+
+    /// "front, not driven" on the real car's stands.
+    fn wheels_note(&self) -> Option<String> {
+        panel_state::wheels_note(
+            self.stands,
+            self.state.kind(),
+            self.vehicle.speed_wheels.as_ref(),
+        )
+    }
+}
+
 /// The window's loop: news in, the buttons, one frame drawn, the command out.
 fn run(
     mut opts: Options,
@@ -310,47 +415,13 @@ fn run(
     rl.set_window_min_size(1100, 760);
     window::place(&mut rl, opts.monitor.as_ref(), opts.fullscreen)?;
     let ui = Ui::new(&mut rl, &thread);
-    let mut state = PanelState::new(config.stale_after());
-    let mut buttons = Buttons::new(Steps {
-        speed: config.speed_step,
-        steer: config.steer_step,
-        creep: config.creep,
-        max_steer: vehicle.max_steering_angle,
-        wheelbase: vehicle.wheelbase,
-    });
-    let caps = Caps {
-        sim: config.sim_cap,
-        stands: config.stands_cap,
-    };
-    let mut last_kind: Option<Kind> = None;
+    let mut panel = Panel::new(config, vehicle, opts.stands);
     let started = Instant::now();
     let screenshot_after = Duration::from_secs_f64(opts.after.unwrap_or(4.0));
 
     while !rl.window_should_close() && !source.has_stopped() {
         let now = Instant::now();
-        for update in source.drain(now) {
-            if let Update::Mux(c) = &update {
-                buttons.observe_mux(*c, now);
-            }
-            state.apply(update, now);
-        }
-        // A source change zeroes the buttons (not the first announcement).
-        let kind = state.kind();
-        if last_kind.is_some_and(|k| k != kind) {
-            buttons.zero(Zeroed::SourceChanged);
-        }
-        last_kind = Some(kind);
-        let gate = gate::gate(
-            &Situation {
-                kind,
-                stands: opts.stands,
-                speed_wheels: vehicle.speed_wheels.as_ref(),
-                no_timeout_lock: state.no_timeout_lock,
-                // Not read yet (a parameter of the legacy bridge): unknown.
-                speed_loop_mode: None,
-            },
-            caps,
-        );
+        let gate = panel.news(source.as_mut(), now);
 
         // The mouse and the keys. A window without focus never holds GO.
         let focused = rl.is_window_focused();
@@ -380,41 +451,29 @@ fn run(
         let mut go =
             focused && (rl.is_key_down(KeyboardKey::KEY_SPACE) || held == Some(Button::Go));
         if let Some(test) = &mut opts.self_test {
-            let (press, hold) = test.frame(now, &buttons, &gate);
+            let (press, hold) = test.frame(now, &panel.buttons, &gate);
             presses.extend(press);
             go |= hold;
         }
-        for p in presses {
-            buttons.press(p, now, &gate);
-        }
-        buttons.set_go(go, now);
-        let command = buttons.command(
-            now,
-            &World {
-                gate: &gate,
-                estop: state.estop_on(),
-                seen_steer: state.seen_steer(now),
-                seen_speed: state.seen_speed(now),
-            },
-        );
+        let command = panel.act(now, &gate, presses, go);
 
-        let note = panel_state::wheels_note(opts.stands, kind, vehicle.speed_wheels.as_ref());
+        let note = panel.wheels_note();
         let frame = Frame {
             now,
             label: source.label(),
             gate: &gate,
-            buttons: &buttons,
+            buttons: &panel.buttons,
             held,
             wheels_note: note.as_deref(),
             stands: opts.stands,
         };
         let mut d = rl.begin_drawing(&thread);
-        ui.draw(&mut d, &state, &frame);
+        ui.draw(&mut d, &panel.state, &frame);
         drop(d);
         source.frame_drawn(command);
 
         if let Some(test) = &mut opts.self_test {
-            test.print(now, &state, &buttons);
+            test.print(now, &panel.state, &panel.buttons);
             if test.finished(now) && opts.screenshot.is_none() {
                 break;
             }
@@ -492,11 +551,103 @@ mod tests {
             b.press(Press::SpeedUp, t, &on);
         }
         assert_eq!(test.frame(t, &b, &on), (None, true));
+        // Zeroed while held (a takeover): it keeps holding, as a person on Space would,
+        // and never presses Speed + again.
+        b.zero(Zeroed::TakenOver);
+        assert_eq!(test.frame(t, &b, &off), (None, true));
         assert_eq!(
             test.frame(t + Duration::from_secs(2), &b, &on),
             (None, false)
         );
         assert!(test.finished(t + Duration::from_secs(6)));
+    }
+
+    /// The Gazebo check without a window (a locked screen can't open one): the real node
+    /// and the same buttons, a frame every 33 ms, the self-test's presses and GO.
+    /// `HW_PANEL_SELF_TEST=0.3:8 cargo test --release -p panel-app -- --ignored
+    /// --nocapture gazebo_self_test`, beside a running sim on the same domain.
+    #[cfg(feature = "ros")]
+    #[test]
+    #[ignore = "needs a running Gazebo on this ROS domain"]
+    fn gazebo_self_test() -> Result<()> {
+        let spec = std::env::var("HW_PANEL_SELF_TEST").unwrap_or_else(|_| "0.3:8".into());
+        let mut test = SelfTest::parse(&spec)?;
+        let config = PanelConfig::default();
+        let (source, config) = ros::RosSource::start(vec!["hw_panel".into()], config)?;
+        let mut source: Box<dyn DataSource> = Box::new(source);
+        let mut panel = Panel::new(&config, &Vehicle::default(), false);
+        let started = Instant::now();
+        loop {
+            let now = Instant::now();
+            let gate = panel.news(source.as_mut(), now);
+            let (press, go) = test.frame(now, &panel.buttons, &gate);
+            let command = panel.act(now, &gate, press, go);
+            source.frame_drawn(command);
+            test.print(now, &panel.state, &panel.buttons);
+            if test.finished(now) || now.duration_since(started) > Duration::from_secs(120) {
+                break;
+            }
+            std::thread::sleep(Duration::from_millis(33));
+        }
+        assert!(
+            test.finished(Instant::now()),
+            "the speed buttons never came on"
+        );
+        Ok(())
+    }
+
+    /// A source that hands out the updates it is given, once.
+    struct Script(Vec<Update>);
+
+    impl DataSource for Script {
+        fn label(&self) -> &'static str {
+            "TEST"
+        }
+        fn drain(&mut self, _now: Instant) -> Vec<Update> {
+            std::mem::take(&mut self.0)
+        }
+        fn press_estop(&mut self) {}
+        fn frame_drawn(&mut self, _command: Option<panel_core::buttons::Command>) {}
+    }
+
+    fn announce(origin: hud_core::origin::Origin) -> Update {
+        Update::Source(hud_core::origin::Announcement {
+            announcer: "gazebo_adapter".into(),
+            entries: vec![hud_core::origin::Entry {
+                name: "imu".into(),
+                topic: "/sensors/imu/data".into(),
+                origin,
+            }],
+        })
+    }
+
+    #[test]
+    fn the_first_announcement_is_not_a_source_change() {
+        use hud_core::origin::Origin;
+        let t = Instant::now();
+        let mut panel = Panel::new(&PanelConfig::default(), &Vehicle::default(), false);
+        let mut quiet = Script(vec![]);
+        assert!(matches!(panel.news(&mut quiet, t), Gate::Off(_)));
+        // Gazebo announces late, while GO is already held: no zero.
+        let mut sim = Script(vec![announce(Origin::Sim)]);
+        let gate = panel.news(&mut sim, t);
+        assert!(matches!(gate, Gate::On { .. }));
+        assert_eq!(panel.buttons.last_zero(), None);
+        let c = panel.act(t, &gate, [Press::SpeedUp], true);
+        assert!(c.is_some_and(|c| (c.speed - 0.1).abs() < 1e-12));
+        // A real announcement beside it: a change, zeroed, and the speed buttons off.
+        let mut real = Script(vec![Update::Source(hud_core::origin::Announcement {
+            announcer: "legacy_uart_bridge".into(),
+            entries: vec![hud_core::origin::Entry {
+                name: "car".into(),
+                topic: String::new(),
+                origin: Origin::Real,
+            }],
+        })]);
+        let gate = panel.news(&mut real, t);
+        assert_eq!(panel.buttons.last_zero(), Some(&Zeroed::SourceChanged));
+        assert!(matches!(gate, Gate::Off(Off::OnTheGround)));
+        assert_eq!(panel.act(t, &gate, [Press::SpeedUp], true), None);
     }
 
     #[test]

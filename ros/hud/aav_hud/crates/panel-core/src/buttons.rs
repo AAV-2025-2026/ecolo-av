@@ -253,13 +253,13 @@ impl Buttons {
         self.go = held;
     }
 
-    /// Everything to 0, and GO must be let go and pressed again.
+    /// Everything to 0; if GO is held, it must be let go and pressed again.
     pub fn zero(&mut self, why: Zeroed) {
         self.asked_speed = 0.0;
         self.asked_steer = 0.0;
         self.centring = None;
         self.stop_until = None;
-        self.needs_release = true;
+        self.needs_release = self.go;
         self.foreign_since = None;
         self.history.clear();
         self.last_zero = Some(why);
@@ -596,6 +596,39 @@ mod tests {
         assert_eq!(b.last_zero(), Some(&Zeroed::TakenOver));
         // The joystick let go: the old speed doesn't come back.
         needs_fresh_presses(&mut b, t + ms(600));
+    }
+
+    #[test]
+    fn a_takeover_at_the_real_rates() {
+        // Frames at 30 Hz, the keyboard's zeros through twist_mux at 10 Hz.
+        let t = Instant::now();
+        let mut b = driving(t);
+        let mut zeroed_at = None;
+        for frame in 1..60u64 {
+            let at = t + ms(33 * frame);
+            if frame % 3 == 0 {
+                b.observe_mux(Command::ZERO, at);
+            }
+            if b.last_zero() == Some(&Zeroed::TakenOver) {
+                zeroed_at = Some(frame);
+                break;
+            }
+            b.command(at, &world(&SIM));
+        }
+        assert!(zeroed_at.is_some_and(|f| f <= 15), "{zeroed_at:?}");
+    }
+
+    #[test]
+    fn a_zero_with_go_let_go_needs_no_release() {
+        let t = Instant::now();
+        let mut b = Buttons::new(STEPS);
+        b.zero(Zeroed::SourceChanged);
+        // Pressed afterwards, GO and Speed + drive at once.
+        b.press(Press::SpeedUp, t, &SIM);
+        b.set_go(true, t);
+        assert!(!b.needs_release());
+        let c = b.command(t, &world(&SIM)).expect("driving");
+        assert!((c.speed - 0.1).abs() < 1e-12);
     }
 
     #[test]
