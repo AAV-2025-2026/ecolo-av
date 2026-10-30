@@ -9,7 +9,12 @@
 //! The map is the PCD `pixi run ndt-map drive` writes (map frame, ground removed), read
 //! with ndt-core's own reader and snapped to cells (1 m by default).
 
-use std::{collections::HashMap, fmt, fs::File, path::Path};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt,
+    fs::File,
+    path::Path,
+};
 
 use map_core::geom::Point;
 
@@ -236,12 +241,111 @@ impl fmt::Display for MapFile {
     }
 }
 
-/// The map's occupied cells: their centres in the map frame.
+/// The map's occupied cells: their centres in the map frame; and the map seen from
+/// above, for the seeing screen's two top-downs.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct MapCells {
     /// One cell's edge, metres.
     pub size: f32,
     pub centres: Vec<[f32; 3]>,
+    /// The map from above: its points, thinned, and each column's ellipse.
+    pub footprint: Footprint,
+}
+
+/// One column of the map (a cell seen from above, every height) as NDT sees it: the
+/// mean and the spread of its points, drawn as an ellipse.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Ellipse {
+    /// The points' mean, map frame, metres.
+    pub centre: [f32; 2],
+    /// The two half-axes at two standard deviations, metres, the long one first.
+    pub half_axes: [f32; 2],
+    /// The long axis' heading, radians from +x (counter-clockwise).
+    pub angle: f32,
+}
+
+/// The thinnest an ellipse is drawn, metres: a wall seen edge-on still shows.
+pub const MIN_HALF_AXIS: f32 = 0.04;
+/// The top-down's points: at most one per square of this size, metres.
+pub const TOP_DOWN_STEP: f64 = 0.15;
+
+impl Ellipse {
+    /// From one column's running sums. None for fewer than [`MIN_POINTS`] points.
+    fn from_sums(s: &Sums) -> Option<Self> {
+        if s.n < MIN_POINTS {
+            return None;
+        }
+        let k = f64::from(s.n);
+        let (mx, my) = (s.sum[0] / k, s.sum[1] / k);
+        let xx = (s.sum_sq[0] / k - mx * mx).max(0.0);
+        let xy = s.sum_sq[1] / k - mx * my;
+        let yy = (s.sum_sq[2] / k - my * my).max(0.0);
+        // The 2 x 2 covariance's eigenvalues, and the long axis' angle.
+        let mean = (xx + yy) / 2.0;
+        let spread = (((xx - yy) / 2.0).powi(2) + xy * xy).sqrt();
+        let (long, short) = (mean + spread, (mean - spread).max(0.0));
+        let angle = 0.5 * (2.0 * xy).atan2(xx - yy);
+        let half = |var: f64| ((2.0 * var.sqrt()) as f32).max(MIN_HALF_AXIS);
+        Some(Self {
+            centre: [mx as f32, my as f32],
+            half_axes: [half(long), half(short)],
+            angle: angle as f32,
+        })
+    }
+}
+
+/// One column's running sums, for its ellipse.
+#[derive(Debug, Clone, Copy, Default)]
+struct Sums {
+    n: u32,
+    sum: [f64; 2],
+    /// x x, x y, y y.
+    sum_sq: [f64; 3],
+}
+
+impl Sums {
+    fn add(&mut self, x: f64, y: f64) {
+        self.n += 1;
+        self.sum[0] += x;
+        self.sum[1] += y;
+        self.sum_sq[0] += x * x;
+        self.sum_sq[1] += x * y;
+        self.sum_sq[2] += y * y;
+    }
+}
+
+/// The map from above.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Footprint {
+    /// The map's points, at most one per [`TOP_DOWN_STEP`] square, map frame.
+    pub points: Vec<[f32; 2]>,
+    /// One ellipse per column with at least [`MIN_POINTS`] points.
+    pub ellipses: Vec<Ellipse>,
+    /// The points' corners: lowest x and y, then highest x and y. None for no points.
+    pub bounds: Option<[f32; 4]>,
+    /// The columns that have an ellipse, by cell index.
+    columns: HashSet<[i32; 2]>,
+    /// One column's edge, metres.
+    size: f64,
+}
+
+impl Footprint {
+    /// Whether `p` (map frame) falls in one of the map's columns: a scan point that
+    /// lands on the map.
+    pub fn covers(&self, p: Point) -> bool {
+        self.size > 0.0
+            && self
+                .columns
+                .contains(&[cubes::cell(p.x, self.size), cubes::cell(p.y, self.size)])
+    }
+
+    /// The ellipses whose centres are within `half` metres of `around`, in x and in y.
+    pub fn ellipses_near(&self, around: Point, half: f64) -> impl Iterator<Item = &Ellipse> {
+        self.ellipses.iter().filter(move |e| {
+            (f64::from(e.centre[0]) - around.x).abs() <= half
+                && (f64::from(e.centre[1]) - around.y).abs() <= half
+        })
+    }
 }
 
 /// A cell needs this many of the map's points to count: a stray point isn't a wall.
@@ -252,12 +356,42 @@ impl MapCells {
     /// Points that aren't finite are skipped.
     pub fn from_points(points: impl IntoIterator<Item = [f64; 3]>, size: f64) -> Self {
         let mut counts: HashMap<[i32; 3], u32> = HashMap::new();
+        let mut columns: HashMap<[i32; 2], Sums> = HashMap::new();
+        let mut thinned: HashSet<[i32; 2]> = HashSet::new();
+        let mut top = Vec::new();
+        let mut bounds: Option<[f32; 4]> = None;
         for p in points
             .into_iter()
             .filter(|p| p.iter().all(|v| v.is_finite()))
         {
-            *counts.entry(cubes::cell_of(p, size)).or_default() += 1;
+            let [ix, iy, iz] = cubes::cell_of(p, size);
+            *counts.entry([ix, iy, iz]).or_default() += 1;
+            columns.entry([ix, iy]).or_default().add(p[0], p[1]);
+            let square = [
+                cubes::cell(p[0], TOP_DOWN_STEP),
+                cubes::cell(p[1], TOP_DOWN_STEP),
+            ];
+            if thinned.insert(square) {
+                let (x, y) = (p[0] as f32, p[1] as f32);
+                top.push([x, y]);
+                bounds = Some(match bounds {
+                    None => [x, y, x, y],
+                    Some([a, b, c, d]) => [a.min(x), b.min(y), c.max(x), d.max(y)],
+                });
+            }
         }
+        let mut ellipses: Vec<([i32; 2], Ellipse)> = columns
+            .iter()
+            .filter_map(|(&c, s)| Ellipse::from_sums(s).map(|e| (c, e)))
+            .collect();
+        ellipses.sort_by_key(|&(c, _)| c);
+        let footprint = Footprint {
+            points: top,
+            columns: ellipses.iter().map(|&(c, _)| c).collect(),
+            ellipses: ellipses.into_iter().map(|(_, e)| e).collect(),
+            bounds,
+            size,
+        };
         let mut centres: Vec<[f32; 3]> = counts
             .into_iter()
             .filter(|&(_, n)| n >= MIN_POINTS)
@@ -274,6 +408,7 @@ impl MapCells {
         Self {
             size: size as f32,
             centres,
+            footprint,
         }
     }
 
@@ -357,6 +492,43 @@ mod tests {
             cells.nearest(Point::new(0.0, 3.0), 1),
             vec![[0.5, 2.5, 1.5]]
         );
+    }
+
+    #[test]
+    fn a_wall_is_a_long_thin_ellipse_along_it() {
+        // A wall along y = 0.5, x from 0 to 0.9, at two heights: one column.
+        let wall = (0..10).flat_map(|i| [0.3, 1.1].map(|z| [f64::from(i) * 0.1, 0.5, z]));
+        let cells = MapCells::from_points(wall, 1.0);
+        assert_eq!(cells.footprint.ellipses.len(), 1);
+        let e = cells.footprint.ellipses[0];
+        assert!((e.centre[0] - 0.45).abs() < 1e-5 && (e.centre[1] - 0.5).abs() < 1e-5);
+        // Along x: 2 sigma of 0, 0.1 ... 0.9 is about 0.57 m; across it, the sliver.
+        assert!((e.half_axes[0] - 0.574).abs() < 0.01, "{:?}", e.half_axes);
+        assert_eq!(e.half_axes[1], MIN_HALF_AXIS);
+        assert!(e.angle.abs() < 1e-5);
+        assert!(cells.footprint.covers(Point::new(0.9, 0.1)));
+        assert!(!cells.footprint.covers(Point::new(1.1, 0.1)));
+        assert_eq!(cells.footprint.bounds, Some([0.0, 0.5, 0.9, 0.5]));
+        // Thinned to one point per 15 cm square, whatever the height.
+        assert_eq!(cells.footprint.points.len(), 7);
+    }
+
+    #[test]
+    fn a_diagonal_wall_leans_at_45_degrees() {
+        let wall = (0..30).map(|i| {
+            let t = f64::from(i) * 0.03;
+            [t, t, 1.0]
+        });
+        let cells = MapCells::from_points(wall, 1.0);
+        let e = cells.footprint.ellipses[0];
+        assert!(
+            (e.angle - std::f32::consts::FRAC_PI_4).abs() < 1e-4,
+            "{}",
+            e.angle
+        );
+        let fp = &cells.footprint;
+        assert_eq!(fp.ellipses_near(Point::new(3.0, 3.0), 1.0).count(), 0);
+        assert_eq!(fp.ellipses_near(Point::new(0.5, 0.5), 1.0).count(), 1);
     }
 
     #[test]

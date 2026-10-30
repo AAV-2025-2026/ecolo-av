@@ -19,7 +19,7 @@ use map_core::geom::{Point, Pose};
 
 use crate::{
     config::DebugConfig,
-    cubes::CubeScan,
+    cubes::{Band, CubeScan},
     frames::{frame_name, MapToOdom, Stamp},
     keys::{CubeView, Layers},
     ndt::NdtStatus,
@@ -381,6 +381,33 @@ impl DebugState {
         }
     }
 
+    /// A localizer's pose, in the map frame (the seeing screen's top-downs). The local
+    /// EKF's needs map -> odom.
+    pub fn pose_in_map(&self, who: Localizer) -> Option<Pose> {
+        let pose = *self.poses.get(&who)?;
+        if who.in_map() {
+            return Some(pose);
+        }
+        let odom = self.map_to_odom.odom_in_map?;
+        Some(Pose {
+            position: odom.transform(pose.position),
+            yaw: odom.yaw + pose.yaw,
+        })
+    }
+
+    /// The latest scan's cubes above the ground, seen from above in the map frame (none
+    /// without map -> odom): what NDT matches against its map.
+    pub fn scan_in_map(&self) -> Vec<Point> {
+        let (Some(scan), Some(odom)) = (&self.scan, self.map_to_odom.odom_in_map) else {
+            return Vec::new();
+        };
+        scan.cubes
+            .iter()
+            .filter(|c| c.band != Band::Ground)
+            .map(|c| odom.transform(Point::new(f64::from(c.centre[0]), f64::from(c.centre[1]))))
+            .collect()
+    }
+
     /// The car as the local EKF has it: what the camera follows.
     pub fn car(&self) -> Option<Pose> {
         self.pose_in_odom(Localizer::Local)
@@ -598,6 +625,44 @@ mod tests {
         );
         assert!(s.frame_problem.is_some());
         assert_eq!(s.particles_in_odom().count(), MAX_PARTICLES);
+    }
+
+    #[test]
+    fn the_seeing_screen_gets_the_car_and_the_scan_in_map() {
+        use crate::cubes::{Band, Cube};
+        let now = Instant::now();
+        let mut s = state();
+        s.apply(pose(Localizer::Local, 1.0, "odom"), now);
+        s.apply(pose(Localizer::Ndt, 4.0, "map"), now);
+        let cube = |x: f32, band| Cube {
+            centre: [x, 0.0, 1.0],
+            band,
+        };
+        s.set_scan(
+            CubeScan {
+                cubes: vec![cube(2.0, Band::Waist), cube(3.0, Band::Ground)],
+                size: 0.2,
+                ..CubeScan::default()
+            },
+            now,
+        );
+        // Without map -> odom: only the map-frame localizers.
+        assert_eq!(s.pose_in_map(Localizer::Local), None);
+        assert!(s.scan_in_map().is_empty());
+        assert_eq!(
+            s.pose_in_map(Localizer::Ndt).map(|p| p.position.x),
+            Some(4.0)
+        );
+        // odom sits at (10, 0) in map, turned a quarter left.
+        let quarter = std::f64::consts::FRAC_PI_2;
+        s.apply(Update::MapToOdom(Pose::new(10.0, 0.0, quarter)), now);
+        let car = s.pose_in_map(Localizer::Local).expect("known");
+        assert!((car.position.x - 10.0).abs() < 1e-9 && (car.position.y - 1.0).abs() < 1e-9);
+        assert!((car.yaw - quarter).abs() < 1e-9);
+        // The ground cube is left out.
+        let scan = s.scan_in_map();
+        assert_eq!(scan.len(), 1);
+        assert!((scan[0].x - 10.0).abs() < 1e-6 && (scan[0].y - 2.0).abs() < 1e-6);
     }
 
     #[test]

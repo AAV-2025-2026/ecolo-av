@@ -1,4 +1,20 @@
-//! The debug screen, drawn with raylib: the 3D view on the left, the panel on the right.
+//! The debug screen, drawn with raylib: the 3D view on the left; on the right, the
+//! seeing screen's two top-downs (the default) or, with key L, the panel.
+//!
+//! The seeing screen (docs/designs/2026-10-29_two-screens.md):
+//!
+//! ```text
+//! +-------------------------------------+------------------------+
+//! | LEGEND                          fps | WHAT THE CAR SEES  SIM |
+//! |                                     | the lidar map from     |
+//! |   cubes (kept, fading), the car,    | above, every car       |
+//! |   the localizers, the plan          +------------------------+
+//! |                                     | NDT's match: ellipses, |
+//! | KEYS                                | the scan, the score    |
+//! +-------------------------------------+------------------------+
+//! ```
+//!
+//! The panel (key L):
 //!
 //! ```text
 //! +-------------------------------------------------+-----------------+
@@ -22,11 +38,12 @@ use std::time::Instant;
 
 use debug_core::{
     cubes::Band,
-    keys::CubeView,
+    keys::{CubeView, Layout},
     ndt::{Fit, MapCells, MapFile, NdtState},
     orbit::Orbit,
     persist::{Fade, FadedCube},
     state::{DebugState, Localizer, Source},
+    topdown::{Rect as TopRect, View},
 };
 use hud_core::{health::Health, vehicle::VehicleStatus};
 use map_core::{
@@ -56,6 +73,15 @@ const TRAIL: Color = Color::new(120, 125, 140, 255);
 const NDT_MAP: Color = Color::new(150, 110, 220, 70);
 /// AMCL's particles: small orange arrows, a little fainter than AMCL's own car.
 const PARTICLE: Color = Color::new(255, 150, 40, 170);
+/// The seeing screen: NDT's map's points from above.
+const MAP_POINT: Color = Color::new(170, 140, 230, 200);
+/// NDT's cells, as ellipses round the car.
+const NDT_CELL: Color = Color::new(170, 120, 240, 150);
+/// The latest scan's cubes from above: on a map cell, or off the map.
+const SCAN_ON: Color = Color::new(80, 230, 120, 255);
+const SCAN_OFF: Color = Color::new(240, 80, 80, 255);
+/// NDT's match is shown this many metres across, round the car.
+const MATCH_WIDTH: f32 = 24.0;
 /// The most NDT map cubes drawn, nearest the car (the test lot has about 2,500).
 const MAX_MAP_CUBES: usize = 6000;
 /// A particle's arrow, metres.
@@ -244,7 +270,7 @@ impl Ui {
     pub fn draw(&mut self, d: &mut RaylibDrawHandle, state: &DebugState, f: &Frame<'_>) {
         d.clear_background(BACKGROUND);
         let (w, h) = (d.get_screen_width() as f32, d.get_screen_height() as f32);
-        let view_w = (w - PANEL_W).max(200.0);
+        let view_w = view_width(w, state.layers.layout);
         let size = state.scan.as_ref().map_or(self.cube_size, |s| s.size);
         self.gather(state.drawn_cubes(), size);
         self.world(d, state, f, view_w, h);
@@ -254,7 +280,232 @@ impl Ui {
         } else {
             self.text(d, "H: keys", 16.0, h - 34.0, 18.0, DIM);
         }
-        self.panel(d, state, f, view_w, w, h);
+        match state.layers.layout {
+            Layout::Panel => self.panel(d, state, f, view_w, w, h),
+            Layout::Seeing => self.seeing(d, state, f, view_w, w, h),
+        }
+    }
+
+    /// The seeing screen's right side: NDT's map from above with every localizer's car
+    /// (top); NDT's match round the car: its cells as ellipses, the latest scan over
+    /// them, the score (bottom).
+    fn seeing(
+        &self,
+        d: &mut RaylibDrawHandle,
+        state: &DebugState,
+        f: &Frame<'_>,
+        x0: f32,
+        w: f32,
+        h: f32,
+    ) {
+        d.draw_rectangle_rec(Rectangle::new(x0, 0.0, w - x0, h), PANEL);
+        let (x, right) = (x0 + 18.0, w - 18.0);
+        let mut y = 14.0;
+        self.text(d, "WHAT THE CAR SEES", x, y, 28.0, TEXT);
+        let label_w = self.font.measure(f.label, 20.0);
+        let tag = Rectangle::new(right - label_w - 20.0, y + 2.0, label_w + 20.0, 30.0);
+        d.draw_rectangle_rounded(tag, 0.3, 6, SECTION);
+        self.text(d, f.label, tag.x + 10.0, y + 6.0, 20.0, CAPTION);
+        y += 44.0;
+        if let Some(banner) = state.origins.banner() {
+            let r = Rectangle::new(x0 + 10.0, y, w - x0 - 20.0, 32.0);
+            d.draw_rectangle_rounded(r, 0.25, 6, NOT_REAL);
+            self.text(d, &banner, x + 4.0, y + 6.0, 19.0, Color::BLACK);
+            y += 40.0;
+        }
+        // Two boxes of about the same height; the score's lines under the second.
+        let score_h = 96.0;
+        let boxes = (h - y - score_h - 2.0 * 34.0 - 16.0).max(120.0);
+        let top_h = boxes / 2.0;
+        y = self.section(d, "THE LIDAR MAP FROM ABOVE: EVERY LOCALIZER", x0, y, w) - 6.0;
+        let top = TopRect::new(x0 + 10.0, y, w - x0 - 20.0, top_h);
+        self.map_from_above(d, state, f, top);
+        y += top_h + 8.0;
+        y = self.section(d, "NDT'S MATCH: THE SCAN ON THE MAP'S CELLS", x0, y, w) - 6.0;
+        let bottom = TopRect::new(x0 + 10.0, y, w - x0 - 20.0, boxes - top_h);
+        let on_map = self.ndt_match(d, state, f, bottom);
+        y += boxes - top_h + 8.0;
+        self.match_score(d, state, f, on_map, x, right, y);
+    }
+
+    /// NDT's map's points from above, fitted to the box, and each localizer's car.
+    fn map_from_above(
+        &self,
+        d: &mut RaylibDrawHandle,
+        state: &DebugState,
+        f: &Frame<'_>,
+        r: TopRect,
+    ) {
+        d.draw_rectangle_rec(Rectangle::new(r.x, r.y, r.w, r.h), BACKGROUND);
+        let Some(cells) = f.map.cells() else {
+            self.no_map(d, f, r);
+            return;
+        };
+        let fp = &cells.footprint;
+        let Some(bounds) = fp.bounds else {
+            self.text(
+                d,
+                "the map has no points",
+                r.x + 12.0,
+                r.y + 12.0,
+                18.0,
+                WARN,
+            );
+            return;
+        };
+        let view = View::fit(bounds, r);
+        let mut s = d.begin_scissor_mode(r.x as i32, r.y as i32, r.w as i32, r.h as i32);
+        let dot = (view.scale * 0.15).clamp(1.5, 3.0);
+        for &[px, py] in &fp.points {
+            let [sx, sy] = view.to_screen(Point::new(f64::from(px), f64::from(py)));
+            s.draw_rectangle_v(
+                Vector2::new(sx - dot / 2.0, sy - dot / 2.0),
+                Vector2::new(dot, dot),
+                MAP_POINT,
+            );
+        }
+        self.cars_from_above(&mut s, state, &view);
+    }
+
+    /// Every localizer's car from above, the local EKF's on top.
+    fn cars_from_above(&self, d: &mut RaylibDrawHandle, state: &DebugState, view: &View) {
+        for who in [
+            Localizer::Truth,
+            Localizer::Amcl,
+            Localizer::Ndt,
+            Localizer::Global,
+            Localizer::Local,
+        ] {
+            if let Some(pose) = state.pose_in_map(who) {
+                car_from_above(d, &self.car, view, pose, localizer_colour(who));
+            }
+        }
+    }
+
+    /// NDT's cells round the car as ellipses, the latest scan's cubes over them (green
+    /// on a cell, red off the map), the car. Returns how many of the scan's cubes were
+    /// on the map, and of how many.
+    fn ndt_match(
+        &self,
+        d: &mut RaylibDrawHandle,
+        state: &DebugState,
+        f: &Frame<'_>,
+        r: TopRect,
+    ) -> Option<(usize, usize)> {
+        d.draw_rectangle_rec(Rectangle::new(r.x, r.y, r.w, r.h), BACKGROUND);
+        let Some(cells) = f.map.cells() else {
+            self.no_map(d, f, r);
+            return None;
+        };
+        // Round NDT's own car when it has one, else the global EKF's, else the local.
+        let Some(car) = [Localizer::Ndt, Localizer::Global, Localizer::Local]
+            .into_iter()
+            .find_map(|who| state.pose_in_map(who))
+        else {
+            let s = "no car on the map yet (map -> odom, or a map-frame localizer)";
+            let s = fit(&self.font, s, r.w - 24.0, 17.0);
+            self.text(d, &s, r.x + 12.0, r.y + 12.0, 17.0, DIM);
+            return None;
+        };
+        let fp = &cells.footprint;
+        let view = View::around(car.position, MATCH_WIDTH, r);
+        let mut s = d.begin_scissor_mode(r.x as i32, r.y as i32, r.w as i32, r.h as i32);
+        for e in fp.ellipses_near(car.position, view.half_span() + 1.0) {
+            let ring: Vec<Vector2> = view
+                .ellipse(e.centre, e.half_axes, e.angle, 18)
+                .into_iter()
+                .map(|[x, y]| Vector2::new(x, y))
+                .collect();
+            s.draw_line_strip(&ring, NDT_CELL);
+        }
+        let scan = state.scan_in_map();
+        let on = scan.iter().filter(|&&p| fp.covers(p)).count();
+        let dot = (view.scale * 0.2).clamp(2.0, 5.0);
+        for &p in scan.iter().filter(|&&p| view.shows(p)) {
+            let [sx, sy] = view.to_screen(p);
+            let colour = if fp.covers(p) { SCAN_ON } else { SCAN_OFF };
+            s.draw_rectangle_v(
+                Vector2::new(sx - dot / 2.0, sy - dot / 2.0),
+                Vector2::new(dot, dot),
+                colour,
+            );
+        }
+        self.cars_from_above(&mut s, state, &view);
+        drop(s);
+        let note = format!("{MATCH_WIDTH:.0} m across, round the car");
+        self.text(d, &note, r.x + 10.0, r.y + r.h - 24.0, 15.0, DIM);
+        (!scan.is_empty()).then_some((on, scan.len()))
+    }
+
+    /// Under NDT's match: its state, score per point and time, and how much of the scan
+    /// landed on the map.
+    #[allow(clippy::too_many_arguments)]
+    fn match_score(
+        &self,
+        d: &mut RaylibDrawHandle,
+        state: &DebugState,
+        f: &Frame<'_>,
+        on_map: Option<(usize, usize)>,
+        x: f32,
+        right: f32,
+        y: f32,
+    ) {
+        let fresh = state.health(Source::NdtStatus, f.now).is_ok();
+        let (word, colour, numbers) = match &state.ndt {
+            Some(s) if fresh => {
+                let colour = match (s.headline(), s.fit) {
+                    ("LOST", _) => BAD,
+                    ("TRACKING", Fit::Good) => GOOD,
+                    _ => WARN,
+                };
+                (s.headline(), colour, s.numbers())
+            }
+            Some(_) => ("STALE", DIM, String::new()),
+            None => ("NOT RUNNING", SECTION, String::new()),
+        };
+        let ww = self.font.measure(word, 18.0);
+        d.draw_rectangle_rounded(Rectangle::new(x, y, ww + 20.0, 28.0), 0.4, 6, colour);
+        let text_colour = if colour == SECTION { DIM } else { Color::BLACK };
+        self.text(d, word, x + 10.0, y + 4.0, 18.0, text_colour);
+        let nx = x + ww + 34.0;
+        if !numbers.is_empty() {
+            let numbers = fit(&self.font, &numbers, right - nx, 22.0);
+            self.text(d, &numbers, nx, y + 2.0, 22.0, TEXT);
+        } else if state.ndt.is_none() {
+            let hint = fit(&self.font, "start the sim with ndt:=true", right - nx, 17.0);
+            self.text(d, &hint, nx, y + 5.0, 17.0, DIM);
+        }
+        let mut line = Vec::new();
+        if let Some((on, of)) = on_map {
+            line.push(format!(
+                "{on} of {of} scan cubes on the map ({:.0}%)",
+                100.0 * on as f64 / of.max(1) as f64
+            ));
+        }
+        if let Some(s) = state.ndt.as_ref().filter(|_| fresh) {
+            let details = s.details();
+            if !details.is_empty() {
+                line.push(details);
+            }
+        }
+        let line = fit(&self.font, &line.join("   "), right - x, 17.0);
+        self.text(d, &line, x, y + 38.0, 17.0, CAPTION);
+        let key = "green: on a map cell   red: off the map   rings: NDT's cells (2 sigma)";
+        let key = fit(&self.font, key, right - x, 15.0);
+        self.text(d, &key, x, y + 64.0, 15.0, DIM);
+    }
+
+    /// In a top-down's box: there is no NDT map, and how to make one.
+    fn no_map(&self, d: &mut RaylibDrawHandle, f: &Frame<'_>, r: TopRect) {
+        let line = f.map.to_string();
+        let mut y = r.y + 12.0;
+        for l in wrap(&self.font, &line, r.w - 24.0, 17.0)
+            .into_iter()
+            .take(4)
+        {
+            self.text(d, &l, r.x + 12.0, y, 17.0, WARN);
+            y += 23.0;
+        }
     }
 
     /// This frame's cube transforms, by band and fade step. `size`: the cubes' edge.
@@ -745,6 +996,38 @@ fn viewport(w: f32, h: f32, fovy_deg: f32) {
         raylib::ffi::rlFrustum(-right, right, -top, top, near, far);
         raylib::ffi::rlMatrixMode(raylib::ffi::RL_MODELVIEW as i32);
     }
+}
+
+/// How wide the 3D view is in a window `w` wide: beside the panel (key L), or beside
+/// the seeing screen's two top-downs (about a third of the window).
+pub fn view_width(w: f32, layout: Layout) -> f32 {
+    let right = match layout {
+        Layout::Panel => PANEL_W,
+        Layout::Seeing => (w * 0.36).clamp(380.0, 720.0),
+    };
+    (w - right).max(200.0)
+}
+
+/// One car from above: its outline from vehicle.yaml and its arrow.
+fn car_from_above(
+    d: &mut RaylibDrawHandle,
+    car: &CarShape,
+    view: &View,
+    pose: Pose,
+    colour: Color,
+) {
+    let at = |p: Point| {
+        let [x, y] = view.to_screen(p);
+        Vector2::new(x, y)
+    };
+    let outline = car.outline(pose).map(at);
+    for i in 0..4 {
+        d.draw_line_ex(outline[i], outline[(i + 1) % 4], 2.0, colour);
+    }
+    let [a, b, c] = car.arrow(pose).map(at);
+    // Seen from either side: the screen's y is upside down.
+    d.draw_triangle(a, b, c, colour);
+    d.draw_triangle(a, c, b, colour);
 }
 
 /// The points at least `step` metres apart, the last one kept.

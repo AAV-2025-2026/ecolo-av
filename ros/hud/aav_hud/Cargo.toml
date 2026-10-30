@@ -13,6 +13,10 @@ resolver = "2"
 #   raylib: `cargo test -p debug-core`.
 # debug-app: the debug HUD, binary `debug_hud`, built like hud-app:
 #   `cargo run -p debug-app --no-default-features -- --demo`
+# panel-core: the hardware panel's logic (the buttons, where they may drive, the sensors'
+#   numbers, safety.py's rules). No ROS, no raylib: `cargo test -p panel-core`.
+# panel-app: the hardware panel, binary `hw_panel`, built like hud-app:
+#   `cargo run -p panel-app --no-default-features -- --demo`
 members = [
   "crates/hud-core",
   "crates/hud-app",
@@ -20,6 +24,8 @@ members = [
   "crates/map-app",
   "crates/debug-core",
   "crates/debug-app",
+  "crates/panel-core",
+  "crates/panel-app",
 ]
 
 [workspace.package]

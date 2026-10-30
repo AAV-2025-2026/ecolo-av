@@ -21,6 +21,7 @@ to ego. A person always outranks the computer.
 | [aav_language](./aav_language/README.md) | plain-English driving: MCP drive tools and a local-model agent | uses the actions above | — |
 
 The lane follower on the AI slot (priority 10) lives in `ros/perception/aav_lane_geometry`.
+The hardware panel's buttons (`/drivers/buttons/cmd_vel`, priority 45) live in `ros/hud/aav_hud` (`hw_panel`).
 
 ## Invariants
 

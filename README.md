@@ -104,7 +104,8 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 | `keyboard` | drive from the keyboard, in a second terminal: `keyboard --local` with `turtle` or `bench`, `keyboard --sim` with `sim`. With no flag it drives whatever shares the ROS domain: on the car's network, the car |
 | `sim` | Gazebo plays the car (`world:=road`, `hud:=true`, `sim_speed:=3`...) |
 | `demo` | the whole simulated car at once: Gazebo, RViz, the HUD and the map window (`demo fullscreen`) |
-| `debugdemo` | `demo` plus the debug HUD: the lidar's cubes, where each localizer puts the car, every sensor |
+| `debugdemo` | `demo` plus the debug HUD, which opens as the seeing screen: the lidar's cubes, NDT's map and match from above, where each localizer puts the car (key L: every sensor) |
+| `hw-panel` | the hardware panel: every sensor's number, and simple buttons (hold Space to drive) for Gazebo or the bench, beside `sim` or `debugdemo` |
 | `bench` | the real car's software, with stand-ins for the hardware |
 | `view` | the car's model in RViz |
 | `rviz` | RViz with the driving layout: map, costmaps, path, car |
@@ -113,7 +114,7 @@ reaches a real car on the same network. The full list, with every option: `pixi 
 | `ghost` | a pretend person in Nav2's view, to test stopping: `ghost ahead 10` |
 | `sim-fault` | make a Gazebo sensor fail on purpose: `sim-fault gps stop`, then `sim-fault gps ok` |
 | `carla-car` | CARLA plays the car: `carla-car host:=<the CARLA computer>` |
-| `hud-demo`, `map-demo`, `debug-hud-demo` | the in-car screen, the map window and the debug HUD, with pretend data: no ROS |
+| `hud-demo`, `map-demo`, `debug-hud-demo`, `hw-panel-demo` | the in-car screen, the map window, the debug HUD and the hardware panel, with pretend data: no ROS |
 
 ### Check that it works
 

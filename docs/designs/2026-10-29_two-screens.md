@@ -1,7 +1,7 @@
 # Two screens: one to test the hardware, one to show what the car sees
 
 * **Author:** Ben (the ask), written up 29 Oct 2026
-* **Status:** Proposed, revised after the EGM review (design, code details), 29 Oct
+* **Status:** Steps 1-3 built 29 Oct (branch `two-screens`): the seeing screen, `hw_panel` read-only, then the buttons (option A) through twist_mux slot 45. Checked in Gazebo (below). Step 4 (option B) waits for the spine's transport
 
 Ben, 29 Oct evening (word for word in `docs/history/messages-2026-10-29.md`): "we need one
 screen just to test all the sensors and operate all the actuators and another screen to
@@ -112,3 +112,33 @@ still publishes nothing. The hardware screen is `hw_panel`.
 | T3 | Its slot in twist_mux | 45: the geofence and no-timeout locks hold it (review: 60 would skip them) |
 | T4 | Mouse only, or keys too? | both: arrows, +/−, Space held = GO, C = CENTRE |
 | T5 | Drive the real car on the ground in step 1? | no: SIM, BENCH, and stands once 49b is answered |
+
+## Built (29 Oct): steps 1-3, and the choices made
+
+| # | Choice | Why |
+|---|---|---|
+| C1 | The seeing screen is `debug_hud`'s default layout; **L** brings the sensor panel back | one program, as the design says; nothing lost |
+| C2 | NDT's cells drawn as **2-sigma ellipses**, one per 1 m column of the map (its points' x-y spread) | that is what NDT matches against; a wall is a thin ellipse along it |
+| C3 | The scan over them: this scan's cubes above the ground, **green** in a mapped column, **red** off the map, and the share on the map | shows at a glance where the scan and the map disagree |
+| C4 | The match view is 24 m round NDT's car (else EKF global's, else local's) | close enough to see single cells |
+| C5 | `hw_panel` sends at 10 Hz, gated by hud-core's `Heartbeat` (frames must rise); stamp 0 | a frozen window stops the car; ego warns only about a set stamp far from its clock (sim time) |
+| C6 | No reverse: Speed - stops at 0 | the radar faces forward; reversing stays a person's job |
+| C7 | Letting go of GO sends 0.5 s of zeros, then nothing | the car stops at once; then twist_mux hands back to the next driver |
+| C8 | CENTRE creeps at 0.1 m/s until the seen steering is within 0.02 rad (or 3 s), then speed 0; with GO let go, everything 0 at once | at a standstill the wheels don't turn (ego) |
+| C9 | A source number the panel doesn't know counts as REAL (safety.py says SIM) | errs towards the real car |
+| C10 | `speed_loop.mode` isn't read yet (None) | today's car is refused on `speed_wheels` first; a TODO before stands |
+| C11 | The lidar, the radar and the camera are only counted (Hz), best effort, keep last 1 | the panel needs "is it alive", not the data |
+| C12 | `--self-test V:S` presses Speed + and holds GO through the same buttons and rules | Gazebo checks without a person at the keyboard |
+
+### Checks run (29 Oct)
+
+| Test | Result |
+|---|---|
+| `panel-core`: steps, hold-to-drive, CENTRE, caps, zero after an e-stop, a takeover, a source change | pass (`cargo test`, 30) |
+| The source rules match `safety.py`'s test vectors | pass |
+| A frozen window (SIGSTOP): publishing stops | pass: the real node in a test, and in Gazebo (the car at 0.0 m/s while frozen) |
+| The geofence locked: the buttons are held | pass, Gazebo |
+| After an e-stop (and a takeover), the car stays at 0 | pass, Gazebo (the bench check: not yet) |
+| twist_mux: a person's joystick beats the buttons | Gazebo with the keyboard's slot (90); the bench: not yet |
+| Gazebo: Speed + three times, GO held, the car reaches 0.3 m/s | pass: 0.31-0.35 m/s (headless, the real node, without the window: the screen was locked) |
+

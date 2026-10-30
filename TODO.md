@@ -367,6 +367,14 @@ work on." His order, with the work under way:
          car on it; right bottom, a top-down of NDT's match (the scan on the map's cells).
       Design: `docs/designs/2026-10-29_two-screens.md` (EGM-reviewed): `hw_panel`, its own
       program, twist_mux slot 45, hold-to-drive; `debug_hud` stays read-only.
+      **Steps 1-3 built 29 Oct** (branch `two-screens`): `debug_hud` opens as the seeing
+      screen (key L: the old panel); `hw_panel` (`pixi run hw-panel`, `hw-panel-demo`)
+      with every sensor and the buttons through `/drivers/buttons/cmd_vel` (slot 45),
+      speed on SIM and BENCH only (docs/hud.md, "The hardware panel"). Left: the window
+      itself against Gazebo and both screenshots from it (the Mac's screen was locked:
+      demo screenshots only); read the legacy bridge's `speed_loop.mode` before stands;
+      the bench check (a person's joystick beats the buttons); step 4, option B (brake and
+      steering through the spine's test mode, once it has a transport, TODO 0b)
 - [ ] **A preflight on stands, before the ground** (Ben, 29 Oct): one scripted run, wheels
       off the ground: speed up, hold, slow down, brake; steer left, right, centre; and
       every sensor checked live (rate, values in range) at the same time. PASS or FAIL per
