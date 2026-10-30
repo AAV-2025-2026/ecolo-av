@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run every test that doesn't need ROS: our packages' Python unit tests, the Rust spine
-# library, the HUD's, the map window's and the debug HUD's logic (hud-core, map-core,
-# debug-core), NDT (ndt-core), and the check that docs/interfaces.md matches
+# library, the HUD's, the map window's, the debug HUD's and the hardware panel's logic
+# (hud-core, map-core, debug-core, panel-core), NDT (ndt-core), and the check that docs/interfaces.md matches
 # docs/interfaces.yaml. Where the mcp environment is installed, also the MCP server over
 # stdio (on a private, local domain).
 # Needs Python 3 with pytest and PyYAML; Rust (cargo) for the spine. Works on any OS.
@@ -45,8 +45,8 @@ if command -v cargo >/dev/null; then
   echo "== ros/localization/aav_ndt: NDT's maths, the filters, LOST; the design's checks"
   (cd ros/localization/aav_ndt && cargo test -q --locked -p ndt-core)
   # Only the logic: the window (raylib) needs a screen's libraries, and colcon builds it.
-  echo "== ros/hud/aav_hud: the HUD's state, GPS, e-stop and formatting; the map's maths"
-  (cd ros/hud/aav_hud && cargo test -q --locked -p hud-core -p map-core -p debug-core)
+  echo "== ros/hud/aav_hud: the HUD's state, GPS, e-stop and formatting; the map's maths; the hardware panel's buttons"
+  (cd ros/hud/aav_hud && cargo test -q --locked -p hud-core -p map-core -p debug-core -p panel-core)
   # Every firmware crate must build without the standard library, for the Pico 2's chip.
   if [[ -d "$(rustc --print target-libdir --target thumbv8m.main-none-eabihf 2>/dev/null)" ]]; then
     echo "== firmware/spine, no_std, for the Pico 2 (thumbv8m.main-none-eabihf)"
@@ -84,7 +84,7 @@ import sys
 tasks = dict(re.findall(r'^([\w-]+) = \{ cmd = "([^"]*)"', open('pixi.toml').read(), re.M))
 bad = [t for t in ('turtle', 'sim', 'bench', 'bench-check', 'view', 'laptop-bench',
                        'sim-check', 'sim-fault', 'carla-car', 'controller-compare',
-                       'timing-test', 'stream-check', 'debugdemo',
+                       'timing-test', 'stream-check', 'debugdemo', 'hw-panel',
                        'ndt-map')
        if not tasks.get(t, '').startswith('tools/ros.sh --local ')]
 sys.exit(f'these pixi tasks need "tools/ros.sh --local": {bad}' if bad else None)
