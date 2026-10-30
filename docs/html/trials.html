@@ -7,7 +7,7 @@
 <!-- Generated from docs/trials.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Trials: new path followers and localizers beside the main ones</h1>
-<div class="meta">8 min read · 8 sections</div></header>
+<div class="meta">13 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -267,6 +267,184 @@ pixi run controller-compare --amcl --ndt                        # score NDT besi
 <li>Match times are this Mac's (M4 Max), not the Orin's. Gazebo's lidar has no sweep; the
   car's does. One run: no spread yet. <code>covariance_scale</code> (k) and the score floor are
   not fitted yet.</li>
+</ul>
+<h3 id="29-oct-afternoon-amcl-tuned-and-why-it-was-lost">29 Oct, afternoon: AMCL tuned, and why it was lost</h3>
+<p>Each run: <code>controller-compare --tours lot --controllers mppi --amcl</code>, with a bag of the
+scan, the truth and AMCL beside it (<code>ros2 bag record</code>, not in git). Off = from Gazebo's truth.</p>
+<p><strong>What the bags showed:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Suspect</th>
+<th>Finding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>things in the world not in the map</td>
+<td><strong>no</strong>: at the truth, 3 of 83,000 beam ends were over 0.75 m from a wall in <code>example_lot</code></td>
+</tr>
+<tr>
+<td>the scan's 0.3-2.0 m band vs the 1.5 m walls</td>
+<td><strong>no</strong>: the lidar's beams (15° down to 15° up) cross the band on every wall from ~2.4 to 30 m</td>
+</tr>
+<tr>
+<td>the odometry</td>
+<td><strong>no</strong>: <code>ekf_local</code> within 0.3 % of the distance and 0.5° per 4 m</td>
+</tr>
+<tr>
+<td>the scan's stamp</td>
+<td>small: it fits the truth ~0.07 s earlier (7 cm at 1 m/s)</td>
+</tr>
+<tr>
+<td>the scan's directions</td>
+<td><strong>a bug, fixed</strong>: each point went to the direction below it, 0.25° clockwise</td>
+</tr>
+<tr>
+<td>AMCL's motion noise (alpha 0.2)</td>
+<td><strong>the main cause</strong>: ~9° of heading noise per particle per 0.25 m driven</td>
+</tr>
+<tr>
+<td>AMCL's laser model (z_hit 0.5, 60 beams)</td>
+<td><strong>weak</strong>: a perfect fit scored only ~6x a hopeless one</td>
+</tr>
+<tr>
+<td>the 0.25 m solid map</td>
+<td><strong>a bias</strong>: a beam on a wall's face lands in the free cell before it; pushing beams into the building scored better than the truth</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What changed</strong> (each with its reason in <code>config/amcl.yaml</code>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Change</th>
+<th>Leg 1 / leg 2 off, mean (m)</th>
+<th>Worst (m)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>before</td>
+<td>the defaults</td>
+<td>0.69 / 6.98 (lost, 95° off)</td>
+<td>21.1</td>
+</tr>
+<tr>
+<td>A</td>
+<td>alpha 0.2 → 0.01-0.05; z_hit 0.9, z_rand 0.1; 180 beams; resample every 2nd scan; the scan's directions</td>
+<td>0.54 / 0.86</td>
+<td>1.68</td>
+</tr>
+<tr>
+<td>B</td>
+<td>A + sigma_hit 0.4 (as wide as the map's cells)</td>
+<td>0.40 / 0.27</td>
+<td>0.79 (whole tour)</td>
+</tr>
+</tbody>
+</table></div>
+<p>B, the whole tour, one run (<code>log/controller-compare/20261029-110651/</code>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Leg</th>
+<th>AMCL off, mean (m)</th>
+<th>worst (m)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a left turn</td>
+<td>0.40</td>
+<td>0.63</td>
+</tr>
+<tr>
+<td>round the building</td>
+<td>0.27</td>
+<td>0.46</td>
+</tr>
+<tr>
+<td>turn back</td>
+<td>0.19</td>
+<td>0.33</td>
+</tr>
+<tr>
+<td>home</td>
+<td>0.47</td>
+<td>0.79</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>Never lost. The worst is in the open (leg 1, home): only one wall within 30 m, so
+  along the car's way nothing pins it, and the solid map's bias pulls it 0.2 m back.</li>
+<li><strong>AMCL's own map</strong> (step C): the lot at 0.05 m with each obstacle only its outline
+  (<code>maps/example_lot_amcl.yaml</code>, <a href="../../ros/drivers/aav_navigation/maps/README.md#why-amcl-has-a-map-of-its-own">why</a>).
+  Offline, on these bags, its best-scoring pose is 0.07 m from the truth (0.25 m map:
+  0.2-0.3 m). Its run: below.</li>
+</ul>
+<p><strong>Step C: AMCL's own map, sigma_hit 0.2</strong> (<code>log/controller-compare/20261029-213729/</code>,
+one run, <code>--tours lot --controllers mppi --amcl</code>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Leg</th>
+<th>AMCL off, mean (m)</th>
+<th>worst (m)</th>
+<th>B's mean / worst (m)</th>
+<th>Lost?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a left turn</td>
+<td>0.11</td>
+<td>0.15</td>
+<td>0.40 / 0.63</td>
+<td>no</td>
+</tr>
+<tr>
+<td>round the building</td>
+<td>0.06</td>
+<td>0.12</td>
+<td>0.27 / 0.46</td>
+<td>no</td>
+</tr>
+<tr>
+<td>turn back</td>
+<td>0.06</td>
+<td>0.12</td>
+<td>0.19 / 0.33</td>
+<td>no</td>
+</tr>
+<tr>
+<td>home</td>
+<td>-</td>
+<td>-</td>
+<td>0.47 / 0.79</td>
+<td>not scored: the car never moved</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>C wins: 3-6x closer than B, and it's the default</strong> for <code>amcl:=true</code> (sigma_hit 0.2
+  in <code>config/amcl.yaml</code>; <code>sim.launch.py</code> always gives AMCL its own map).</li>
+<li>Heading off: 1° at worst (B: 6°). The first 10 s of leg 1 have no pose yet (AMCL waits
+  for 0.25 m of driving), as in B.</li>
+<li>Nav2, not AMCL, failed the last two legs: it gave up on the turn back (status 6,
+  collision_monitor stopped it once) and never started home. The Mac was at load ~25 then
+  (another worktree's Gazebo). Run it again on a quiet computer for the home leg.</li>
+<li><strong>A bug found on the way:</strong> until this run AMCL never read its own map. Under
+  <code>sim.launch.py</code>'s global <code>use_sim_time</code>, <code>amcl.yaml</code>'s <code>map_topic: /map</code> beat the launch
+  file's, so the runs at 11:20 and 19:31 (<code>20261029-112022/</code>, <code>-193140/</code>) were Nav2's 0.25 m
+  map with sigma 0.2: 0.5-0.8 m mean, 1.8 m worst, worse than B. That shows 0.4 is right on
+  the coarse map, 0.2 only on the fine one. <code>map_topic</code> left <code>amcl.yaml</code>; the launch test
+  checks that nothing the launch file sets is in the file too.</li>
+<li>An earlier try at the same setup (<code>20261029-213056/</code>), beside another Gazebo: leg 1 0.08 m
+  mean, then AMCL dropped 68 scans (its transforms came late) and published nothing more.
+  With the computer this loaded, AMCL's numbers are only worth what its pose count says.</li>
 </ul>
 </section>
 <section class="card"><h2 id="scoring-a-localizer-fairly">Scoring a localizer fairly</h2>
