@@ -30,9 +30,39 @@ impl CubeView {
     }
 }
 
-/// What the 3D view draws besides the localizers.
+/// How the window is laid out (key L).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Layout {
+    /// The seeing screen (docs/designs/2026-10-29_two-screens.md): the 3D cubes big on
+    /// the left; on the right, NDT's map from above with every localizer's car, and
+    /// NDT's match (its cells, the latest scan over them, the score).
+    #[default]
+    Seeing,
+    /// The debug HUD as it was: the 3D view and the panel of every sensor.
+    Panel,
+}
+
+impl Layout {
+    pub fn toggled(self) -> Self {
+        match self {
+            Self::Seeing => Self::Panel,
+            Self::Panel => Self::Seeing,
+        }
+    }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Seeing => "seeing: cubes, map, NDT",
+            Self::Panel => "panel: every sensor",
+        }
+    }
+}
+
+/// What the 3D view draws besides the localizers, and the window's layout.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Layers {
+    /// The seeing screen, or the sensor panel (key L).
+    pub layout: Layout,
     pub cubes: CubeView,
     /// NDT's map as faint wireframe cubes (key M).
     pub ndt_map: bool,
@@ -45,6 +75,7 @@ pub struct Layers {
 impl Default for Layers {
     fn default() -> Self {
         Self {
+            layout: Layout::Seeing,
             cubes: CubeView::Kept,
             ndt_map: false,
             particles: true,
@@ -68,13 +99,16 @@ pub enum Action {
     Particles,
     /// H: the key legend.
     Keys,
+    /// L: the seeing screen, or the sensor panel.
+    Layout,
     /// F11: full screen.
     FullScreen,
 }
 
 impl Action {
     /// Every key, in the legend's order (keys 1-4 come after them).
-    pub const ALL: [Action; 7] = [
+    pub const ALL: [Action; 8] = [
+        Action::Layout,
         Action::Cubes,
         Action::NdtMap,
         Action::Particles,
@@ -93,6 +127,7 @@ impl Action {
             Self::NdtMap => "M",
             Self::Particles => "A",
             Self::Keys => "H",
+            Self::Layout => "L",
             Self::FullScreen => "F11",
         }
     }
@@ -106,6 +141,7 @@ impl Action {
             Self::NdtMap => "NDT's map",
             Self::Particles => "AMCL's particles",
             Self::Keys => "hide these keys",
+            Self::Layout => "layout",
             Self::FullScreen => "full screen",
         }
     }
@@ -119,6 +155,7 @@ impl Layers {
             Action::NdtMap => self.ndt_map = !self.ndt_map,
             Action::Particles => self.particles = !self.particles,
             Action::Keys => self.keys = !self.keys,
+            Action::Layout => self.layout = self.layout.toggled(),
             Action::Camera | Action::ResetCamera | Action::FullScreen => {}
         }
     }
@@ -136,6 +173,7 @@ impl Layers {
                     Action::NdtMap => on(self.ndt_map).to_owned(),
                     Action::Particles => on(self.particles).to_owned(),
                     Action::Camera => camera.label().to_owned(),
+                    Action::Layout => self.layout.label().to_owned(),
                     _ => String::new(),
                 };
                 KeyLine {
@@ -184,6 +222,11 @@ mod tests {
         l.apply(Action::Camera);
         l.apply(Action::Cubes);
         assert_eq!(l.cubes, CubeView::Kept);
+        assert_eq!(l.layout, Layout::Seeing);
+        l.apply(Action::Layout);
+        assert_eq!(l.layout, Layout::Panel);
+        l.apply(Action::Layout);
+        assert_eq!(l.layout, Layout::Seeing);
     }
 
     #[test]

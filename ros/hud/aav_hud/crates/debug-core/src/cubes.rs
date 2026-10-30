@@ -159,7 +159,7 @@ pub fn build(
 }
 
 /// The cube index along one axis. Saturates far out (a point 400,000 km away).
-fn cell(v: f64, size: f64) -> i32 {
+pub(crate) fn cell(v: f64, size: f64) -> i32 {
     let i = (v / size).floor();
     if i >= f64::from(i32::MAX) {
         i32::MAX

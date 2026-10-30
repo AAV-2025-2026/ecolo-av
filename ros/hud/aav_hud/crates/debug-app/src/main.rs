@@ -6,6 +6,12 @@
 //! panel of every sensor and actuator straight from its own topic. The cubes are kept
 //! in odom and fade when not seen for 2 s (key K: this scan's only).
 //!
+//! It opens as the seeing screen (docs/designs/2026-10-29_two-screens.md): the cubes big
+//! on the left; on the right, NDT's map from above with every localizer's car, and
+//! NDT's match round the car (its cells as ellipses, the latest scan over them, the
+//! score). Key L swaps the right side for the sensor panel. The hardware screen, with
+//! the buttons, is another program: hw_panel.
+//!
 //! Subscribes  (names from config/debug_hud.yaml, or ROS parameters)
 //!             lidar_topic           sensor_msgs/PointCloud2     reliable, keep last 1: the cubes
 //!             local_odom_topic      nav_msgs/Odometry           odom: the car; places the cubes
@@ -68,7 +74,7 @@ use raylib::prelude::*;
 use crate::{
     demo::Demo,
     source::DataSource,
-    ui::{Frame, Ui, PANEL_W},
+    ui::{Frame, Ui},
 };
 
 const USAGE: &str = "\
@@ -88,7 +94,8 @@ usage: debug_hud [--demo] [--fullscreen] [--monitor NAME|N] [--list-monitors]
   --ros-args ...     passed to ROS, e.g. --ros-args -p lidar_topic:=/x
 
 keys: drag turn, right-drag (or shift-drag) move, wheel zoom, C chase / follow / free,
-      R reset the camera, K kept (fading) cubes or this scan's, M NDT's map,
+      R reset the camera, L the seeing screen (the map and NDT's match from above) or
+      the sensor panel, K kept (fading) cubes or this scan's, M NDT's map,
       A AMCL's particles, H hide the key legend, 1-4 swap the trial tracker (sim only:
       pure pursuit, Stanley, LQR, MPC), F11 full screen";
 
@@ -264,7 +271,7 @@ fn run(
         }
 
         // The mouse, over the 3D view only.
-        let view_w = rl.get_screen_width() as f32 - PANEL_W;
+        let view_w = ui::view_width(rl.get_screen_width() as f32, state.layers.layout);
         let mouse = rl.get_mouse_position();
         let over_view = mouse.x < view_w;
         let shift = rl.is_key_down(KeyboardKey::KEY_LEFT_SHIFT)
@@ -360,6 +367,7 @@ fn key_of(action: Action) -> KeyboardKey {
         Action::NdtMap => KeyboardKey::KEY_M,
         Action::Particles => KeyboardKey::KEY_A,
         Action::Keys => KeyboardKey::KEY_H,
+        Action::Layout => KeyboardKey::KEY_L,
         Action::FullScreen => KeyboardKey::KEY_F11,
     }
 }
@@ -440,7 +448,7 @@ mod tests {
                 assert_eq!(key_of(a) as u32, u32::from(c), "{a:?}");
             }
         }
-        assert!(USAGE.contains("K kept"));
+        assert!(USAGE.contains("K kept") && USAGE.contains("L the seeing screen"));
     }
 
     #[test]

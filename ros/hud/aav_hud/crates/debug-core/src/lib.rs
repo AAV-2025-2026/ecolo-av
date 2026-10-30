@@ -18,6 +18,7 @@
 //! | [`orbit`] | the 3D camera: chase, follow, free; turn, tilt, zoom, pan |
 //! | [`track`] | aav_track's status: the tracker, cross track, loop time |
 //! | [`swap`] | keys 1-4: which tracker, and whether a swap may be asked for (sim only) |
+//! | [`topdown`] | the seeing screen's top-downs: the map frame in a rectangle of the window |
 //! | [`state`] | everything above, as one value the screen draws |
 
 pub mod cloud;
@@ -32,4 +33,5 @@ pub mod poses;
 pub mod scan;
 pub mod state;
 pub mod swap;
+pub mod topdown;
 pub mod track;
