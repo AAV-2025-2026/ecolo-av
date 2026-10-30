@@ -308,6 +308,10 @@ def test_amcl_needs_the_lidar_and_never_publishes_map_to_odom():
     assert list(given(nodes['lifecycle_manager_localization'])['node_names']) == ['amcl']
     assert 'amcl' not in given(nodes['lifecycle_manager_navigation'])['node_names']
     assert 'amcl_map_server' not in nodes and 'map_topic' not in start   # Nav2's /map
+    # What the launch file sets must not be in the file too: under sim.launch.py's global
+    # use_sim_time (SetParameter) the file's value wins, and AMCL read Nav2's /map.
+    own = given(nav_nodes(lidar='true', amcl='true', amcl_map='/maps/lot_amcl.yaml')['amcl'])
+    assert not set(own) & set(file)
 
 
 def test_amcl_may_have_a_map_of_its_own():
