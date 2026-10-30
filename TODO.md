@@ -354,6 +354,9 @@ work on." His order, with the work under way:
         test mode (#15): its caps and the e-stop still apply. Never around the spine;
       - **what the car thinks:** the lidar's cubes and the NDT match (where the scan sits
         on the saved map), drawn on the same screen.
+- [ ] **controller-compare picks a random ROS domain without checking it's free** (found 29 Oct:
+      it picked 191, the same as a Gazebo already running, and the two runs mixed). Until
+      fixed, give it one: `AAV_SIM_DOMAIN=213 pixi run controller-compare ...`.
 - [ ] **Two screens, not one** (Ben, 29 Oct evening, word for word in `docs/history/messages-2026-10-29.md`):
       1. **The hardware screen**: every sensor live, and **very simple buttons** for the
          actuators: speed +/-, brake +/-, steering left/right, **centre**. Through the
