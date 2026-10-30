@@ -36,10 +36,14 @@ amcl:
     z_hit: 0.9                        # [0.5] Gazebo's map is exact: a beam on a wall is
     z_rand: 0.1                       # [0.5] nearly always right. With 0.5/0.5 a perfect fit
                                       # scored only ~6x a hopeless one (nav2's p += pz^3)
-    sigma_hit: 0.4                    # m [0.2]: as wide as the map's 0.25 m cells. A beam on a
-                                      # wall face lands in the free cell before it (0.25 m
-                                      # "off"): at 0.2 every pose that pushes beams into the
-                                      # walls scored better than the truth
+    # sigma_hit: 0.4 on Nav2's 0.25 m map, where a beam on a wall's face lands in the free
+    # cell before it (0.25 m "off"): at 0.2 every pose that pushed beams into the walls
+    # scored better than the truth. On AMCL's own map (amcl_map:=, 0.05 m outlines:
+    # maps/README.md) that's gone, and 0.2 put the best score nearest the truth. In Gazebo
+    # (29 Oct, docs/trials.md): own map + 0.2, 0.06-0.11 m mean off; Nav2's map + 0.4,
+    # 0.19-0.47; Nav2's map + 0.2, 0.5-0.8. sim.launch.py's amcl:=true always gives it its
+    # own map; with Nav2's map alone (no amcl_map:=), set 0.4 here.
+    sigma_hit: 0.2                    # m [0.2]
     laser_likelihood_max_dist: 2.0    # m [2.0]: kept
     # The motion model: how far odometry may be wrong, per update. Its noise's standard
     # deviation is sqrt(alpha) times the move: the default 0.2 gave each particle ~9 deg of
