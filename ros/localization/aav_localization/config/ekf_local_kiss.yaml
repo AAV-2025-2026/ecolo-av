@@ -28,10 +28,12 @@ ekf_local:
     odom1_differential: false
     odom1_relative: false
     odom1_queue_size: 5
-    # The covariance is KISS-ICP's node's (fixed: 0.05 m/s and 0.02 rad/s, 1 sigma;
-    # checked against Gazebo's truth: docs/trials.md). A twist more than 5 sigma from
-    # the filter's (2 numbers: 99.9 % of honest ones are within 3.7) is refused: a slip
-    # of the match, or the zero twist of a worker that has just restarted.
+    # The covariance is KISS-ICP's node's (aav_kiss_icp config/kiss_icp.yaml: 0.15 m/s
+    # and 0.01 rad/s, 1 sigma, measured against Gazebo's truth: docs/trials.md). So the
+    # wheels still lead the speed, and KISS-ICP the turn rate (the IMU's is 0.02 rad/s).
+    # A twist more than 5 sigma from the filter's (2 numbers: 99.9 % of honest ones are
+    # within 3.7) is refused: a slip of the match, or the zero twist of a worker that has
+    # just restarted (at 1 m/s that zero is about 6 sigma off).
     odom1_twist_rejection_threshold: 5.0
     # The twist carries the cloud's stamp and arrives a few ms late (the match). Not put
     # back in time (no smooth_lagged_data, unlike ekf_global with NDT): a speed 20 ms old
