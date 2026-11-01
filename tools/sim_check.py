@@ -26,6 +26,10 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
                                             reads the lidar as cubes, aav_voxels, instead of
                                             the flat scan; with --lidar-obstacle, the trial's
                                             stop test. docs/designs/2026-10-30_voxels.md)
+    pixi run sim-check --kiss-ekf          (every run with the lidar takes kiss_ekf:=true:
+                                            ekf_local takes KISS-ICP's twist, a trial; and
+                                            checks KISS-ICP's odometry came and ekf_local
+                                            kept up. Needs pixi install --locked -e kiss)
     pixi run sim-check --spine             (adds the spine in the loop, spine:=true: its
                                             stops, e-stops and arming, in a second run: 3
                                             more minutes; --python-bridge runs aav_spine's
@@ -375,6 +379,14 @@ class Probe(Node):
         self.output_mux = ''   # the output mux's state: OPEN, WAIT or STOP (aav_io_mux)
         self.create_subscription(String, '/safety/output_mux/state',
                                  lambda m: setattr(self, 'output_mux', m.data), 10)
+        # (stamp, vx): KISS-ICP's odometry and ekf_local's, for --kiss-ekf.
+        self.kiss, self.local = [], []
+        self.create_subscription(Odometry, '/localization/kiss_icp/odom',
+                                 lambda m: self.kiss.append((seconds(m.header.stamp),
+                                                             m.twist.twist.linear.x)), 10)
+        self.create_subscription(Odometry, '/localization/odom/local',
+                                 lambda m: self.local.append((seconds(m.header.stamp),
+                                                              m.twist.twist.linear.x)), 10)
         self.voxels = []     # the voxels trial's status values, every cloud (--voxels)
         self.create_subscription(DiagnosticStatus, '/perception/voxels/status',
                                  lambda m: self.voxels.append({v.key: v.value for v in m.values}),
@@ -742,6 +754,36 @@ def check_stop_sign(probe):
             print('The camera as the lock went on: /tmp/aav-sim-stop-sign.png', flush=True)
         except Exception as e:  # noqa: B902 - the picture is a bonus
             print(f'could not save the picture: {e}', flush=True)
+
+
+def check_kiss_ekf(probe):
+    """
+    Check the KISS-ICP trial (--kiss-ekf): its odometry, and ekf_local reading it.
+
+    KISS-ICP's odometry came at the lidar's 10 Hz, and ekf_local, which reads its twist,
+    kept its 30 Hz and the truth's speed.
+    """
+    kiss, local = list(probe.kiss), list(probe.local)
+    if len(kiss) < 10:
+        result('kiss_ekf', False, f'{len(kiss)} KISS-ICP odometries: is the kiss env installed?')
+        return
+    kiss_rate = rate([t for t, _ in kiss])
+    local_rate = rate([t for t, _ in local])
+    result('kiss_ekf', kiss_rate > 5.0 and local_rate > 20.0,
+           f'KISS-ICP {kiss_rate:.1f} Hz, ekf_local {local_rate:.1f} Hz (simulated time)')
+    # ekf_local's speed against Gazebo's, at each of its stamps.
+    truth = [(t, v) for t, _, _, _, v in probe.track]
+    times = [t for t, _ in truth]
+    gaps = []
+    for t, v in local:
+        i = bisect.bisect_left(times, t)
+        if 0 < i < len(times):
+            gaps.append(abs(v - truth[i][1]))
+    if gaps:
+        gaps.sort()
+        result('kiss_ekf speed', None,
+               f"ekf_local's speed vs the truth: median {gaps[len(gaps) // 2]:.3f} m/s, "
+               f'worst {gaps[-1]:.3f} m/s over {len(gaps)} samples')
 
 
 def check_voxels(probe):
@@ -1873,6 +1915,7 @@ WATCHDOG_TOPICS = ('/safety/sensor_watchdog/lock', '/safety/sensor_watchdog/stat
 
 EVERY_RUN = []   # launch arguments every session adds: --speed-loop's
 VOXELS = False   # --voxels: every session with the lidar takes voxels:=true
+KISS_EKF = False  # --kiss-ekf: every session with the lidar takes kiss_ekf:=true
 
 
 def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spine=False,
@@ -1895,6 +1938,8 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spin
         # The trial: the cubes instead of the scan, which then has no publisher.
         launch_args = list(launch_args) + ['voxels:=true']
         ignore = tuple(ignore) + ('/sensors/lidar/scan',)
+    if KISS_EKF and 'lidar:=false' not in launch_args:
+        launch_args = list(launch_args) + ['kiss_ekf:=true']
     ignore = (tuple(ignore) + (LIDAR_TOPICS if 'lidar:=false' in launch_args else ())
               + (WATCHDOG_TOPICS if 'watchdog:=false' in launch_args else ()))
     env = dict(os.environ)
@@ -1985,11 +2030,12 @@ def main():
               file=sys.stderr)
         return 2
     lidar = '--no-lidar' not in args
-    global VOXELS
+    global VOXELS, KISS_EKF
     VOXELS = lidar and '--voxels' in args
+    KISS_EKF = lidar and '--kiss-ekf' in args
     scan_check = check_voxels if VOXELS else check_lidar_scan
     checks = ([check_sensors, check_cameras] + ([check_lidar, scan_check] if lidar else [])
-              + [check_drive])
+              + [check_drive] + ([check_kiss_ekf] if KISS_EKF else []))
     if perception:
         checks.append(check_stop_sign)
     if '--obstacle' in args:

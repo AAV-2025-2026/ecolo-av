@@ -36,6 +36,9 @@ The trials (docs/trials.md):
                     beside ekf_local: each lined up with the truth at the start, its drift
                     per 100 m, its heading at the end, each match's wall-clock time; per
                     leg and for the whole tour. Needs pixi install --locked -e kiss)
+    pixi run controller-compare --kiss-ekf         (the same, with KISS-ICP's twist into
+                    ekf_local, kiss_ekf:=true: compare its ekf_local numbers with
+                    --kiss-icp's)
     pixi run controller-compare --planners hybrid lattice smac2d --tours lot
                     Nav2's planners (planner:=), each with MPPI unless --controllers or
                     --trackers says otherwise. Before each leg it also asks the planner
@@ -666,7 +669,9 @@ def session(tour, follower, args, out_dir, body, used, run=1):
         command += ['watchdog:=false', 'geofence:=false']
     if args.voxels:
         command.append('voxels:=true')
-    if args.kiss_icp:
+    if args.kiss_ekf:
+        command.append('kiss_ekf:=true')
+    elif args.kiss_icp:
         command.append('kiss_icp:=true')
     if plan['obstacle']:
         command.append('obstacle:=true')
@@ -793,6 +798,7 @@ def report(results, args, started):
              (', KISS-ICP lidar odometry beside ekf_local (each lined up with the truth at '
               "the start; Gazebo's lidar has no sweep, so no deskew)" if args.kiss_icp
               else '') +
+             (", KISS-ICP's twist into ekf_local (kiss_ekf:=true)" if args.kiss_ekf else '') +
              (f', planners: {", ".join(args.planners)} (planner:=; the planner alone '
               "asked once before each leg, its turns against the car's full lock of "
               f'{vehicle.min_turning_radius(vehicle.load()["vehicle"]):.2f} m)'
@@ -919,6 +925,9 @@ def main():
     parser.add_argument('--kiss-icp', action='store_true',
                         help='run KISS-ICP lidar odometry (kiss_icp:=true) and score its '
                              'drift beside ekf_local; needs pixi install --locked -e kiss')
+    parser.add_argument('--kiss-ekf', action='store_true',
+                        help="as --kiss-icp, and ekf_local takes KISS-ICP's twist "
+                             '(kiss_ekf:=true)')
     parser.add_argument('--tours', nargs='+', choices=list(TOURS), default=list(TOURS))
     parser.add_argument('--speed', type=float, default=None,
                         help="m/s, up to 5: sim_speed:= (the car's own top speed: 1.0)")
@@ -940,6 +949,7 @@ def main():
     if args.runs < 1:
         parser.error('--runs must be 1 or more')
     args.ndt = args.ndt or args.ndt_ekf
+    args.kiss_icp = args.kiss_icp or args.kiss_ekf
     if args.ndt and not os.path.isfile(NDT_MAP):
         parser.error(f'--ndt: no map at {NDT_MAP}; make it with pixi run ndt-map drive')
     started = datetime.datetime.now()

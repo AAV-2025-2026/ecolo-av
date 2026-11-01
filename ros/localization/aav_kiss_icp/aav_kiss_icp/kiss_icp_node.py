@@ -1,8 +1,9 @@
 """
-kiss_icp: lidar odometry by KISS-ICP (MIT, PRBonn), a trial. Never TF, never in an EKF.
+kiss_icp: lidar odometry by KISS-ICP (MIT, PRBonn), a trial. Never TF.
 
 How far the car moved, from the lidar alone: each scan matched to a small map of the last
-few. docs/designs/2026-10-30_kiss-icp.md.
+few. docs/designs/2026-10-30_kiss-icp.md. Only ekf_local reads it, and only its
+twist, with kiss_ekf:=true (aav_localization config/ekf_local_kiss.yaml).
 
 Subscribes  sensors/lidar/points       sensor_msgs/PointCloud2, lidar_link (reliable,
                                        keep last 1: a scan that arrives while one is being
@@ -11,7 +12,9 @@ Publishes   localization/kiss_icp/odom    nav_msgs/Odometry: frame kiss_odom (it
                                           where base_link was at the first scan), child
                                           base_link; pose, and twist in base_link from the
                                           last step; stamped with the cloud's stamp.
-                                          Covariances are fixed guesses (KISS-ICP gives none)
+                                          KISS-ICP gives no covariance: the twist's is
+                                          twist_linear_sd, twist_angular_sd (measured in
+                                          Gazebo, 1 Nov), the pose's a fixed 1
             localization/kiss_icp/status  diagnostic_msgs/DiagnosticStatus after each
                                           scan: OK (TRACKING), or ERROR (no kiss
                                           environment, a cloud without x, y, z, the worker);
@@ -23,7 +26,8 @@ Parameters  kiss_python (the kiss environment's Python: '' = <repo>/.pixi/envs/k
             body_min, body_max (the car's outline in base_link, x y), min_height
             (m above base_link: lower is the ground, cut out), min_range,
             max_range, voxel_size (0 = max_range / 100, KISS-ICP's rule),
-            max_points_per_voxel, threads, deskew, lidar_period. config/kiss_icp.yaml.
+            max_points_per_voxel, threads, deskew, lidar_period, twist_linear_sd (m/s),
+            twist_angular_sd (rad/s). config/kiss_icp.yaml.
 
 KISS-ICP runs in worker.py, in the kiss environment's Python (pixi install --locked -e
 kiss), as a child program fed through a pipe (wire.py). The maths is in odometry.py.
@@ -44,10 +48,9 @@ from rclpy.qos import HistoryPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import PointCloud2
 
 FRAME = 'kiss_odom'
-# Fixed guesses (K6): KISS-ICP gives no covariance. Fitted only if it feeds the EKF.
-POSE_VARIANCE = 1.0          # m^2, rad^2: the pose drifts; use the twist
-LINEAR_VARIANCE = 0.05 ** 2  # (m/s)^2
-ANGULAR_VARIANCE = 0.02 ** 2  # (rad/s)^2
+# KISS-ICP gives no covariance (K6). The pose's is a fixed guess: it drifts, use the
+# twist. The twist's comes from the parameters (K11: measured against Gazebo's truth).
+POSE_VARIANCE = 1.0          # m^2, rad^2
 WORKER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'worker.py')
 # Only what Python needs: none of the default environment's library paths reach the
 # kiss environment's Python.
@@ -67,13 +70,16 @@ class KissIcp(Node):
             ('body_min', [0.0, 0.0]), ('body_max', [0.0, 0.0]), ('min_height', 0.3),
             ('min_range', 0.5),
             ('max_range', 100.0), ('voxel_size', 0.0), ('max_points_per_voxel', 20),
-            ('threads', 4), ('deskew', True), ('lidar_period', 0.1))}
+            ('threads', 4), ('deskew', True), ('lidar_period', 0.1),
+            ('twist_linear_sd', 0.15), ('twist_angular_sd', 0.01))}
         self.mount = ([float(v) for v in p['lidar_xyz']], [float(v) for v in p['lidar_rpy']])
         self.body = ([float(v) for v in p['body_min']], [float(v) for v in p['body_max']])
         self.ranges = (float(p['min_range']), float(p['max_range']))
         self.min_height = float(p['min_height'])
         self.deskew = bool(p['deskew'])
         self.period = float(p['lidar_period'])
+        self.twist_variance = (float(p['twist_linear_sd']) ** 2,
+                               float(p['twist_angular_sd']) ** 2)
         self.settings = {'min_range': 0.0, 'max_range': self.ranges[1],
                          'voxel_size': float(p['voxel_size']),
                          'max_points_per_voxel': int(p['max_points_per_voxel']),
@@ -179,7 +185,7 @@ class KissIcp(Node):
         w.x, w.y, w.z = wx, wy, wz
         for i in range(6):
             out.pose.covariance[7 * i] = POSE_VARIANCE
-            out.twist.covariance[7 * i] = LINEAR_VARIANCE if i < 3 else ANGULAR_VARIANCE
+            out.twist.covariance[7 * i] = self.twist_variance[0 if i < 3 else 1]
         self.odom_pub.publish(out)
 
     def status(self, level, message, values):

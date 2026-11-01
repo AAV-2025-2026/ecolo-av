@@ -21,6 +21,7 @@ import sys
 ROOT = Path(__file__).resolve().parent.parent
 LAST = Path.home() / '.config' / 'aav' / 'last-pick'
 NDT_MAP = 'maps/ndt/test_lot.pcd'
+KISS_PYTHON = '.pixi/envs/kiss/bin/python'
 
 # What to start: the pixi task, and what it is.
 PROGRAMS = [
@@ -63,19 +64,23 @@ PLANNERS = [
 ]
 
 # Where-am-I finders that run beside the EKF and are scored (they never steer yet); with
-# ndt_ekf, the global EKF takes NDT's pose (a trial: docs/trials.md).
+# ndt_ekf, the global EKF takes NDT's pose; with kiss_ekf, the local EKF takes KISS-ICP's
+# twist (trials: docs/trials.md).
 # Every row sets each switch, on or off: debugdemo turns some on, and the last value wins.
+NO_KISS = ['kiss_icp:=false', 'kiss_ekf:=false']
 LOCALIZERS = [
     ('ekf', 'the EKFs only: wheels, IMU and GPS (default)',
-     ['ndt:=false', 'ndt_ekf:=false', 'amcl:=false']),
+     ['ndt:=false', 'ndt_ekf:=false', 'amcl:=false'] + NO_KISS),
     ('ndt', 'add NDT: the lidar matched to a saved map (1-3 cm)',
-     ['ndt:=true', 'ndt_ekf:=false', f'ndt_map:={NDT_MAP}', 'amcl:=false']),
+     ['ndt:=true', 'ndt_ekf:=false', f'ndt_map:={NDT_MAP}', 'amcl:=false'] + NO_KISS),
     ('amcl', 'add AMCL: guesses that match the walls (6-11 cm)',
-     ['ndt:=false', 'ndt_ekf:=false', 'amcl:=true']),
+     ['ndt:=false', 'ndt_ekf:=false', 'amcl:=true'] + NO_KISS),
     ('both', 'add NDT and AMCL',
-     ['ndt:=true', 'ndt_ekf:=false', f'ndt_map:={NDT_MAP}', 'amcl:=true']),
+     ['ndt:=true', 'ndt_ekf:=false', f'ndt_map:={NDT_MAP}', 'amcl:=true'] + NO_KISS),
     ('ndt_ekf', 'NDT, and its pose into the global EKF beside the GPS (a trial)',
-     ['ndt:=true', 'ndt_ekf:=true', f'ndt_map:={NDT_MAP}', 'amcl:=false']),
+     ['ndt:=true', 'ndt_ekf:=true', f'ndt_map:={NDT_MAP}', 'amcl:=false'] + NO_KISS),
+    ('kiss_ekf', 'KISS-ICP lidar odometry, and its speed into the local EKF (a trial)',
+     ['ndt:=false', 'ndt_ekf:=false', 'amcl:=false', 'kiss_icp:=true', 'kiss_ekf:=true']),
 ]
 
 # How Nav2 sees obstacles: the flat lidar scan, or the lidar as cubes (aav_voxels).
@@ -138,7 +143,12 @@ def questions(read=input, say=print):
     where = ask('Where-am-I finders beside the EKF?', finders, read, say)
     if 'ndt:=true' in where[2] and not (ROOT / NDT_MAP).is_file():
         say(f'  note: no {NDT_MAP} yet: make it once with pixi run ndt-map drive')
-    if program == 'sim' and where[0] != 'ekf' and rows[0][0] != 'test_lot':
+    if 'kiss_icp:=true' in where[2] and not (ROOT / KISS_PYTHON).is_file():
+        say('  note: no kiss environment yet: install it once with pixi install --locked -e kiss')
+    if program == 'sim' and where[0] == 'kiss_ekf' and rows[0][0] == 'empty':
+        say('  note: KISS-ICP needs the lidar; switching the world to the test lot')
+        rows[0] = WORLDS[0]
+    elif program == 'sim' and where[0] not in ('ekf', 'kiss_ekf') and rows[0][0] != 'test_lot':
         say('  note: NDT and AMCL need the test lot; switching the world to it')
         rows[0] = WORLDS[0]
     rows.append(where)

@@ -288,7 +288,7 @@ pose to `ekf_global` beside GPS.
 
 ### Two ways the lidar can feed the EKFs
 
-| | KISS-ICP into `ekf_local` (later) | NDT into `ekf_global` (`ndt_ekf:=true`, a trial) |
+| | KISS-ICP into `ekf_local` (`kiss_ekf:=true`, a trial) | NDT into `ekf_global` (`ndt_ekf:=true`, a trial) |
 |---|---|---|
 | Needs a map? | **No**: each scan is matched to the last few | **Yes**: a saved map of the lot (`pixi run ndt-map drive` in Gazebo) |
 | What it says | how far the car moved since the last scan | where the car **is** on the map |

@@ -4,7 +4,7 @@
 
 **How far did the car move, from the lidar alone?** KISS-ICP (MIT, PRBonn) matches each
 scan to a small map of the last few. No saved map, no GPS. A trial: scored beside
-`ekf_local`, never TF, never in an EKF by default. The design:
+`ekf_local`, never TF; its twist goes into `ekf_local` only with `kiss_ekf:=true`. The design:
 `docs/designs/2026-10-30_kiss-icp.md`.
 
 ```
@@ -41,6 +41,7 @@ pixi install --locked -e kiss
 | `threads` | 4 | KISS-ICP's threads |
 | `deskew` | true | only where the cloud has a `time` field (the VLP-16; Gazebo's has none) |
 | `lidar_period` | 0.1 s | for counting clouds dropped |
+| `twist_linear_sd`, `twist_angular_sd` | 0.15 m/s, 0.01 rad/s | the twist's covariance (1 sigma), measured against Gazebo's truth, 1 Nov |
 | `lidar_xyz`, `lidar_rpy`, `body_min`, `body_max` | from `vehicle.yaml` | set by the launch file |
 
 ### Launch
@@ -49,6 +50,7 @@ pixi install --locked -e kiss
 |---|---|
 | `kiss_icp.launch.py [kiss_python:=]` | the node; refuses with no kiss env, and says how to install it |
 | `sim.launch.py kiss_icp:=true` (aav_bringup) | includes it, in any world with the lidar |
+| `sim.launch.py kiss_ekf:=true` | the same, and `ekf_local` takes its twist (a trial) |
 
 ### Modules
 
@@ -61,11 +63,13 @@ pixi install --locked -e kiss
 
 ## Invariants
 
-- Never TF; nothing reads its odometry to drive.
+- Never TF; nothing reads its odometry to drive, except `ekf_local` with `kiss_ekf:=true`
+  (its twist only: `aav_localization` `config/ekf_local_kiss.yaml`).
 - The scan is matched in `base_link` (the mount from `vehicle.yaml`), so the pose is the car's.
 - The worker runs with `-I` and a clean environment: two environments' libraries never mix.
 - A dead worker is restarted; the odometry carries on from the last pose (`restarts`).
-- Covariances are fixed guesses: KISS-ICP gives none.
+- KISS-ICP gives no covariance: the pose's is a fixed 1 (it drifts), the twist's the
+  parameters above, measured in Gazebo (refit on the car).
 
 ## Side Effects
 
