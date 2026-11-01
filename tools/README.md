@@ -35,7 +35,7 @@ The `Task` column is `pixi run <task>`; "-" means run the script itself.
 |---|---|---|
 | `test.sh` | every test that needs no ROS: Python units, Rust, interfaces.md, stand-ins stay local | inside `test` |
 | `lint.sh` | ament_flake8 and ament_pep257 on our Python | `lint` |
-| `check_graph.py` | the running graph against `docs/interfaces.yaml` | `check <profile>` |
+| `check_graph.py` | the running graph against `docs/interfaces.yaml`; then `/localization/health`'s line (warn only) | `check <profile>` |
 | `bench_check.py` | starts bench mode, tests the whole graph: contract, drive, e-stops | `bench-check` |
 | `sim_check.py` | Gazebo's road world headless, the whole graph, a drive (`--voxels`: Nav2 on the lidar's cubes) | `sim-check` |
 | `gz_crash.py` | did Gazebo itself crash at start-up? (sim-check retries once) | - |
