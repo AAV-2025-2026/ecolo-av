@@ -36,7 +36,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Heading from the gyro and wheels | At walking pace GPS made the heading jump up to 76°; the gyro and wheels hold it steady | Ben | 2026-10-22 | sim |
 | Heading from the GPS velocity (`aav_gps_heading`) | The receiver's Doppler velocity gives a good heading while moving, with no magnetometer | Ben | 2026-10-25 | sim |
 | [AMCL as a trial](trials.md) (stock `nav2_amcl`, `amcl:=true`) | To score a particle filter on the lidar and the map against the global EKF, without letting it steer the car (`tf_broadcast: false`) | Ben | 2026-10-29 | built |
-| NDT on a saved lidar map, our own in Rust (`aav_ndt`) | To find the car to centimetres on a map of the lot without RTK, as Autoware does, in code we understand and test on a laptop; scored as a trial before it feeds the EKF | Ben's idea; built by Ben | 2026-10-29 | sim |
+| NDT on a saved lidar map, our own in Rust (`aav_ndt`) | To find the car to centimetres on a map of the lot without RTK, as Autoware does, in code we understand and test on a laptop; scored as a trial before it feeds the EKF. Its map comes from Gazebo's truth, or from a real drive placed by the car's own EKF (`ndt-map build --poses`) | Ben's idea; built by Ben | 2026-10-29 | sim |
 | [NDT into the global EKF](trials.md#ndt-into-the-global-ekf-30-oct) (`ndt_ekf:=true`, a trial) | So the map position Nav2 plans by holds to centimetres, and holds when the GPS drops out; NDT's covariance fitted to its Gazebo errors, poor or jumping fits never published, and the EKF refuses any pose 5 sigma off | Ben | 2026-10-30 | sim |
 | KISS-ICP lidar odometry as a trial (`aav_kiss_icp`, `kiss_icp:=true`; stock KISS-ICP, MIT, from its PyPI wheel); [its twist into the local EKF](trials.md#kiss-icp-into-the-local-ekf-1-nov) (`kiss_ekf:=true`, a trial) | A third "how far did I move" beside the wheels and the IMU, from the lidar alone and with no map; with `kiss_ekf:=true` its twist (never its pose) feeds `ekf_local`, so wheels that slip are caught. Its covariance measured against Gazebo's truth, twists 5 sigma off refused, and ekf_local carries on when it stops. Later it builds the real lot's map for NDT | Ben's idea; built by Ben | 2026-10-30 | sim |
 
@@ -152,7 +152,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | `bench-check --weave` and `--zone-edge` | Measure the weave on a straight Nav2 drive (N7), and prove a box at the stop zone's edge can't let the car creep on | Ben | 2026-10-29 | built |
 | Sensor failures on purpose (`pixi run sim-fault`) | Breaks a sensor in Gazebo, to prove the watchdog catches it | Ben | 2026-10-15 | sim |
 | [Ghost obstacles](ghost-obstacles.md) (`aav_ghost`) | A pretend person only Nav2 sees, to test stopping with nothing real to hit | Ben | 2026-10-16 | sim |
-| Record and replay a drive | A recorded drive runs through the EKFs again, to check them; they match within 0.03 m | Ben | 2026-10-09 | sim |
+| Record and replay a drive (`tools/record.sh`; `--lidar` for the lot's map) | A recorded drive runs through the EKFs again, to check them; they match within 0.03 m. With the lidar, the first drive on the ground also gives NDT's map of the lot and real scores for the trials (tests.md 4e) | Ben | 2026-10-09 | sim |
 
 ## HUD
 

@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">31 min read · 14 sections</div></header>
+<div class="meta">32 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -253,7 +253,7 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 </tr>
 <tr>
 <td>NDT on a saved lidar map, our own in Rust (<code>aav_ndt</code>)</td>
-<td>To find the car to centimetres on a map of the lot without RTK, as Autoware does, in code we understand and test on a laptop; scored as a trial before it feeds the EKF</td>
+<td>To find the car to centimetres on a map of the lot without RTK, as Autoware does, in code we understand and test on a laptop; scored as a trial before it feeds the EKF. Its map comes from Gazebo's truth, or from a real drive placed by the car's own EKF (<code>ndt-map build --poses</code>)</td>
 <td>Ben's idea; built by Ben</td>
 <td>2026-10-29</td>
 <td>sim</td>
@@ -904,8 +904,8 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>sim</td>
 </tr>
 <tr>
-<td>Record and replay a drive</td>
-<td>A recorded drive runs through the EKFs again, to check them; they match within 0.03 m</td>
+<td>Record and replay a drive (<code>tools/record.sh</code>; <code>--lidar</code> for the lot's map)</td>
+<td>A recorded drive runs through the EKFs again, to check them; they match within 0.03 m. With the lidar, the first drive on the ground also gives NDT's map of the lot and real scores for the trials (tests.md 4e)</td>
 <td>Ben</td>
 <td>2026-10-09</td>
 <td>sim</td>

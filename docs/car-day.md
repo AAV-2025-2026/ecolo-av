@@ -536,7 +536,7 @@ stands nothing measures the spinning wheels (TODO 49b). Once a rear-wheel speed 
 (`vehicle.yaml` `speed_wheels: rear`): `pixi run preflight --skip steering gps lidar`,
 with the e-stop person and someone on the rear wheels' tachometer ([the preflight](actuator-tests.md#the-preflight-on-stands)).
 
-**Not today: the car on the ground.** That waits for tests 4.2 (`coast`) and 4.4 (`throttle-map`): they measure the drag and the throttle, and settle the 5 times disagreement (TODO 52b).
+**Not today: the car on the ground.** That waits for tests 4.2 (`coast`) and 4.4 (`throttle-map`): they measure the drag and the throttle, and settle the 5 times disagreement (TODO 52b). Then the ground: [Every test](tests.md#stage-4-the-car-in-an-empty-lot), stage 4, recorded with the lidar (4e).
 
 Then put it back: Ctrl-C everything; theirs again (`sudo systemctl start aav_serial_bridge`)
 only with the C++ on the ESP32 (6d), as the team decides.

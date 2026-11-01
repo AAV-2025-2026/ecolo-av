@@ -568,3 +568,17 @@ def test_the_watchdog_has_a_rule_for_every_streamed_camera():
         assert (rule['topic'], rule['kind']) == ('/perception/detections', 'detections')
         assert rule['frame_id'] == settings['frame_id'], camera
         assert rule['stop'] is True, camera
+
+
+def test_the_car_day_stack_is_the_defaults():
+    # docs/tests.md, "The stack for every test on the ground": the best of the Gazebo trials for a
+    # car that drives forward only. Change a default here and the plan changes with it.
+    nav = included(started(CAR, machine='orin'))['navigation.launch.py']
+    assert nav['planner'] == 'hybrid'
+    assert nav['reversing'] == 'false'
+    assert nav['voxels'] == 'false'
+    assert nav.get('controller', 'mppi') == 'mppi'
+    assert nav.get('tracker', 'none') == 'none'
+    assert nav.get('amcl', 'false') == 'false'
+    loc = included(started(CAR, machine='orin'))['localization.launch.py']
+    assert loc.get('ndt_ekf', 'false') == 'false' and loc.get('kiss_ekf', 'false') == 'false'

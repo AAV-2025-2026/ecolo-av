@@ -7,7 +7,7 @@
 <!-- Generated from docs/car-day.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Car day: the runbook</h1>
-<div class="meta">39 min read · 16 sections</div></header>
+<div class="meta">40 min read · 16 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -1528,7 +1528,7 @@ on the car today: the wheel sensors are on the front, the motor drives the rear,
 stands nothing measures the spinning wheels (TODO 49b). Once a rear-wheel speed exists
 (<code>vehicle.yaml</code> <code>speed_wheels: rear</code>): <code>pixi run preflight --skip steering gps lidar</code>,
 with the e-stop person and someone on the rear wheels' tachometer (<a href="actuator-tests.html#the-preflight-on-stands">the preflight</a>).</p>
-<p><strong>Not today: the car on the ground.</strong> That waits for tests 4.2 (<code>coast</code>) and 4.4 (<code>throttle-map</code>): they measure the drag and the throttle, and settle the 5 times disagreement (TODO 52b).</p>
+<p><strong>Not today: the car on the ground.</strong> That waits for tests 4.2 (<code>coast</code>) and 4.4 (<code>throttle-map</code>): they measure the drag and the throttle, and settle the 5 times disagreement (TODO 52b). Then the ground: <a href="tests.html#stage-4-the-car-in-an-empty-lot">Every test</a>, stage 4, recorded with the lidar (4e).</p>
 <p>Then put it back: Ctrl-C everything; theirs again (<code>sudo systemctl start aav_serial_bridge</code>)
 only with the C++ on the ESP32 (6d), as the team decides.</p>
 <p><strong>Stop point:</strong> 3.1-3.8 pass. Anything that turned the wrong way: written down.</p>

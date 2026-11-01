@@ -7,7 +7,7 @@
 <!-- Generated from docs/tests.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Every test we&#x27;ve talked about</h1>
-<div class="meta">14 min read · 8 sections</div></header>
+<div class="meta">17 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -102,7 +102,8 @@ in the order to run them. Each one says what it proves, how to run it, and when 
 - <strong>Five stages</strong>, safest first: the simulator, the bench, the car on stands, the car in an empty lot, then the whole drive.
 - Never skip a stage: a test only runs once the stage before it passes.
 - <strong>Status:</strong> ✅ exists and passes; 🔧 exists, not yet run on the car; ⬜ still to build.
-- On the car, always: a safety driver, the e-stop in someone's hand, and a speed cap.</p>
+- On the car, always: a safety driver, the e-stop in someone's hand, and a speed cap.
+- <strong>The first drive on the ground is recorded with the lidar</strong> (4e): it gives the lot's maps and real scores for the trials.</p>
 </blockquote>
 <pre class="highlight"><code class="language-text"> 1 simulator  →  2 bench  →  3 car on stands  →  4 car, empty lot  →  5 the whole drive
  (Gazebo,        (stand-ins,   (wheels off the      (walking pace,       (A to B by GPS)
@@ -554,6 +555,95 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.</p
 <td><strong>Sensor failures on the car</strong></td>
 <td>pull the GPS's, the IMU's, the wheel sensors' CAN cable while Nav2 drives at walking pace: the HUD's red banner names it, and the car stops</td>
 <td>⬜</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="4e-record-the-lot-the-maps-and-the-scores">4e. Record the lot: the maps and the scores</h3>
+<p>The first drive on the ground is by hand, <strong>recorded with the lidar</strong>. At home, that
+recording gives the maps, and real scores for every trial (<a href="trials.html">Trials</a>).</p>
+<p><strong>Before:</strong> the lot's corner (latitude, longitude: a phone is close enough) in
+<code>navsat.yaml</code>'s <code>datum</code>. Today it's a placeholder near Carleton. <strong>Keep it the same for
+every drive</strong>, or the maps won't line up. The Orin needs 20 GB free (the lidar is about
+5 GB per 10 min).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Test</th>
+<th>How</th>
+<th>Gives</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4.19</td>
+<td><strong>Record the lot</strong></td>
+<td>the joystick, slowly: 2 laps, a figure 8, a stop by each cone, then 10 m by tape. <code>tools/record.sh --lidar lot</code> on the Orin</td>
+<td>one recording with the lidar, GPS, IMU and wheels</td>
+<td>🔧</td>
+</tr>
+<tr>
+<td>4.20</td>
+<td><strong>The wheel diameter</strong></td>
+<td>from 4.19's taped 10 m: the wheels' distance against the tape's</td>
+<td><code>vehicle.yaml</code> <code>wheel_diameter</code> (TODO 60)</td>
+<td>🔧</td>
+</tr>
+<tr>
+<td>4.21</td>
+<td><strong>NDT's map of the lot</strong></td>
+<td><code>pixi run ndt-map build bags/&lt;4.19&gt; --poses /localization/odom/global --out maps/ndt/&lt;lot&gt;</code></td>
+<td><code>ndt:=true</code> on the car. Only as good as the EKF that placed it</td>
+<td>🔧</td>
+</tr>
+<tr>
+<td>4.22</td>
+<td><strong>Score the trials</strong></td>
+<td><code>replay.launch.py</code> and <code>ros2 bag play bags/&lt;4.19&gt;</code>: <code>ndt_ekf</code>, <code>kiss_ekf</code>, <code>voxels</code>, on and off</td>
+<td>the best of, decided on real data</td>
+<td>🔧</td>
+</tr>
+</tbody>
+</table></div>
+<p>Nav2's map stays <code>empty.yaml</code>: the sensors see obstacles live. A map made from the lidar
+needs a tool we don't have yet.</p>
+<h3 id="the-stack-for-every-test-on-the-ground">The stack for every test on the ground</h3>
+<p>The car's defaults: the best of the Gazebo trials for a car that <strong>drives forward only</strong>
+(until H5). <code>test_car_launch.py</code> pins them. The trials wait for 4.22.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Job</th>
+<th>On the car</th>
+<th>Why this one</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Where am I</td>
+<td>the two EKFs, with the GPS</td>
+<td>NDT needs a map of the lot first (4.21)</td>
+</tr>
+<tr>
+<td>Draws the route</td>
+<td>Hybrid-A*</td>
+<td>forward only, the lattice lost the U-turn</td>
+</tr>
+<tr>
+<td>Steers along it</td>
+<td>MPPI</td>
+<td>reads the costmap; the trackers don't</td>
+</tr>
+<tr>
+<td>Sees obstacles</td>
+<td>the flat lidar scan</td>
+<td>the cubes are a trial</td>
+</tr>
+<tr>
+<td>Reverses?</td>
+<td>no</td>
+<td>the wheels can't tell direction yet (H5)</td>
 </tr>
 </tbody>
 </table></div>

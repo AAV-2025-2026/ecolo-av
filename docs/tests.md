@@ -8,6 +8,7 @@ in the order to run them. Each one says what it proves, how to run it, and when 
 > - Never skip a stage: a test only runs once the stage before it passes.
 > - **Status:** ✅ exists and passes; 🔧 exists, not yet run on the car; ⬜ still to build.
 > - On the car, always: a safety driver, the e-stop in someone's hand, and a speed cap.
+> - **The first drive on the ground is recorded with the lidar** (4e): it gives the lot's maps and real scores for the trials.
 
 ```text
  1 simulator  →  2 bench  →  3 car on stands  →  4 car, empty lot  →  5 the whole drive
@@ -121,6 +122,39 @@ and the coast-down (4.2) subtracted, so drag doesn't count as motor or brake.
 | 4.16 | Radar | `/perception/radar/clusters` shows a person walking in front | ⬜ |
 | 4.17 | Lidar (the roof VLP-16, stock `velodyne` driver) | `car.launch.py` (lidar on by default): an obstacle shows in RViz's local costmap (`lidar_layer`), and a person in front stops Nav2 | ⬜ untested with the real lidar; ✅ in Gazebo (1.11) and against a pretend VLP-16 |
 | 4.18 | **Sensor failures on the car** | pull the GPS's, the IMU's, the wheel sensors' CAN cable while Nav2 drives at walking pace: the HUD's red banner names it, and the car stops | ⬜ |
+
+### 4e. Record the lot: the maps and the scores
+
+The first drive on the ground is by hand, **recorded with the lidar**. At home, that
+recording gives the maps, and real scores for every trial ([Trials](trials.md)).
+
+**Before:** the lot's corner (latitude, longitude: a phone is close enough) in
+`navsat.yaml`'s `datum`. Today it's a placeholder near Carleton. **Keep it the same for
+every drive**, or the maps won't line up. The Orin needs 20 GB free (the lidar is about
+5 GB per 10 min).
+
+| # | Test | How | Gives | Status |
+|---|---|---|---|---|
+| 4.19 | **Record the lot** | the joystick, slowly: 2 laps, a figure 8, a stop by each cone, then 10 m by tape. `tools/record.sh --lidar lot` on the Orin | one recording with the lidar, GPS, IMU and wheels | 🔧 |
+| 4.20 | **The wheel diameter** | from 4.19's taped 10 m: the wheels' distance against the tape's | `vehicle.yaml` `wheel_diameter` (TODO 60) | 🔧 |
+| 4.21 | **NDT's map of the lot** | `pixi run ndt-map build bags/<4.19> --poses /localization/odom/global --out maps/ndt/<lot>` | `ndt:=true` on the car. Only as good as the EKF that placed it | 🔧 |
+| 4.22 | **Score the trials** | `replay.launch.py` and `ros2 bag play bags/<4.19>`: `ndt_ekf`, `kiss_ekf`, `voxels`, on and off | the best of, decided on real data | 🔧 |
+
+Nav2's map stays `empty.yaml`: the sensors see obstacles live. A map made from the lidar
+needs a tool we don't have yet.
+
+### The stack for every test on the ground
+
+The car's defaults: the best of the Gazebo trials for a car that **drives forward only**
+(until H5). `test_car_launch.py` pins them. The trials wait for 4.22.
+
+| Job | On the car | Why this one |
+|---|---|---|
+| Where am I | the two EKFs, with the GPS | NDT needs a map of the lot first (4.21) |
+| Draws the route | Hybrid-A* | forward only, the lattice lost the U-turn |
+| Steers along it | MPPI | reads the costmap; the trackers don't |
+| Sees obstacles | the flat lidar scan | the cubes are a trial |
+| Reverses? | no | the wheels can't tell direction yet (H5) |
 
 ## Stage 5: the whole drive
 

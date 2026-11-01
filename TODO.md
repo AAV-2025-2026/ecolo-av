@@ -17,6 +17,9 @@ Ben, 1 Nov: "do all the ideas. I like them all but car day. Keep that in a list 
 | 60 | **Car day: measure the wheel diameter by rolling** (Betsi's 0.36 m is PROVISIONAL; loaded it read 0.42 m, a 17 % speed error) | ⬜ car day: roll the car 10 m by tape, count the encoder ticks, `vehicle.yaml` `wheel_diameter` |
 | 61 | **Car day: the track, front and rear** (0.65 m and 0.85 m, today one average, 0.75 m) | ⬜ car day: check both; decide whether `vehicle.yaml` needs a front and a rear track |
 | 62 | **Car day: the lattice forward only on the car** | ⬜ car day, after H5: then the car can take the lattice too |
+| 63 | **The ground plan: maps and scores from the first drive** | ✅ 1 Nov: [tests.md 4e](docs/tests.md#4e-record-the-lot-the-maps-and-the-scores) (record with the lidar, the wheel diameter, NDT's map, score the trials on replay) and the stack for every ground test, pinned by `test_car_launch.py`. `tools/record.sh --lidar`; `ndt-map build --poses` for a real drive. No `best:=true`: on the car, the best of the trials *is* the defaults |
+| 64 | **Set the datum to the test lot** (`navsat.yaml`, a placeholder near Carleton) | ⬜ once the lot is chosen: before the first recording |
+| 65 | **The 2024-25 / 2025-26 drive recording** (Humble): find it; if it has the lidar, NDT's map of that lot | ⬜ Ben: who has it |
 
 ## Friday 30 October: the lattice, fairly
 
