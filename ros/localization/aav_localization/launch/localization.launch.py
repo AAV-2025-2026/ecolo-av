@@ -5,8 +5,8 @@ Neither EKF reads the other's topic. They meet only in TF: ekf_global publishes
 map -> odom, worked out on top of ekf_local's odom -> base_link.
 
   ros2 launch aav_localization localization.launch.py [gps:=true] [gps_heading:=true]
-      [health:=true] [ndt_ekf:=false] [start_x:=0.0] [start_y:=0.0] [start_yaw:=0.0]
-      [use_sim_time:=false]
+      [health:=true] [ndt_ekf:=false] [kiss_ekf:=false] [start_x:=0.0] [start_y:=0.0]
+      [start_yaw:=0.0] [use_sim_time:=false]
 
   /vehicle/odom, /sensors/imu/data ──> ekf_local ──> /localization/odom/local, TF odom -> base_link
   /vehicle/odom, /sensors/imu/data, /localization/gps/odom, /localization/gps/heading
@@ -20,6 +20,11 @@ map -> odom, worked out on top of ekf_local's odom -> base_link.
 ndt_ekf:=true (a trial, docs/trials.md): ekf_global also takes NDT's pose,
 /localization/ndt/pose (x, y, yaw), with config/ekf_global_ndt.yaml on top of
 ekf_global.yaml. NDT itself is aav_ndt's: sim.launch.py ndt_ekf:=true starts both.
+
+kiss_ekf:=true (a trial, docs/trials.md): ekf_local also takes KISS-ICP's twist,
+/localization/kiss_icp/odom (vx, vyaw; never its pose), with config/ekf_local_kiss.yaml
+on top of ekf_local.yaml. KISS-ICP itself is aav_kiss_icp's: sim.launch.py
+kiss_ekf:=true starts both. Without its odometry, ekf_local runs on the wheels and IMU.
 
 start_x, start_y, start_yaw: where the car is when this starts, in the map frame
 (metres east and north of the datum, yaw in radians counter-clockwise from east).
@@ -46,6 +51,21 @@ def ekf_services(node_name):
     # Both EKFs create set_pose, enable, reset and toggle with relative names; give each
     # its own so they don't collide on /set_pose.
     return [(s, f'{node_name}/{s}') for s in ('set_pose', 'enable', 'reset', 'toggle')]
+
+
+def local_ekf(context):
+    config = PathJoinSubstitution([FindPackageShare('aav_localization'), 'config'])
+    files = [PathJoinSubstitution([config, 'ekf_local.yaml'])]
+    if LaunchConfiguration('kiss_ekf').perform(context).lower() == 'true':
+        files.append(PathJoinSubstitution([config, 'ekf_local_kiss.yaml']))
+    return [Node(
+        package='robot_localization',
+        executable='ekf_node',
+        name='ekf_local',
+        parameters=files + [{'use_sim_time': LaunchConfiguration('use_sim_time')}],
+        remappings=([('odometry/filtered', '/localization/odom/local')]
+                    + ekf_services('ekf_local')),
+    )]
 
 
 def global_ekf(context):
@@ -77,19 +97,14 @@ def generate_launch_description():
         DeclareLaunchArgument('health', default_value='true'),
         DeclareLaunchArgument('ndt_ekf', default_value='false',
                               description="ekf_global also takes NDT's pose (a trial)"),
+        DeclareLaunchArgument('kiss_ekf', default_value='false',
+                              description="ekf_local also takes KISS-ICP's twist (a trial)"),
         DeclareLaunchArgument('start_x', default_value='0.0'),
         DeclareLaunchArgument('start_y', default_value='0.0'),
         DeclareLaunchArgument('start_yaw', default_value='0.0'),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
 
-        Node(
-            package='robot_localization',
-            executable='ekf_node',
-            name='ekf_local',
-            parameters=[PathJoinSubstitution([config, 'ekf_local.yaml']), use_sim_time],
-            remappings=([('odometry/filtered', '/localization/odom/local')]
-                        + ekf_services('ekf_local')),
-        ),
+        OpaqueFunction(function=local_ekf),
         OpaqueFunction(function=global_ekf),
         Node(
             package='robot_localization',

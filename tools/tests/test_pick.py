@@ -54,11 +54,20 @@ def test_programs_are_pixi_tasks():
         assert re.search(rf'^{name} *=', text, re.M), name
 
 
-def test_every_row_sets_both_localizers():
-    # debugdemo turns AMCL and NDT on; the last value wins, so each row says both.
+def test_every_row_sets_every_localizer():
+    # debugdemo turns AMCL and NDT on; the last value wins, so each row says them all.
     for _, _, args in pick.LOCALIZERS:
         names = {a.split(':=')[0] for a in args}
-        assert {'ndt', 'ndt_ekf', 'amcl'} <= names
+        assert {'ndt', 'ndt_ekf', 'amcl', 'kiss_icp', 'kiss_ekf'} <= names
+
+
+def test_kiss_ekf_on_the_empty_world_moves_to_the_test_lot():
+    # sim, empty, hybrid, mppi, kiss_ekf, scan, default
+    answers = iter(['3', '3', '', '', '6', '', ''])
+    said = []
+    cmd = pick.questions(read=lambda _: next(answers), say=said.append)
+    assert 'world:=test_lot' in cmd and 'kiss_ekf:=true' in cmd and 'kiss_icp:=true' in cmd
+    assert any('KISS-ICP needs the lidar' in s for s in said)
 
 
 def test_enter_takes_the_defaults():
