@@ -54,7 +54,7 @@ The two EKFs never read each other's topic. They meet only in TF.
 |---|---|
 | `config/ekf_local.yaml` | 30 Hz, `two_d_mode`, `world_frame: odom` |
 | `config/ekf_global.yaml` | 30 Hz, `world_frame: map`; GPS fixes refused past 10 sigma (`odom1_pose_rejection_threshold`); yaw process noise 0.01; x, y start 100 m unsure, so the first fix decides them |
-| `config/ekf_local_kiss.yaml` | only with `kiss_ekf:=true`: `odom1` = KISS-ICP's twist, vx and vyaw; refused past 5 sigma; no `smooth_lagged_data` (a speed a few ms old is still today's) |
+| `config/ekf_local_kiss.yaml` | only with `kiss_ekf:=true`: `odom1` = KISS-ICP's twist, vx and vyaw; refused past 5 sigma; `smooth_lagged_data` with 1 s of history (its twists carry the cloud's stamp) |
 | `config/ekf_global_ndt.yaml` | only with `ndt_ekf:=true`: `pose0` = NDT's pose, x, y, yaw; refused past 5 sigma; `smooth_lagged_data` with 1 s of history (NDT's poses carry the cloud's stamp, so they come late) |
 | `config/navsat.yaml` | `wait_for_datum: true`; `datum` [45.3860, -75.6960, 0] is a placeholder near Carleton (TODO: the test site) |
 

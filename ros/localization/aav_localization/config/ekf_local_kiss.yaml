@@ -35,6 +35,8 @@ ekf_local:
     # within 3.7) is refused: a slip of the match, or the zero twist of a worker that has
     # just restarted (at 1 m/s that zero is about 6 sigma off).
     odom1_twist_rejection_threshold: 5.0
-    # The twist carries the cloud's stamp and arrives a few ms late (the match). Not put
-    # back in time (no smooth_lagged_data, unlike ekf_global with NDT): a speed 20 ms old
-    # is today's speed to within millimetres per second.
+    # The twist carries the cloud's stamp and arrives late (the match, and Gazebo's
+    # render). Keep 1 s of the filter's past and put each in at its own time, as
+    # ekf_global does with NDT, rather than correcting today's turn rate with an old one.
+    smooth_lagged_data: true
+    history_length: 1.0

@@ -431,6 +431,8 @@ def test_the_local_ekf_reads_kiss_icp_only_with_kiss_ekf():
     assert [i for i, on in enumerate(p['odom1_config']) if on] == [6, 11]
     assert p['odom1_differential'] is False
     assert 0 < p['odom1_twist_rejection_threshold'] < 10
+    # Its twists carry the cloud's stamp: put each in at its own time.
+    assert p['smooth_lagged_data'] is True and p['history_length'] >= 0.5
     # Doesn't clash with ekf_local.yaml's own inputs.
     base = os.path.join(get_package_share_directory('aav_localization'), 'config',
                         'ekf_local.yaml')
