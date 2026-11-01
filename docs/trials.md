@@ -12,6 +12,8 @@ and is **scored on the same routes**. It becomes the default only once it wins.
 > - **Results (29 Oct, Gazebo, 3 runs):** pure pursuit, Stanley and MPC finished every leg; MPPI, RPP and LQR lost legs on the U-turn. AMCL lost itself; the EKF wins. [Results](#results-29-october).
 > - **NDT**, 29 Oct: about 1-3 cm off on the lot tour, 2 ms a match (below).
 > - **NDT into the global EKF** (`ndt_ekf:=true`), 30 Oct: the EKF **17 cm → 1.6 cm** off; with the GPS off, 1.2 m → 1.6 cm. [Results](#ndt-into-the-global-ekf-30-oct).
+> - **Betsi's measurements** (1 Nov: wheelbase 1.561 m, track 0.75 m, lidar and GPS heights): the runs above used the old guesses. Rerun with hers: `sim-check` 9 of 9, `bench-check` 6 of 6, NDT's lot tour 4 of 4 legs, the EKF 1 cm off; the lattice's moves rebuilt (radius 3.572 m).
+> - **1 Nov: the lattice is the default planner** (Ben); the car keeps Hybrid-A* until H5. [Planners](#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32).
 > - **Afternoon:** LQR rebuilt with a preview (U-turn 2 of 3 in a quiet run; it weaved on a busy Mac), `mpc_full` 10 of 12. [Results](#results-29-october-afternoon-lqr-rebuilt-and-mpc_full).
 > - **Planners** (`planner:=`): Nav2's State Lattice (on our own primitives), Smac 2D, NavFn and Theta*, beside Hybrid-A*. 29 Oct, forward only: Hybrid-A* 4 of 4, the lattice 2 of 4. **30 Oct, reversing on, 3-4 runs: every leg for hybrid, lattice and lattice32; the lattice the fastest** (184 s a tour against 213 s). Hybrid stays the default until Ben decides. [Results](#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32).
 > - **Voxels** (`voxels:=true`, 30 Oct): Nav2 reads the lidar as 0.25 m cubes. It stopped 0.44 m before the post (the scan 0.36 m), drove the lot tour 4 of 4, 6 ms a cloud. [Results](#voxels-30-oct-the-lidar-as-cubes).
@@ -537,7 +539,9 @@ Each planner's runs: hybrid 4, lattice 4, lattice32 3 (one more was spoiled, bel
   (forward only) it lost the U-turn; backing up 9 m is what it needed.
 - **32 headings don't help.** Same legs, slower plans, more spread. The 16-heading file
   stays the lattice's default.
-- **Hybrid-A* stays the default for now**: the trials rule is that Ben decides a swap.
+- **1 Nov: the lattice is the default** (Ben). Sim, bench and CARLA reverse, so they take
+  it; the car keeps Hybrid-A* (`CAR_DEFAULT_PLANNER`) until H5.
+- Before, on 30 Oct: Hybrid-A* stayed the default, as the trials rule is that Ben decides a swap.
   The lattice has won this one test, in Gazebo. Before a swap: the bench, and a look at
   forward only on the car (its `reversing:=false` until H5), where the lattice still loses
   the U-turn.

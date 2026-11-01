@@ -491,8 +491,10 @@ LATTICE_JSON = ROOT / 'ros/drivers/aav_navigation/config/lattice_ackermann.json'
 SEARCH_MODEL = 'planner_server.ros__parameters.GridBased.motion_model_for_search'
 
 
-def test_planners_hybrid_by_default_and_only_car_shaped_ones_on_the_car():
-    assert vehicle.DEFAULT_PLANNER == 'hybrid'
+def test_planners_lattice_by_default_hybrid_on_the_car_and_only_car_shaped_ones_there():
+    assert vehicle.DEFAULT_PLANNER == 'lattice'
+    assert vehicle.CAR_DEFAULT_PLANNER == 'hybrid'
+    assert {vehicle.DEFAULT_PLANNER, vehicle.CAR_DEFAULT_PLANNER} <= set(vehicle.CAR_PLANNERS)
     assert set(vehicle.CAR_PLANNERS) < set(vehicle.PLANNERS)
     assert set(vehicle.PLANNER_BLOCKS) == set(vehicle.PLANNERS)
     assert vehicle.check_planner(' Lattice ') == 'lattice'

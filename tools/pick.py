@@ -51,10 +51,10 @@ FOLLOWERS = [
 # Who draws the route: Nav2's planner (planner:=). Gazebo, the lot tour, MPPI: hybrid
 # and lattice 30 Oct, reversing on, 4 runs each; the grid planners 29 Oct, forward only.
 PLANNERS = [
-    ('hybrid', 'Hybrid-A*: routes a car can drive (default; every leg, 213 s a tour)',
-     ['planner:=hybrid']),
-    ('lattice', "State Lattice: our car's own moves; every leg, the fastest (184 s a tour)",
+    ('lattice', "State Lattice: our car's own moves (default; every leg, 184 s a tour)",
      ['planner:=lattice']),
+    ('hybrid', "Hybrid-A*: routes a car can drive (the car's default; 213 s a tour)",
+     ['planner:=hybrid']),
     ('smac2d', 'grid A*: ignores the turning circle (2 of 4)', ['planner:=smac2d']),
     ('navfn', 'NavFn, the classic: ignores the turning circle (not tried in Gazebo)',
      ['planner:=navfn']),

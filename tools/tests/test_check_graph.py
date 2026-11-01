@@ -3,11 +3,8 @@
 from pathlib import Path
 import sys
 
-import pytest
-
-pytest.importorskip('rclpy')        # check_graph imports it; tools/tests isn't a ROS package
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import check_graph as cg  # noqa: E402
+import check_graph as cg  # noqa: E402  (it imports rclpy: run inside pixi)
 
 
 def test_ok_is_one_line():

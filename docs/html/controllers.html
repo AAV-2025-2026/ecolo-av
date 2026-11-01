@@ -1226,11 +1226,11 @@ on branch <code>trials</code> (Tentative; <code>git show trials:docs/designs/202
 </section>
 <section class="card"><h2 id="planners">Planners</h2>
 <p>The <strong>planner</strong> draws the path; the <strong>follower</strong> (MPPI, RPP, a tracker) drives it. Nav2
-can use several planners. We picked one with <code>planner:=</code>; Hybrid-A* stays the default
-until another wins (<code>docs/trials.md</code>, <a href="trials.html#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32">Planners, 30 Oct</a>).</p>
+can use several planners. We pick one with <code>planner:=</code>; the State Lattice is the default since 1 Nov
+(Hybrid-A* on the car, forward only until H5) (<code>docs/trials.md</code>, <a href="trials.html#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32">Planners, 30 Oct</a>).</p>
 <pre class="highlight"><code class="language-text"> goal ─► bt_navigator ─► planner_server: "GridBased" ─► the path ─► follower
                                 │
-             planner:=hybrid (default) | lattice | smac2d | navfn | theta_star</code></pre>
+             planner:=lattice (default) | hybrid | smac2d | navfn | theta_star</code></pre>
 <p>The behaviour trees always ask for <code>GridBased</code>. The launch file puts the chosen planner
 behind that name, so nothing else changes.</p>
 <h3 id="each-planner-in-plain-words">Each planner, in plain words</h3>
@@ -1245,13 +1245,13 @@ behind that name, so nothing else changes.</p>
 </thead>
 <tbody>
 <tr>
-<td><code>hybrid</code> (default)</td>
+<td><code>hybrid</code> (the car's default)</td>
 <td>SmacPlannerHybrid</td>
 <td>searches with real car moves: straight, full left, full right; Dubins curves (Reeds-Shepp with <code>reversing:=true</code>)</td>
 <td><strong>yes</strong></td>
 </tr>
 <tr>
-<td><code>lattice</code></td>
+<td><code>lattice</code> (default)</td>
 <td>SmacPlannerLattice</td>
 <td>joins short car moves from a ready-made list, our <strong>primitives</strong> (below)</td>
 <td><strong>yes</strong></td>

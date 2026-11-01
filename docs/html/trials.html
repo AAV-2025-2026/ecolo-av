@@ -7,7 +7,7 @@
 <!-- Generated from docs/trials.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Trials: new path followers and localizers beside the main ones</h1>
-<div class="meta">39 min read · 14 sections</div></header>
+<div class="meta">40 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -107,10 +107,12 @@ and is <strong>scored on the same routes</strong>. It becomes the default only o
 - <strong>Results (29 Oct, Gazebo, 3 runs):</strong> pure pursuit, Stanley and MPC finished every leg; MPPI, RPP and LQR lost legs on the U-turn. AMCL lost itself; the EKF wins. <a href="#results-29-october">Results</a>.
 - <strong>NDT</strong>, 29 Oct: about 1-3 cm off on the lot tour, 2 ms a match (below).
 - <strong>NDT into the global EKF</strong> (<code>ndt_ekf:=true</code>), 30 Oct: the EKF <strong>17 cm → 1.6 cm</strong> off; with the GPS off, 1.2 m → 1.6 cm. <a href="#ndt-into-the-global-ekf-30-oct">Results</a>.
-- <strong>Afternoon:</strong> LQR rebuilt with a preview (U-turn 2 of 3 in a quiet run; it weaved on a busy Mac), <code>mpc_full</code> 10 of 12. <a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results</a>.
-- <strong>Planners</strong> (<code>planner:=</code>): Nav2's State Lattice (on our own primitives), Smac 2D, NavFn and Theta<em>, beside Hybrid-A</em>. 29 Oct, forward only: Hybrid-A<em> 4 of 4, the lattice 2 of 4. </em><em>30 Oct, reversing on, 3-4 runs: every leg for hybrid, lattice and lattice32; the lattice the fastest</em><em> (184 s a tour against 213 s). Hybrid stays the default until Ben decides. <a href="#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32">Results</a>.
-- </em><em>Voxels</em><em> (<code>voxels:=true</code>, 30 Oct): Nav2 reads the lidar as 0.25 m cubes. It stopped 0.44 m before the post (the scan 0.36 m), drove the lot tour 4 of 4, 6 ms a cloud. <a href="#voxels-30-oct-the-lidar-as-cubes">Results</a>.
-- </em><em>KISS-ICP</em><em> (<code>aav_kiss_icp</code>, stock, MIT): lidar odometry, scored against <code>ekf_local</code>, never in an EKF yet. <code>kiss_icp:=true</code>. 30 Oct, one run: </em><em>0.04 m per 100 m</em>* over the lot tour, against ekf_local's 0.33; about 1 ms a scan; once the ground was cut out. <a href="#30-oct-kiss-icp-beside-ekf_local-one-run-mppi-the-lot-tour">Results</a>. Design: <code>docs/designs/2026-10-30_kiss-icp.md</code>.
+- <strong>Betsi's measurements</strong> (1 Nov: wheelbase 1.561 m, track 0.75 m, lidar and GPS heights): the runs above used the old guesses. Rerun with hers: <code>sim-check</code> 9 of 9, <code>bench-check</code> 6 of 6, NDT's lot tour 4 of 4 legs, the EKF 1 cm off; the lattice's moves rebuilt (radius 3.572 m).
+- <strong>1 Nov: the lattice is the default planner</strong> (Ben); the car keeps Hybrid-A<em> until H5. <a href="#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32">Planners</a>.
+- </em><em>Afternoon:</em><em> LQR rebuilt with a preview (U-turn 2 of 3 in a quiet run; it weaved on a busy Mac), <code>mpc_full</code> 10 of 12. <a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results</a>.
+- </em><em>Planners</em><em> (<code>planner:=</code>): Nav2's State Lattice (on our own primitives), Smac 2D, NavFn and Theta</em>, beside Hybrid-A<em>. 29 Oct, forward only: Hybrid-A</em> 4 of 4, the lattice 2 of 4. <strong>30 Oct, reversing on, 3-4 runs: every leg for hybrid, lattice and lattice32; the lattice the fastest</strong> (184 s a tour against 213 s). Hybrid stays the default until Ben decides. <a href="#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32">Results</a>.
+- <strong>Voxels</strong> (<code>voxels:=true</code>, 30 Oct): Nav2 reads the lidar as 0.25 m cubes. It stopped 0.44 m before the post (the scan 0.36 m), drove the lot tour 4 of 4, 6 ms a cloud. <a href="#voxels-30-oct-the-lidar-as-cubes">Results</a>.
+- <strong>KISS-ICP</strong> (<code>aav_kiss_icp</code>, stock, MIT): lidar odometry, scored against <code>ekf_local</code>, never in an EKF yet. <code>kiss_icp:=true</code>. 30 Oct, one run: <strong>0.04 m per 100 m</strong> over the lot tour, against ekf_local's 0.33; about 1 ms a scan; once the ground was cut out. <a href="#30-oct-kiss-icp-beside-ekf_local-one-run-mppi-the-lot-tour">Results</a>. Design: <code>docs/designs/2026-10-30_kiss-icp.md</code>.
 - The design: <code>docs/designs/2026-10-29_trials.md</code>.</p>
 </blockquote></div>
 <section class="card"><h2 id="what-is-on-trial">What is on trial</h2>
@@ -1282,7 +1284,9 @@ Results in <code>~/aav-runs/2026-10-30/lattice-rerun*/</code> on Ben's Mac (not 
   (forward only) it lost the U-turn; backing up 9 m is what it needed.</li>
 <li><strong>32 headings don't help.</strong> Same legs, slower plans, more spread. The 16-heading file
   stays the lattice's default.</li>
-<li><strong>Hybrid-A* stays the default for now</strong>: the trials rule is that Ben decides a swap.
+<li><strong>1 Nov: the lattice is the default</strong> (Ben). Sim, bench and CARLA reverse, so they take
+  it; the car keeps Hybrid-A* (<code>CAR_DEFAULT_PLANNER</code>) until H5.</li>
+<li>Before, on 30 Oct: Hybrid-A* stayed the default, as the trials rule is that Ben decides a swap.
   The lattice has won this one test, in Gazebo. Before a swap: the bench, and a look at
   forward only on the car (its <code>reversing:=false</code> until H5), where the lattice still loses
   the U-turn.</li>

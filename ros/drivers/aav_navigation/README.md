@@ -41,7 +41,7 @@ Launch: `ros2 launch aav_navigation navigation.launch.py [args]`
 | `reversing` | false | true: Reeds-Shepp paths, reverse to `-max_reverse_speed`, trees back up 1 m |
 | `max_speed` | empty (1.0 m/s) | Nav2's top speed (`sim.launch.py sim_speed:=`) |
 | `controller` | `mppi` | or `rpp` (Regulated Pure Pursuit); `docs/path-followers.md` |
-| `planner` | `hybrid` | the planner behind `GridBased`: `hybrid` (SmacPlannerHybrid) or `lattice` (SmacPlannerLattice, `config/lattice_ackermann.json`; refused if it no longer fits `vehicle.yaml` or the map's cells) keep to the turning radius; `smac2d`, `navfn`, `theta_star` don't (trials; `car.launch.py` refuses them). `docs/controllers.md`, Planners |
+| `planner` | `lattice` (`car.launch.py`: `hybrid`) | the planner behind `GridBased`: `lattice` (SmacPlannerLattice, `config/lattice_ackermann.json`; refused if it no longer fits `vehicle.yaml` or the map's cells) or `hybrid` (SmacPlannerHybrid) keep to the turning radius; `smac2d`, `navfn`, `theta_star` don't (trials; `car.launch.py` refuses them). `docs/controllers.md`, Planners |
 | `lattice_headings` | 16 | with `planner:=lattice`: 16 headings (`config/lattice_ackermann.json`) or 32, a trial (`config/lattice_ackermann_32.json`) |
 | `plan_around` | true | false: the planner sees only the map, so the car stops (stop tests) |
 | `tracker` | `none` | a trial follower (`aav_track`): `pure_pursuit`, `stanley`, `lqr`, `mpc`. It serves `follow_path`; controller_server's becomes `follow_path_unused`. Refused with `reversing:=true` (`docs/trials.md`) |
@@ -55,7 +55,7 @@ Nodes started:
 | Node | Does |
 |---|---|
 | `map_server` | publishes `/map` |
-| `planner_server` | SmacPlannerHybrid: drivable paths for a car (`/plan`); or `planner:=`'s, always as `GridBased` |
+| `planner_server` | SmacPlannerLattice: drivable paths for a car (`/plan`); or `planner:=`'s (the car: SmacPlannerHybrid), always as `GridBased` |
 | `controller_server` | MPPI (Ackermann model) or RPP; `cmd_vel` -> `cmd_vel_nav` |
 | `behavior_server` | wait, backup, drive_on_heading (no spin) |
 | `bt_navigator` | actions `/navigate_to_pose`, `/navigate_through_poses`; trees in `behavior_trees/` |

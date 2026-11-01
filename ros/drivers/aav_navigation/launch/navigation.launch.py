@@ -4,7 +4,7 @@ Nav2 as one more driver: goals in, /drivers/nav/cmd_vel (TwistStamped) out to tw
   ros2 launch aav_navigation navigation.launch.py [map:=<path to map yaml>]
       [radar:=false] [lidar:=false] [collision_monitor:=<radar or lidar>]
       [camera_obstacles:=false] [ghost:=false] [voxels:=false]
-      [reversing:=false] [max_speed:=] [controller:=mppi] [planner:=hybrid]
+      [reversing:=false] [max_speed:=] [controller:=mppi] [planner:=lattice]
       [plan_around:=true]
       [tracker:=none] [live_swap:=false] [amcl:=false] [amcl_x:=0.0] [amcl_y:=0.0]
       [amcl_yaw:=0.0] [amcl_map:=]
@@ -16,7 +16,7 @@ route server, and AMCL only as a trial, amcl:=true, since robot_localization doe
 localization):
 
   map_server        the map (default: maps/empty.yaml, everything free)
-  planner_server    SmacPlannerHybrid: drivable paths for a car; planner:= for another
+  planner_server    SmacPlannerLattice: drivable paths for a car; planner:= for another
                     (below)
   controller_server MPPI, with its Ackermann model -> cmd_vel_nav; controller:=rpp for
                     Regulated Pure Pursuit instead (docs/path-followers.md)
@@ -135,7 +135,7 @@ def flag(context, name):
 
 def tuned_copy(source, v, reversing, max_speed, radar, lidar, ghost=False,
                controller=vehicle.DEFAULT_CONTROLLER, plan_around=True, camera=False,
-               planner=vehicle.DEFAULT_PLANNER, lattice_file=None, voxels=False):
+               planner='hybrid', lattice_file=None, voxels=False):
     """Return a temporary copy of nav2.yaml, tuned by vehicle.nav2_tuned (no ROS there)."""
     with open(source) as f:
         cfg = vehicle.nav2_tuned(yaml.safe_load(f), v, reversing, max_speed, radar, lidar,

@@ -7,7 +7,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [map:=false] [foxglove:=false]
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true] [radar:=true]
       [actuator_model:=true] [speed_loop:=default|smooth|lqi] [sim_speed:=]
-      [reversing:=true] [controller:=mppi] [planner:=hybrid] [tracker:=none]
+      [reversing:=true] [controller:=mppi] [planner:=lattice] [tracker:=none]
       [amcl:=false] [voxels:=false]
       [ndt:=false] [ndt_ekf:=false] [ndt_map:=maps/ndt/test_lot.pcd] [kiss_icp:=false]
       [plan_around:=true]
@@ -56,8 +56,8 @@ bench's argument names:
                       ego refuses it outside a simulator
   controller:=rpp     Nav2 follows the path with Regulated Pure Pursuit, not MPPI (the
                       default): pixi run controller-compare drives both (docs/path-followers.md)
-  planner:=lattice    Nav2 plans with another planner (navigation.launch.py planner:=):
-                      hybrid (the default) or lattice keep to the car's turning radius;
+  planner:=hybrid     Nav2 plans with another planner (navigation.launch.py planner:=):
+                      lattice (the default) or hybrid keep to the car's turning radius;
                       smac2d, navfn and theta_star don't, trials only. pixi run
                       controller-compare --planners scores them (docs/controllers.md).
                       lattice_headings:=32: the lattice's trial file, 32 headings

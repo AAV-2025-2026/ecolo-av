@@ -10,9 +10,11 @@ The real car. One launch file for every machine; a machine file picks the parts.
                            lidar, or camera_obstacles with a detector on the rear camera
                            that keeps people. Without, it stays forward only and says why)
       [planner:=hybrid]   (Nav2's planner: hybrid (SmacPlannerHybrid) or lattice
-                           (SmacPlannerLattice, our primitives). Only these two on the car:
-                           smac2d, navfn and theta_star ignore the turning radius, and are
-                           refused here, with no way round it (vehicle.check_planner real)
+                           (SmacPlannerLattice, our primitives). Hybrid on the car
+                           until H5: forward only, the lattice lost the U-turn. Only
+                           these two on the car: smac2d, navfn and theta_star ignore the
+                           turning radius, and are refused here, with no way round it
+                           (vehicle.check_planner real)
       [lidar:=true]       (false: no lidar anywhere, whatever the machine file says)
       [voxels:=false]     (true: Nav2 reads the lidar as 0.25 m cubes, aav_voxels, a trial
                            not yet tried on the car: docs/designs/2026-10-30_voxels.md)
@@ -646,10 +648,11 @@ def generate_launch_description():
                                           'wheels tell direction, H5); true: Nav2 may back '
                                           'up, with the lidar watching behind '
                                           '(docs/learn-nav2.md)'),
-        DeclareLaunchArgument('planner', default_value=vehicle.DEFAULT_PLANNER,
+        DeclareLaunchArgument('planner', default_value=vehicle.CAR_DEFAULT_PLANNER,
                               description=', '.join(vehicle.CAR_PLANNERS) + ": Nav2's "
-                                          'planner on the car; the grid planners (sim and '
-                                          'bench trials) are refused here'),
+                                          'planner on the car (hybrid until H5: forward '
+                                          'only, the lattice lost the U-turn); the grid '
+                                          'planners (sim and bench trials) are refused here'),
         DeclareLaunchArgument('bridge', default_value=bridges.DEFAULT,
                               description='spine_bridge in rust (aav_spine_bridge) or python '
                                           '(aav_spine), where the machine runs the spine'),

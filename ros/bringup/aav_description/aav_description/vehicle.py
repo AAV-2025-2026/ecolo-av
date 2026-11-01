@@ -316,7 +316,11 @@ def check_tracker(tracker, reversing=False):
 # on the real car (check_planner real=True).
 PLANNERS = ('hybrid', 'lattice', 'smac2d', 'navfn', 'theta_star')
 CAR_PLANNERS = ('hybrid', 'lattice')
-DEFAULT_PLANNER = 'hybrid'
+# The lattice is the default (Ben, 1 Nov): with reversing on, every leg of the lot tour,
+# 29 s quicker than Hybrid-A* (docs/trials.md, 30 Oct). Forward only it lost the U-turn
+# (29 Oct), so the real car, forward only until H5, keeps Hybrid-A* (CAR_DEFAULT_PLANNER).
+DEFAULT_PLANNER = 'lattice'
+CAR_DEFAULT_PLANNER = 'hybrid'
 # Each planner's block in nav2.yaml's planner_server (GridBased is hybrid's own).
 PLANNER_BLOCKS = {'hybrid': 'GridBased', 'lattice': 'Lattice', 'smac2d': 'Smac2D',
                   'navfn': 'NavFn', 'theta_star': 'ThetaStar'}
@@ -416,7 +420,7 @@ def track_params(nav2, cfg, ego=None, max_speed=None):
     }
 
 
-def nav2_rewrites(v, reversing=False, planner=DEFAULT_PLANNER):
+def nav2_rewrites(v, reversing=False, planner='hybrid'):
     """
     Values to substitute into aav_navigation/config/nav2.yaml.
 
@@ -453,7 +457,7 @@ def nav2_rewrites(v, reversing=False, planner=DEFAULT_PLANNER):
 
 def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False,
                ghost=False, controller=DEFAULT_CONTROLLER, plan_around=True, camera=False,
-               planner=DEFAULT_PLANNER, lattice_file=None, voxels=False):
+               planner='hybrid', lattice_file=None, voxels=False):
     """
     Return a copy of nav2.yaml's settings (`nav2`, loaded) with what RewrittenYaml can't write.
 
@@ -479,8 +483,10 @@ def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False
       costmap too, so it plans round what they see (the ghost stays out: the car must stop
       for it). Without plan_around the planner sees only the map, and the car stops for
       what's in its way: the stop zone's tests;
-    - the planner (PLANNERS, DEFAULT_PLANNER): its block (PLANNER_BLOCKS) becomes GridBased,
-      the name the behaviour trees ask for, and the spare blocks go. lattice also takes
+    - the planner (PLANNERS; hybrid when none is named, as it needs no `lattice_file`;
+      the launch files always name one, DEFAULT_PLANNER or CAR_DEFAULT_PLANNER): its
+      block (PLANNER_BLOCKS) becomes GridBased, the name the behaviour trees ask for, and
+      the spare blocks go. lattice also takes
       `lattice_file` (the primitives) and, with `reversing`, may expand backwards;
     - with `voxels` and `lidar` (aav_voxels, a trial): the lidar_layer reads the cubes and
       the road they saw (sources voxels, voxels_ground) instead of the scan, and
