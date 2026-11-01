@@ -10,9 +10,9 @@ Ben, 1 Nov: "do all the ideas. I like them all but car day. Keep that in a list 
 | # | Task | Status |
 |---|---|---|
 | 55 | **The cubes in RViz** (`voxels:=true`) | ✅ 1 Nov, `ideas-1nov`: a "Cubes" display (0.25 m boxes) in `road.rviz` and `drive.rviz` |
-| 56 | **The cubes and Betsi's health checks on the debug screen** | ⬜ in progress, branch `hud-cubes-health` |
+| 56 | **The cubes and Betsi's health checks on the debug screen** | ✅ 1 Nov, `hud-cubes-health`: Nav2's cubes as red wireframes (key V), a "Nav2's cubes" section (road fit, count, ms) and "Localization health" (OK, or WARN and each check) on the seeing screen; rows in the sensor panel. Seen in `--demo`; untested live |
 | 57 | **Health in `pixi run check`** | ✅ 1 Nov: one line from `/localization/health` at the end; a WARN never fails the check |
-| 58 | **KISS-ICP into `ekf_local`** (`kiss_ekf:=true`, a trial) | ⬜ in progress, branch `kiss-ekf` |
+| 58 | **KISS-ICP into `ekf_local`** (`kiss_ekf:=true`, a trial) | ✅ 1 Nov, `kiss-ekf`: speed and turn rate only, covariance measured against Gazebo's truth. Not a clear win yet: ekf_local 0.30-1.27 m per 100 m on, 0.44-1.91 off, one run each on a busy Mac. Stays off. Next: 3 runs each on a quiet machine, then ekf_local's process noise; refit on a car bag |
 | 59 | **The lattice as the default planner** (54b) | ✅ 1 Nov (Ben): sim, bench and CARLA; the car keeps Hybrid-A* until H5 (forward only, the lattice lost the U-turn) |
 | 60 | **Car day: measure the wheel diameter by rolling** (Betsi's 0.36 m is PROVISIONAL; loaded it read 0.42 m, a 17 % speed error) | ⬜ car day: roll the car 10 m by tape, count the encoder ticks, `vehicle.yaml` `wheel_diameter` |
 | 61 | **Car day: the track, front and rear** (0.65 m and 0.85 m, today one average, 0.75 m) | ⬜ car day: check both; decide whether `vehicle.yaml` needs a front and a rear track |
