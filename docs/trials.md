@@ -16,6 +16,7 @@ and is **scored on the same routes**. It becomes the default only once it wins.
 > - **Planners** (`planner:=`): Nav2's State Lattice (on our own primitives), Smac 2D, NavFn and Theta*, beside Hybrid-A*. 29 Oct, forward only: Hybrid-A* 4 of 4, the lattice 2 of 4. **30 Oct, reversing on, 3-4 runs: every leg for hybrid, lattice and lattice32; the lattice the fastest** (184 s a tour against 213 s). Hybrid stays the default until Ben decides. [Results](#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32).
 > - **Voxels** (`voxels:=true`, 30 Oct): Nav2 reads the lidar as 0.25 m cubes. It stopped 0.44 m before the post (the scan 0.36 m), drove the lot tour 4 of 4, 6 ms a cloud. [Results](#voxels-30-oct-the-lidar-as-cubes).
 > - **KISS-ICP** (`aav_kiss_icp`, stock, MIT): lidar odometry, scored against `ekf_local`, never in an EKF yet. `kiss_icp:=true`. 30 Oct, one run: **0.04 m per 100 m** over the lot tour, against ekf_local's 0.33; about 1 ms a scan; once the ground was cut out. [Results](#30-oct-kiss-icp-beside-ekf_local-one-run-mppi-the-lot-tour). Design: `docs/designs/2026-10-30_kiss-icp.md`.
+> - **KISS-ICP into the local EKF** (`kiss_ekf:=true`), 1 Nov: its twist beside the wheels and IMU. Gazebo, 5 runs: **no clear win yet** (ekf_local 0.30-1.27 m per 100 m with it, 0.44-1.91 without; the spread is the Mac's load). Its covariance is now measured. [Results](#kiss-icp-into-the-local-ekf-1-nov).
 > - The design: `docs/designs/2026-10-29_trials.md`.
 
 ## What is on trial
@@ -31,6 +32,7 @@ and is **scored on the same routes**. It becomes the default only once it wins.
 | NDT on a saved lidar map | the global EKF, and AMCL | `ndt:=true` (after `pixi run ndt-map drive`) |
 | NDT's pose into the global EKF | the global EKF on GPS alone | `ndt_ekf:=true` |
 | KISS-ICP lidar odometry (how far the car moved, no map) | `ekf_local` (wheels and IMU) | `kiss_icp:=true` (after `pixi install --locked -e kiss`) |
+| KISS-ICP's twist into the local EKF | `ekf_local` on the wheels and IMU alone | `kiss_ekf:=true` |
 | State Lattice planner, our primitives | Hybrid-A* | `planner:=lattice` (`lattice_headings:=32`: the 32-heading file) |
 | Smac 2D, NavFn, Theta* planners (ignore the turning circle: sim and bench only) | Hybrid-A* | `planner:=smac2d`, `navfn`, `theta_star` |
 | The lidar as 0.25 m cubes over the fitted road (`aav_voxels`) | the flat scan (`lidar_scan`) | `voxels:=true` |
@@ -78,6 +80,8 @@ pixi run sim-check --lidar-obstacle --voxels                     # the cubes sto
 pixi run controller-compare --voxels --tours lot                 # the lot tour on cubes
 pixi install --locked -e kiss                                   # KISS-ICP, once
 pixi run controller-compare --kiss-icp --tours lot --controllers mppi   # its drift vs ekf_local
+pixi run controller-compare --kiss-ekf --tours lot --controllers mppi   # ekf_local with its twist
+pixi run sim-check --kiss-ekf                                   # the road world, kiss_ekf:=true
 ```
 
 ## Results
@@ -312,6 +316,76 @@ building 0.21 / 0.18; turn back 0.08 / 0.21; home 0.23 / 1.65.
   field); an open lot has fewer walls.
 - One run only. Next: 3 runs, then a bag from the real lot, before its twist goes into
   `ekf_local`.
+
+## KISS-ICP into the local EKF (1 Nov)
+
+`kiss_ekf:=true`: `ekf_local` takes KISS-ICP's **twist** (vx, vyaw) beside the wheels
+and the IMU. Off by default. Never its pose: it drifts, in its own frame.
+
+```
+lidar ─► KISS-ICP ─► /localization/kiss_icp/odom (twist) ─┐
+wheels ─► /vehicle/odom ──────────────────────────────────┼─► ekf_local ─► odom → base_link
+IMU ─► /sensors/imu/data ─────────────────────────────────┘   (refuses a twist 5 sigma off)
+```
+
+> **The short version**
+> - **No clear win in Gazebo yet.** With it, ekf_local drifted 0.30-1.27 m per 100 m;
+>   without, 0.44-1.91. The Mac's load moves the numbers more than the switch does.
+> - **Its covariance was wrong, now measured**: the speed 3x too sure, the turn rate 3x too
+>   doubtful. Too sure, it made ekf_local's speed 10x noisier.
+> - **KISS-ICP stopping is safe**: killed mid-drive, ekf_local kept 30 Hz and the right speed.
+
+### The covariance, against Gazebo's truth
+
+Each KISS-ICP step against the truth over the same two stamps (5 runs, ~9,000 steps).
+
+| | Its noise (1 sigma) | It said (30 Oct) | It says now |
+|---|---:|---:|---:|
+| Speed | **0.14-0.16 m/s** | 0.05 | 0.15 (`twist_linear_sd`) |
+| Turn rate | **0.005-0.007 rad/s** | 0.02 | 0.01 (`twist_angular_sd`) |
+| (the wheels, Gazebo) | 0.002 m/s, 0.003 rad/s | | |
+| (the IMU) | 0.02 rad/s | | |
+
+Why the speed is noisy while the pose holds: each scan's position wobbles about 1.5 cm,
+and the next scan takes it back. Over 0.1 s, 1.5 cm is 0.15 m/s.
+
+| ekf_local's speed vs the truth | sd (m/s) |
+|---|---:|
+| without KISS-ICP | 0.003 |
+| with it, said 0.05 (too sure) | **0.035** |
+| with it, says 0.15 | 0.008-0.009 |
+
+### The drift (the lot tour, MPPI, one run each)
+
+`controller-compare --kiss-icp` (off) and `--kiss-ekf` (on), headless on Ben's Mac, other
+Gazebo and test runs beside it. Folders `log/kiss-ekf/` (not in git). MPPI lost the turn
+back in every run, so "driven" differs.
+
+| Run | ekf_local: drift (m per 100 m) | worst off (m) | heading at the end | driven | KISS-ICP alone |
+|---|---:|---:|---:|---:|---:|
+| off | 1.91 | 1.88 | 0.29° | ~90 m | 0.02 |
+| off2 | 0.44 | 1.77 | 1.66° | 222 m | 0.04 |
+| on (covariance 0.05, too sure) | 0.93 | 1.22 | 2.69° | 91 m | 0.02 |
+| on2 (0.15) | 1.27 | 1.28 | 2.92° | 83 m | 0.03 |
+| on3 (0.15, and lagged twists put back in time) | **0.30** | **0.46** | 0.80° | 109 m | 0.03 |
+
+The first two legs, run by run (m per 100 m): off 1.19, 1.15; off2 1.76, 0.61; on2 0.48,
+1.14; on3 0.51, 0.65. Mean: **1.18 off, 0.70 on**, but the spread overlaps.
+
+### What it shows
+
+- KISS-ICP **alone** holds 0.02-0.04 m per 100 m; `ekf_local` with it doesn't come
+  close. Its turn rate (10 Hz) is outvoted by the IMU (50 Hz): ekf_local's turn-rate
+  noise stayed 0.013 rad/s in every run. Next: tune its process noise.
+- In Gazebo the wheels are nearly perfect, so there is little for the lidar to fix. The
+  point is the real car, where wheels slip: score it on a bag from the lot.
+- Lag: the twist arrives 17 ms after its cloud's stamp (median, Gazebo). `ekf_local`
+  puts each in at its own time (`smooth_lagged_data`, 1 s of history), as `ekf_global`
+  does with NDT; the car's VLP-16 may be later.
+- Dropout (KISS-ICP killed mid-drive, test lot, 1 m/s): ekf_local stayed at 30 Hz,
+  1.000 m/s against the truth's 1.000, for the next 10 s.
+- `pixi run sim-check --kiss-ekf` (road world): all PASS; KISS-ICP 10 Hz, ekf_local 30 Hz,
+  its speed 0.005 m/s from the truth (median).
 
 ## Scoring a localizer fairly
 

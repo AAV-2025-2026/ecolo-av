@@ -7,7 +7,7 @@
 <!-- Generated from docs/trials.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Trials: new path followers and localizers beside the main ones</h1>
-<div class="meta">39 min read · 14 sections</div></header>
+<div class="meta">44 min read · 15 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -94,7 +94,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#what-is-on-trial">What is on trial</a><a href="#where-a-tracker-sits">Where a tracker sits</a><a href="#fair-rules">Fair rules</a><a href="#run-it">Run it</a><a href="#results">Results</a><a href="#ndt-into-the-global-ekf-30-oct">NDT into the global EKF (30 Oct)</a><a href="#scoring-a-localizer-fairly">Scoring a localizer fairly</a><a href="#scoring-an-odometry-fairly-kiss-icp-ekf_local">Scoring an odometry fairly (KISS-ICP, ekf_local)</a><a href="#before-a-winner-goes-on-the-car">Before a winner goes on the car</a><a href="#results-29-october">Results, 29 October</a><a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results, 29 October (afternoon): LQR rebuilt, and mpc_full</a><a href="#planners-29-oct-hybrid-lattice-and-smac2d">Planners, 29 Oct: hybrid, lattice and smac2d</a><a href="#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32">Planners, 30 Oct: reversing on, hybrid, lattice and lattice32</a><a href="#voxels-30-oct-the-lidar-as-cubes">Voxels, 30 Oct: the lidar as cubes</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#what-is-on-trial">What is on trial</a><a href="#where-a-tracker-sits">Where a tracker sits</a><a href="#fair-rules">Fair rules</a><a href="#run-it">Run it</a><a href="#results">Results</a><a href="#ndt-into-the-global-ekf-30-oct">NDT into the global EKF (30 Oct)</a><a href="#kiss-icp-into-the-local-ekf-1-nov">KISS-ICP into the local EKF (1 Nov)</a><a href="#scoring-a-localizer-fairly">Scoring a localizer fairly</a><a href="#scoring-an-odometry-fairly-kiss-icp-ekf_local">Scoring an odometry fairly (KISS-ICP, ekf_local)</a><a href="#before-a-winner-goes-on-the-car">Before a winner goes on the car</a><a href="#results-29-october">Results, 29 October</a><a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results, 29 October (afternoon): LQR rebuilt, and mpc_full</a><a href="#planners-29-oct-hybrid-lattice-and-smac2d">Planners, 29 Oct: hybrid, lattice and smac2d</a><a href="#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32">Planners, 30 Oct: reversing on, hybrid, lattice and lattice32</a><a href="#voxels-30-oct-the-lidar-as-cubes">Voxels, 30 Oct: the lidar as cubes</a></nav>
 <div class="lead"><p>Ben, 29 Oct: "We want to make other nodes or plugins that we can test and then replace
 the main ones if they work." Each trial runs <strong>beside</strong> today's default, chosen at launch,
 and is <strong>scored on the same routes</strong>. It becomes the default only once it wins.</p>
@@ -110,7 +110,8 @@ and is <strong>scored on the same routes</strong>. It becomes the default only o
 - <strong>Afternoon:</strong> LQR rebuilt with a preview (U-turn 2 of 3 in a quiet run; it weaved on a busy Mac), <code>mpc_full</code> 10 of 12. <a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results</a>.
 - <strong>Planners</strong> (<code>planner:=</code>): Nav2's State Lattice (on our own primitives), Smac 2D, NavFn and Theta<em>, beside Hybrid-A</em>. 29 Oct, forward only: Hybrid-A<em> 4 of 4, the lattice 2 of 4. </em><em>30 Oct, reversing on, 3-4 runs: every leg for hybrid, lattice and lattice32; the lattice the fastest</em><em> (184 s a tour against 213 s). Hybrid stays the default until Ben decides. <a href="#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32">Results</a>.
 - </em><em>Voxels</em><em> (<code>voxels:=true</code>, 30 Oct): Nav2 reads the lidar as 0.25 m cubes. It stopped 0.44 m before the post (the scan 0.36 m), drove the lot tour 4 of 4, 6 ms a cloud. <a href="#voxels-30-oct-the-lidar-as-cubes">Results</a>.
-- </em><em>KISS-ICP</em><em> (<code>aav_kiss_icp</code>, stock, MIT): lidar odometry, scored against <code>ekf_local</code>, never in an EKF yet. <code>kiss_icp:=true</code>. 30 Oct, one run: </em><em>0.04 m per 100 m</em>* over the lot tour, against ekf_local's 0.33; about 1 ms a scan; once the ground was cut out. <a href="#30-oct-kiss-icp-beside-ekf_local-one-run-mppi-the-lot-tour">Results</a>. Design: <code>docs/designs/2026-10-30_kiss-icp.md</code>.
+- </em><em>KISS-ICP</em><em> (<code>aav_kiss_icp</code>, stock, MIT): lidar odometry, scored against <code>ekf_local</code>, never in an EKF yet. <code>kiss_icp:=true</code>. 30 Oct, one run: </em><em>0.04 m per 100 m</em><em> over the lot tour, against ekf_local's 0.33; about 1 ms a scan; once the ground was cut out. <a href="#30-oct-kiss-icp-beside-ekf_local-one-run-mppi-the-lot-tour">Results</a>. Design: <code>docs/designs/2026-10-30_kiss-icp.md</code>.
+- </em><em>KISS-ICP into the local EKF</em><em> (<code>kiss_ekf:=true</code>), 1 Nov: its twist beside the wheels and IMU. Gazebo, 5 runs: </em><em>no clear win yet</em>* (ekf_local 0.30-1.27 m per 100 m with it, 0.44-1.91 without; the spread is the Mac's load). Its covariance is now measured. <a href="#kiss-icp-into-the-local-ekf-1-nov">Results</a>.
 - The design: <code>docs/designs/2026-10-29_trials.md</code>.</p>
 </blockquote></div>
 <section class="card"><h2 id="what-is-on-trial">What is on trial</h2>
@@ -167,6 +168,11 @@ and is <strong>scored on the same routes</strong>. It becomes the default only o
 <td>KISS-ICP lidar odometry (how far the car moved, no map)</td>
 <td><code>ekf_local</code> (wheels and IMU)</td>
 <td><code>kiss_icp:=true</code> (after <code>pixi install --locked -e kiss</code>)</td>
+</tr>
+<tr>
+<td>KISS-ICP's twist into the local EKF</td>
+<td><code>ekf_local</code> on the wheels and IMU alone</td>
+<td><code>kiss_ekf:=true</code></td>
 </tr>
 <tr>
 <td>State Lattice planner, our primitives</td>
@@ -250,7 +256,9 @@ pixi run controller-compare --ndt-ekf --runs 3 --tours lot      # NDT into the g
 pixi run sim-check --lidar-obstacle --voxels                     # the cubes stop for a post?
 pixi run controller-compare --voxels --tours lot                 # the lot tour on cubes
 pixi install --locked -e kiss                                   # KISS-ICP, once
-pixi run controller-compare --kiss-icp --tours lot --controllers mppi   # its drift vs ekf_local</code></pre>
+pixi run controller-compare --kiss-icp --tours lot --controllers mppi   # its drift vs ekf_local
+pixi run controller-compare --kiss-ekf --tours lot --controllers mppi   # ekf_local with its twist
+pixi run sim-check --kiss-ekf                                   # the road world, kiss_ekf:=true</code></pre>
 </section>
 <section class="card"><h2 id="results">Results</h2>
 <p>Each run's results go here, with its date and its folder in <code>log/controller-compare/</code>.</p>
@@ -761,6 +769,158 @@ building 0.21 / 0.18; turn back 0.08 / 0.21; home 0.23 / 1.65.</p>
   <code>ekf_local</code>.</li>
 </ul>
 </section>
+<section class="card"><h2 id="kiss-icp-into-the-local-ekf-1-nov">KISS-ICP into the local EKF (1 Nov)</h2>
+<p><code>kiss_ekf:=true</code>: <code>ekf_local</code> takes KISS-ICP's <strong>twist</strong> (vx, vyaw) beside the wheels
+and the IMU. Off by default. Never its pose: it drifts, in its own frame.</p>
+<pre class="highlight"><code>lidar ─► KISS-ICP ─► /localization/kiss_icp/odom (twist) ─┐
+wheels ─► /vehicle/odom ──────────────────────────────────┼─► ekf_local ─► odom → base_link
+IMU ─► /sensors/imu/data ─────────────────────────────────┘   (refuses a twist 5 sigma off)</code></pre>
+<blockquote>
+<p><strong>The short version</strong>
+- <strong>No clear win in Gazebo yet.</strong> With it, ekf_local drifted 0.30-1.27 m per 100 m;
+  without, 0.44-1.91. The Mac's load moves the numbers more than the switch does.
+- <strong>Its covariance was wrong, now measured</strong>: the speed 3x too sure, the turn rate 3x too
+  doubtful. Too sure, it made ekf_local's speed 10x noisier.
+- <strong>KISS-ICP stopping is safe</strong>: killed mid-drive, ekf_local kept 30 Hz and the right speed.</p>
+</blockquote>
+<h3 id="the-covariance-against-gazebos-truth">The covariance, against Gazebo's truth</h3>
+<p>Each KISS-ICP step against the truth over the same two stamps (5 runs, ~9,000 steps).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">Its noise (1 sigma)</th>
+<th style="text-align: right;">It said (30 Oct)</th>
+<th style="text-align: right;">It says now</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Speed</td>
+<td style="text-align: right;"><strong>0.14-0.16 m/s</strong></td>
+<td style="text-align: right;">0.05</td>
+<td style="text-align: right;">0.15 (<code>twist_linear_sd</code>)</td>
+</tr>
+<tr>
+<td>Turn rate</td>
+<td style="text-align: right;"><strong>0.005-0.007 rad/s</strong></td>
+<td style="text-align: right;">0.02</td>
+<td style="text-align: right;">0.01 (<code>twist_angular_sd</code>)</td>
+</tr>
+<tr>
+<td>(the wheels, Gazebo)</td>
+<td style="text-align: right;">0.002 m/s, 0.003 rad/s</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+</tr>
+<tr>
+<td>(the IMU)</td>
+<td style="text-align: right;">0.02 rad/s</td>
+<td style="text-align: right;"></td>
+<td style="text-align: right;"></td>
+</tr>
+</tbody>
+</table></div>
+<p>Why the speed is noisy while the pose holds: each scan's position wobbles about 1.5 cm,
+and the next scan takes it back. Over 0.1 s, 1.5 cm is 0.15 m/s.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>ekf_local's speed vs the truth</th>
+<th style="text-align: right;">sd (m/s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>without KISS-ICP</td>
+<td style="text-align: right;">0.003</td>
+</tr>
+<tr>
+<td>with it, said 0.05 (too sure)</td>
+<td style="text-align: right;"><strong>0.035</strong></td>
+</tr>
+<tr>
+<td>with it, says 0.15</td>
+<td style="text-align: right;">0.008-0.009</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-drift-the-lot-tour-mppi-one-run-each">The drift (the lot tour, MPPI, one run each)</h3>
+<p><code>controller-compare --kiss-icp</code> (off) and <code>--kiss-ekf</code> (on), headless on Ben's Mac, other
+Gazebo and test runs beside it. Folders <code>log/kiss-ekf/</code> (not in git). MPPI lost the turn
+back in every run, so "driven" differs.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Run</th>
+<th style="text-align: right;">ekf_local: drift (m per 100 m)</th>
+<th style="text-align: right;">worst off (m)</th>
+<th style="text-align: right;">heading at the end</th>
+<th style="text-align: right;">driven</th>
+<th style="text-align: right;">KISS-ICP alone</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>off</td>
+<td style="text-align: right;">1.91</td>
+<td style="text-align: right;">1.88</td>
+<td style="text-align: right;">0.29°</td>
+<td style="text-align: right;">~90 m</td>
+<td style="text-align: right;">0.02</td>
+</tr>
+<tr>
+<td>off2</td>
+<td style="text-align: right;">0.44</td>
+<td style="text-align: right;">1.77</td>
+<td style="text-align: right;">1.66°</td>
+<td style="text-align: right;">222 m</td>
+<td style="text-align: right;">0.04</td>
+</tr>
+<tr>
+<td>on (covariance 0.05, too sure)</td>
+<td style="text-align: right;">0.93</td>
+<td style="text-align: right;">1.22</td>
+<td style="text-align: right;">2.69°</td>
+<td style="text-align: right;">91 m</td>
+<td style="text-align: right;">0.02</td>
+</tr>
+<tr>
+<td>on2 (0.15)</td>
+<td style="text-align: right;">1.27</td>
+<td style="text-align: right;">1.28</td>
+<td style="text-align: right;">2.92°</td>
+<td style="text-align: right;">83 m</td>
+<td style="text-align: right;">0.03</td>
+</tr>
+<tr>
+<td>on3 (0.15, and lagged twists put back in time)</td>
+<td style="text-align: right;"><strong>0.30</strong></td>
+<td style="text-align: right;"><strong>0.46</strong></td>
+<td style="text-align: right;">0.80°</td>
+<td style="text-align: right;">109 m</td>
+<td style="text-align: right;">0.03</td>
+</tr>
+</tbody>
+</table></div>
+<p>The first two legs, run by run (m per 100 m): off 1.19, 1.15; off2 1.76, 0.61; on2 0.48,
+1.14; on3 0.51, 0.65. Mean: <strong>1.18 off, 0.70 on</strong>, but the spread overlaps.</p>
+<h3 id="what-it-shows">What it shows</h3>
+<ul>
+<li>KISS-ICP <strong>alone</strong> holds 0.02-0.04 m per 100 m; <code>ekf_local</code> with it doesn't come
+  close. Its turn rate (10 Hz) is outvoted by the IMU (50 Hz): ekf_local's turn-rate
+  noise stayed 0.013 rad/s in every run. Next: tune its process noise.</li>
+<li>In Gazebo the wheels are nearly perfect, so there is little for the lidar to fix. The
+  point is the real car, where wheels slip: score it on a bag from the lot.</li>
+<li>Lag: the twist arrives 17 ms after its cloud's stamp (median, Gazebo). <code>ekf_local</code>
+  puts each in at its own time (<code>smooth_lagged_data</code>, 1 s of history), as <code>ekf_global</code>
+  does with NDT; the car's VLP-16 may be later.</li>
+<li>Dropout (KISS-ICP killed mid-drive, test lot, 1 m/s): ekf_local stayed at 30 Hz,
+  1.000 m/s against the truth's 1.000, for the next 10 s.</li>
+<li><code>pixi run sim-check --kiss-ekf</code> (road world): all PASS; KISS-ICP 10 Hz, ekf_local 30 Hz,
+  its speed 0.005 m/s from the truth (median).</li>
+</ul>
+</section>
 <section class="card"><h2 id="scoring-a-localizer-fairly">Scoring a localizer fairly</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -1030,7 +1190,7 @@ Stanley's runs had sensor-watchdog stops, and LQR's run 1 had 125 planner-loop m
 <p>04:18, load average 17-21 at the start. <strong>LQR 10 of 12 legs, the U-turn 2 of 3</strong> (was 8
 and 1 of 3 at 02:42); pure pursuit 12 of 12 (its U-turn 3 of 3). LQR's failed
 U-turn was the planner's clockwise loop, to the south wall.</p>
-<h3 id="what-it-shows">What it shows</h3>
+<h3 id="what-it-shows_1">What it shows</h3>
 <ul>
 <li><strong>The preview fixed what it was for</strong>: on the fake car, and in the quiet run. In the
   busy run LQR lost legs it used to make: run 1 was starved, run 2 <strong>weaved</strong> (heading
@@ -1148,7 +1308,7 @@ results in <code>~/aav-runs/2026-10-29/planners-results/</code> on Ben's Mac (no
 </tr>
 </tbody>
 </table></div>
-<h3 id="what-it-shows_1">What it shows</h3>
+<h3 id="what-it-shows_2">What it shows</h3>
 <ul>
 <li><strong>Hybrid-A* stays the default.</strong> It was the only one to finish the U-turn.</li>
 <li><strong>The lattice is fast and drives well</strong> where there's room: 4 ms a plan, and the
@@ -1275,7 +1435,7 @@ Results in <code>~/aav-runs/2026-10-30/lattice-rerun*/</code> on Ben's Mac (not 
 </tr>
 </tbody>
 </table></div>
-<h3 id="what-it-shows_2">What it shows</h3>
+<h3 id="what-it-shows_3">What it shows</h3>
 <ul>
 <li><strong>With reversing on, the lattice finishes every leg</strong>, and it is the fastest: about
   <strong>29 s quicker</strong> a tour than Hybrid-A* (14 %), with plans a third quicker. On 29 Oct
@@ -1419,7 +1579,7 @@ most), <strong>1,067-1,378</strong> on the lot tour (walls, the building, parked
 </tbody>
 </table></div>
 <p>Runs: <code>/tmp/voxbench/runs/</code> on Ben's Mac (not in git).</p>
-<h3 id="what-it-shows_3">What it shows</h3>
+<h3 id="what-it-shows_4">What it shows</h3>
 <ul>
 <li><strong>Cubes stop the car as well as the scan</strong>: 0.44 m from the post against 0.36 m.</li>
 <li><strong>They cost more</strong>, 6 ms a cloud against well under 1 ms, but that is 6 % of the

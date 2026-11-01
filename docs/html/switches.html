@@ -202,7 +202,8 @@ In <code>debugdemo</code>, keys 1-4 swap the tracker live. More: <a href="contro
 </section>
 <section class="card"><h2 id="where-am-i">Where am I</h2>
 <p>These run <strong>beside</strong> the EKFs and are only scored for now. They never steer, except
-<code>ndt_ekf:=true</code>: then the global EKF, which Nav2 plans by, takes NDT's pose too.
+<code>ndt_ekf:=true</code>: then the global EKF, which Nav2 plans by, takes NDT's pose too; and
+<code>kiss_ekf:=true</code>: then the local EKF, which Nav2 steers by, takes KISS-ICP's speed too.
 In <code>pixi run pick</code>, <code>debugdemo</code> offers NDT + AMCL first (to see every finder); the
 others offer the EKFs only first.</p>
 <div class="table-wrap"><table>
@@ -234,9 +235,20 @@ others offer the EKFs only first.</p>
 <td>NDT, and the global EKF <strong>uses</strong> it beside the GPS (a trial)</td>
 <td>the EKF <strong>1.6 cm</strong> (<a href="trials.html#ndt-into-the-global-ekf-30-oct">trials</a>)</td>
 </tr>
+<tr>
+<td><code>kiss_icp:=true</code></td>
+<td>how far the car moved, from the lidar alone (no map)</td>
+<td>0.02-0.04 m per 100 m driven</td>
+</tr>
+<tr>
+<td><code>kiss_ekf:=true</code></td>
+<td>KISS-ICP, and the local EKF <strong>uses</strong> its speed beside the wheels (a trial)</td>
+<td>no clear win yet (<a href="trials.html#kiss-icp-into-the-local-ekf-1-nov">trials</a>)</td>
+</tr>
 </tbody>
 </table></div>
-<p>NDT's map isn't in git: make it once with <code>pixi run ndt-map drive</code> (about 6 min).</p>
+<p>NDT's map isn't in git: make it once with <code>pixi run ndt-map drive</code> (about 6 min).
+KISS-ICP needs its own environment once: <code>pixi install --locked -e kiss</code>.</p>
 </section>
 <section class="card"><h2 id="speed">Speed</h2>
 <div class="table-wrap"><table>

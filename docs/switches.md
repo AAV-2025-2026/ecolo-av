@@ -51,7 +51,8 @@ In `debugdemo`, keys 1-4 swap the tracker live. More: [Controllers](controllers.
 ## Where am I
 
 These run **beside** the EKFs and are only scored for now. They never steer, except
-`ndt_ekf:=true`: then the global EKF, which Nav2 plans by, takes NDT's pose too.
+`ndt_ekf:=true`: then the global EKF, which Nav2 plans by, takes NDT's pose too; and
+`kiss_ekf:=true`: then the local EKF, which Nav2 steers by, takes KISS-ICP's speed too.
 In `pixi run pick`, `debugdemo` offers NDT + AMCL first (to see every finder); the
 others offer the EKFs only first.
 
@@ -61,8 +62,11 @@ others offer the EKFs only first.
 | `ndt:=true ndt_map:=maps/ndt/test_lot.pcd` | the lidar slid onto a saved map | **1-3 cm** |
 | `amcl:=true` | many guesses; keep the ones that match the walls | 6-11 cm |
 | `ndt_ekf:=true ndt_map:=maps/ndt/test_lot.pcd` | NDT, and the global EKF **uses** it beside the GPS (a trial) | the EKF **1.6 cm** ([trials](trials.md#ndt-into-the-global-ekf-30-oct)) |
+| `kiss_icp:=true` | how far the car moved, from the lidar alone (no map) | 0.02-0.04 m per 100 m driven |
+| `kiss_ekf:=true` | KISS-ICP, and the local EKF **uses** its speed beside the wheels (a trial) | no clear win yet ([trials](trials.md#kiss-icp-into-the-local-ekf-1-nov)) |
 
 NDT's map isn't in git: make it once with `pixi run ndt-map drive` (about 6 min).
+KISS-ICP needs its own environment once: `pixi install --locked -e kiss`.
 
 ## Speed
 
