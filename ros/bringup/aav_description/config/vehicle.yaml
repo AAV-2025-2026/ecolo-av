@@ -23,10 +23,11 @@
 vehicle:
   wheelbase: 1.561          # MEASURED: 156.1 cm, rear wheel centre -> front wheel centre
 
-  track: 0.77               # TODO reconcile with measured front=0.650 m, rear=0.850 m
+  track: 0.75               # PROVISIONAL: average of measured front=0.650 m, rear=0.850 m
 
-  wheel_diameter: 0.30      # TODO recheck: measured diameter=0.360 m,
-                            # loaded radius=0.210 m implies 0.420 m diameter
+  wheel_diameter: 0.36      # PROVISIONAL: tape-measured; verify with the rollout test
+                            # (docs/measure-the-car.md M3). Loaded radius 0.210 m
+                            # would give 0.420 m
 
   wheel_width: 0.10         # TODO measure
 
@@ -113,8 +114,9 @@ sensors:
     rpy: [0.0, 0.0, 0.0]      # TODO verify IMU orientation
 
   gps_link:
-    xyz: [0.25, 0.00, 1.40]   # MEASURED / PROVISIONAL: antenna [25, 0, 140] cm
-                               # antenna position, not receiver box
+    xyz: [0.00, 0.00, 1.40]   # over the rear axle (Ben, 23 Oct; confirmed 31 Oct);
+                               # z MEASURED / PROVISIONAL: 140 cm. Antenna, not
+                               # receiver box. The 31 Oct audit's x = 25 cm was wrong
     rpy: [0.0, 0.0, 0.0]      # TODO verify if orientation/heading is relevant
 
   radar_link:
