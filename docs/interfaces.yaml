@@ -442,8 +442,8 @@ topics:
   /perception/voxels/cubes:
     type: sensor_msgs/msg/PointCloud2
     pub: [voxels]
-    sub: [local_costmap, collision_monitor]
-    note: A trial (docs/designs/2026-10-30_voxels.md), only with navigation.launch.py voxels:=true (sim.launch.py and car.launch.py pass it on; needs the lidar) - the roof lidar's cloud as 0.25 m cubes (aav_voxels voxels), in base_link, the cloud's stamp, 10 Hz. Fields x, y, z (float32) - the centre of every cube holding a point between 0.3 m and the roof plus 0.5 m (vehicle.obstacle_heights) above the road, the road's plane fitted to each cloud (so a leaning car doesn't see the road as an obstacle); the car's own body left out; out to 30 m. Reliable, depth 1. Then the local costmap's lidar_layer marks with it and collision_monitor's voxels source stops for it, instead of /sensors/lidar/scan.
+    sub: [local_costmap, collision_monitor, debug_hud]
+    note: A trial (docs/designs/2026-10-30_voxels.md), only with navigation.launch.py voxels:=true (sim.launch.py and car.launch.py pass it on; needs the lidar) - the roof lidar's cloud as 0.25 m cubes (aav_voxels voxels), in base_link, the cloud's stamp, 10 Hz. Fields x, y, z (float32) - the centre of every cube holding a point between 0.3 m and the roof plus 0.5 m (vehicle.obstacle_heights) above the road, the road's plane fitted to each cloud (so a leaning car doesn't see the road as an obstacle); the car's own body left out; out to 30 m. Reliable, depth 1. Then the local costmap's lidar_layer marks with it and collision_monitor's voxels source stops for it, instead of /sensors/lidar/scan. The debug HUD draws it as red wireframes over its own cubes (key V), placed with the local EKF's pose at the cloud's stamp.
   /perception/voxels/ground:
     type: sensor_msgs/msg/PointCloud2
     pub: [voxels]
@@ -452,8 +452,8 @@ topics:
   /perception/voxels/status:
     type: diagnostic_msgs/msg/DiagnosticStatus
     pub: [voxels]
-    sub: []
-    note: The voxels trial after every cloud - name voxels, level OK (the road fitted) or WARN (no good fit - taken as flat, as lidar_scan does); values ms (wall clock, the cloud read to the cubes published), cubes, ground_cubes, points (finite, off the car, in range), fitted, roll_deg, pitch_deg (the body's lean on the fitted road, REP-103), clouds_dropped (from the stamps). sim-check --voxels and controller-compare --voxels read it.
+    sub: [debug_hud]
+    note: The voxels trial after every cloud - name voxels, level OK (the road fitted) or WARN (no good fit - taken as flat, as lidar_scan does); values ms (wall clock, the cloud read to the cubes published), cubes, ground_cubes, points (finite, off the car, in range), fitted, roll_deg, pitch_deg (the body's lean on the fitted road, REP-103), clouds_dropped (from the stamps). sim-check --voxels and controller-compare --voxels read it; so does the debug HUD (its Nav2 cubes section and row).
   /perception/radar/clusters:
     type: sensor_msgs/msg/PointCloud2
     pub: [radar_clusters]
@@ -665,9 +665,9 @@ topics:
   /localization/health:
     type: std_msgs/msg/String
     pub: [localization_health]
-    sub: []
+    sub: [debug_hud]
     live: [turtle, sim, car, replay, bench]
-    note: localization_health (aav_localization_health) once a second - OK, or WARN and each check that isn't OK (gyro_bias parked, imu_mounting, gps_quality, timestamps, frames, tf, wheels, motion; STALE where an input it needs went quiet). Warn only - nothing drives from it, and it changes nothing in the EKFs. The same checks, with their numbers, on /diagnostics.
+    note: localization_health (aav_localization_health) once a second - OK, or WARN and each check that isn't OK (gyro_bias parked, imu_mounting, gps_quality, timestamps, frames, tf, wheels, motion; STALE where an input it needs went quiet). Warn only - nothing drives from it, and it changes nothing in the EKFs. The same checks, with their numbers, on /diagnostics. The debug HUD shows it (green OK, amber WARN with each check).
 
   # --- navigation ---
   /map:

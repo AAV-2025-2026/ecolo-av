@@ -23,6 +23,10 @@
 //!             ndt_status_topic      diagnostic_msgs/DiagnosticStatus  the panel: NDT's score, ms, LOST
 //!             plan_topic            nav_msgs/Path               Nav2's plan
 //!             tf_topic, tf_static_topic  tf2_msgs/TFMessage     map -> odom; base_link -> lidar_link
+//!             voxels_cubes_topic    sensor_msgs/PointCloud2     reliable, keep last 1, base_link:
+//!                                   Nav2's cubes (the voxels trial), red wireframes, key V
+//!             voxels_status_topic   diagnostic_msgs/DiagnosticStatus  the voxels trial: ms, cubes, road fit
+//!             health_topic          std_msgs/String             /localization/health: OK or WARN ...
 //!             imu_topic             sensor_msgs/Imu             the panel
 //!             gps_topic             sensor_msgs/NavSatFix       the panel
 //!             wheels_topic          aav_interfaces/WheelSpeeds  the panel
@@ -35,7 +39,8 @@
 //!                                       tracker, only while /system/source says SIM
 //! Parameters  the topics above; odom_frame, base_frame, map_frame; stale_after (s),
 //!             cube_size (m), max_cubes, pose_window (s), ground_height (m),
-//!             keep_cubes_for (s), ndt_map (a PCD file, key M), ndt_map_cell (m)
+//!             keep_cubes_for (s), ndt_map (a PCD file, key M), ndt_map_cell (m),
+//!             voxels_cube_size (m), health_stale_after (s)
 //! Reads       ndt_map at start-up, if it is there (else the panel says how to make it)
 //!
 //! raylib owns the main thread (macOS needs that); rclrs spins on its own thread; clouds
@@ -98,7 +103,8 @@ usage: debug_hud [--demo] [--fullscreen] [--monitor NAME|N] [--list-monitors]
 
 keys: drag turn, right-drag (or shift-drag) move, wheel zoom, C chase / follow / free,
       R reset the camera, L the seeing screen (the map and NDT's match from above) or
-      the sensor panel, K kept (fading) cubes or this scan's, M NDT's map,
+      the sensor panel, K kept (fading) cubes or this scan's, V Nav2's cubes (the voxels
+      trial's, red wireframes), M NDT's map,
       A AMCL's particles, H hide the key legend, 1-4 swap the trial tracker (sim only:
       pure pursuit, Stanley, LQR, MPC), F11 full screen";
 
@@ -218,7 +224,12 @@ fn open_source(
     config: DebugConfig,
 ) -> Result<(Box<dyn DataSource>, DebugConfig)> {
     if opts.demo {
-        let demo = Demo::new(Instant::now(), config.cube_settings(), opts.bench_cubes);
+        let demo = Demo::new(
+            Instant::now(),
+            config.cube_settings(),
+            config.voxel_settings(),
+            opts.bench_cubes,
+        );
         return Ok((Box::new(demo), config));
     }
     #[cfg(feature = "ros")]
@@ -279,6 +290,9 @@ fn run(
         }
         if let Some(scan) = source.take_scan() {
             state.set_scan(scan, now);
+        }
+        if let Some(cubes) = source.take_nav2_cubes() {
+            state.set_nav2_cubes(cubes, now);
         }
 
         // The mouse, over the 3D view only.
@@ -377,6 +391,7 @@ fn key_of(action: Action) -> KeyboardKey {
         Action::Cubes => KeyboardKey::KEY_K,
         Action::NdtMap => KeyboardKey::KEY_M,
         Action::Particles => KeyboardKey::KEY_A,
+        Action::Nav2Cubes => KeyboardKey::KEY_V,
         Action::Keys => KeyboardKey::KEY_H,
         Action::Layout => KeyboardKey::KEY_L,
         Action::FullScreen => KeyboardKey::KEY_F11,
@@ -460,6 +475,7 @@ mod tests {
             }
         }
         assert!(USAGE.contains("K kept") && USAGE.contains("L the seeing screen"));
+        assert!(USAGE.contains("V Nav2's cubes"));
     }
 
     #[test]
