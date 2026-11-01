@@ -20,6 +20,7 @@ for pkg in ros/ego/aav_ego ros/io_mux/aav_io_mux ros/can_bridge/aav_spine ros/ca
            ros/drivers/aav_scripted ros/drivers/aav_language ros/drivers/aav_navigation \
            ros/drivers/aav_actuator_tests ros/drivers/aav_drive_to_point ros/drivers/aav_routes ros/drivers/aav_rc \
            ros/bringup/aav_description ros/localization/aav_gps_heading \
+           ros/localization/aav_localization_health \
            ros/perception/aav_detector ros/sources/aav_camera_stream \
            ros/perception/aav_lane_finder ros/perception/aav_lane_geometry ros/perception/aav_lidar \
            ros/safety/aav_safety ros/safety/aav_ghost \
@@ -80,7 +81,7 @@ import sys
 tasks = dict(re.findall(r'^([\w-]+) = \{ cmd = "([^"]*)"', open('pixi.toml').read(), re.M))
 bad = [t for t in ('turtle', 'sim', 'bench', 'bench-check', 'view', 'laptop-bench',
                        'sim-check', 'sim-fault', 'carla-car', 'controller-compare',
-                       'timing-test', 'stream-check')
+                       'timing-test', 'stream-check', 'loc-accuracy', 'health-check')
        if not tasks.get(t, '').startswith('tools/ros.sh --local ')]
 sys.exit(f'these pixi tasks need "tools/ros.sh --local": {bad}' if bad else None)
 PY
