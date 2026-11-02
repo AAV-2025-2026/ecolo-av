@@ -62,6 +62,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Scripted drives (`aav_scripted`) | Repeatable speed-up, hold and slow-down runs, for tests and the first drives | Ben | 2026-10-09 | sim |
 | [Drive to point: GPS A to B](a-to-b.md) (`aav_drive_to_point`) | The Gate 4 goal: drive to a GPS point and stop within 1 m; in Gazebo it stopped within 0.4 m. Called `aav_goto` until 26 Oct: renamed so the name says the job (action `/drive_to_point`, slot `point`, `pixi run drive-to-point`) | Ben | 2026-10-15 | sim |
 | [Plain English](plain-english.md) (`aav_language`) | Say "drive 10 m forward": a local model plans it, and asks before the car moves | Ben | 2026-10-15 | sim |
+| [First moves on the Motor Pi alone](car-setup.md#the-first-moves-the-joystick) (`car.launch.py machine:=motor_pi_alone`) | Ben, 1 Nov: "We do still need a way to move the vehicle to get to our first test": the joystick drives through mux, ego and the output mux all on the Pi, so the heartbeat is made beside the ESP32 and a dead Pi or wire brakes the car, with no Orin needed | Ben | 2026-11-01 | built |
 | RC via ROS (`rc_driver`) and a three-position mode switch | A person on the RC transmitter outranks every program, but still passes through ROS's safety checks | Ben | 2026-10-24 | built |
 | [Preflight on stands](actuator-tests.md#the-preflight-on-stands) (`pixi run actuator-test preflight --stands`) | One run before the car goes on the ground: it speeds up, holds, slows, brakes and steers while every sensor is checked, and says PASS or FAIL per line. Refused on the real car until a rear-wheel speed exists (TODO 49b); `--no-drive` checks the sensors alone | Ben | 2026-10-29 | sim |
 
@@ -184,6 +185,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Bandwidth, CAN load and timing tests | Checks each network link has room, and finds late messages and stalls | Ben | 2026-10-23 | sim |
 | [Watch from a laptop](foxglove.md) (Foxglove and Lichtblick) | One bridge and four layouts to watch any profile from a laptop | Ben | 2026-10-24 | sim |
 | [Cockpit layout](foxglove.md#cockpit) and Gazebo's chase camera | Every driving detail on one screen, like Foxglove's nuScenes demo, so one window replaces Gazebo's, RViz and the HUD while we try the algorithms | Ben | 2026-11-01 | sim |
+| [Car setup](car-setup.md): a runbook and `tools/car_setup.sh <role>` | Ben, 1 Nov: "a car test that will allow people to do the test so I don't have to. Maybe even install everything like the update and upgrade": each computer backed up, upgraded, installed and started at boot by a student alone; a dry run unless the role is typed | Ben | 2026-11-01 | built |
 | [A-to-B scorer](a-to-b.md) (`pixi run measure atob`) | Numbers for how well the car sped up, held its speed and stopped on B, the same for Gazebo and car runs; a tape-measured stop splits the GPS error from the control error | Ben | 2026-10-26 | built |
 
 ## Infrastructure

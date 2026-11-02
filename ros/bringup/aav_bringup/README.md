@@ -50,6 +50,7 @@ detector's and camera streams' settings. Arguments win over the file (`gps:=fals
 |---|---|
 | `orin` | description, mux, ego, scripted, drive_to_point, sensors, lidar, camera_stream, stop_signs, localization, navigation, spine, foxglove |
 | `motor_pi` | `legacy_uart` only: the Pi wired to the ESP32's UART |
+| `motor_pi_alone` | the first moves: mux, ego, teleop and `legacy_uart`, all on the Motor Pi, so the heartbeat is made there. Never with `car orin` too (docs/car-setup.md) |
 | `laptop` | teleop and a detector |
 | `all` | everything on one computer |
 

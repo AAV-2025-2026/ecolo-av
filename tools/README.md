@@ -23,6 +23,7 @@ The Flutter HUD's scripts (`flutter.sh`, `get_flutter.sh`, `hud_test.sh`,
 
 Folders: [foxglove/](./foxglove/README.md) (the Foxglove/Lichtblick layouts),
 [screens/](./screens/README.md) (the car screens' systemd units),
+[systemd/](./systemd/README.md) (our stack at boot, per car computer),
 [udev/](./udev/README.md) (stable device names), `tests/` (the tools' own tests).
 
 ## Interface
@@ -59,6 +60,7 @@ so add `--local`: `pixi run tools/ros.sh --local python3 tools/<script>.py`.
 |---|---|---|
 | `car_kit.sh` | makes `car-kit/`: our Jazzy for the ARM computers, offline, on a stick | `car-kit` |
 | `car_install.sh` | installs from that kit on a car computer (`--dry-run`, `--screens`) | - (on the car) |
+| `car_setup.sh` | one car computer, by role: backup, upgrade, install, services at boot, check. A dry run unless `--apply` and the role typed (`docs/car-setup.md`) | - (on the car) |
 | `car_listen.sh` | read-only: which devices are here, could each driver open its own | - (on the car) |
 | `car_screen.sh` | starts the HUD or the map full screen on its monitor | (screens/ units) |
 | `car_screens_install.sh` | installs `screens/` into `~/.config` | - |
@@ -205,6 +207,7 @@ Each lands outside git, checksum pinned where the script says.
 | `esp32.sh flash`, `pico.sh <board> flash`, `legacy_firmware.sh -t upload` | write a board's flash (bench only) |
 | `legacy_firmware.sh` | with no `src/secrets.h`, copies `secrets.h.example` there (placeholders, untracked) |
 | `car_install.sh`, `car_screens_install.sh` | write `~/aav-jazzy`, `~/.config` on a car computer |
+| `car_setup.sh --apply` | sudo: apt upgrades, chrony, udev, netplan, linger; `~/aav-backup`, `~/.config` on a car computer |
 | `net_map.py`, `doctor.py`, surveys | ping, ssh, listen on the network; read only |
 | `progress_mail.py` | sends email over SMTP |
 

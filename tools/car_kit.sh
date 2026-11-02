@@ -15,7 +15,7 @@
 #   models/                         the YOLO model files in models/, if any
 #   maps/                           the map window's street map and place database, if
 #                                   downloaded (pixi run get street-map, get places)
-#   car_install.sh, README.md, KIT.txt, SHA256SUMS
+#   car_install.sh, car_setup.sh, README.md, KIT.txt, SHA256SUMS
 #
 # Downloads are cached in vendor/car-kit-cache, so a second run is quick.
 # Portable: bash 3.2, no GNU-only flags.
@@ -125,7 +125,8 @@ done
 
 step "The installer, the README, the checksums"
 cp tools/car_install.sh "$OUT/car_install.sh"
-chmod +x "$OUT/car_install.sh"
+cp tools/car_setup.sh "$OUT/car_setup.sh"   # the per-machine setup (docs/car-setup.md)
+chmod +x "$OUT/car_install.sh" "$OUT/car_setup.sh"
 cat > "$OUT/KIT.txt" <<EOF
 AAV car kit, made $(date '+%Y-%m-%d %H:%M') on $(uname -n)
 commit:     $(git log -1 --format='%h %s')
@@ -156,6 +157,9 @@ and the map then start at login, full screen, one on each (docs/car-screens.md).
 | works with no internet | start any driver by itself |
 
 Undo everything: `rm -rf ~/aav-jazzy`
+
+The whole setup of one computer (back up, upgrade, this install, start at boot):
+`bash car_setup.sh <role>` prints it; docs/car-setup.md is the runbook.
 
 KIT.txt says which commit this is. SHA256SUMS checks the copy (car_install.sh does it).
 EOF
