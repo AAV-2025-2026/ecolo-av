@@ -16,6 +16,8 @@
 parts:
   mux: true
   ego: true
+  stop_signs: true        # one watcher per car, next to the mux (test_car_launch.py): with no
+                          # camera here it sees nothing, and it never holds a person
   teleop: true            # the joystick's USB receiver is plugged into this Pi (21 Oct audit)
   legacy_uart: true       # the ESP32 on /dev/ttyAMA0 (H1)
   legacy_encoder: false   # see motor_pi.yaml
