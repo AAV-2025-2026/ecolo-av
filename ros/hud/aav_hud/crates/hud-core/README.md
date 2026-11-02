@@ -24,7 +24,7 @@ keeps. `map-core` shares its health, origin, watchdog and formatting code.
 | `state` | `HudState::new`, `apply(Update, now)`, `estop_pressed`, `take_new_picture` |
 | `format` | numbers as short text for the screen |
 | `screen` | which monitor a window opens on (`--monitor HDMI-1`) |
-| `theme` | every colour of the HUD and the map: `Theme`, `ThemeName` (`mocha`, `latte`, `calm`), `Rgba` with `contrast` (WCAG); Catppuccin's palettes (MIT) |
+| `theme` | every colour of the four screens (HUD, map, debug screen, hardware panel): `Theme`, `ThemeName` (`mocha`, `latte`, `calm`), `Rgba` with `contrast` (WCAG); Catppuccin's palettes (MIT) |
 
 ## Invariants
 

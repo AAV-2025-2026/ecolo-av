@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">52 min read · 7 sections</div></header>
+<div class="meta">53 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -1248,7 +1248,8 @@ a bug.</p>
 inside the test lot. On the car, the datum is the real test site.</p>
 </section>
 <section class="card"><h2 id="themes-the-screens-colours">Themes: the screens' colours</h2>
-<p>The HUD and the map window share one set of colours, a <strong>theme</strong> (1 Nov). Ben found the
+<p>All four screens share one set of colours, a <strong>theme</strong> (1 Nov): the HUD, the map
+window, the debug screen and the hardware panel. Ben found the
 old look "kind of ugly": too many bright primary colours. Now the colours are soft, and
 the panels are <strong>frosted glass</strong>.</p>
 <div class="table-wrap"><table>
@@ -1270,6 +1271,16 @@ the panels are <strong>frosted glass</strong>.</p>
 <td><img alt="Before" src="../img/map-before-theme.png" /></td>
 <td><img alt="Mocha" src="../img/map-streets-demo.png" /></td>
 </tr>
+<tr>
+<td>Debug screen</td>
+<td><img alt="Before" src="../img/debug-hud-before-theme.png" /></td>
+<td><img alt="Mocha" src="../img/debug-hud-seeing.png" /></td>
+</tr>
+<tr>
+<td>Hardware panel</td>
+<td><img alt="Before" src="../img/hw-panel-before-theme.png" /></td>
+<td><img alt="Mocha" src="../img/hw-panel-demo.png" /></td>
+</tr>
 </tbody>
 </table></div>
 <h3 id="the-themes">The themes</h3>
@@ -1290,7 +1301,7 @@ the panels are <strong>frosted glass</strong>.</p>
 <tr>
 <td><code>latte</code></td>
 <td>daytime: light</td>
-<td><img alt="Latte HUD" src="../img/hud-latte.png" /> <img alt="Latte map" src="../img/map-latte.png" /></td>
+<td><img alt="Latte HUD" src="../img/hud-latte.png" /> <img alt="Latte map" src="../img/map-latte.png" /> <img alt="Latte debug screen" src="../img/debug-hud-latte.png" /> <img alt="Latte hardware panel" src="../img/hw-panel-latte.png" /></td>
 </tr>
 <tr>
 <td><code>calm</code></td>
@@ -1312,7 +1323,7 @@ its official colour values.</p>
 <tbody>
 <tr>
 <td>The car (ROS)</td>
-<td><code>theme: latte</code> in <code>config/hud.yaml</code> or <code>config/map.yaml</code>, or <code>--ros-args -p theme:=latte</code></td>
+<td><code>theme: latte</code> in <code>config/hud.yaml</code>, <code>map.yaml</code>, <code>debug_hud.yaml</code> or <code>hw_panel.yaml</code> (each screen has its own), or <code>--ros-args -p theme:=latte</code></td>
 </tr>
 <tr>
 <td>A demo</td>
@@ -1386,6 +1397,14 @@ darkens them (the test caught it).</p>
 <td>Map</td>
 <td>the search box, results, keyboard, chips and scale bar show the map <strong>blurred</strong> behind them (<code>blur: true</code>)</td>
 </tr>
+<tr>
+<td>Debug screen</td>
+<td>the legends over the 3D view (where the car is, the keys)</td>
+</tr>
+<tr>
+<td>Hardware panel</td>
+<td>none: words sit straight on the window, so they read best</td>
+</tr>
 </tbody>
 </table></div>
 <p>How the blur works (<code>map-app/src/frost.rs</code>): once the map is drawn, the graphics card
@@ -1421,7 +1440,54 @@ shaders, the window says so and keeps see-through glass.</p>
 </table></div>
 <p>The blur costs little. Zoomed far out the street map itself is slow, blur or not (many
 tiles); the window asks for 30 fps.</p>
-<p>The debug screen and the hardware panel keep their own colours for now.</p>
+<h3 id="the-debug-screens-colours">The debug screen's colours</h3>
+<p>Each localizer keeps its colour in every theme, so a picture means the same by day and
+by night:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Colour</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>EKF local (the car)</td>
+<td>blue</td>
+</tr>
+<tr>
+<td>EKF global</td>
+<td>green</td>
+</tr>
+<tr>
+<td>Gazebo's truth</td>
+<td>white (dark grey in Latte)</td>
+</tr>
+<tr>
+<td>AMCL, its particles</td>
+<td>orange</td>
+</tr>
+<tr>
+<td>NDT, its map</td>
+<td>purple</td>
+</tr>
+<tr>
+<td>Nav2's plan</td>
+<td>yellow</td>
+</tr>
+<tr>
+<td>Nav2's cubes</td>
+<td>red wireframes</td>
+</tr>
+<tr>
+<td>The lidar's cubes</td>
+<td>Catppuccin teal, standing out more the higher they are</td>
+</tr>
+</tbody>
+</table></div>
+<p>Tests (<code>hud_core::theme</code>) check that these marks stand out on the 3D view, stay apart
+from each other and from the cubes (a colour distance, OKLab), and keep their hue.
+The pills (OK, STALE, WARN, LOST, E-STOP) are the same on both screens.</p>
 </section>
 <section class="card"><h2 id="the-debug-hud">The debug HUD</h2>
 <p><code>ros/hud/aav_hud</code>, binary <code>debug_hud</code>: what the car <strong>sees</strong> and what it <strong>thinks</strong>, in
@@ -1481,7 +1547,7 @@ drive</code>). No map -&gt; odom yet: only the map-frame cars are drawn.</p>
 </thead>
 <tbody>
 <tr>
-<td>Cubes (20 cm), coloured by height: dark ground, then teal to pale. <strong>Kept</strong> for 2 s and fading darker (key K: this scan's only)</td>
+<td>Cubes (20 cm), coloured by height: grey ground, then the theme's teal, standing out more the higher. <strong>Kept</strong> for 2 s and fading darker (key K: this scan's only)</td>
 <td><code>/sensors/lidar/points</code></td>
 <td>lidar_link -&gt; base_link -&gt; odom</td>
 </tr>

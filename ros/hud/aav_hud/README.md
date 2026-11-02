@@ -26,11 +26,13 @@ the name.
 A Cargo workspace that colcon builds through `CMakeLists.txt`. More in docs/hud.md and
 docs/car-screens.md.
 
-**Colours (1 Nov):** `hud` and `map` share one theme (`hud_core::theme`): `mocha` (dark,
-the default), `latte` (light, daytime) or `calm` (a placeholder copy of Mocha until Ben
-gives his colours). Mocha and Latte are [Catppuccin](https://catppuccin.com)'s palettes,
+**Colours (1 Nov):** all four screens share one theme (`hud_core::theme`), each chosen
+by `theme:` in its own yaml: `mocha` (dark, the default), `latte` (light, daytime) or
+`calm` (a placeholder copy of Mocha until Ben gives his colours). Mocha and Latte are [Catppuccin](https://catppuccin.com)'s palettes,
 MIT licence. Panels are frosted glass (`hud_app::paint`); the map blurs what's behind
-its boxes (`map-app/src/frost.rs`, `blur`). docs/hud.md, "Themes".
+its boxes (`map-app/src/frost.rs`, `blur`); the debug screen's legends are glass too.
+The localizers keep their colours in every theme (local blue, global green, AMCL orange,
+NDT purple). docs/hud.md, "Themes".
 
 ## Interface
 
@@ -103,8 +105,8 @@ Other parameters: `stale_after` (1.0 s), `plan_stale_after` (3.0 s; `plan_kept_f
 Other parameters: `odom_frame`, `base_frame`, `map_frame`; `stale_after` (1.0 s),
 `cube_size` (0.2 m), `max_cubes` (20,000), `pose_window` (1.0 s), `ground_height` (0.25 m),
 `keep_cubes_for` (2.0 s: key K's cubes fade over it), `ndt_map` (`maps/ndt/test_lot.pcd`,
-relative to where it starts; key M), `ndt_map_cell` (1.0 m), `voxels_cube_size` (0.25 m)
-and `health_stale_after` (3.0 s: the health checks come once a second).
+relative to where it starts; key M), `ndt_map_cell` (1.0 m), `voxels_cube_size` (0.25 m),
+`health_stale_after` (3.0 s: the health checks come once a second) and `theme` (`mocha`).
 
 ### Node `hw_panel` (topic names from `config/hw_panel.yaml`)
 
@@ -120,7 +122,7 @@ and `health_stale_after` (3.0 s: the health checks come once a second).
 | sub | `lidar_topic`, `radar_topic`: `/sensors/lidar/points`, `/sensors/radar/points`; `camera_topic`: `/sensors/camera/front_left/image_raw` (counted only: Hz; best effort, keep last 1) | sensor_msgs/PointCloud2, Image |
 
 Other parameters: `stale_after` (1.0 s), `speed_step` (0.1 m/s), `steer_step` (0.05 rad),
-`creep` (0.1 m/s, CENTRE), `sim_cap` (1.0 m/s), `stands_cap` (0.3 m/s).
+`creep` (0.1 m/s, CENTRE), `sim_cap` (1.0 m/s), `stands_cap` (0.3 m/s), `theme` (`mocha`).
 
 ### Launch and commands
 
