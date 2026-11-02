@@ -175,7 +175,7 @@ mod tests {
         let Form::Circle { radius, .. } = eye.form else {
             panic!("round");
         };
-        assert!((radius - 2.0 * 0.15 * CAR.width).abs() < 1e-9);
+        assert!((radius - 2.0 * 0.19 * CAR.width).abs() < 1e-9);
     }
 
     #[test]

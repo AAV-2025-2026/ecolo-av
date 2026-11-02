@@ -234,8 +234,8 @@ pub fn top_view(length: f64, width: f64, travelled: f64) -> TopView {
     middle.extend(block(neck_x, neck_y, [top, eye_z], Part::Neck, Part::Neck));
     // The eyes, at the front, looking forward: a shell, its glass, the light in it.
     let eye_x = 0.22 * length;
-    let eye_r = 0.15 * width;
-    let apart = 0.165 * width;
+    let eye_r = 0.19 * width;
+    let apart = 0.2 * width;
     middle.push(Piece::polygon(
         Part::Neck,
         vec![
