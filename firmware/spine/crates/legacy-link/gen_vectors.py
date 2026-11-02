@@ -505,12 +505,13 @@ def rust_v3_tests(v3):
                 f"    assert_eq!(frame.counter, {c['counter']});",
                 f"    assert_eq!(frame.flags, Flags {{ armed: {rust_bool(c['armed'])}, "
                 f"estop: {rust_bool(c['estop'])} }});",
-                f"    assert_eq!(frame.calibration, "
+                '    assert_eq!(frame.calibration, '
                 f"{rust_cal_request(c['cal_mode'], c['jog_target'])});",
                 '    assert_eq!(frame.encode(), bytes);',
                 '    assert_eq!(',
                 '        frame.values.check().expect("in range").targets(),',
-                f"        Targets {{ steering: {c['cpp']['steering']}, brake: {c['cpp']['brake']}, "
+                f"        Targets {{ steering: {c['cpp']['steering']}, "
+                f"brake: {c['cpp']['brake']}, "
                 f"throttle: {rust_throttle(c['cpp']['throttle'])} }}",
                 '    );', '}', '']
     out += ['#[test]', 'fn v3_a_stream_of_both_versions_with_noise() {',

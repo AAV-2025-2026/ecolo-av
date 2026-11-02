@@ -24,7 +24,7 @@ firmware checks the same again, and more (legacy-link's SteerCal).
 
   | Refused when | Why |
   |---|---|
-  | `steering_calibration` is off (the default) | stands or bench only, and only with the hardware lead |
+  | `steering_calibration` is none (the default) | stands or bench, with the hardware lead |
   | the frame version isn't 3 | only the Rust firmware knows the mode |
   | no fresh uplink frame | the counts come back on it: nothing to calibrate with |
   | the e-stop is on | it stops everything |
@@ -52,7 +52,7 @@ VERSIONS = (1, 2, 3)
 WITH_TIMEOUT = (2, 3)
 # Where the steering calibration may run: never (the default), or with the hardware
 # lead's say-so on the stands (wheels off the ground) or the bench (the ESP32 on a desk).
-CAL_WHERE = ('off', 'stands', 'bench')
+CAL_WHERE = ('none', 'stands', 'bench')   # 'none', not 'off': YAML reads off as false
 CAL_REQUEST_TIMEOUT = 0.5   # s: the panel asks again at 10 Hz while its person holds
 STANDSTILL = 0.05           # m/s: a faster wheel speed is a moving car
 
@@ -76,11 +76,11 @@ class Relay:
 
     def __init__(self, mapping: LegacyMapping, cmd_timeout: float, version: int = 2,
                  speed_loop: Optional[SpeedControl] = None, odom_timeout: float = 0.3,
-                 calibration: str = 'off'):
+                 calibration: str = 'none'):
         if version not in VERSIONS:
             raise ValueError(f'frame_version {version}: use 1 (the C++ firmware), 2 or 3')
         if calibration not in CAL_WHERE:
-            raise ValueError(f'steering_calibration {calibration!r}: use off, stands or bench')
+            raise ValueError(f'steering_calibration {calibration!r}: use none, stands or bench')
         self.cal_where = calibration
         self.cal_request: Optional[Tuple[int, int, float]] = None   # (mode, target, time)
         self.uplink_at: Optional[float] = None
@@ -137,8 +137,8 @@ class Relay:
 
     def cal_refusal(self, now: float) -> Optional[str]:
         """Return why the panel's calibration request isn't passed on now, or None."""
-        if self.cal_where == 'off':
-            return ('steering_calibration is off: stands or bench only, set by the '
+        if self.cal_where == 'none':
+            return ('steering_calibration is none: stands or bench only, set by the '
                     'hardware lead')
         if self.version != 3:
             return f'frame_version {self.version}: the calibration needs 3 (the Rust firmware)'

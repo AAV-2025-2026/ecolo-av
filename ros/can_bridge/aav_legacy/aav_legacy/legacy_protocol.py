@@ -285,8 +285,8 @@ CAL_STATES = {
     CAL_OFF: 'OFF', CAL_LIMP: 'LIMP', CAL_JOG: 'JOG', CAL_HOLD: 'HOLD',
     CAL_RETURN: 'RETURN', CAL_REFUSED_MOVING: 'REFUSED - the speed command is not zero',
     CAL_REFUSED_NOT_BRAKED: 'REFUSED - not braked, or the throttle is on',
-    CAL_REFUSED_NO_FEEDBACK: "REFUSED - no position from the steering actuator "
-                             "(its Jrk's feedback must be analog)",
+    CAL_REFUSED_NO_FEEDBACK: 'REFUSED - no position from the steering actuator '
+                             '(the feedback of its Jrk must be analog)',
     CAL_REFUSED_ESTOP: 'REFUSED - e-stop', CAL_REFUSED_OTHER_DRIVER:
         'REFUSED - the RC (direct) or a test drives',
 }

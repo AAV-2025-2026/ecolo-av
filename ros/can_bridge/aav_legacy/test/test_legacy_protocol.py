@@ -2,12 +2,12 @@ import importlib.util
 import json
 from pathlib import Path
 
+from aav_legacy import legacy_protocol as lp
 from aav_legacy.legacy_protocol import (
     crc8, encoder_counts, EncoderSpeed, FRAME_V2_LEN, FrameV2, LegacyMapping, metres_per_count,
     MODE_COMPUTER, MODE_STOPPED, pack_frame, pack_frame_v2, pack_uplink, stop_command,
     SWITCH_NONE, SWITCH_RC_VIA_ROS, to_legacy, unpack_frame, unpack_frame_v2, unpack_uplink,
     Uplink, UPLINK_LEN, UPLINK_V2_LEN, UplinkParser)
-from aav_legacy import legacy_protocol as lp
 import pytest
 
 ROOT = Path(__file__).resolve().parents[4]

@@ -136,7 +136,7 @@ def test_disarming_resets_the_speed_loop():
 # --- Version 3: the steering actuator's calibration (1 Nov) ---
 
 def calibrating(where='stands', now=10.0):
-    """A version 3 relay with the uplink fresh and the panel asking for limp at `now`."""
+    """Return a version 3 relay, the uplink fresh, the panel asking for limp at `now`."""
     r = Relay(M, cmd_timeout=0.3, version=3, calibration=where)
     r.heartbeat(9)
     r.uplink_seen(now)
@@ -157,7 +157,7 @@ def test_calibration_frames_stand_the_car_still():
 
 
 def test_calibration_is_off_unless_the_hardware_lead_set_where():
-    r = calibrating(where='off')
+    r = calibrating(where='none')
     assert unpack_frame_v3(r.frame(now=10.0)).cal_mode == CAL_MODE_OFF
     assert 'hardware lead' in r.cal_refusal(10.0)
     with pytest.raises(ValueError):
