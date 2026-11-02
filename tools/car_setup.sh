@@ -22,9 +22,16 @@
 #                      motor_pi_alone for the first moves)
 #   --address A/NN     `services`: a fixed address beside DHCP's (such as 192.168.1.120/24)
 #   --interface NAME   the car's network card (default: the one on 192.168.1.x)
+#   --host-ok          this hostname isn't the one the audit found for the role, and you
+#                      checked it's the right computer (a new SD card, a reflash)
+#   --after-esp32      `upgrade` on the motor_pi: the Rust ESP32 is flashed and car-day
+#                      session 6 passed, so the 2025-26 C++ path may end (Day B)
 #
+# STOP lines: a pending reboot; a hostname that isn't the role's (unless --host-ok);
+# `upgrade` on the localization Pi (no machine file for its IMU and GPS yet) or on the
+# motor_pi without --after-esp32. With --apply a STOP before the steps changes nothing.
 # `check` only reads, so it runs in a dry run too. It never sends email, never copies a
-# password: logins stay in the Keychain of Ben's Mac.
+# password: logins live in the team's password vault (car-day.md, "Logins").
 # Portable: bash 3.2, no GNU-only flags (its dry run also runs on a Mac).
 set -euo pipefail
 
@@ -32,16 +39,19 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 ROLES="orin motor_pi localization dash camera_pi lab_desktop"
 STEPS="backup upgrade install services check"
 OS_RELEASE=${AAV_OS_RELEASE:-/etc/os-release}
+REBOOT_FLAG=${AAV_REBOOT_FLAG:-/var/run/reboot-required}   # the tests point it elsewhere
 TODAY=$(date +%Y-%m-%d)
 NEED_UPGRADE_GB=5
 
-usage() { sed -n '2,29p' "$0"; }
+usage() { sed -n '2,37p' "$0"; }
 
-role="" steps="" apply=0 release=0 kit="$HOME/car-kit" machine="" address="" iface=""
+role="" steps="" apply=0 release=0 host_ok=0 after_esp32=0 kit="$HOME/car-kit" machine="" address="" iface=""
 while (($#)); do
   case "$1" in
     --apply) apply=1 ;;
     --release-upgrade) release=1 ;;
+    --host-ok) host_ok=1 ;;
+    --after-esp32) after_esp32=1 ;;
     --kit) kit=${2:?--kit needs a folder}; shift ;;
     --machine) machine=${2:?--machine needs a name}; shift ;;
     --address) address=${2:?--address needs A/NN}; shift ;;
@@ -95,7 +105,7 @@ expected_host() {
 }
 
 # What this computer is.
-host=$(hostname 2>/dev/null || echo unknown)
+host=${AAV_HOSTNAME:-$(hostname 2>/dev/null || echo unknown)}   # the tests set it
 kernel=$(uname -s) arch=$(uname -m)
 os_id="" os_version="" os_name="unknown"
 if [[ -r "$OS_RELEASE" ]]; then
@@ -168,22 +178,42 @@ ubuntu_role() { case "$1" in orin|motor_pi|localization|dash|lab_desktop) return
 ros_role() { case "$1" in orin|motor_pi|localization|dash) return 0 ;; esac; return 1; }
 
 printf 'car_setup.sh: %s on %s (%s, %s)\n' "$role" "$host" "$os_name" "$arch"
-want=$(expected_host "$role")
-if [[ -n "$want" ]]; then
-  case " $want " in
-    *" $host "*) ;;
-    *) printf 'NOTE: the audit found the %s as "%s"; this is "%s". The right computer?\n' \
-         "$role" "$want" "$host" ;;
-  esac
-fi
 if [[ $apply == 0 ]]; then
   printf 'Dry run: nothing changes. Add --apply to do it.\n'
+fi
+
+# Before any step: the right computer, and no reboot waiting.
+step "before: the right computer, no reboot waiting"
+want=$(expected_host "$role")
+if [[ -z "$want" ]]; then
+  note "hostname" "$host (no hostname on record for the $role)"
+else
+  case " $want " in
+    *" $host "*) ok "hostname" "$host, as the audit found the $role" ;;
+    *)
+      if [[ $host_ok == 1 ]]; then
+        note "hostname" "$host, not \"$want\": you said it's right (--host-ok)"
+      elif [[ "$kernel" != Linux ]]; then
+        note "hostname" "$host, not \"$want\": fine for a rehearsal on $kernel"
+      else
+        bad "hostname" "$host, not \"$want\" (the audit's $role). The wrong computer? Check its address and hosts.txt; if it's right (a new card, a reflash), add --host-ok"
+      fi ;;
+  esac
+fi
+if [[ -f "$REBOOT_FLAG" ]]; then
+  bad "reboot" "a reboot is waiting: sudo reboot, log in again, then run this again"
+else
+  ok "reboot" "none waiting"
 fi
 
 # Real steps: only on the car's Linux, as a normal user, after typing the role.
 needs_apply=0
 for s in $steps; do [[ "$s" != check ]] && needs_apply=1; done
 if [[ $apply == 1 && $needs_apply == 1 ]]; then
+  if (( problems > 0 )); then
+    echo "Refused: $problems STOP line(s) above. Nothing changed." >&2
+    exit 1
+  fi
   if [[ "$kernel" != Linux ]]; then
     echo "Refused: this is $kernel. --apply runs on the car's Linux computers only." >&2
     exit 1
@@ -223,11 +253,27 @@ do_backup() {
   echo "    rsync -a --exclude .cache --exclude aav-jazzy <user>@<address>:/home/<user>/ ~/aav-backup/$host-$TODAY/home/"
 }
 
+# The machine file our stack would start on this role, in the repo or the installed copy.
+machine_file() {
+  local r
+  r=$(repo)
+  [[ -n "$r" && -f "$r/ros/bringup/aav_bringup/config/machines/$1.yaml" ]]
+}
+
 do_upgrade() {
   step "upgrade: this release's updates (docs/car-setup.md, step 2)"
+  # Day B only, and not these two until their way forward exists (car-day.md, Day B).
+  if [[ "$role" == localization ]] && ! machine_file localization; then
+    bad "upgrade" "refused: its IMU and GPS drivers run on the 2025-26 Humble, which 24.04 ends, and no machine file of ours (machines/localization.yaml) runs them yet. Upgrading now loses the car's IMU and GPS"
+    return
+  fi
+  if [[ "$role" == motor_pi && $after_esp32 == 0 ]]; then
+    bad "upgrade" "refused: the 2025-26 aav_serial_bridge (Humble) is the way back to the C++ ESP32, and 24.04 ends it. Only once the Rust ESP32 is flashed and car-day session 6 passed: add --after-esp32"
+    return
+  fi
   act sudo apt-get update
   act sudo apt-get full-upgrade
-  act_sh "if [ -f /var/run/reboot-required ]; then echo '  REBOOT NOW: sudo reboot, then run this step again'; fi"
+  act_sh "if [ -f $REBOOT_FLAG ]; then echo '  REBOOT NOW: sudo reboot, then run this step again'; fi"
 
   step "upgrade: the next release"
   if [[ "$role" == orin || $jetson == 1 ]]; then
@@ -429,7 +475,6 @@ do_check() {
     *) note "release" "${os_name}" ;;
   esac
   if [[ $jetson == 1 ]]; then note "JetPack" "$(head -1 /etc/nv_tegra_release)"; fi
-  if [[ -f /var/run/reboot-required ]]; then note "reboot" "needed: sudo reboot"; fi
   local free_kb
   free_kb=$(df -Pk "$HOME" | awk 'NR == 2 {print $4}')
   note "disk" "$((free_kb / 1024 / 1024)) GB free in $HOME"
@@ -446,12 +491,26 @@ do_check() {
     if [[ -f "$HOME/.config/aav/cyclonedds.xml" ]]; then ok "Cyclone" "~/.config/aav/cyclonedds.xml"; else note "Cyclone" "no ~/.config/aav/cyclonedds.xml"; fi
     if id -nG 2>/dev/null | tr ' ' '\n' | grep -qx dialout; then ok "groups" "$(id -nG)"; else note "groups" "not in dialout (the services step, then a reboot)"; fi
   fi
+  # After the upgrade (Ubuntu 24.04), the devices must come back: a STOP if not.
+  local upgraded=0
+  [[ "$kernel" == Linux && "$os_id" == ubuntu && "$os_version" == 24.04 ]] && upgraded=1
   if [[ "$role" != dash ]] && ros_role "$role"; then
-    if [[ -f /etc/udev/rules.d/99-aav.rules ]]; then ok "udev" "$(ls /dev/aav 2>/dev/null | tr '\n' ' ')"; else note "udev" "no 99-aav.rules (the services step)"; fi
+    local names
+    names=$(ls /dev/aav 2>/dev/null | tr '\n' ' ' || true)
+    if [[ ! -f /etc/udev/rules.d/99-aav.rules ]]; then
+      note "udev" "no 99-aav.rules (the services step)"
+    elif [[ -n "$names" ]]; then
+      ok "udev" "/dev/aav: $names"
+    elif [[ $upgraded == 1 && ( "$role" == orin || "$role" == localization ) ]]; then
+      bad "udev" "nothing in /dev/aav after the upgrade: the sensors' cables, then sudo udevadm trigger"
+    else
+      note "udev" "nothing in /dev/aav yet"
+    fi
   fi
   if [[ "$role" == motor_pi ]]; then
     if [[ -e /dev/ttyAMA0 ]]; then ok "UART" "/dev/ttyAMA0"
     elif [[ "$kernel" != Linux ]]; then note "UART" "no /dev/ttyAMA0 (not Linux)"
+    elif [[ $upgraded == 1 ]]; then bad "UART" "no /dev/ttyAMA0 after the upgrade: enable_uart=1 in /boot/firmware/config.txt, then reboot (H1)"
     else bad "UART" "no /dev/ttyAMA0: enable_uart=1 in /boot/firmware/config.txt (H1)"; fi
     if command -v systemctl >/dev/null && systemctl is-active aav_serial_bridge >/dev/null 2>&1; then
       note "2025-26" "aav_serial_bridge is running: theirs holds the ESP32's port"
@@ -480,6 +539,10 @@ for s in $steps; do
     services) do_services ;;
     check) do_check ;;
   esac
+  if [[ $apply == 1 && $problems -gt 0 && "$s" != check ]]; then
+    printf '\nStopped after %s: %d STOP line(s). The steps after it were not done.\n' "$s" "$problems" >&2
+    exit 1
+  fi
 done
 
 echo
