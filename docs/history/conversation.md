@@ -214,6 +214,21 @@ Yes. The Ubuntu-version rule only applies to the official binary packages.
 
 > **Revised:** "one forum user had display problems" became several user reports once checked.
 
+### Can Ubuntu go from 22.04 to 24.04 with an upgrade, or do we flash? (1 Nov)
+
+Ben, 1 Nov: "ubuntu 24 whatever on all of them and updated ... we aren't flashing any of
+them. just upgrading ... some are running pi os or whatever we will have to switch them."
+
+| Computer | Upgrade in place? | How |
+|---|---|---|
+| The Ubuntu 22.04 Pis (Motor Pi, LOCALIZATION, the dash) | **Yes** | `apt full-upgrade`, reboot, then `sudo do-release-upgrade`. Over ssh it opens a spare ssh on port 1022 |
+| The camera Pis (Pi OS, Debian 13) | **No**: Pi OS can't become Ubuntu in place | a new SD card. They stay on Pi OS (no ROS there; the Pi camera works best on it): updates only |
+| The Orin (JetPack 6) | **No**: JetPack 7.2 is a reflash, never `do-release-upgrade` | SDK Manager on the lab's x86 desktop, after the full image and the hardware lead's OK; check NVIDIA's 7.2 notes list the AGX Orin first |
+
+- Back up first anyway: the upgrade ends Humble on that computer (it is built for 22.04).
+- One script does each computer, a dry run unless told: `tools/car_setup.sh <role>`;
+  the runbook is [Car setup](../car-setup.md).
+
 ### What is Pixi?
 
 - **What it is:** a per-project package manager, written in Rust, that works like Cargo:
@@ -1424,6 +1439,7 @@ Ben: "All the perception stack maybe, what part does what. When sitting at the c
 
 ## Open threads
 
+- **Car setup (1 Nov):** the runbook and `car_setup.sh` are written and tested in dry run; their first real run is on the car. Open: the joystick turned off with its receiver in, a firmware cap for the first moves (TODO 74); which computer is the Motor Pi (H1); a machine file for the localization Pi.
 - **Car day (1 Nov):** roll the car to measure the wheel diameter; check the front and rear track; then the lattice forward only (TODO 60-62).
 - **D3, the muxes (23 Oct):** built and tested in every profile; for the team: agree
   "check, not copy", and whether a bench with a real spine board and pretend sensors needs
