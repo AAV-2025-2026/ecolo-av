@@ -1,44 +1,19 @@
-# Car setup: every computer, one by one
+# Car setup: one computer
 
 Written 1 November 2026, for a student on their own. Ben, 1 Nov: "we are going to login
-to each node, upgrade the os, and install our code. Make sure we setup the boot process
-... ubuntu 24 whatever on all of them and updated." This page is that day, in order.
+to each node, upgrade the os, and install our code. Make sure we setup the boot process".
+This page sets up **one computer**. **Which one, and when:** [Car day](car-day.md) owns the
+order; the upgrades are its [Day B](car-day.md#day-b-upgrades-and-the-reflash).
 
 > **The short version**
-> - **Back up each computer first.** Then upgrade it, install our code, start it at boot.
-> - **One script does each computer:** `bash car_setup.sh <role>`. With no `--apply` it only prints what it would do.
-> - **Order:** the Pis, then the Orin (a reflash), then the ESP32, then the first moves with the joystick, then the lab desktop.
-> - **Wheels off the ground** until [car day](car-day.md)'s session 9 passes.
-> - **Logins** are in the Keychain of Ben's Mac. Type them; never paste them into a file, a chat or the repo.
+> - **One script per computer:** `bash car_setup.sh <role>`. With no `--apply` it only prints what it would do.
+> - **Back up first** ([car day A2](car-day.md#a2-back-up-every-machine)). Upgrades are Day B, after a restore is proven.
+> - **The script stops** on a pending reboot, a hostname that isn't the role's, and an upgrade that's too early (below).
+> - The computers, their roles and addresses: [the machines table](car-day.md#the-machines).
+> - **Logins** come from the team's password vault ([Logins](car-day.md#logins)). Type them; never paste them into a file, a chat or the repo.
 > - Changes to the hardware (the ESP32, the Orin's reflash) wait for **the hardware lead's OK**.
 
-## The order
-
-```text
- 1 back up ──► 2 Ubuntu Pis: upgrade ──► 4 install ──► 5 start at boot ──┐
-   (all)       3 Pi OS Pis: keep, or                                     │
-                 a new SD card                                           ▼
- 6 the Orin: JetPack 7.2 (reflash) ──► 4, 5 again on it ──► 7 the ESP32 ──► 8 first moves
- 9 the lab desktop: upgrade, CARLA (any time)
-```
-
-The internet is there all day: `apt` and GitHub work. Only the ESP32's flash (step 7)
-goes over a USB cable from the laptop.
-
-## The computers and their roles
-
-From the [21 Oct audit](history/audit-2026-10-21-car.md). Addresses are `192.168.1.x`.
-Usernames: `~/aav-audit/hosts.txt` on Ben's Mac.
-
-| Role (for the script) | Computer | Address | Today | Should be | How |
-|---|---|---|---|---|---|
-| `orin` | JETSON, AGX Orin | .140 | Ubuntu 22.04, JetPack 6 (R36.4.7) | JetPack 7.2 (Ubuntu 24.04) | a reflash (step 6) |
-| `motor_pi` | CORTEX, Pi 4 (the Motor Pi? H1) | .120 | Ubuntu 22.04 | Ubuntu 24.04 | `do-release-upgrade` (step 2) |
-| `localization` | LOCALIZATION, Pi 4 | .113 | Ubuntu 22.04 | Ubuntu 24.04 | `do-release-upgrade` |
-| `dash` | aav-desktop, Pi 4, the two screens | .196 | Ubuntu 22.04 Desktop | Ubuntu 24.04 Desktop | `do-release-upgrade`; 4 GB of memory or more |
-| `camera_pi` | CAM1-PI, CAM2-PI, Pi 5 | .108 (or .102), .118 | Pi OS (Debian 13) | **Pi OS, updated** | `apt full-upgrade` only (step 3) |
-| `lab_desktop` | the lab's x86 desktop, NVIDIA | ☐ | Ubuntu, CARLA | updated | step 9 |
-| none | `.211`, a Pi | .211 | Ubuntu 22.04 | ask the team first | its job is unknown |
+The internet is there: `apt` and GitHub work.
 
 ## Running the script
 
@@ -63,43 +38,38 @@ bash car_setup.sh motor_pi backup --apply          # really: it asks you to type
 With no step named, it does all five, in that order. The units it installs:
 [tools/systemd](../tools/systemd/README.md).
 
+### When it stops
+
+A STOP line ends the run before anything changes (with `--apply`, before the next step).
+
+| STOP | Why | What to do |
+|---|---|---|
+| `reboot` | a reboot is waiting: an upgrade on top of it can break the boot | `sudo reboot`, log in, run it again |
+| `hostname` | this isn't the hostname the audit found for the role: maybe the wrong computer | check the address and the vault's entry. Right after all (a new card, a reflash)? add `--host-ok` |
+| `upgrade` on `localization` | its IMU and GPS drivers run on Humble, which 24.04 ends; no machine file of ours runs them yet | wait for `machines/localization.yaml` (TODO 75) |
+| `upgrade` on `motor_pi` | the 2025-26 `aav_serial_bridge` (Humble) is the way back to the C++ ESP32 | only after the Rust ESP32 passed car day's session 6: add `--after-esp32` |
+| `UART`, `udev` (in `check`, after an upgrade) | the ESP32's serial port, or the sensors' `/dev/aav` names, didn't come back | `enable_uart=1` in `/boot/firmware/config.txt` and reboot; the cables, then `sudo udevadm trigger` |
+
+On a Mac (a rehearsal) the hostname is only a NOTE.
+
 ## Step 1: back up
 
-Before anything changes. The backups hold passwords (WiFi, keys): only on the
-**encrypted** backup drive, never in git.
+Before anything changes, on the **encrypted** backup drive (the backups hold passwords),
+never in git. The whole list, with the checks, is car day's
+[A2](car-day.md#a2-back-up-every-machine): every Pi's SD card as an image (checked with
+`gunzip -t`), the Orin's home and `/etc`, the ESP32, the actuators' settings.
 
-### A Pi's SD card, from a Mac
-
-The whole card, so undo is a card swap. Shut the Pi down (`sudo poweroff`), take its card
-out, put it in the Mac's reader.
-
-```bash
-diskutil list                                   # find the card: "external, physical", its size
-diskutil unmountDisk /dev/disk4                 # disk4: the number diskutil showed
-sudo dd if=/dev/rdisk4 of=$HOME/aav-backup/cortex-$(date +%F).img bs=1m   # Ctrl-T: progress
-gzip $HOME/aav-backup/cortex-$(date +%F).img
-diskutil eject /dev/disk4
-```
-
-- Check the disk number twice: `dd` reads the card here, so a wrong number only wastes time.
-- To put it back: Raspberry Pi Imager → Choose OS → **Use custom** → the `.img.gz`.
-
-### An Ubuntu computer, while it runs
+On the computer itself, a second copy of what only it has:
 
 | # | Where | Do |
 |---|---|---|
 | 1 | the computer | `bash car_setup.sh <role> backup --apply` |
-| 2 | the laptop | the `rsync` line it prints: the home folder, to `~/aav-backup/` |
-
-### The Orin
-
-Its home and `/etc`: car day's [session 4a](car-day.md#4a-look-then-back-up). Its full
-disk image, before the reflash: [session 11b](car-day.md#11b-in-the-lab-the-orins-full-image),
-on the lab desktop.
+| 2 | the laptop | the `rsync` line it prints: the home folder, to the backup drive |
 
 ## Step 2: the Ubuntu 22.04 Pis, to 24.04
 
-`motor_pi`, `localization`, `dash`. An upgrade in place: no new card.
+`dash`; `motor_pi` with `--after-esp32`; `localization` once its machine file exists.
+An upgrade in place: no new card. Car day's [Day B](car-day.md#day-b-upgrades-and-the-reflash) says when.
 
 | # | Do | You should see | If not |
 |---|---|---|---|
@@ -107,7 +77,7 @@ on the lab desktop.
 | 2 | `sudo reboot`, log in again, `tmux new -s setup` | | |
 | 3 | `bash car_setup.sh <role> upgrade --apply --release-upgrade` | it asks questions: keep the **installed** version of each config file | it refuses: fewer than 5 GB free, or a reboot is pending |
 | 4 | Over ssh it says it opens a **spare ssh on port 1022**: say yes | | the ssh drops: `ssh -p 1022 <user>@<address>` |
-| 5 | At the end, reboot | `lsb_release -d`: Ubuntu 24.04 | the SD card backup (step 1) |
+| 5 | At the end, reboot | `lsb_release -d`: Ubuntu 24.04 | the SD card image (car day A2) |
 | 6 | `bash car_setup.sh <role> check` | `Ubuntu 24.04` | |
 
 !!! warning "This ends the 2025-26 software on that Pi"
@@ -137,7 +107,7 @@ A new card instead, for any Pi: keep the old card, labelled. Undo is a card swap
 | 3 | the computer | `~/aav-jazzy/aav.sh tools/car_listen.sh`: the devices (read-only) |
 
 The kit's details: [From a USB stick](car-install.md). The camera Pis get only our
-`mediamtx.yml` ([session 5](car-day.md#session-5-the-camera-pi)).
+`mediamtx.yml` (car day's [session 5](car-day.md#session-5-the-camera-pi)).
 
 ## Step 5: start at boot
 
@@ -167,79 +137,37 @@ The kit's details: [From a USB stick](car-install.md). The camera Pis get only o
     `sudo systemctl disable --now aav_serial_bridge`.
 
 The `localization` Pi gets no ROS service yet: no machine file has its IMU and GPS
-(`orin.yaml` assumes they're on the Orin: a TODO for the hardware lead's answer).
+(`orin.yaml` assumes they're on the Orin: a TODO for the hardware lead's answer). For the
+same reason `upgrade` refuses there.
+
+**The first moves** (`machine:=motor_pi_alone`, the joystick on the Motor Pi): car day's
+[A9b](car-day.md#a9b-the-joystick-on-stands).
 
 ## Step 6: the Orin, to JetPack 7.2
 
 A **reflash**, not an upgrade: `do-release-upgrade` must never run on a Jetson (the
-script refuses). Everything on the Orin is wiped. **After the hardware lead's OK.**
+script refuses). Everything on the Orin is wiped. **Day B, after the hardware lead's OK**
+([B3](car-day.md#b3-the-orin-its-image-then-the-reflash)).
 
 | ☐ | Check first |
 |---|---|
 | ☐ | NVIDIA's JetPack 7.2 release notes list **Jetson AGX Orin**, and its memory size (W7: 32 or 64 GB). Write what they say here: ________ |
 | ☐ | SDK Manager's page: which Ubuntu the **host** needs for 7.2. The lab desktop has it? |
 | ☐ | The module's part number ([Platforms](platforms.md#moving-the-orin-to-jetpack-72): -502 has a reported flashing problem) |
-| ☐ | Home and `/etc` copied (session 4a); the full image taken (session 11b) |
+| ☐ | Home and `/etc` copied ([A2](car-day.md#a2-back-up-every-machine)); the full image taken ([11b](car-day.md#11b-in-the-lab-the-orins-full-image)) |
 
 | # | Do | You should see |
 |---|---|---|
 | 1 | The Orin beside the lab desktop, a USB-C data cable to its flashing port, the Orin in **recovery mode** | `lsusb` on the desktop: NVIDIA (`0955:`) |
 | 2 | SDK Manager on the desktop: Jetson AGX Orin, JetPack 7.2; flash and install the SDK components | 30-90 min; the Orin boots its first-start setup |
 | 3 | Make the user (as in `hosts.txt`), on the car's network | `ssh` works |
-| 4 | `bash car_setup.sh orin upgrade --apply`, then `install --apply`, `services --apply` | as steps 4-5 |
+| 4 | `bash car_setup.sh orin upgrade --apply`, then `install --apply`, `services --apply` (a new hostname: `--host-ok`) | as steps 4-5 |
 | 5 | The TensorRT engine again: [session 4d](car-day.md#4d-rf-detrs-tensorrt-engine) | an engine is tied to its TensorRT version |
 
-## Step 7: the ESP32
+## Step 7: the lab desktop
 
-**After the hardware lead's OK, with Ben on a call.** Car day's
-[session 6](car-day.md#session-6-the-esp32): back up the board, flash the Rust
-(`spine-esp32-umod-v2.elf`), set `frame_version: 2`, then the checks on stands. The
-bench page: [First flash on the bench](esp32-bench.md).
-
-## Step 8: the first moves, the joystick
-
-Ben, 1 Nov: "We do still need a way to move the vehicle to get to our first test. Should
-we allow the joystick to have direct control like before? ... if the connection drops we
-stop?"
-
-**Yes, but through our stack, all on the Motor Pi** (`machine:=motor_pi_alone`). The
-heartbeat is then made on the same Pi as the bridge, so the ESP32 stops the car when the
-Pi, the bridge or the wire stops. No Orin is needed.
-
-```text
-joystick (USB, on the Pi) ─► teleop ─► twist_mux ─► ego ─► output mux ─► legacy bridge ─► ESP32
-   hold-to-drive              0.5 s     0.3 s       the heartbeat         0.3 s          brakes 100 ms
-                              timeout   timeout     counter               stale→brake    after it stops
-```
-
-| # | Do |
-|---|---|
-| 1 | Stands, the e-stop in a hand ([session 1](car-day.md#session-1-safety-first)). The Rust on the ESP32 (step 7), `frame_version: 2` |
-| 2 | Theirs off: `aav_serial_bridge` inactive. The Orin **not** running `car orin` (two muxes would both drive) |
-| 3 | On the Motor Pi: `~/aav-jazzy/aav.sh ros2 launch aav_bringup car.launch.py machine:=motor_pi_alone max_speed:=0.3`. Or at boot: `AAV_MACHINE=motor_pi_alone` in `~/.config/aav/car.env` |
-| 4 | Check the buttons and sticks first: `~/aav-jazzy/aav.sh ros2 topic echo /drivers/joy/joy` (deadman: button 0; e-stop: button 2) |
-| 5 | Session 9's tests 3.1-3.9 with the joystick. Then **turn the joystick off while holding the trigger** (the gap below) |
-| 6 | Only then on the ground, at walking pace, with a safety driver |
-
-### What keeps it safe
-
-| Rule | With the Rust ESP32 | With the 2025-26 C++ |
-|---|---|---|
-| Hold-to-drive: let go of the trigger, it stops | ✅ teleop_twist_joy, one zero on release | ✅ |
-| The joystick's USB receiver unplugged | ✅ no commands: twist_mux 0.5 s, ego 0.3 s, the bridge brakes | ✅ |
-| **The joystick turned off or out of range, its receiver still in** | ❓ `joy_node` repeats the last state 20 times a second. If the receiver keeps its last report, the car keeps going. **Untested** (TODO 74) | ❓ |
-| The Pi, the bridge or the serial wire stops | ✅ brakes 100 ms after the heartbeat stops (QEMU: 111-120 ms) | ❌ the last throttle stays: only the e-stop |
-| The network drops | ✅ nothing on the network: all on the Pi | ✅ |
-| A speed cap | ✅ ego's `max_speed:=0.3`, on the Pi | ✅ the same |
-| A cap in the firmware | ⚠️ only the throttle's top (DAC 700 of 1023): no speed cap, the ESP32 has no wheel speed (TODO 74) | ⚠️ the same |
-| The joystick's e-stop button | ✅ `/safety/estop`: the bridge brakes | ✅ |
-| The RC transmitter turned off | ✅ brakes within 0.1 s | ❌ no RC timeout |
-| The red button, the Kar-Tech e-stop | ✅ hardware: what it cuts is S1 | ✅ |
-
-The 2025-26 path ("like before": `joy_to_ackermann` → `aav_serial_bridge` → the C++) has
-the deadman but **no timeout anywhere**: we don't use it.
-
-## Step 9: the lab desktop
+**Its OS stays frozen until the Orin's reflash is done**: it is the flashing host
+([B4](car-day.md#b4-the-lab-desktop-stays-frozen)).
 
 | # | Do | You should see |
 |---|---|---|
@@ -247,29 +175,23 @@ the deadman but **no timeout anywhere**: we don't use it.
 | 2 | `bash car_setup.sh lab_desktop install --apply` | `~/ecolo-av` cloned and built (Pixi first, if missing) |
 | 3 | CARLA running, and the rehearsal: car day's [session 11a](car-day.md#11a-in-the-lab-the-week-before) | the car drives in CARLA |
 
-## The checklist
+## This computer's checklist
 
-Tick each box as it passes. `check` is `bash car_setup.sh <role> check`.
+`check` is `bash car_setup.sh <role> check`. Which computers, in which order: [Car day](car-day.md#the-order).
 
-| Step | orin | motor_pi | localization | dash | CAM1 | CAM2 | lab desktop |
-|---|---|---|---|---|---|---|---|
-| 1 backed up (card image or home + `/etc`) | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| 1 the Orin's full image (11b) | ☐ | | | | | | |
-| 2 `apt full-upgrade`, rebooted | | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ |
-| 2 Ubuntu 24.04 (`do-release-upgrade`) | | ☐ | ☐ | ☐ | | | |
-| 6 JetPack 7.2 (after the hardware lead's OK) | ☐ | | | | | | |
-| 4 our code installed | ☐ | ☐ | ☐ | ☐ | | | ☐ |
-| 5 services; rebooted; `check` all OK | ☐ | ☐ | ☐ | ☐ | ☐ | ☐ | |
-| 5 time from the Orin (`chronyc sources`) | serves | ☐ | ☐ | ☐ | ☐ | ☐ | |
-| 7 the ESP32 flashed, session 6 passed | | ☐ | | | | | |
-| 8 the first moves, on stands | | ☐ | | | | | |
-| 9 CARLA rehearsal | | | | | | | ☐ |
+| ☐ | Step |
+|---|---|
+| ☐ | 1 backed up (car day A2), and its own `backup --apply` |
+| ☐ | 2 or 3: updated, rebooted; `check` says the release you wanted |
+| ☐ | 4 our code installed (not the camera Pis) |
+| ☐ | 5 services; rebooted; `check` has no STOP |
+| ☐ | 5 time from the Orin (`chronyc sources`; the Orin serves) |
 
 ## What's untested
 
 | Part | Status |
 |---|---|
-| `car_setup.sh`'s dry run, every role, and its refusals | [[works]] on a Mac and in CI (`tools/tests/test_car_setup.py`) |
+| `car_setup.sh`'s dry run, every role, and its STOPs | [[works]] on a Mac (`tools/tests/test_car_setup.py`); on Linux: CI runs the same tests, not yet seen there |
 | `car_setup.sh --apply` on a car computer | [[untested]]: this day is its first run |
 | `aav-car.service` at boot | [[untested]] |
 | `machine:=motor_pi_alone` | [[untested]] on the car; its launch is checked like every machine file |
