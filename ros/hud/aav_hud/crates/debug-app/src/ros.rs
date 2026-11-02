@@ -797,7 +797,8 @@ fn announcement(m: &DataSource) -> Announcement {
     }
 }
 
-/// The node's parameters: each topic and frame's name, and the numbers. Read once.
+/// The node's parameters: each topic and frame's name, the numbers and the theme. Read
+/// once.
 struct Params {
     _names: Vec<ReadOnlyParameter<Arc<str>>>,
     _numbers: Vec<ReadOnlyParameter<f64>>,
@@ -837,6 +838,12 @@ impl Params {
             .read_only()?;
         config.ndt_map = map.get().to_string();
         names.push(map);
+        let theme = node
+            .declare_parameter::<Arc<str>>("theme")
+            .default(config.theme.as_str().into())
+            .read_only()?;
+        config.theme = theme.get().parse()?;
+        names.push(theme);
         let mut numbers = Vec::new();
         for n in Number::ALL {
             let p = node

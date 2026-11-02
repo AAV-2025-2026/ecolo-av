@@ -46,3 +46,5 @@ debug_hud:
     ndt_map_cell: 1.0     # m: one NDT map cube's edge (key M)
     voxels_cube_size: 0.25  # m: one of Nav2's cubes (aav_voxels' size in aav_navigation's nav2.yaml)
     health_stale_after: 3.0 # s: /localization/health comes once a second, so it gets longer than stale_after
+    # --- the look ---
+    theme: mocha          # the colours: mocha (dark, night), latte (light, day), calm (Ben's, to come)

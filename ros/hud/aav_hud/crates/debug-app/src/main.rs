@@ -40,7 +40,7 @@
 //! Parameters  the topics above; odom_frame, base_frame, map_frame; stale_after (s),
 //!             cube_size (m), max_cubes, pose_window (s), ground_height (m),
 //!             keep_cubes_for (s), ndt_map (a PCD file, key M), ndt_map_cell (m),
-//!             voxels_cube_size (m), health_stale_after (s)
+//!             voxels_cube_size (m), health_stale_after (s), theme (mocha, latte, calm)
 //! Reads       ndt_map at start-up, if it is there (else the panel says how to make it)
 //!
 //! raylib owns the main thread (macOS needs that); rclrs spins on its own thread; clouds
@@ -264,7 +264,13 @@ fn run(
     rl.set_target_fps(if opts.bench_cubes.is_some() { 0 } else { 60 });
     rl.set_window_min_size(1000, 600);
     window::place(&mut rl, opts.monitor.as_ref(), opts.fullscreen)?;
-    let mut ui = Ui::new(&mut rl, &thread, car, config.cube_size as f32);
+    let mut ui = Ui::new(
+        &mut rl,
+        &thread,
+        car,
+        config.cube_size as f32,
+        config.theme.theme(),
+    );
     let mut state = DebugState::new(config);
     // NDT's map: the demo's own lot, or the file; shown from the start when there is one.
     let map = match source.built_in_map() {
