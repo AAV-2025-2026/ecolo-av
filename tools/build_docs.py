@@ -59,7 +59,7 @@ PAGES = [
     ('car-setup.md', 'Car setup', 'Every car computer: back up, upgrade, install, start at boot'),
     ('car-day.md', 'Car day', 'The day at the car, session by session; the preflight'),
     ('tests.md', 'Every test', 'Every test, in order: sim, bench, stands, lot, the drive'),
-    ('know-the-car.md', 'Know the car', 'Six tests that learn the car, repeated until the error is small'),
+    ('know-the-car.md', 'Know the car', 'Six tests that learn the car, pass by pass'),
     ('measure-the-car.md', 'Measure the car', 'The sheet for whoever measures the car'),
     ('decisions.md', 'Decisions', 'Decided, Tentative, Proposed, and Q1–Q34'),
     ('infrastructure.md', 'Infrastructure', 'The repo, Pixi, the contracts, profiles, computers'),
