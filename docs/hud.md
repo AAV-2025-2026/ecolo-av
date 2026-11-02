@@ -475,6 +475,82 @@ Try a search from a terminal: `cargo run --release -p map-core --example search 
 The sim's datum is the placeholder near Carleton, so in Gazebo "University Drive" lands
 inside the test lot. On the car, the datum is the real test site.
 
+## Themes: the screens' colours
+
+The HUD and the map window share one set of colours, a **theme** (1 Nov). Ben found the
+old look "kind of ugly": too many bright primary colours. Now the colours are soft, and
+the panels are **frosted glass**.
+
+| | Before | After (Mocha) |
+|---|---|---|
+| HUD | ![Before](img/hud-before-theme.png) | ![Mocha](img/hud-raylib.png) |
+| Map | ![Before](img/map-before-theme.png) | ![Mocha](img/map-streets-demo.png) |
+
+### The themes
+
+| Theme | When | Picture |
+|---|---|---|
+| `mocha` (default) | night, and glare in the cabin: dark | the "After" pictures above |
+| `latte` | daytime: light | ![Latte HUD](img/hud-latte.png) ![Latte map](img/map-latte.png) |
+| `calm` | Ben's own theme, from his Carleton web work | **not yet**: a copy of Mocha until Ben gives its colours |
+
+Mocha and Latte are [Catppuccin](https://catppuccin.com)'s palettes (MIT licence), with
+its official colour values.
+
+### Switch theme
+
+| Where | How |
+|---|---|
+| The car (ROS) | `theme: latte` in `config/hud.yaml` or `config/map.yaml`, or `--ros-args -p theme:=latte` |
+| A demo | `--config FILE`, a copy of the yaml with `theme: latte` |
+| Blur off (map) | `blur: false` in `config/map.yaml`, or `-p blur:=false` |
+
+### Status colours keep their meaning
+
+GO green, WAIT amber, STOP and the e-stop red, in every theme. The e-stop is a deep red
+(Catppuccin Latte's red) with white words and a white ring, in both themes: Mocha's own
+red is a soft pink, and an e-stop must shout.
+
+A unit test (`hud_core::theme`) checks every pair against WCAG: **4.5 : 1** for words,
+**3 : 1** for big words and shapes. It checks words on the glass over the window and
+over every street colour.
+
+| Pair | Mocha | Latte |
+|---|---|---|
+| Text on a panel | 9.4 | 7.7 |
+| Green / amber / red words on a panel | 9.2 / 10.8 / 5.9 | 6.5 / 6.1 / 5.2 |
+| GO's words on green | 12.6 | 6.8 |
+| E-STOP's white words on red | 5.4 | 5.4 |
+| The e-stop button on the window | 3.0 | 4.8 |
+
+Latte's own green, yellow and peach are too light for words on white, so the theme
+darkens them (the test caught it).
+
+### Frosted glass
+
+| Screen | Glass |
+|---|---|
+| HUD | see-through panels over a soft gradient; no blur (nothing behind them moves) |
+| Map | the search box, results, keyboard, chips and scale bar show the map **blurred** behind them (`blur: true`) |
+
+How the blur works (`map-app/src/frost.rs`): once the map is drawn, the graphics card
+copies the screen, shrinks it to a quarter and blurs it (two Gaussian passes, twice).
+Each glass box draws its piece of it, cut to its round corners. If the card refuses the
+shaders, the window says so and keeps see-through glass.
+
+`map --demo --bench 6` prints the frame rate. Ben's Mac (M4 Max), 1 Nov:
+
+| View | Blur on | Blur off |
+|---|---|---|
+| Window, zoomed in | 238 fps | 345 fps |
+| Full screen, zoomed in, keyboard open | 140 fps | 191 fps |
+| Full screen, zoomed out (`--zoom 0.3`), keyboard open | 27 fps | 28 fps |
+
+The blur costs little. Zoomed far out the street map itself is slow, blur or not (many
+tiles); the window asks for 30 fps.
+
+The debug screen and the hardware panel keep their own colours for now.
+
 ## The debug HUD
 
 `ros/hud/aav_hud`, binary `debug_hud`: what the car **sees** and what it **thinks**, in

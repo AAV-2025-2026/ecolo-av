@@ -24,6 +24,7 @@ keeps. `map-core` shares its health, origin, watchdog and formatting code.
 | `state` | `HudState::new`, `apply(Update, now)`, `estop_pressed`, `take_new_picture` |
 | `format` | numbers as short text for the screen |
 | `screen` | which monitor a window opens on (`--monitor HDMI-1`) |
+| `theme` | every colour of the HUD and the map: `Theme`, `ThemeName` (`mocha`, `latte`, `calm`), `Rgba` with `contrast` (WCAG); Catppuccin's palettes (MIT) |
 
 ## Invariants
 
@@ -31,6 +32,7 @@ keeps. `map-core` shares its health, origin, watchdog and formatting code.
 - The e-stop sends only `true`, five times, 100 ms apart. Nothing here makes a `false`.
 - A heartbeat only while the drawn-frame count rises: a frozen screen stops it.
 - Topic names come from `config/hud.yaml`; a unit test checks it parses.
+- Every theme passes the contrast test: 4.5 : 1 for words, 3 : 1 for shapes (the e-stop).
 - SI units inside (m/s, rad, s); km/h only in text for the screen.
 - Times use `Instant` (a steady clock).
 

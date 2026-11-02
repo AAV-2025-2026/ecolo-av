@@ -15,6 +15,8 @@ map:
     final_approach: 8.0                       # m from the plan's end: Nav2 keeps its path here, not replanning (TODO 17; its trees' ArePosesNear)
     plan_kept_for: 25.0                       # s: so there a plan this old is still fine (the trees plan again after 20 s)
     arrive_within: 1.0                        # m: the car this close to the goal = ARRIVED (Nav2's own is 0.5)
+    theme: mocha                              # the colours: mocha (dark, night), latte (light, day), calm (Ben's, to come)
+    blur: true                                # frosted glass: the map blurred behind the boxes over it (false: see-through only)
     # The street map under Nav2's map (pixi run get-street-map). A path relative to the
     # folder the window starts in (pixi starts it in the repo); missing = no streets.
     street_map: maps/streets/ottawa.pmtiles

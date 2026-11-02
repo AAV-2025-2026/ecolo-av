@@ -26,6 +26,12 @@ the name.
 A Cargo workspace that colcon builds through `CMakeLists.txt`. More in docs/hud.md and
 docs/car-screens.md.
 
+**Colours (1 Nov):** `hud` and `map` share one theme (`hud_core::theme`): `mocha` (dark,
+the default), `latte` (light, daytime) or `calm` (a placeholder copy of Mocha until Ben
+gives his colours). Mocha and Latte are [Catppuccin](https://catppuccin.com)'s palettes,
+MIT licence. Panels are frosted glass (`hud_app::paint`); the map blurs what's behind
+its boxes (`map-app/src/frost.rs`, `blur`). docs/hud.md, "Themes".
+
 ## Interface
 
 ### Crates
@@ -34,8 +40,8 @@ docs/car-screens.md.
 |---|---|
 | [`hud-core`](./crates/hud-core/README.md) | the HUD's logic: no ROS, no raylib |
 | [`map-core`](./crates/map-core/README.md) | the map window's logic: no ROS, no raylib |
-| `crates/hud-app` | binary `hud`: the window (`ui.rs`) and the node (`ros.rs`, feature `ros`) |
-| `crates/map-app` | binary `map`: the same shape, plus the street map and place search |
+| `crates/hud-app` | binary `hud`: the window (`ui.rs`) and the node (`ros.rs`, feature `ros`); its library: the window's monitor (`window`) and drawing with a theme (`paint`: glass, the background), shared with `map` |
+| `crates/map-app` | binary `map`: the same shape, plus the street map, place search and the blur behind the glass (`frost.rs`) |
 | [`debug-core`](./crates/debug-core/README.md) | the debug HUD's logic: cubes (kept, fading), frames, poses at a stamp, NDT's status and map, the keys, the camera; no ROS, no raylib |
 | `crates/debug-app` | binary `debug_hud`: the window (`ui.rs`, instanced cubes, the seeing screen's top-downs), the node (`ros.rs`), `--demo` |
 | [`panel-core`](./crates/panel-core/README.md) | the hardware panel's logic: the buttons, where they may drive (`gate`), every sensor's number, `safety.py`'s rules ported; no ROS, no raylib |
@@ -56,7 +62,7 @@ docs/car-screens.md.
 | pub | `estop_topic`: `/safety/estop` (only `true`) | std_msgs/Bool |
 | pub | `heartbeat_topic`: `/hud/heartbeat` (10 Hz while it draws) | std_msgs/UInt64 |
 
-Parameter `stale_after` (1.0 s): a quieter topic shows STALE.
+Parameters `stale_after` (1.0 s): a quieter topic shows STALE; `theme` (`mocha`, `latte`, `calm`).
 
 ### Node `map` (topic names from `config/map.yaml`)
 
@@ -71,7 +77,8 @@ Parameter `stale_after` (1.0 s): a quieter topic shows STALE.
 
 Other parameters: `stale_after` (1.0 s), `plan_stale_after` (3.0 s; `plan_kept_for`, 25 s, within
 `final_approach`, 8 m, of the plan's end: Nav2 keeps its path there), `arrive_within`
-(1.0 m), `street_map` (`maps/streets/ottawa.pmtiles`), `places` (`maps/places/ottawa.db`).
+(1.0 m), `street_map` (`maps/streets/ottawa.pmtiles`), `places` (`maps/places/ottawa.db`),
+`theme` (`mocha`), `blur` (true: the map blurred behind the glass).
 
 ### Node `debug_hud` (topic names from `config/debug_hud.yaml`)
 
@@ -122,7 +129,7 @@ Other parameters: `stale_after` (1.0 s), `speed_step` (0.1 m/s), `steer_step` (0
 | `pixi run hud [fullscreen:=true] [monitor:=HDMI-1]` | `hud.launch.py` |
 | `pixi run map [fullscreen:=true] [monitor:=HDMI-1] [streets:=] [places:=]` | `map.launch.py`, with `vehicle.yaml` and `navsat.yaml` |
 | `cargo run -p hud-app --no-default-features -- --demo` | the HUD with pretend data, no ROS |
-| `cargo run -p map-app --no-default-features -- --demo` | the map with pretend data |
+| `cargo run -p map-app --no-default-features -- --demo [--bench 6]` | the map with pretend data; `--bench` prints the frame rate (the blur's test) |
 | `pixi run debug-hud`; `pixi run debugdemo` | `debug_hud.launch.py` (passes `--vehicle` and `--own-box`, the car's own box from `vehicle.self_box`); `demo` plus the debug HUD |
 | `cargo run --release -p debug-app --no-default-features -- --demo [--bench-cubes 20000]` | the debug HUD with pretend data; the drawing test |
 | `pixi run hw-panel [stands:=true] [fullscreen:=true]`; `pixi run hw-panel-demo` | `hw_panel.launch.py` (localhost-only); the panel with a pretend car |
@@ -133,6 +140,8 @@ Other parameters: `stale_after` (1.0 s), `speed_step` (0.1 m/s), `steer_step` (0
 
 ## Invariants
 
+- Colours live only in `hud_core::theme`, never in the drawing code. Its test checks
+  every text and status pair for contrast (WCAG: 4.5 : 1 words, 3 : 1 shapes).
 - Topic names live only in `config/*.yaml`, never in Rust. They are built in as the
   defaults, so `--demo` shows the same names.
 - raylib owns the main thread (macOS needs it); rclrs spins on a thread called `ros`

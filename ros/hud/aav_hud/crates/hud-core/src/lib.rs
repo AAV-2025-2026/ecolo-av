@@ -16,6 +16,7 @@
 //! | [`state`] | everything above, as one value the screen draws |
 //! | [`format`] | numbers turned into short text for the screen |
 //! | [`screen`] | which monitor a window goes on (`--monitor HDMI-1`), for two screens |
+//! | [`theme`] | every colour the HUD and the map window draw with: Catppuccin Mocha, Latte, calm |
 
 pub mod config;
 pub mod estop;
@@ -28,6 +29,7 @@ pub mod origin;
 pub mod picture;
 pub mod screen;
 pub mod state;
+pub mod theme;
 pub mod units;
 pub mod vehicle;
 pub mod watchdog;

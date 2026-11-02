@@ -24,9 +24,14 @@
 //! icon, a word and the one main reason (hud_core::gate). The orange SIMULATED / BENCH /
 //! REPLAY banner shows whenever `/system/source` says any data isn't from the real car;
 //! each topic it names gets a REAL / SIM tag under TOPICS.
+//!
+//! Every colour comes from the theme (`hud_core::theme`, `theme:` in config/hud.yaml):
+//! the panels are frosted glass over a soft background (hud_app::paint); GO, WAIT,
+//! STOP and the e-stop button stay solid.
 
 use std::time::Instant;
 
+use hud_app::paint::{self, ToColor};
 use hud_core::{
     config::Topic,
     format,
@@ -36,6 +41,7 @@ use hud_core::{
     origin::Origin,
     picture::Picture,
     state::{Alarm, EstopReport, HudState},
+    theme::{Rgba, Theme},
     vehicle::VehicleStatus,
 };
 use raylib::prelude::*;
@@ -43,19 +49,6 @@ use raylib::prelude::*;
 /// The canvas everything is drawn on, before scaling.
 const CANVAS_W: f32 = 1280.0;
 const CANVAS_H: f32 = 720.0;
-
-const BACKGROUND: Color = Color::new(12, 12, 16, 255);
-const PANEL: Color = Color::new(30, 32, 40, 255);
-const CAPTION: Color = Color::new(160, 165, 180, 255);
-const TEXT: Color = Color::new(245, 245, 245, 255);
-const DIM: Color = Color::new(110, 112, 120, 255);
-const GOOD: Color = Color::new(60, 200, 90, 255);
-const WARN: Color = Color::new(245, 180, 40, 255);
-const BAD: Color = Color::new(230, 45, 45, 255);
-const ESTOP_RED: Color = Color::new(200, 20, 20, 255);
-const ESTOP_HOVER: Color = Color::new(240, 40, 40, 255);
-/// The not-the-real-car banner, and the tags of topics that aren't real.
-const NOT_REAL: Color = Color::new(255, 140, 0, 255);
 
 /// The steering bar's ends, in degrees each way.
 const STEERING_RANGE_DEG: f32 = 30.0;
@@ -117,15 +110,16 @@ struct CameraTexture {
     height: u32,
 }
 
-/// The screen: its font and the camera's texture.
+/// The screen: its font, its colours and the camera's texture.
 pub struct Ui {
     font: HudFont,
+    theme: &'static Theme,
     camera: Option<CameraTexture>,
 }
 
 impl Ui {
     /// Loads the font. Needs the window open.
-    pub fn new(rl: &mut RaylibHandle, thread: &RaylibThread) -> Self {
+    pub fn new(rl: &mut RaylibHandle, thread: &RaylibThread, theme: &'static Theme) -> Self {
         let loaded = FONT_FILES
             .iter()
             .filter(|path| std::path::Path::new(path).exists())
@@ -138,7 +132,11 @@ impl Ui {
             }
             None => HudFont::BuiltIn(rl.get_font_default()),
         };
-        Self { font, camera: None }
+        Self {
+            font,
+            theme,
+            camera: None,
+        }
     }
 
     /// Puts a new camera picture on the graphics card.
@@ -186,13 +184,15 @@ impl Ui {
     ) {
         let scale = Scale::new(d.get_screen_width(), d.get_screen_height());
         let blink = (d.get_time() * 2.0).fract() < 0.5;
-        d.clear_background(BACKGROUND);
+        let t = self.theme;
+        paint::backdrop(d, d.get_screen_width(), d.get_screen_height(), t);
         let mut c = Canvas {
             d,
             font: &self.font,
             scale,
+            t,
         };
-        let vehicle = Fresh::of(state, Topic::VehicleStatus, now, state.vehicle);
+        let vehicle = Fresh::of(state, Topic::VehicleStatus, now, state.vehicle, t.dim);
         strip(&mut c, state, &vehicle, now, source);
         speed(&mut c, &vehicle);
         gate(&mut c, &state.verdict(now));
@@ -212,22 +212,25 @@ fn to_i32(n: u32) -> anyhow::Result<i32> {
 struct Fresh<T> {
     value: Option<T>,
     health: Health,
+    /// The colour of old news.
+    dim: Rgba,
 }
 
 impl<T: Copy> Fresh<T> {
-    fn of(state: &HudState, topic: Topic, now: Instant, value: Option<T>) -> Self {
+    fn of(state: &HudState, topic: Topic, now: Instant, value: Option<T>, dim: Rgba) -> Self {
         Self {
             value,
             health: state.health(topic, now),
+            dim,
         }
     }
 
-    /// The text colour: normal when fresh, grey when old.
-    fn colour(&self, fresh: Color) -> Color {
+    /// The text colour: normal when fresh, dim when old.
+    fn colour(&self, fresh: Rgba) -> Rgba {
         if self.health.is_ok() {
             fresh
         } else {
-            DIM
+            self.dim
         }
     }
 }
@@ -266,67 +269,81 @@ struct Canvas<'a, 'b> {
     d: &'a mut RaylibDrawHandle<'b>,
     font: &'a HudFont,
     scale: Scale,
+    t: &'static Theme,
 }
 
+/// A panel's corners, in canvas units.
+const RADIUS: f32 = 14.0;
+
 impl Canvas<'_, '_> {
-    fn fill(&mut self, a: area::Area, colour: Color) {
+    /// A frosted-glass panel.
+    fn glass(&mut self, a: area::Area) {
         let r = self.scale.rect(a);
-        self.d.draw_rectangle_rounded(r, 0.06, 8, colour);
+        let k = self.scale.k;
+        paint::glass(self.d, r, RADIUS * k, self.t.panel, self.t, k.max(1.0));
     }
 
-    fn outline(&mut self, a: area::Area, thick: f32, colour: Color) {
+    /// A solid panel: GO / STOP, the e-stop button.
+    fn fill(&mut self, a: area::Area, colour: Rgba) {
         let r = self.scale.rect(a);
-        self.d
-            .draw_rectangle_lines_ex(r, thick * self.scale.k, colour);
+        paint::rounded(self.d, r, RADIUS * self.scale.k, colour);
     }
 
-    fn bar(&mut self, a: area::Area, colour: Color) {
+    fn outline(&mut self, a: area::Area, thick: f32, colour: Rgba) {
         let r = self.scale.rect(a);
-        self.d.draw_rectangle_rec(r, colour);
+        let k = self.scale.k;
+        paint::rounded_edge(self.d, r, RADIUS * k, thick * k, colour);
+    }
+
+    /// A bar, a little rounded: the controls' and the banners.
+    fn bar(&mut self, a: area::Area, colour: Rgba) {
+        let r = self.scale.rect(a);
+        paint::rounded(self.d, r, 6.0 * self.scale.k, colour);
     }
 
     fn width(&self, text: &str, size: f32) -> f32 {
         self.font.measure(text, size * self.scale.k) / self.scale.k
     }
 
-    fn text(&mut self, x: f32, y: f32, size: f32, text: &str, colour: Color) {
+    fn text(&mut self, x: f32, y: f32, size: f32, text: &str, colour: Rgba) {
         let s = self.scale;
         let pos = Vector2::new(s.x0 + x * s.k, s.y0 + y * s.k);
         let px = size * s.k;
         self.d
-            .draw_text_ex(self.font, text, pos, px, px / 20.0, colour);
+            .draw_text_ex(self.font, text, pos, px, px / 20.0, colour.rl());
     }
 
-    fn centred(&mut self, cx: f32, y: f32, size: f32, text: &str, colour: Color) {
+    fn centred(&mut self, cx: f32, y: f32, size: f32, text: &str, colour: Rgba) {
         let w = self.width(text, size);
         self.text(cx - w / 2.0, y, size, text, colour);
     }
 
-    fn right(&mut self, x_right: f32, y: f32, size: f32, text: &str, colour: Color) {
+    fn right(&mut self, x_right: f32, y: f32, size: f32, text: &str, colour: Rgba) {
         let w = self.width(text, size);
         self.text(x_right - w, y, size, text, colour);
     }
 
-    /// A panel: its background and its caption.
+    /// A panel: its glass and its caption.
     fn panel(&mut self, a: area::Area, caption: &str) {
-        self.fill(a, PANEL);
-        self.text(a.0 + 14.0, a.1 + 10.0, 18.0, caption, CAPTION);
+        self.glass(a);
+        self.text(a.0 + 14.0, a.1 + 10.0, 18.0, caption, self.t.caption);
     }
 
     /// The light's icon, centred at `centre` (canvas units), radius `r`: a tick in a
     /// circle (GO), a pause sign (WAIT), a stop sign (STOP), a question mark (no gate).
-    fn icon(&mut self, light: Light, centre: (f32, f32), r: f32, fill: Color, ink: Color) {
+    fn icon(&mut self, light: Light, centre: (f32, f32), r: f32, fill: Rgba, ink: Rgba) {
         let s = self.scale;
+        let (fill_c, ink_c) = (fill.rl(), ink.rl());
         let at = |x: f32, y: f32| Vector2::new(s.x0 + x * s.k, s.y0 + y * s.k);
         let (cx, cy) = centre;
         let (k, c) = (s.k, at(cx, cy));
         if light == Light::Stop {
             // An octagon, flat on top, as a road's stop sign: a rim, and a bar across.
-            self.d.draw_poly(c, 8, r * k, 22.5, ink);
-            self.d.draw_poly(c, 8, (r - 6.0) * k, 22.5, fill);
+            self.d.draw_poly(c, 8, r * k, 22.5, ink_c);
+            self.d.draw_poly(c, 8, (r - 6.0) * k, 22.5, fill_c);
         } else {
-            self.d.draw_circle_v(c, r * k, ink);
-            self.d.draw_circle_v(c, (r - 6.0) * k, fill);
+            self.d.draw_circle_v(c, r * k, ink_c);
+            self.d.draw_circle_v(c, (r - 6.0) * k, fill_c);
         }
         let rect = |x: f32, y: f32, w: f32, h: f32| {
             Rectangle::new(
@@ -337,7 +354,9 @@ impl Canvas<'_, '_> {
             )
         };
         match light {
-            Light::Stop => self.d.draw_rectangle_rec(rect(-0.6, -0.16, 1.2, 0.32), ink),
+            Light::Stop => self
+                .d
+                .draw_rectangle_rec(rect(-0.6, -0.16, 1.2, 0.32), ink_c),
             Light::Go => {
                 let thick = r * 0.2 * k;
                 let (a, b, e) = (
@@ -345,21 +364,22 @@ impl Canvas<'_, '_> {
                     at(cx - r * 0.12, cy + r * 0.36),
                     at(cx + r * 0.48, cy - r * 0.34),
                 );
-                self.d.draw_line_ex(a, b, thick, ink);
-                self.d.draw_line_ex(b, e, thick, ink);
-                self.d.draw_circle_v(b, thick / 2.0, ink);
+                self.d.draw_line_ex(a, b, thick, ink_c);
+                self.d.draw_line_ex(b, e, thick, ink_c);
+                self.d.draw_circle_v(b, thick / 2.0, ink_c);
             }
             Light::Wait => {
                 self.d
-                    .draw_rectangle_rec(rect(-0.32, -0.42, 0.2, 0.84), ink);
-                self.d.draw_rectangle_rec(rect(0.12, -0.42, 0.2, 0.84), ink);
+                    .draw_rectangle_rec(rect(-0.32, -0.42, 0.2, 0.84), ink_c);
+                self.d
+                    .draw_rectangle_rec(rect(0.12, -0.42, 0.2, 0.84), ink_c);
             }
             Light::Unknown => self.centred(cx, cy - r * 0.55, r * 1.1, "?", ink),
         }
     }
 
     /// Text that fits in `max_w`: shrinks it down to `min_size`, no smaller.
-    fn fitted(&mut self, x: f32, y: f32, size: f32, max_w: f32, text: &str, colour: Color) {
+    fn fitted(&mut self, x: f32, y: f32, size: f32, max_w: f32, text: &str, colour: Rgba) {
         let mut s = size;
         while s > 12.0 && self.width(text, s) > max_w {
             s -= 2.0;
@@ -368,11 +388,11 @@ impl Canvas<'_, '_> {
     }
 }
 
-fn health_colour(h: Health) -> Color {
+fn health_colour(t: &Theme, h: Health) -> Rgba {
     match h {
-        Health::Ok(_) => GOOD,
-        Health::Stale(_) => WARN,
-        Health::Never => BAD,
+        Health::Ok(_) => t.good,
+        Health::Stale(_) => t.warn,
+        Health::Never => t.bad,
     }
 }
 
@@ -385,26 +405,26 @@ fn strip(
     source: &str,
 ) {
     let (x, y, _, h) = area::STRIP;
-    c.fill(area::STRIP, PANEL);
+    c.glass(area::STRIP);
     let v = vehicle.value;
-    let dash = || ("--".to_owned(), DIM);
-    let mode = v.map_or_else(dash, |v| (v.mode.to_string(), TEXT));
+    let dash = || ("--".to_owned(), c.t.dim);
+    let mode = v.map_or_else(dash, |v| (v.mode.to_string(), c.t.text));
     let armed = v.map_or_else(dash, |v| {
         if v.armed {
-            ("ARMED".into(), GOOD)
+            ("ARMED".into(), c.t.good)
         } else {
-            ("DISARMED".into(), WARN)
+            ("DISARMED".into(), c.t.warn)
         }
     });
-    let gear = v.map_or_else(dash, |v| (v.gear().letter().into(), TEXT));
+    let gear = v.map_or_else(dash, |v| (v.gear().letter().into(), c.t.text));
     let estop = v.map_or_else(dash, |v| {
         if v.estop_active {
-            ("ON".into(), BAD)
+            ("ON".into(), c.t.bad)
         } else {
-            ("off".into(), GOOD)
+            ("off".into(), c.t.good)
         }
     });
-    let battery = Fresh::of(state, Topic::Battery, now, state.battery);
+    let battery = Fresh::of(state, Topic::Battery, now, state.battery, c.t.dim);
     let charge = battery.value.map_or_else(dash, |b| {
         let text = match (b.percent, b.voltage) {
             (Some(p), _) => format!("{p:.0} %"),
@@ -412,16 +432,16 @@ fn strip(
             (None, None) => "?".into(),
         };
         let low = b.percent.is_some_and(|p| p < 20.0);
-        (text, battery.colour(if low { BAD } else { TEXT }))
+        (text, battery.colour(if low { c.t.bad } else { c.t.text }))
     });
     let faults = v.map_or_else(dash, |v| {
         if v.faults.is_empty() {
-            ("none".into(), GOOD)
+            ("none".into(), c.t.good)
         } else {
-            (v.faults.to_string(), BAD)
+            (v.faults.to_string(), c.t.bad)
         }
     });
-    let cells: [(&str, (String, Color), f32); 6] = [
+    let cells: [(&str, (String, Rgba), f32); 6] = [
         ("MODE", mode, 190.0),
         ("COMPUTER", armed, 180.0),
         ("GEAR", gear, 90.0),
@@ -437,7 +457,7 @@ fn strip(
         } else {
             vehicle.colour(colour)
         };
-        c.text(cx, y + 8.0, 16.0, caption, CAPTION);
+        c.text(cx, y + 8.0, 16.0, caption, c.t.caption);
         c.fitted(cx, y + 30.0, 34.0, w - 14.0, &value, colour);
         cx += w;
     }
@@ -447,9 +467,9 @@ fn strip(
         Health::Never => format!("{source}: no status"),
     };
     let tag_colour = if vehicle.health.is_ok() {
-        CAPTION
+        c.t.caption
     } else {
-        WARN
+        c.t.warn
     };
     c.right(
         area::STRIP.0 + area::STRIP.2 - 14.0,
@@ -467,7 +487,7 @@ fn speed(c: &mut Canvas, vehicle: &Fresh<VehicleStatus>) {
     let cx = a.0 + a.2 / 2.0;
     match vehicle.value {
         Some(v) => {
-            let colour = vehicle.colour(TEXT);
+            let colour = vehicle.colour(c.t.text);
             c.centred(
                 cx,
                 a.1 + 50.0,
@@ -475,9 +495,9 @@ fn speed(c: &mut Canvas, vehicle: &Fresh<VehicleStatus>) {
                 &format::speed_km_per_hour(v.speed),
                 colour,
             );
-            c.centred(cx, a.1 + 226.0, 30.0, "km/h", CAPTION);
+            c.centred(cx, a.1 + 226.0, 30.0, "km/h", c.t.caption);
         }
-        None => c.centred(cx, a.1 + 50.0, 170.0, "--", DIM),
+        None => c.centred(cx, a.1 + 50.0, 170.0, "--", c.t.dim),
     }
     if let Health::Stale(age) = vehicle.health {
         c.centred(
@@ -485,10 +505,10 @@ fn speed(c: &mut Canvas, vehicle: &Fresh<VehicleStatus>) {
             a.1 + 262.0,
             24.0,
             &format!("OLD: {}", format::age(age)),
-            WARN,
+            c.t.warn,
         );
     } else if vehicle.health == Health::Never {
-        c.centred(cx, a.1 + 262.0, 24.0, "no vehicle status", BAD);
+        c.centred(cx, a.1 + 262.0, 24.0, "no vehicle status", c.t.bad);
     }
 }
 
@@ -496,11 +516,12 @@ fn speed(c: &mut Canvas, vehicle: &Fresh<VehicleStatus>) {
 /// main reason, and what a person can do (hud_core::gate).
 fn gate(c: &mut Canvas, verdict: &Verdict) {
     let a = area::GATE;
+    let t = c.t;
     let (fill, ink) = match verdict.light {
-        Light::Go => (GOOD, Color::BLACK),
-        Light::Wait => (WARN, Color::BLACK),
-        Light::Stop => (ESTOP_RED, TEXT),
-        Light::Unknown => (PANEL, CAPTION),
+        Light::Go => (t.go_fill, t.go_ink),
+        Light::Wait => (t.wait_fill, t.wait_ink),
+        Light::Stop => (t.stop_fill, t.stop_ink),
+        Light::Unknown => (t.panel, t.caption),
     };
     c.fill(a, fill);
     let r = 52.0;
@@ -516,7 +537,7 @@ fn gate(c: &mut Canvas, verdict: &Verdict) {
 /// Steering, throttle and brake, as bars: one row each.
 fn controls(c: &mut Canvas, vehicle: &Fresh<VehicleStatus>) {
     let a = area::CONTROLS;
-    c.fill(a, PANEL);
+    c.glass(a);
     let (x, right) = (a.0 + 16.0, a.0 + a.2 - 16.0);
     let (bar_x, bar_w) = (x + 130.0, right - 96.0 - (x + 130.0));
     let v = vehicle.value;
@@ -524,26 +545,26 @@ fn controls(c: &mut Canvas, vehicle: &Fresh<VehicleStatus>) {
     let rows = ["STEERING", "THROTTLE", "BRAKE"];
     for (i, label) in rows.into_iter().enumerate() {
         let y = a.1 + 12.0 + i as f32 * 36.0;
-        c.text(x, y + 4.0, 18.0, label, CAPTION);
-        c.bar((bar_x, y + 2.0, bar_w, 26.0), BACKGROUND);
+        c.text(x, y + 4.0, 18.0, label, c.t.caption);
+        c.bar((bar_x, y + 2.0, bar_w, 26.0), c.t.track);
         let value = match (i, v) {
             (_, None) => "--".to_owned(),
             (0, Some(_)) => format::steering(steer_deg.unwrap_or(0.0)),
             (1, Some(v)) => format!("{:.0} %", v.throttle.get() * 100.0),
             (_, Some(v)) => format!("{:.0} %", v.brake.get() * 100.0),
         };
-        c.right(right, y + 3.0, 20.0, &value, vehicle.colour(TEXT));
+        c.right(right, y + 3.0, 20.0, &value, vehicle.colour(c.t.text));
         let Some(v) = v else { continue };
         let fill = vehicle.colour(match i {
-            0 => TEXT,
-            1 => GOOD,
-            _ => BAD,
+            0 => c.t.text,
+            1 => c.t.good,
+            _ => c.t.bad,
         });
         if i == 0 {
             // Centre = straight; left of centre = turning left (positive, REP-103).
             let k = (steer_deg.unwrap_or(0.0) / STEERING_RANGE_DEG).clamp(-1.0, 1.0);
             let mid = bar_x + bar_w / 2.0;
-            c.bar((mid - 1.0, y, 2.0, 30.0), CAPTION);
+            c.bar((mid - 1.0, y, 2.0, 30.0), c.t.caption);
             let marker = mid - k * (bar_w / 2.0 - 5.0);
             c.bar((marker - 5.0, y + 2.0, 10.0, 26.0), fill);
         } else {
@@ -565,7 +586,7 @@ fn camera(
     let topic = state.config.topic(Topic::Camera);
     c.panel(a, &format!("CAMERA  {topic}"));
     let inner = (a.0 + 10.0, a.1 + 36.0, a.2 - 20.0, a.3 - 46.0);
-    c.bar(inner, Color::BLACK);
+    c.bar(inner, c.t.camera_back);
     let health = state.health(Topic::Camera, now);
     if let Some(t) = texture {
         // Fit the picture in the panel, keeping its shape.
@@ -579,17 +600,17 @@ fn camera(
             h,
         );
         let src = Rectangle::new(0.0, 0.0, tw, th);
-        let tint = if health.is_ok() { Color::WHITE } else { DIM };
+        let tint = if health.is_ok() { Rgba::WHITE } else { c.t.dim };
         let dest = c.scale.rect(dest);
-        c.d.draw_texture_pro(&t.texture, src, dest, Vector2::zero(), 0.0, tint);
+        c.d.draw_texture_pro(&t.texture, src, dest, Vector2::zero(), 0.0, tint.rl());
     }
     let cx = inner.0 + inner.2 / 2.0;
     let cy = inner.1 + inner.3 / 2.0;
     match health {
-        Health::Never => c.centred(cx, cy - 14.0, 28.0, "NO PICTURE YET", BAD),
+        Health::Never => c.centred(cx, cy - 14.0, 28.0, "NO PICTURE YET", c.t.bad),
         Health::Stale(age) => {
             let msg = format!("CAMERA STOPPED {}", format::age(age));
-            c.centred(cx, cy - 14.0, 28.0, &msg, WARN);
+            c.centred(cx, cy - 14.0, 28.0, &msg, c.t.warn);
         }
         Health::Ok(_) => {}
     }
@@ -598,8 +619,8 @@ fn camera(
     let not_real = state.origins.banner();
     if let Some(words) = &not_real {
         let band = (inner.0, inner.1 + inner.3 - banner_h, inner.2, banner_h);
-        c.bar(band, NOT_REAL);
-        c.centred(cx, band.1 + 8.0, 52.0, words, Color::BLACK);
+        c.bar(band, c.t.not_real);
+        c.centred(cx, band.1 + 8.0, 52.0, words, c.t.not_real_ink);
     }
     let lift = if not_real.is_some() { banner_h } else { 0.0 };
     if let Some(why) = &state.picture_problem {
@@ -609,31 +630,37 @@ fn camera(
             18.0,
             inner.2 - 16.0,
             why,
-            WARN,
+            c.t.warn,
         );
     }
     let mut top = inner.1;
     if state.stop_sign && state.health(Topic::StopSign, now).is_ok() {
         let banner = (inner.0, inner.1, inner.2, 84.0);
-        c.bar(banner, if blink { BAD } else { ESTOP_RED });
-        c.centred(cx, inner.1 + 14.0, 56.0, "STOP SIGN", TEXT);
+        let fill = if blink {
+            c.t.stop_fill_alt
+        } else {
+            c.t.stop_fill
+        };
+        c.bar(banner, fill);
+        c.centred(cx, inner.1 + 14.0, 56.0, "STOP SIGN", c.t.stop_ink);
         top += 84.0;
     }
     // The sensor watchdog: what failed, and whether Nav2 and the AI slot stopped for it.
     if let Some(alarm) = state.sensor_alarm(now) {
-        let (text, colour) = match &alarm {
-            Alarm::Stop(t) => (t, if blink { BAD } else { ESTOP_RED }),
-            Alarm::Warn(t) => (t, WARN),
+        let th = c.t;
+        let (text, colour, ink) = match &alarm {
+            Alarm::Stop(why) => {
+                let fill = if blink {
+                    th.stop_fill_alt
+                } else {
+                    th.stop_fill
+                };
+                (why, fill, th.stop_ink)
+            }
+            Alarm::Warn(why) => (why, th.wait_fill, th.wait_ink),
         };
         c.bar((inner.0, top, inner.2, 40.0), colour);
-        c.fitted(
-            inner.0 + 8.0,
-            top + 9.0,
-            22.0,
-            inner.2 - 16.0,
-            text,
-            Color::BLACK,
-        );
+        c.fitted(inner.0 + 8.0, top + 9.0, 22.0, inner.2 - 16.0, text, ink);
     }
 }
 
@@ -647,54 +674,55 @@ fn topics(c: &mut Canvas, state: &HudState, now: Instant) {
         let y = a.1 + 42.0 + i as f32 * 43.0;
         let status = format::health(health);
         let status_w = c.width(&status, 24.0);
-        c.right(right, y, 24.0, &status, health_colour(health));
+        c.right(right, y, 24.0, &status, health_colour(c.t, health));
         let mut name_right = right - status_w - 16.0;
         if let Some(origin) = state.origins.of_topic(name) {
             let tag = origin.tag();
             let colour = if origin == Origin::Real {
-                CAPTION
+                c.t.caption
             } else {
-                NOT_REAL
+                c.t.not_real_text
             };
             c.right(name_right, y + 2.0, 20.0, tag, colour);
             name_right -= c.width(tag, 20.0) + 12.0;
         }
-        c.fitted(x, y, 24.0, name_right - x, name, TEXT);
+        c.fitted(x, y, 24.0, name_right - x, name, c.t.text);
     }
 }
 
 /// The e-stop button, and what came of the last press.
 fn estop(c: &mut Canvas, state: &HudState, vehicle: &Fresh<VehicleStatus>, hover: bool) {
     let a = area::ESTOP;
-    c.fill(a, if hover { ESTOP_HOVER } else { ESTOP_RED });
-    c.outline(a, 4.0, TEXT);
+    let t = c.t;
+    c.fill(a, if hover { t.stop_fill_alt } else { t.stop_fill });
+    c.outline(a, 4.0, t.stop_ink);
     let cx = a.0 + a.2 / 2.0;
-    c.centred(cx, a.1 + 40.0, 72.0, "E-STOP", TEXT);
-    c.centred(cx, a.1 + 128.0, 20.0, "tap to stop the car", TEXT);
+    c.centred(cx, a.1 + 40.0, 72.0, "E-STOP", t.stop_ink);
+    c.centred(cx, a.1 + 128.0, 20.0, "tap to stop the car", t.stop_ink);
 
     let n = area::ESTOP_NOTE;
     let car_stopped = vehicle.health.is_ok() && vehicle.value.is_some_and(|v| v.estop_active);
     let estop_topic = state.config.topic(Topic::Estop);
-    let lines: Vec<(String, Color)> = match state.estop {
-        None if car_stopped => vec![("The car says: E-STOP ON".into(), BAD)],
-        None => vec![("Not pressed".into(), DIM)],
+    let lines: Vec<(String, Rgba)> = match state.estop {
+        None if car_stopped => vec![("The car says: E-STOP ON".into(), c.t.bad)],
+        None => vec![("Not pressed".into(), c.t.dim)],
         Some(EstopReport::Sent { subscribers: 0 }) => vec![
-            ("E-STOP FAILED".into(), BAD),
-            (format!("nothing listens on {estop_topic}"), BAD),
-            ("Press the car's red button!".into(), BAD),
+            ("E-STOP FAILED".into(), c.t.bad),
+            (format!("nothing listens on {estop_topic}"), c.t.bad),
+            ("Press the car's red button!".into(), c.t.bad),
         ],
         Some(EstopReport::Sent { subscribers }) => vec![
-            (format!("SENT to {subscribers} node(s)"), GOOD),
+            (format!("SENT to {subscribers} node(s)"), c.t.good),
             if car_stopped {
-                ("The car says: E-STOP ON".into(), BAD)
+                ("The car says: E-STOP ON".into(), c.t.bad)
             } else {
-                ("waiting for the car...".into(), WARN)
+                ("waiting for the car...".into(), c.t.warn)
             },
-            ("Clear it from a laptop".into(), CAPTION),
+            ("Clear it from a laptop".into(), c.t.caption),
         ],
         Some(EstopReport::Failed) => vec![
-            ("E-STOP FAILED: not sent".into(), BAD),
-            ("Press the car's red button!".into(), BAD),
+            ("E-STOP FAILED: not sent".into(), c.t.bad),
+            ("Press the car's red button!".into(), c.t.bad),
         ],
     };
     for (i, (line, colour)) in lines.iter().enumerate() {
@@ -712,13 +740,13 @@ fn gps(c: &mut Canvas, state: &HudState, now: Instant) {
     let health = state.health(Topic::Gps, now);
     let fix = state.gps;
     let (headline, colour) = match (health, fix) {
-        (Health::Never, _) | (_, None) => ("NO GPS DATA".to_owned(), BAD),
-        (Health::Stale(_), _) => ("GPS SILENT".to_owned(), WARN),
-        (Health::Ok(_), Some(f)) => (f.kind.to_string(), kind_colour(f.kind)),
+        (Health::Never, _) | (_, None) => ("NO GPS DATA".to_owned(), c.t.bad),
+        (Health::Stale(_), _) => ("GPS SILENT".to_owned(), c.t.warn),
+        (Health::Ok(_), Some(f)) => (f.kind.to_string(), kind_colour(c.t, f.kind)),
     };
     c.fitted(x, a.1 + 40.0, 44.0, w, &headline, colour);
 
-    let dim_if_old = |col: Color| if health.is_ok() { col } else { DIM };
+    let dim_if_old = |col: Rgba| if health.is_ok() { col } else { c.t.dim };
     let mut rows: Vec<(&str, String)> = Vec::new();
     if let Some(f) = fix {
         if !health.is_ok() {
@@ -740,20 +768,20 @@ fn gps(c: &mut Canvas, state: &HudState, now: Instant) {
     rows.push(("AGE", age));
     for (i, (label, value)) in rows.iter().enumerate() {
         let y = a.1 + 104.0 + i as f32 * 38.0;
-        c.text(x, y, 22.0, label, CAPTION);
+        c.text(x, y, 22.0, label, c.t.caption);
         let colour = if *label == "AGE" {
-            health_colour(health)
+            health_colour(c.t, health)
         } else {
-            dim_if_old(TEXT)
+            dim_if_old(c.t.text)
         };
         c.fitted(x + 70.0, y, 24.0, w - 70.0, value, colour);
     }
 }
 
-fn kind_colour(kind: FixKind) -> Color {
+fn kind_colour(t: &Theme, kind: FixKind) -> Rgba {
     match kind {
-        FixKind::NoFix => BAD,
-        FixKind::Unknown | FixKind::Fix2d | FixKind::RtkFloat => WARN,
-        FixKind::Fix3d | FixKind::Dgps | FixKind::RtkFixed => GOOD,
+        FixKind::NoFix => t.bad,
+        FixKind::Unknown | FixKind::Fix2d | FixKind::RtkFloat => t.warn,
+        FixKind::Fix3d | FixKind::Dgps | FixKind::RtkFixed => t.good,
     }
 }
