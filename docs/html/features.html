@@ -402,7 +402,7 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>built</td>
 </tr>
 <tr>
-<td><a href="actuator-tests.html#the-preflight-on-stands">Preflight on stands</a> (<code>pixi run preflight</code>, <code>actuator-test preflight</code>)</td>
+<td><a href="actuator-tests.html#the-preflight-on-stands">Preflight on stands</a> (<code>pixi run actuator-test preflight --stands</code>)</td>
 <td>One run before the car goes on the ground: it speeds up, holds, slows, brakes and steers while every sensor is checked, and says PASS or FAIL per line. Refused on the real car until a rear-wheel speed exists (TODO 49b); <code>--no-drive</code> checks the sensors alone</td>
 <td>Ben</td>
 <td>2026-10-29</td>
@@ -466,8 +466,8 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>built</td>
 </tr>
 <tr>
-<td><a href="controllers.html#planners">Trial planners</a> (<code>planner:=</code> hybrid, lattice, smac2d, navfn or theta_star; the lattice on our own primitives, <code>pixi run lattice-primitives</code>, 16 headings or 32 with <code>lattice_headings:=32</code>)</td>
-<td>To see whether another of Nav2's planners plans better or faster than Hybrid-A<em> on the same routes, scored by <code>controller-compare --planners</code> (<code>--reversing</code> for the car's own setting, <code>lattice32</code> for the 32-heading file), before any replaces the default. The lattice won (30 Oct, reversing: every leg, 29 s quicker a tour) and is the default since 1 Nov; the car, forward only until H5, keeps Hybrid-A</em>. Only hybrid and lattice keep to the turning radius, so the car refuses the other three</td>
+<td><a href="controllers.html#planners">Trial planners</a> (<code>planner:=</code> hybrid, lattice, smac2d, navfn or theta_star; the lattice on our own primitives, <code>pixi run python3 tools/lattice_primitives.py</code>, 16 headings or 32 with <code>lattice_headings:=32</code>)</td>
+<td>To see whether another of Nav2's planners plans better or faster than Hybrid-A<em> on the same routes, scored by <code>measure controllers --planners</code> (<code>--reversing</code> for the car's own setting, <code>lattice32</code> for the 32-heading file), before any replaces the default. The lattice won (30 Oct, reversing: every leg, 29 s quicker a tour) and is the default since 1 Nov; the car, forward only until H5, keeps Hybrid-A</em>. Only hybrid and lattice keep to the turning radius, so the car refuses the other three</td>
 <td>Ben</td>
 <td>2026-10-29</td>
 <td>sim</td>
@@ -983,7 +983,7 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>built</td>
 </tr>
 <tr>
-<td><a href="hud.html#the-debug-hud">Debug HUD</a> (<code>debug_hud</code>, <code>pixi run debugdemo</code>): the lidar's cubes in 3D, kept and fading (the occupancy-network look), every localizer's car (NDT purple, with its score and LOST in the panel), AMCL's particles, NDT's map as wireframes, every sensor from its own topic; keys 1-4 swap the sim's trial tracker; a key legend on screen. Since 29 Oct it opens as the <strong>seeing screen</strong>: the cubes big on the left, NDT's map from above with every localizer's car, and NDT's match (its cells as ellipses, the scan over them, the score); key L brings the sensor panel back. Since 1 Nov it also draws <strong>Nav2's cubes</strong> (the voxels trial's 0.25 m cubes, red wireframes, key V) over its own, with their road fit, count and ms, and shows the <strong>localization health</strong> checks (OK green, WARN amber with each check)</td>
+<td><a href="hud.html#the-debug-hud">Debug HUD</a> (<code>debug_hud</code>, <code>pixi run demo --debug</code>): the lidar's cubes in 3D, kept and fading (the occupancy-network look), every localizer's car (NDT purple, with its score and LOST in the panel), AMCL's particles, NDT's map as wireframes, every sensor from its own topic; keys 1-4 swap the sim's trial tracker; a key legend on screen. Since 29 Oct it opens as the <strong>seeing screen</strong>: the cubes big on the left, NDT's map from above with every localizer's car, and NDT's match (its cells as ellipses, the scan over them, the score); key L brings the sensor panel back. Since 1 Nov it also draws <strong>Nav2's cubes</strong> (the voxels trial's 0.25 m cubes, red wireframes, key V) over its own, with their road fit, count and ms, and shows the <strong>localization health</strong> checks (OK green, WARN amber with each check)</td>
 <td>See what the car sees and what it thinks, side by side, to debug localization (NDT, AMCL) and the trackers without RViz; the seeing screen shows off what the lidar sees (Ben, 29 Oct: "another screen to show off the voxels"); Nav2's cubes show what Nav2 actually stops for beside what the lidar sees, and the health checks say when localization's inputs stop being believable</td>
 <td>Ben</td>
 <td>2026-10-29</td>
@@ -1013,10 +1013,17 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <tbody>
 <tr>
 <td><a href="switches.html">Switch picker</a> (<code>pixi run pick</code>)</td>
-<td>Every swappable part (who steers, where-am-I, speed loop) as a plain-words menu that prints, saves and runs the command, so nobody has to remember the switches; <code>demo</code> and <code>debugdemo</code> take them too</td>
+<td>Every swappable part (who steers, where-am-I, speed loop) as a plain-words menu that prints, saves and runs the command, so nobody has to remember the switches; <code>demo</code> and <code>demo --debug</code> take them too</td>
 <td>Ben</td>
 <td>2026-10-29</td>
 <td>sim</td>
+</tr>
+<tr>
+<td><a href="../../README.md#every-command">Every command</a>: about 45 <code>pixi run</code> tasks, families as one word and a choice (<code>get models</code>, <code>clear estop</code>, <code>pico spine flash</code>, <code>hud --demo</code>)</td>
+<td>Ben, 1 Nov: "Less is more. Everything should be easy and obvious": 89 tasks were too many to find the right one</td>
+<td>Ben</td>
+<td>2026-11-01</td>
+<td>built</td>
 </tr>
 <tr>
 <td>Live graph check (<code>pixi run check</code>)</td>
@@ -1082,7 +1089,7 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>sim</td>
 </tr>
 <tr>
-<td><a href="a-to-b.html">A-to-B scorer</a> (<code>pixi run atob-score</code>)</td>
+<td><a href="a-to-b.html">A-to-B scorer</a> (<code>pixi run measure atob</code>)</td>
 <td>Numbers for how well the car sped up, held its speed and stopped on B, the same for Gazebo and car runs; a tape-measured stop splits the GPS error from the control error</td>
 <td>Ben</td>
 <td>2026-10-26</td>

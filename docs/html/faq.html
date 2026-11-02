@@ -279,7 +279,7 @@ lane keeping and the HUD. Each keeps a <code>PROVENANCE.md</code>. See <a href="
 stays on. Wheels off the ground, e-stop in hand: see <a href="firmware.html">Firmware</a>.</p>
 </div>
 <h3 id="how-do-i-press-the-e-stop-from-a-laptop">How do I press the e-stop from a laptop?</h3>
-<p><code>pixi run estop</code> publishes <code>true</code> on <code>/safety/estop</code>. <code>pixi run estop-clear</code> clears it.
+<p><code>pixi run estop</code> publishes <code>true</code> on <code>/safety/estop</code>. <code>pixi run clear estop</code> clears it.
 The HUD's button only ever sets it: clearing is always a person's deliberate act.</p>
 <h3 id="who-wins-when-two-drivers-talk-at-once">Who wins when two drivers talk at once?</h3>
 <p>The highest priority that spoke in the last 0.5 s.</p>
@@ -543,7 +543,7 @@ Answer by number: "Q12: ...".</p>
 <pre class="highlight"><code class="language-bash">pixi run turtle              # terminal 1: a turtle that steers like the car
 pixi run keyboard --local    # terminal 2: hold i to drive
 pixi run estop               # terminal 3: the turtle stops
-pixi run estop-clear         #             and drives again</code></pre>
+pixi run clear estop         #             and drives again</code></pre>
 </section>
 <section class="card"><h2 id="where-this-lives-in-the-code">Where this lives in the code</h2>
 <div class="table-wrap"><table>

@@ -605,7 +605,7 @@ does. The spine only listens to it (<a href="firmware.html">Firmware</a>).</p>
 </tr>
 <tr>
 <td>Stop everything</td>
-<td><code>pixi run estop</code>, then <code>pixi run estop-clear</code></td>
+<td><code>pixi run estop</code>, then <code>pixi run clear estop</code></td>
 </tr>
 <tr>
 <td>The speed loop's own tests</td>
@@ -645,11 +645,11 @@ does. The spine only listens to it (<a href="firmware.html">Firmware</a>).</p>
 </tr>
 <tr>
 <td>State space from zero: models, simulators, poles, Bode, shocks and roll</td>
-<td><code>tools/state_space_demo.py</code>, <code>pixi run state-space-demo</code> (<a href="learn-state-space.html">Learn: state space</a>)</td>
+<td><code>tools/state_space_demo.py</code>, <code>pixi run python3 tools/state_space_demo.py</code> (<a href="learn-state-space.html">Learn: state space</a>)</td>
 </tr>
 <tr>
 <td>The loops as transfer functions and state space: poles, margins, delays</td>
-<td><code>ros/ego/aav_ego/aav_ego/vehicle_model.py</code>, <code>pixi run vehicle-model</code> (<a href="vehicle-model.html">The car as a linear model</a>)</td>
+<td><code>ros/ego/aav_ego/aav_ego/vehicle_model.py</code>, <code>pixi run python3 tools/vehicle_model.py</code> (<a href="vehicle-model.html">The car as a linear model</a>)</td>
 </tr>
 <tr>
 <td>Nav2's controller and smoother</td>

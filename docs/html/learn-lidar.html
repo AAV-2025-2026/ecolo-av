@@ -564,7 +564,7 @@ inside a box, it gets the box's name, and the cubes give its distance.</p>
 really is from where it thought.</p>
 <pre class="highlight"><code class="language-text">  /sensors/lidar/points ──► NDT, against the saved map ──► a pose (x, y, yaw)
                                                           └──► ekf_global, beside GPS</code></pre>
-<p><code>pixi run ndt-demo</code> shows it on a made-up lot: a scan off by 1.4 m and 9° ends within about
+<p><code>pixi run python3 tools/ndt_demo.py</code> shows it on a made-up lot: a scan off by 1.4 m and 9° ends within about
 2 cm. Step by step, with pictures: <a href="learn-localization.html#8-next-matching-the-lidar-to-a-map-ndt-and-icp">Learn: localization §8</a>.</p>
 </section>
 <section class="card"><h2 id="8-making-the-map-kiss-icp">8. Making the map: KISS-ICP</h2>
@@ -776,7 +776,7 @@ it starts. Built on the raylib HUD (<code>ros/hud/aav_hud</code>).</p>
 </tr>
 <tr>
 <td>NDT and ICP, drawn</td>
-<td><code>tools/ndt_demo.py</code> (<code>pixi run ndt-demo</code>)</td>
+<td><code>tools/ndt_demo.py</code> (<code>pixi run python3 tools/ndt_demo.py</code>)</td>
 </tr>
 <tr>
 <td>The roof lidar end to end</td>

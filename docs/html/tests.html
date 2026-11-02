@@ -162,7 +162,7 @@ in the order to run them. Each one says what it proves, how to run it, and when 
 <tr>
 <td>1.6</td>
 <td>The HUD, with pretend data</td>
-<td><code>pixi run hud-demo</code></td>
+<td><code>pixi run hud --demo</code></td>
 <td>the window opens with speed, camera, GPS, e-stop</td>
 <td>✅ Ben, 15 Oct</td>
 </tr>
@@ -316,7 +316,7 @@ software stopped; speed capped (<code>max_speed:=0.3</code>).</p>
 <tr>
 <td>3.5</td>
 <td>The HUD's e-stop button</td>
-<td>brakes at once; nothing moves until <code>pixi run estop-clear</code></td>
+<td>brakes at once; nothing moves until <code>pixi run clear estop</code></td>
 <td>🔧</td>
 </tr>
 <tr>
@@ -773,7 +773,7 @@ trials wait for 4.22.</p>
 <tr>
 <td>F.1</td>
 <td>Every machine on the network, with its ROS domain</td>
-<td><code>pixi run net-map</code></td>
+<td><code>pixi run bash tools/net_map.sh</code></td>
 <td>✅ at home</td>
 </tr>
 <tr>
@@ -785,7 +785,7 @@ trials wait for 4.22.</p>
 <tr>
 <td>F.3</td>
 <td>Every machine surveyed: what runs, what's plugged in, what exists only there</td>
-<td><code>pixi run survey ~/aav-audit/hosts.txt</code></td>
+<td><code>pixi run bash tools/survey_car.sh ~/aav-audit/hosts.txt</code></td>
 <td>✅ Linux CI; 🔧 the car</td>
 </tr>
 <tr>

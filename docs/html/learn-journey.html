@@ -633,7 +633,7 @@ pixi run tools/ros.sh --local ros2 topic echo /control/cmd_vel
 pixi run tools/ros.sh --local ros2 topic hz /ego/actuator_cmd</code></pre>
 <p>For the CAN path, run <code>pixi run bench</code>, then
 <code>pixi run tools/ros.sh --local ros2 topic echo /can/tx</code>. <code>pixi run estop</code> and
-<code>pixi run estop-clear</code> try the e-stop. <code>pixi run check turtle</code> compares the running graph
+<code>pixi run clear estop</code> try the e-stop. <code>pixi run check turtle</code> compares the running graph
 with <code>docs/interfaces.yaml</code>.</p>
 </section>
 <section class="card"><h2 id="where-this-lives-in-the-code">Where this lives in the code</h2>

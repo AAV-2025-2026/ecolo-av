@@ -145,7 +145,7 @@ left, right, centre, stop. The car moves only while you <strong>hold</strong> Sp
 </tr>
 </tbody>
 </table></div>
-<h3 id="the-debug-screen-pixi-run-debugdemo">The debug screen (<code>pixi run debugdemo</code>)</h3>
+<h3 id="the-debug-screen-pixi-run-demo-debug">The debug screen (<code>pixi run demo --debug</code>)</h3>
 <p>Left: the lidar as cubes in 3D, and where each localizer thinks the car is. Right: the
 lidar map from above, and NDT's match. New on 1 Nov: <strong>Nav2's cubes</strong> in red (key V), and
 <strong>localization health</strong>.</p>
@@ -201,7 +201,7 @@ lidar map from above, and NDT's match. New on 1 Nov: <strong>Nav2's cubes</stron
 <td>built (QEMU)</td>
 </tr>
 <tr>
-<td>The preflight on stands (<code>pixi run preflight</code>)</td>
+<td>The preflight on stands (<code>pixi run actuator-test preflight --stands</code>)</td>
 <td>Ben</td>
 <td>sim</td>
 </tr>
@@ -408,7 +408,7 @@ lidar map from above, and NDT's match. New on 1 Nov: <strong>Nav2's cubes</stron
 </table></div>
 <p><img alt="The lattice drives the lot tour 29 s quicker than Hybrid-A*" src="../img/whats-new-planners.png" /></p>
 <p>The lattice strings together short moves our car can really make, worked out from
-<code>vehicle.yaml</code> (<code>pixi run lattice-primitives</code>):</p>
+<code>vehicle.yaml</code> (<code>pixi run python3 tools/lattice_primitives.py</code>):</p>
 <p><img alt="The lattice's moves for our car" src="../img/lattice-primitives.png" /></p>
 <h3 id="path-followers-who-steers-along-it">Path followers: who steers along it</h3>
 <p><code>tracker:=pure_pursuit</code> (or <code>stanley</code>, <code>lqr</code>, <code>mpc</code>) swaps them; in Gazebo, live, with

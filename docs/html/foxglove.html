@@ -155,7 +155,7 @@ WebSocket. Built in on 24 October (Ben asked on 11 Oct; go-ahead 24 Oct).</p>
 </tr>
 <tr>
 <td>2</td>
-<td>In the app: <strong>Open connection → Foxglove WebSocket</strong>, then <code>ws://localhost:8765</code> (a simulator here) or <code>ws://&lt;the Orin's IP&gt;:8765</code> (the car; <code>pixi run net-map</code> finds it)</td>
+<td>In the app: <strong>Open connection → Foxglove WebSocket</strong>, then <code>ws://localhost:8765</code> (a simulator here) or <code>ws://&lt;the Orin's IP&gt;:8765</code> (the car; <code>pixi run bash tools/net_map.sh</code> finds it)</td>
 </tr>
 <tr>
 <td>3</td>
@@ -412,8 +412,8 @@ and the scan. On a cable, <code>ros2 launch aav_bringup foxglove.launch.py foxgl
 lets everything through.</p>
 </section>
 <section class="card"><h2 id="check-it-without-the-app">Check it without the app</h2>
-<pre class="highlight"><code class="language-bash">pixi run layout-check                       # the sim here: is every topic served?
-pixi run layout-check ws://192.168.1.140:8765 --data   # the car: and how much each sends</code></pre>
+<pre class="highlight"><code class="language-bash">pixi run python3 tools/layout_check.py                       # the sim here: is every topic served?
+pixi run python3 tools/layout_check.py ws://192.168.1.140:8765 --data   # the car: and how much each sends</code></pre>
 </section>
 <section class="card"><h2 id="tested">Tested</h2>
 <div class="table-wrap"><table>
@@ -446,7 +446,7 @@ pixi run layout-check ws://192.168.1.140:8765 --data   # the car: and how much e
 </tr>
 <tr>
 <td>The cockpit, 1 Nov, road world, <code>foxglove:=true tracker:=pure_pursuit voxels:=true</code></td>
-<td><code>layout-check</code>: every topic served but the GPS route and the scan (<code>voxels:=true</code> replaces it) and <code>/localization/gps/fix</code> (early); <code>/track/set_parameters</code> advertised; the chase camera 10 Hz, 200 kB/s. Opened in Lichtblick, but the Mac was locked: <strong>no screenshot</strong>, and the tracker panel and the switch list are <strong>untested in the app</strong></td>
+<td><code>python3 tools/layout_check.py</code>: every topic served but the GPS route and the scan (<code>voxels:=true</code> replaces it) and <code>/localization/gps/fix</code> (early); <code>/track/set_parameters</code> advertised; the chase camera 10 Hz, 200 kB/s. Opened in Lichtblick, but the Mac was locked: <strong>no screenshot</strong>, and the tracker panel and the switch list are <strong>untested in the app</strong></td>
 </tr>
 <tr>
 <td>The car</td>

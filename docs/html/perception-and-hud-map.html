@@ -191,12 +191,12 @@ sign", so we start there.</p>
 <tr>
 <td>Mac</td>
 <td><code>yolo11n.mlpackage</code> (Core ML)</td>
-<td><code>pixi run -e ml export-coreml</code></td>
+<td><code>pixi run -e ml python3 tools/export_model.py --format coreml</code></td>
 </tr>
 <tr>
 <td>Anything</td>
 <td><code>yolo11n.pt</code> (PyTorch)</td>
-<td><code>pixi run get-models</code></td>
+<td><code>pixi run get models</code></td>
 </tr>
 </tbody>
 </table></div>
@@ -309,7 +309,7 @@ known.</p>
 </tr>
 <tr>
 <td><code>ottawa.db</code>: 606,628 places for the search box</td>
-<td><code>pixi run get-places</code></td>
+<td><code>pixi run get places</code></td>
 </tr>
 <tr>
 <td>OSRM road routes</td>

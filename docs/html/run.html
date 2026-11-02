@@ -234,11 +234,11 @@ model, so like the car, it can't turn on the spot.</p>
 <td>starts the bench and tests the whole graph: about 2 minutes</td>
 </tr>
 <tr>
-<td><code>pixi run get-models</code>, then <code>pixi run detect picture:=ros/perception/aav_detector/test/stop_sign.jpg</code></td>
+<td><code>pixi run get models</code>, then <code>pixi run detect picture:=ros/perception/aav_detector/test/stop_sign.jpg</code></td>
 <td>RF-DETR Nano finds a stop sign in a picture (<code>detector:=yolo</code> for YOLO; <a href="perception.html">Perception</a>)</td>
 </tr>
 <tr>
-<td><code>pixi run graph-picture</code></td>
+<td><code>pixi run tools/ros.sh python3 tools/graph_picture.py</code></td>
 <td>saves the running graph as a picture</td>
 </tr>
 <tr>
@@ -246,7 +246,7 @@ model, so like the car, it can't turn on the spot.</p>
 <td>RViz with the driving layout</td>
 </tr>
 <tr>
-<td><code>pixi run estop</code>, <code>pixi run estop-clear</code></td>
+<td><code>pixi run estop</code>, <code>pixi run clear estop</code></td>
 <td>stop every driver; let them go again</td>
 </tr>
 <tr>
@@ -307,7 +307,7 @@ network, driving and watching the car, and Gazebo.</p>
 </tr>
 <tr>
 <td>Nodes hang at start-up, or the sim never spawns the car</td>
-<td><code>pixi run shm-clean</code>: it removes Fast DDS's shared-memory files left by programs that died (515 of them on 15 Oct). Only with <code>AAV_RMW=fastdds</code>: Cyclone, the default since 23 Oct, leaves none. Stop every ROS program first</td>
+<td><code>pixi run fastdds shm clean</code>: it removes Fast DDS's shared-memory files left by programs that died (515 of them on 15 Oct). Only with <code>AAV_RMW=fastdds</code>: Cyclone, the default since 23 Oct, leaves none. Stop every ROS program first</td>
 </tr>
 <tr>
 <td>Another computer can't see my sim or bench</td>

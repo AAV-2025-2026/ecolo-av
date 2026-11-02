@@ -103,7 +103,7 @@ the board, exists. It runs on a Mac or on Linux.</p></div>
 <p><img alt="The bench's running graph" src="../img/bench-graph.svg" /></p>
 <p>Read it left to right: the stand-ins for the hardware, the sensors, perception,
 localization, the drivers and the HUD, the mux and ego, then the backend. <code>pixi run
-graph-picture</code> draws this from whatever is running.</p>
+tools/ros.sh python3 tools/graph_picture.py</code> draws this from whatever is running.</p>
 </section>
 <section class="card"><h2 id="run-it">Run it</h2>
 <pre class="highlight"><code class="language-bash">pixi run build                          # once, and after every change
@@ -397,7 +397,7 @@ between it and the mux, as on a car with a radar.</p>
 </tr>
 <tr>
 <td>The e-stop</td>
-<td><code>pixi run estop</code>, then <code>pixi run estop-clear</code></td>
+<td><code>pixi run estop</code>, then <code>pixi run clear estop</code></td>
 </tr>
 <tr>
 <td>The hardware e-stop</td>
@@ -675,7 +675,7 @@ the centre.</p>
 </tr>
 <tr>
 <td><code>tools/graph_picture.py</code></td>
-<td><code>pixi run graph-picture</code>: the picture at the top</td>
+<td><code>pixi run tools/ros.sh python3 tools/graph_picture.py</code>: the picture at the top</td>
 </tr>
 </tbody>
 </table></div></section>
