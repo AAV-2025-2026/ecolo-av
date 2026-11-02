@@ -32,3 +32,5 @@ hw_panel:
     creep: 0.1            # m/s: CENTRE turns the wheels straight at this speed (they don't turn at a standstill)
     sim_cap: 1.0          # m/s: the most the buttons ask for in Gazebo or on the bench
     stands_cap: 0.3       # m/s: on stands (--stands), once the preflight's rules allow it (TODO 49b)
+    # --- the look ---
+    theme: mocha          # the colours: mocha (dark, night), latte (light, day), calm (Ben's, to come)
