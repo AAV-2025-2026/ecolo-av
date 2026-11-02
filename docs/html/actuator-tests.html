@@ -22,11 +22,12 @@
 <a href="work.html">Work</a>
 <a href="plan.html">The plan</a>
 <a href="features.html">Features</a>
+<a href="release-0.2.html">Release 0.2</a>
 <a href="whats-new.html">What&#x27;s new</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
-<a href="car-setup.html">Car setup</a>
 <a href="car-day.html">Car day</a>
+<a href="car-setup.html">Car setup</a>
 <a href="tests.html">Every test</a>
 <a href="know-the-car.html">Know the car</a>
 <a href="measure-the-car.html">Measure the car</a>
@@ -398,14 +399,16 @@ side, 1550 the other). Our Rust firmware copied 1950 / 400-3500 / 3100 counts a 
 (<code>calibration.rs</code>, <code>TODO(Q1)</code>, <code>TODO(Q2)</code>). Nobody has measured the real ends.</p>
 <p><strong>Gives:</strong> the centre, equal limits each side of it, the counts a radian, and
 <code>max_steering_angle</code>. Test 3.0 in <a href="tests.html#3b-steering-on-stands">tests.md</a>: do it
-before 3.10.</p>
+before 3.10. <strong>3.10 then runs only inside the measured ends:</strong> both ends outside today's
+software limits (400-3500), or the measured ends flashed in <code>calibration.rs</code> first
+(<a href="car-day.html#a6-the-steering-actuators-ends-way-a">car day, A6</a>).</p>
 <div class="admonition warning">
 <p class="admonition-title">Before any sweep</p>
 <ul>
 <li><strong>The car on stands</strong>, all four wheels off the ground, the e-stop in someone's hand.</li>
 <li><strong>The steering actuator's current limit set low first</strong> (its Jrk's settings, in
   Pololu's utility), so a wrong target pushes gently against the stop. The value is
-  the hardware lead's.</li>
+  the hardware lead's: <strong>______</strong> (write it here and on the sheet).</li>
 <li><strong>The steering actuator's own (Jrk) limits are the last line of defence.</strong> They are
   the hardware lead's to set. Our software limits come first; they don't replace them.</li>
 <li>Hands clear of the wheels and the linkage while the motor is on.</li>
@@ -425,8 +428,8 @@ radians are worked out <em>from</em> this calibration.</p>
 <thead>
 <tr>
 <th></th>
-<th>Way A: car day, today's C++ firmware</th>
-<th>Way B: the Rust firmware and the hardware panel</th>
+<th>Way A: car day, whatever firmware is on the ESP32</th>
+<th>Way B: later, the Rust firmware with the uplink and the hardware panel</th>
 </tr>
 </thead>
 <tbody>
@@ -484,7 +487,7 @@ radians are worked out <em>from</em> this calibration.</p>
 </tr>
 <tr>
 <td>A5</td>
-<td>The ESP32 sends a steering target all the time, so the motor won't stay off. With the hardware lead, stop it reaching the Jrk (the ESP32 off, or its I2C unplugged), then press <strong>Stop motor</strong> in the utility</td>
+<td>The ESP32 sends a steering target all the time, so the motor won't stay off. <strong>Power everything off first.</strong> Then, with the hardware lead, stop it reaching the Jrk: the ESP32 left off, or its I2C unplugged <strong>with the power still off</strong> (never with it on). Power the Jrk back, then press <strong>Stop motor</strong> in the utility</td>
 <td>how</td>
 </tr>
 <tr>
@@ -517,7 +520,10 @@ radians are worked out <em>from</em> this calibration.</p>
 <p>Menu and tab names are from Pololu's user's guide; the version on the laptop may name
 them a little differently.</p>
 <h3 id="way-b-the-hardware-panel-rust-firmware">Way B: the hardware panel (Rust firmware)</h3>
-<p>The Motor Pi's <code>legacy.yaml</code>, for this session only, with the hardware lead's say-so:</p>
+<p><strong>Not on car day.</strong> Car day runs link version 2 throughout
+(<a href="car-day.html#one-link-version-on-the-car">one link version on the car</a>). Way B comes later,
+once the Rust firmware with the uplink is flashed and H9 says the wire is there. Then the
+Motor Pi's <code>legacy.yaml</code>, for this session only, with the hardware lead's say-so:</p>
 <pre class="highlight"><code class="language-yaml">frame_version: 3
 uplink: true
 steering_calibration: stands     # back to none afterwards</code></pre>

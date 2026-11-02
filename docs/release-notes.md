@@ -217,6 +217,7 @@ written here once the merges land (TODO 77); until then:
 |---|---|
 | When 0.2 is done | [the car-ready checklist](car-day.md#ready-for-car-day-the-02-checklist) |
 | What's left | [TODO.md](../TODO.md), "Left for 0.2" |
+| **What 0.2 has, with pictures** | [Release 0.2](release-0.2.md) (its own PDF: `docs/html/aav-0.2.pdf`) |
 | What came in since 0.1 | [What's new](whats-new.md) (history, 22 Oct to 1 Nov) |
 
 ## Coming next (from 0.1)

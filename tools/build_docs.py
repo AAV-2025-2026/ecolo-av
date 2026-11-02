@@ -33,8 +33,8 @@ DOCS = ROOT / 'docs'
 OUT = DOCS / 'html'
 STYLE = DOCS / 'style.css'
 WPM = 150          # an unhurried reading speed, so the times are a promise
-READ_FIRST = 23    # PAGES[:23] are the reading list
-LEARN_END = 38     # PAGES[23:38] are the learn pages; the rest are reference
+READ_FIRST = 24    # PAGES[:24] are the reading list
+LEARN_END = 39     # PAGES[24:39] are the learn pages; the rest are reference
 
 # (file in docs/, menu title, what it's for). A name in ROOT_PAGES is a page kept at the
 # repository's root instead, built the same way (none since 25 Oct: every page is in docs/).
@@ -53,6 +53,7 @@ PAGES = [
     ('work.md', 'Work', "The plan, what's done, what needs doing"),
     ('plan.md', 'The plan', 'The proposal as a to-do list: the gates, every task'),
     ('features.md', 'Features', 'What the software does, why, and who built it'),
+    ('release-0.2.md', 'Release 0.2', 'what 0.2 has, by area, with pictures'),
     ('whats-new.md', "What's new", '22 Oct to 1 Nov, by area, with pictures (history)'),
     ('audit-friday.md', 'Audit, 16 Oct', 'The hardware audit, machine by machine'),
     ('audit-questions.md', 'Audit questions', 'What only the car can tell us'),
@@ -146,6 +147,7 @@ RELEASE = 'release-notes.md'   # also printed on its own, with a cover, to share
 RELEASE_PDF = 'aav-release-notes.pdf'
 # Pages also printed on their own, with a cover, to share: page -> (PDF, footer words).
 SHARED = {RELEASE: (RELEASE_PDF, 'release notes'),
+          'release-0.2.md': ('aav-0.2.pdf', 'release 0.2'),
           'whats-new.md': ('aav-whats-new.pdf', "what's new")}
 # A shared page's own PDF: a running footer, and the cover on a page of its own.
 RELEASE_STYLE = """

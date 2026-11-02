@@ -22,11 +22,12 @@
 <a href="work.html">Work</a>
 <a href="plan.html">The plan</a>
 <a href="features.html">Features</a>
+<a href="release-0.2.html">Release 0.2</a>
 <a href="whats-new.html">What&#x27;s new</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
-<a href="car-setup.html">Car setup</a>
 <a href="car-day.html">Car day</a>
+<a href="car-setup.html">Car setup</a>
 <a class="here" href="tests.html">Every test</a>
 <a href="know-the-car.html">Know the car</a>
 <a href="measure-the-car.html">Measure the car</a>
@@ -363,13 +364,13 @@ software stopped; speed capped (<code>max_speed:=0.3</code>).</p>
 <tr>
 <td>3.0</td>
 <td><strong>The steering actuator's ends and centre</strong>: before any sweep, its current limit low</td>
-<td>left end, centre, right end in counts, and the wheel angle at each end (protractor). Way A: Pololu's utility on the C++ car; way B: the hardware panel, limp or jog (<a href="actuator-tests.html#find-the-steering-actuators-ends-and-centre">the procedure and sheet</a>)</td>
+<td>left end, centre, right end in counts, and the wheel angle at each end (protractor). Way A (car day): Pololu's utility, the power off before any I2C is unplugged; way B (later, link version 3): the hardware panel, limp or jog (<a href="actuator-tests.html#find-the-steering-actuators-ends-and-centre">the procedure and sheet</a>)</td>
 <td>the sheet filled in; <code>steering_limits</code> gives equal limits each side; the hardware lead reviews them</td>
 <td>⬜</td>
 </tr>
 <tr>
 <td>3.10</td>
-<td><strong>Steering sweep</strong>: full left, centre, full right, slowly</td>
+<td><strong>Steering sweep</strong>: full left, centre, full right, slowly; <strong>only inside the ends 3.0 measured</strong> (or once they're flashed)</td>
 <td>the wheel angle at each command (protractor or phone app on the wheel). <code>pixi run actuator-test steer-sweep --stands</code>: it asks for each angle</td>
 <td>a table: command → real angle, each way</td>
 <td>🔧</td>
@@ -842,7 +843,7 @@ trials wait for 4.22.</p>
 </tr>
 </tbody>
 </table></div></section>
-<nav class="prevnext"><a class="prev" href="car-day.html"><small>Previous</small>← Car day</a>
+<nav class="prevnext"><a class="prev" href="car-setup.html"><small>Previous</small>← Car setup</a>
 <a class="next" href="know-the-car.html"><small>Next</small>Know the car →</a></nav>
 </main>
 <footer>Source: <code>docs/tests.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>

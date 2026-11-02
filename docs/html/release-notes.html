@@ -7,7 +7,7 @@
 <!-- Generated from docs/release-notes.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Release 0.1: the first pass</h1>
-<div class="meta">14 min read · 17 sections</div></header>
+<div class="meta">15 min read · 18 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a class="here" href="release-notes.html">Release notes</a>
@@ -22,11 +22,12 @@
 <a href="work.html">Work</a>
 <a href="plan.html">The plan</a>
 <a href="features.html">Features</a>
+<a href="release-0.2.html">Release 0.2</a>
 <a href="whats-new.html">What&#x27;s new</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
-<a href="car-setup.html">Car setup</a>
 <a href="car-day.html">Car day</a>
+<a href="car-setup.html">Car setup</a>
 <a href="tests.html">Every test</a>
 <a href="know-the-car.html">Know the car</a>
 <a href="measure-the-car.html">Measure the car</a>
@@ -97,7 +98,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#highlights">Highlights</a><a href="#everything-in-one-workspace">Everything in one workspace</a><a href="#driving-one-path-from-any-driver-to-the-wheels">Driving: one path from any driver to the wheels</a><a href="#knowing-where-the-car-is">Knowing where the car is</a><a href="#navigation-built-for-a-car">Navigation built for a car</a><a href="#perception-and-ai-on-every-gpu">Perception and AI on every GPU</a><a href="#firmware-a-can-spine-in-rust">Firmware: a CAN spine, in Rust</a><a href="#from-c-to-rust">From C++ to Rust</a><a href="#simulation-and-bench-mode">Simulation and bench mode</a><a href="#macs-are-first-class">Macs are first-class</a><a href="#the-hud">The HUD</a><a href="#ready-for-ai-tools-the-mcp-server">Ready for AI tools: the MCP server</a><a href="#safety-by-design">Safety by design</a><a href="#quality-tests-contracts-and-docs">Quality: tests, contracts and docs</a><a href="#by-the-numbers">By the numbers</a><a href="#coming-next">Coming next</a><a href="#credits">Credits</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#highlights">Highlights</a><a href="#everything-in-one-workspace">Everything in one workspace</a><a href="#driving-one-path-from-any-driver-to-the-wheels">Driving: one path from any driver to the wheels</a><a href="#knowing-where-the-car-is">Knowing where the car is</a><a href="#navigation-built-for-a-car">Navigation built for a car</a><a href="#perception-and-ai-on-every-gpu">Perception and AI on every GPU</a><a href="#firmware-a-can-spine-in-rust">Firmware: a CAN spine, in Rust</a><a href="#from-c-to-rust">From C++ to Rust</a><a href="#simulation-and-bench-mode">Simulation and bench mode</a><a href="#macs-are-first-class">Macs are first-class</a><a href="#the-hud">The HUD</a><a href="#ready-for-ai-tools-the-mcp-server">Ready for AI tools: the MCP server</a><a href="#safety-by-design">Safety by design</a><a href="#quality-tests-contracts-and-docs">Quality: tests, contracts and docs</a><a href="#by-the-numbers">By the numbers</a><a href="#release-02-in-progress">Release 0.2: in progress</a><a href="#coming-next-from-01">Coming next (from 0.1)</a><a href="#credits">Credits</a></nav>
 <div class="lead"><blockquote>
 <p><strong>A snapshot from 11 October 2026.</strong> What's true now: <a href="status.html">Status</a> and <a href="features.html">Features</a>.</p>
 </blockquote>
@@ -348,7 +349,38 @@ change since):</p>
 </tbody>
 </table></div>
 </section>
-<section class="card"><h2 id="coming-next">Coming next</h2>
+<section class="card"><h2 id="release-02-in-progress">Release 0.2: in progress</h2>
+<p><strong>0.2 = sim-complete, car-ready.</strong> A small release: everything merged and tested in
+Gazebo, the car-day runbook, and the first moves' safety gaps closed. The notes are
+written here once the merges land (TODO 77); until then:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>When 0.2 is done</td>
+<td><a href="car-day.html#ready-for-car-day-the-02-checklist">the car-ready checklist</a></td>
+</tr>
+<tr>
+<td>What's left</td>
+<td><a href="../../TODO.md">TODO.md</a>, "Left for 0.2"</td>
+</tr>
+<tr>
+<td><strong>What 0.2 has, with pictures</strong></td>
+<td><a href="release-0.2.html">Release 0.2</a> (its own PDF: <code>docs/html/aav-0.2.pdf</code>)</td>
+</tr>
+<tr>
+<td>What came in since 0.1</td>
+<td><a href="whats-new.html">What's new</a> (history, 22 Oct to 1 Nov)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="coming-next-from-01">Coming next (from 0.1)</h2>
 <ul>
 <li><strong>16 October: the hardware audit</strong> at the car, read-only first: backups, the
   inventory, the measurements.</li>
