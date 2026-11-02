@@ -128,14 +128,14 @@ def test_mppi_unless_regulated_pure_pursuit_is_asked_for():
 
 
 def test_who_may_reverse():
-    # Gazebo and the bench: yes. The car only with reversing:=true since 26 Oct (the wheels
-    # can't tell direction yet, H5), and where the lidar sees behind (test_car_launch.py).
+    # Gazebo and the bench: yes. The car too since 1 Nov (Ben: "reverse and uturn should be
+    # in"), where the lidar sees behind (test_car_launch.py).
     assert sent_to_navigation(SIM)['reversing'] == 'true'
     assert sent_to_navigation(SIM, reversing='false')['reversing'] == 'false'
     assert sent_to_navigation(SIM, sim_speed='3')['max_speed'] == '3'
     assert sent_to_navigation(BENCH)['reversing'] == 'true'
-    assert sent_to_navigation(CAR, machine='all')['reversing'] == 'false'
-    assert sent_to_navigation(CAR, machine='all', reversing='true')['reversing'] == 'true'
+    assert sent_to_navigation(CAR, machine='all')['reversing'] == 'true'
+    assert sent_to_navigation(CAR, machine='all', reversing='false')['reversing'] == 'false'
 
 
 def whole_file(**args):
@@ -406,7 +406,12 @@ def test_the_sim_passes_any_planner_and_the_car_only_car_shaped_ones():
     assert sent_to_navigation(SIM)['planner'] == 'lattice'
     for planner in vehicle.PLANNERS:
         assert sent_to_navigation(SIM, planner=planner)['planner'] == planner
-    assert sent_to_navigation(CAR, machine='all')['planner'] == 'hybrid'    # forward only
+    # The car picks by reversing: the lattice, or Hybrid-A* forward only (or blind behind).
+    assert sent_to_navigation(CAR, machine='all')['planner'] == 'lattice'
+    assert sent_to_navigation(CAR, machine='all', reversing='false')['planner'] == 'hybrid'
+    assert sent_to_navigation(CAR, machine='all', lidar='false')['planner'] == 'hybrid'
+    assert sent_to_navigation(CAR, machine='all', reversing='false',
+                              planner='lattice')['planner'] == 'lattice'
     assert sent_to_navigation(CAR, machine='all', planner='lattice')['planner'] == 'lattice'
     for planner in set(vehicle.PLANNERS) - set(vehicle.CAR_PLANNERS):
         with pytest.raises(ValueError, match='turning radius'):

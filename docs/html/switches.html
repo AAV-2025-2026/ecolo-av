@@ -120,7 +120,7 @@ twice, the last one wins.</p></div>
 <td>30 Oct, reversing: every leg, <strong>184 s</strong> a tour. Forward only (29 Oct): 2 of 4, lost the U-turn</td>
 </tr>
 <tr>
-<td><code>planner:=hybrid</code> (the car's default)</td>
+<td><code>planner:=hybrid</code> (forward only)</td>
 <td>Hybrid-A*: only routes a car can drive</td>
 <td>30 Oct, reversing: every leg, 213 s a tour</td>
 </tr>
@@ -146,8 +146,9 @@ twice, the last one wins.</p></div>
 </tr>
 </tbody>
 </table></div>
-<p>The lattice is the default since 1 Nov (Ben). The real car takes only <code>hybrid</code> or
-<code>lattice</code>, and keeps <code>hybrid</code>: forward only (until H5), the lattice lost the U-turn. More: <a href="controllers.html">Controllers, Planners</a>, <a href="trials.html#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32">the runs</a>.</p>
+<p>The lattice is the default since 1 Nov (Ben), on the car too, now that it may reverse.
+Forward only (<code>reversing:=false</code>, or no lidar), the car takes <code>hybrid</code>: the lattice lost
+the U-turn. The real car takes only <code>hybrid</code> or <code>lattice</code>. More: <a href="controllers.html">Controllers, Planners</a>, <a href="trials.html#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32">the runs</a>.</p>
 </section>
 <section class="card"><h2 id="who-steers-along-the-path">Who steers along the path</h2>
 <div class="table-wrap"><table>

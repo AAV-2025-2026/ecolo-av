@@ -318,9 +318,9 @@ PLANNERS = ('hybrid', 'lattice', 'smac2d', 'navfn', 'theta_star')
 CAR_PLANNERS = ('hybrid', 'lattice')
 # The lattice is the default (Ben, 1 Nov): with reversing on, every leg of the lot tour,
 # 29 s quicker than Hybrid-A* (docs/trials.md, 30 Oct). Forward only it lost the U-turn
-# (29 Oct), so the real car, forward only until H5, keeps Hybrid-A* (CAR_DEFAULT_PLANNER).
+# (29 Oct), so a car that may not reverse takes Hybrid-A* (FORWARD_ONLY_PLANNER).
 DEFAULT_PLANNER = 'lattice'
-CAR_DEFAULT_PLANNER = 'hybrid'
+FORWARD_ONLY_PLANNER = 'hybrid'
 # Each planner's block in nav2.yaml's planner_server (GridBased is hybrid's own).
 PLANNER_BLOCKS = {'hybrid': 'GridBased', 'lattice': 'Lattice', 'smac2d': 'Smac2D',
                   'navfn': 'NavFn', 'theta_star': 'ThetaStar'}
@@ -339,6 +339,11 @@ def lattice_file_name(headings=LATTICE_HEADINGS[0]):
                          f'{", ".join(str(h) for h in LATTICE_HEADINGS)}')
     tail = '' if headings == LATTICE_HEADINGS[0] else f'_{headings}'
     return f'lattice_ackermann{tail}.json'
+
+
+def default_planner(reversing):
+    """Return the planner to use when none is asked for: the lattice only if Nav2 may reverse."""
+    return DEFAULT_PLANNER if reversing else FORWARD_ONLY_PLANNER
 
 
 def check_planner(planner, real=False):
@@ -484,7 +489,7 @@ def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False
       for it). Without plan_around the planner sees only the map, and the car stops for
       what's in its way: the stop zone's tests;
     - the planner (PLANNERS; hybrid when none is named, as it needs no `lattice_file`;
-      the launch files always name one, DEFAULT_PLANNER or CAR_DEFAULT_PLANNER): its
+      the launch files always name one, as default_planner(reversing) picks): its
       block (PLANNER_BLOCKS) becomes GridBased, the name the behaviour trees ask for, and
       the spare blocks go. lattice also takes
       `lattice_file` (the primitives) and, with `reversing`, may expand backwards;

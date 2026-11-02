@@ -514,7 +514,7 @@ on branch `trials` (Tentative; `git show trials:docs/designs/2026-10-29_trials.m
 
 The **planner** draws the path; the **follower** (MPPI, RPP, a tracker) drives it. Nav2
 can use several planners. We pick one with `planner:=`; the State Lattice is the default since 1 Nov
-(Hybrid-A* on the car, forward only until H5) (`docs/trials.md`, [Planners, 30 Oct](trials.md#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32)).
+(Hybrid-A* when the car may not reverse) (`docs/trials.md`, [Planners, 30 Oct](trials.md#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32)).
 
 ```text
  goal ─► bt_navigator ─► planner_server: "GridBased" ─► the path ─► follower
@@ -529,7 +529,7 @@ behind that name, so nothing else changes.
 
 | `planner:=` | Nav2's plugin | How it draws the path | Keeps to the car's turning circle? |
 |---|---|---|---|
-| `hybrid` (the car's default) | SmacPlannerHybrid | searches with real car moves: straight, full left, full right; Dubins curves (Reeds-Shepp with `reversing:=true`) | **yes** |
+| `hybrid` (forward only) | SmacPlannerHybrid | searches with real car moves: straight, full left, full right; Dubins curves (Reeds-Shepp with `reversing:=true`) | **yes** |
 | `lattice` (default) | SmacPlannerLattice | joins short car moves from a ready-made list, our **primitives** (below) | **yes** |
 | `smac2d` | SmacPlanner2D | A* on the grid, 8 directions, then smoothed | no |
 | `navfn` | NavfnPlanner | Dijkstra on the grid: Nav2's oldest planner | no |

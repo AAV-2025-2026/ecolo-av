@@ -518,6 +518,7 @@ The HUD's GO / STOP panel says whether the car may move, and why not. A latched 
 |---|---|---|---|
 | 3.1 | Nothing pressed | wheels still; the HUD shows 0 | e-stop |
 | 3.2 | Forward, gently | the drive wheels turn **forward**, slowly | backwards: write it down (`legacy_protocol.py`), not fixed at the car. **Fast:** e-stop, write down the speed (3.12's tachometer), and no ground driving until tests 4.2 and 4.4 |
+| 3.2b | Backward, gently (the keyboard's back key) | the drive wheels turn **backward**, slowly; the HUD's speed reads negative | forward: the ESP32's direction switch (ask the hardware lead). **Nav2 must not reverse on the ground until this passes:** `reversing:=false` |
 | 3.3 | Left | the front wheels turn **left** | right: `steering_sign` (Q2) |
 | 3.4 | Let go of the key | slows to 0 within 0.3 s | |
 | 3.5 | The HUD's e-stop button | brakes at once; nothing moves until `pixi run estop-clear` | |
@@ -541,7 +542,7 @@ with the e-stop person and someone on the rear wheels' tachometer ([the prefligh
 Then put it back: Ctrl-C everything; theirs again (`sudo systemctl start aav_serial_bridge`)
 only with the C++ on the ESP32 (6d), as the team decides.
 
-**Stop point:** 3.1-3.8 pass. Anything that turned the wrong way: written down.
+**Stop point:** 3.1-3.8 and 3.2b pass. Anything that turned the wrong way: written down.
 
 ## Session 10: what to record
 

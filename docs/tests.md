@@ -59,6 +59,7 @@ software stopped; speed capped (`max_speed:=0.3`).
 |---|---|---|---|
 | 3.1 | Nothing pressed | wheels still; the HUD shows 0 | 🔧 |
 | 3.2 | Forward, gently | the drive wheels turn **forward**, slowly | 🔧 |
+| 3.2b | **Backward, gently** (the keyboard's back key) | the drive wheels turn **backward**, slowly; `/vehicle/odom` reads **negative** (its sign is the command's until H5) | 🔧 |
 | 3.3 | Left | the front wheels turn **left** | 🔧 |
 | 3.4 | Let go of the key | slows to 0 within 0.3 s; brake frames sent | 🔧 |
 | 3.5 | The HUD's e-stop button | brakes at once; nothing moves until `pixi run estop-clear` | 🔧 |
@@ -140,21 +141,34 @@ every drive**, or the maps won't line up. The Orin needs 20 GB free (the lidar i
 | 4.21 | **NDT's map of the lot** | `pixi run ndt-map build bags/<4.19> --poses /localization/odom/global --out maps/ndt/<lot>` | `ndt:=true` on the car. Only as good as the EKF that placed it | 🔧 |
 | 4.22 | **Score the trials** | `replay.launch.py` and `ros2 bag play bags/<4.19>`: `ndt_ekf`, `kiss_ekf`, `voxels`, on and off | the best of, decided on real data | 🔧 |
 
+### 4f. Reversing and the U-turn
+
+Nav2 may back up on the car (at 0.5 m/s at most), where the lidar watches behind. Until
+the wheels tell direction (H5), the speed's sign is the **last command's**: 4.25 checks
+where that goes wrong.
+
+| # | Test | How | Passes when | Status |
+|---|---|---|---|---|
+| 4.23 | **Reverse straight** | the keyboard, 5 m back at 0.3 m/s, then `actuator-test straight` reversed | the local EKF goes **back** 5 m (±0.3 m); the GPS agrees | 🔧 |
+| 4.24 | **Stop for something behind** | a cone 3 m behind, Nav2 told to back up past it | stops before it: collision_monitor's box behind the bumper (Gazebo: 0.75 m short, `sim-check --rear-obstacle`) | 🔧 |
+| 4.25 | **Rolling back** (the known flaw) | on a gentle slope, drive forward, stop, let it roll back by hand on the brake | written down: how far the EKF thinks it went **forward**, and whether the watchdog noticed (it compares speeds, not directions: maybe not). Too far: wait for H5 before reversing on slopes | 🔧 |
+| 4.26 | **The U-turn** | Nav2, a goal behind the car in a 14 m lane of cones (Gazebo's "turn back" leg) | a three-point turn: forward, back about 9 m, forward; no cone touched | 🔧 in Gazebo, 16 of 16 legs with the lattice (30 Oct) |
+
 Nav2's map stays `empty.yaml`: the sensors see obstacles live. A map made from the lidar
 needs a tool we don't have yet.
 
 ### The stack for every test on the ground
 
-The car's defaults: the best of the Gazebo trials for a car that **drives forward only**
-(until H5). `test_car_launch.py` pins them. The trials wait for 4.22.
+The car's defaults: the best of the Gazebo trials. `test_car_launch.py` pins them. The
+trials wait for 4.22.
 
 | Job | On the car | Why this one |
 |---|---|---|
 | Where am I | the two EKFs, with the GPS | NDT needs a map of the lot first (4.21) |
-| Draws the route | Hybrid-A* | forward only, the lattice lost the U-turn |
+| Draws the route | the lattice (Hybrid-A* if forward only) | with reversing: every leg, 29 s quicker a tour |
 | Steers along it | MPPI | reads the costmap; the trackers don't |
 | Sees obstacles | the flat lidar scan | the cubes are a trial |
-| Reverses? | no | the wheels can't tell direction yet (H5) |
+| Reverses? | yes, 0.5 m/s at most, where the lidar sees behind | the U-turn needs it (4.26); the sign is the command's until H5 |
 
 ## Stage 5: the whole drive
 

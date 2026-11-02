@@ -233,7 +233,7 @@ def generate_launch_description():
         DeclareLaunchArgument('camera_obstacles', default_value='false',
                               description="the detectors' boxes into the local costmap"),
         DeclareLaunchArgument('reversing', default_value='true',
-                              description='Nav2 may drive backwards: on here, off on the car '
+                              description='Nav2 may drive backwards, as on the car '
                                           '(docs/learn-nav2.md)'),
         DeclareLaunchArgument('plan_around', default_value='true',
                               description="true: Nav2's planner plans round what the radar "

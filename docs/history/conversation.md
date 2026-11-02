@@ -1389,6 +1389,15 @@ Ben: "All the perception stack maybe, what part does what. When sitting at the c
 - **Also built:** the cubes in RViz; health in `pixi run check`; on branches, the cubes
   and health on the debug screen, and KISS-ICP into `ekf_local` (`kiss_ekf:=true`).
 
+### "reverse and uturn should be in": the car reverses again
+
+- **Decided (Ben):** Nav2 may back up on the car again (off 26 Oct-1 Nov), at 0.5 m/s at
+  most, where the lidar watches behind. Its planner is then the lattice.
+- **The risk, written down:** until H5 the speed's sign is the last command's. Pushed or
+  rolling back, the EKF thinks forward: test 4.25 measures it.
+- **The ground plan** is `tests.md` stages 4 and 5 (it existed; Claude first said it
+  didn't), now with 4e (record the lot: maps and scores) and 4f (reversing, the U-turn).
+
 ## Open threads
 
 - **Car day (1 Nov):** roll the car to measure the wheel diameter; check the front and rear track; then the lattice forward only (TODO 60-62).

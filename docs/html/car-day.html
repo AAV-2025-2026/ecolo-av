@@ -1456,6 +1456,12 @@ Their <code>foxglove-bridge</code> already holds port 8765 on the Orin, so ours 
 <td>backwards: write it down (<code>legacy_protocol.py</code>), not fixed at the car. <strong>Fast:</strong> e-stop, write down the speed (3.12's tachometer), and no ground driving until tests 4.2 and 4.4</td>
 </tr>
 <tr>
+<td>3.2b</td>
+<td>Backward, gently (the keyboard's back key)</td>
+<td>the drive wheels turn <strong>backward</strong>, slowly; the HUD's speed reads negative</td>
+<td>forward: the ESP32's direction switch (ask the hardware lead). <strong>Nav2 must not reverse on the ground until this passes:</strong> <code>reversing:=false</code></td>
+</tr>
+<tr>
 <td>3.3</td>
 <td>Left</td>
 <td>the front wheels turn <strong>left</strong></td>
@@ -1531,7 +1537,7 @@ with the e-stop person and someone on the rear wheels' tachometer (<a href="actu
 <p><strong>Not today: the car on the ground.</strong> That waits for tests 4.2 (<code>coast</code>) and 4.4 (<code>throttle-map</code>): they measure the drag and the throttle, and settle the 5 times disagreement (TODO 52b). Then the ground: <a href="tests.html#stage-4-the-car-in-an-empty-lot">Every test</a>, stage 4, recorded with the lidar (4e).</p>
 <p>Then put it back: Ctrl-C everything; theirs again (<code>sudo systemctl start aav_serial_bridge</code>)
 only with the C++ on the ESP32 (6d), as the team decides.</p>
-<p><strong>Stop point:</strong> 3.1-3.8 pass. Anything that turned the wrong way: written down.</p>
+<p><strong>Stop point:</strong> 3.1-3.8 and 3.2b pass. Anything that turned the wrong way: written down.</p>
 </section>
 <section class="card"><h2 id="session-10-what-to-record">Session 10: what to record</h2>
 <p><strong>Who:</strong> the laptop person. <strong>All day.</strong> These feed the sim-versus-real report (PLAN T2.7),
