@@ -18,21 +18,24 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import layout_check  # noqa: E402, I100
 
 ROOT = Path(__file__).resolve().parents[2]
-TOPICS = set(yaml.safe_load((ROOT / 'docs/interfaces.yaml').read_text())['topics'])
+TOPICS = yaml.safe_load((ROOT / 'docs/interfaces.yaml').read_text())['topics']
 BRIDGE = yaml.safe_load((ROOT / 'ros/bringup/aav_bringup/config/foxglove_bridge.yaml').read_text())
 WIFI = BRIDGE['foxglove_bridge']['ros__parameters']['topic_whitelist']
 LAYOUTS = {p.stem: json.loads(p.read_text()) for p in layout_check.LAYOUTS}
 
 
-def test_the_three_layouts_are_there():
-    assert set(LAYOUTS) == {'driving', 'sensors-health', 'map'}
+SERVICES = set(yaml.safe_load((ROOT / 'docs/interfaces.yaml').read_text())['services'])
+
+
+def test_the_four_layouts_are_there():
+    assert set(LAYOUTS) == {'driving', 'sensors-health', 'map', 'cockpit'}
 
 
 @pytest.mark.parametrize('name', sorted(LAYOUTS))
 def test_every_topic_is_in_the_contract(name):
     shown = layout_check.shown_topics(LAYOUTS[name])
     assert shown, 'the layout shows no topics'
-    unknown = shown - TOPICS - layout_check.NAV2_OWN
+    unknown = shown - set(TOPICS) - layout_check.NAV2_OWN
     assert not unknown, f'not in docs/interfaces.yaml: {sorted(unknown)}'
 
 
@@ -68,6 +71,52 @@ def test_the_driving_layout_shows_the_cameras_preview_not_its_pictures():
     assert not any(t.endswith('/image_raw') or t.endswith('/image') for t in shown)
 
 
+def test_the_cockpit_has_every_part_on_one_screen():
+    layout = LAYOUTS['cockpit']
+    kinds = {panel.split('!')[0] for panel in layout['configById']}
+    assert {'3D', 'Image', 'map', 'Plot', 'Indicator', 'DiagnosticSummary', 'CallService',
+            'Table'} <= kinds
+    shown = layout_check.shown_topics(layout)
+    assert {'/vehicle/gazebo/chase_camera/compressed', '/perception/voxels/cubes',
+            '/localization/health', '/plan', '/goal_pose', '/diagnostics'} <= shown
+
+
+def test_the_cockpits_3d_panel_sends_goals_where_nav2_listens():
+    config = LAYOUTS['cockpit']['configById']['3D!cockpit']
+    assert config['publish']['type'] == 'pose'
+    assert config['publish']['poseTopic'] == '/goal_pose'
+
+
+def test_the_cockpit_swaps_the_tracker_through_its_parameter_service():
+    config = LAYOUTS['cockpit']['configById']['CallService!tracker']
+    assert layout_check.shown_services(LAYOUTS['cockpit']) <= SERVICES
+    request = json.loads(config['requestPayload'])
+    (param,) = request['parameters']
+    assert param['name'] == 'tracker'
+    assert param['value']['type'] == 4                 # PARAMETER_STRING
+    assert param['value']['string_value'] in ('pure_pursuit', 'stanley', 'lqr', 'mpc',
+                                              'mpc_full')
+
+
+def test_the_launch_switches_script_reads_a_topic_every_run_has():
+    layout = LAYOUTS['cockpit']
+    assert layout_check.script_inputs(layout) == {'/diagnostics'}
+    (script,) = layout['userNodes'].values()
+    for switch in ('planner', 'ndt', 'ndt_ekf', 'kiss_icp', 'kiss_ekf', 'voxels', 'amcl'):
+        assert f'"{switch}:="' in script['sourceCode']
+    assert 'pixi run pick' in script['sourceCode']
+    # The Table shows the script's output: the app's own topic, never the bridge's.
+    assert layout['configById']['Table!switches']['topicPath'].startswith(
+        layout_check.SCRIPT_PREFIX)
+
+
+def test_the_chase_cameras_raw_picture_stays_off_the_wifi():
+    raw = '/vehicle/gazebo/chase_camera/image_raw'
+    assert raw in TOPICS
+    assert not any(re.fullmatch(p, raw) for p in WIFI)
+    assert TOPICS['/vehicle/gazebo/chase_camera/compressed']['live'] == ['road']
+
+
 def test_an_unknown_panel_is_refused():
     with pytest.raises(ValueError, match='Gauge!x'):
         layout_check.shown_topics({'configById': {'Gauge!x': {}}})
@@ -82,6 +131,14 @@ def test_the_bridge_topics_come_from_its_advertise_messages():
         json.dumps({'op': 'unadvertise', 'channelIds': [2]}),
     ]
     assert layout_check.advertised(payloads) == {'/vehicle/odom': 1, '/tf': 3}
+
+
+def test_the_bridge_services_come_from_its_advertise_services_messages():
+    services = set()
+    payloads = [json.dumps({'op': 'advertiseServices', 'services': [
+        {'id': 1, 'name': '/track/set_parameters', 'type': 'rcl_interfaces/srv/SetParameters'}]})]
+    assert layout_check.advertised(payloads, services) == {}
+    assert services == {'/track/set_parameters'}
 
 
 def test_message_data_is_the_subscription_and_the_message_size():

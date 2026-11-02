@@ -154,8 +154,8 @@ WiFi connection, with no ROS on the Mac.
 
 In either app: Open connection → Foxglove WebSocket → `ws://<the Orin's IP>:8765`.
 
-**Our layouts** (24 Oct): `tools/foxglove/driving.json`, `sensors-health.json` and
-`map.json`. In the app's Layouts menu, import one from its file. What each shows, where
+**Our layouts** (24 Oct): `tools/foxglove/driving.json`, `sensors-health.json`,
+`map.json`, and `cockpit.json` (1 Nov: all on one screen). In the app's Layouts menu, import one from its file. What each shows, where
 each bridge listens, and how much it costs the WiFi: [Watch from a laptop](foxglove.md).
 In the simulator: `pixi run sim foxglove:=true`, then `ws://localhost:8765`.
 

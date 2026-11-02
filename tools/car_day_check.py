@@ -387,7 +387,7 @@ def check_layouts(root):
         for path in sorted((root / LAYOUT_DIR).glob('*.json')):
             topics = layout_check.shown_topics(json.loads(path.read_text()))
             counts.append(f'{path.stem} ({len(topics)} topics)')
-        if len(counts) < 3:
+        if len(counts) < 4:
             raise ValueError(f'{len(counts)} layouts')
         lines.append(Line('OK', 'layouts', ', '.join(counts) + '; checked live at the '
                           'car (session 8)'))

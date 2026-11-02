@@ -39,10 +39,76 @@ Open → Open ([Your Mac](mac.md#watch-without-ros-lichtblick)).
 | **Driving** | `tools/foxglove/driving.json` | 3D view following the car: its model, the lidar's scan, the local costmap, Nav2's plan and goal, the radar and its clusters, the camera's obstacles, the stop zone. The camera preview. Speed and steering, measured against commanded. E-stop, the sensor watchdog, the output gate |
 | **Sensors health** | `tools/foxglove/sensors-health.json` | every `/diagnostics` status: the watchdog's per sensor with its **rate (Hz) and longest gap**; EKFs, twist_mux, the camera streams. Whether every sensor comes from the right source. A timeline of stops and e-stops |
 | **Map** | `tools/foxglove/map.json` | the car on a street map: the EKF's position (blue) and the raw GPS (orange); fix or no fix; the street route's status |
+| **Cockpit** | `tools/foxglove/cockpit.json` | everything on one screen ([below](#cockpit)) |
 
 !!! note "The map needs the internet"
     The map panel loads OpenStreetMap's tiles from the web. At the car with no internet,
     it shows the dots on a blank map.
+
+## Cockpit
+
+Every driving detail on one screen, like Foxglove's nuScenes demo (Ben, 1 Nov). For
+Gazebo, the bench, a replayed bag, and the car (watch only).
+
+```text
+┌──────────────┬────────────┬──────────────────┐
+│ front camera │ status     │ street map       │
+├──────────────┤ (5 panels) │ (GPS and EKF)    │
+│ chase camera │            │                  │
+├──────────────┴────────────┼──────────────────┤
+│                           │ speed plot       │
+│  3D: the car, lidar,      │ steering plot    │
+│  cubes, costmap, plan     │ tracker switch   │
+│                           │ launch switches  │
+└───────────────────────────┴──────────────────┘
+```
+
+| Panel | Shows | Topic |
+|---|---|---|
+| Front camera | the front left camera, small, once a second | `/perception/camera/front_left/preview/compressed` |
+| Chase camera | Gazebo's picture from behind the car (sim only) | `/vehicle/gazebo/chase_camera/compressed` |
+| Status | e-stop, sensor watchdog, localization health (word and text), output gate, `/diagnostics` warnings | `/vehicle/status`, `/safety/...`, `/localization/health`, `/diagnostics` |
+| Map | the EKF (blue) and the raw GPS (orange) | `/localization/gps/fix`, `/sensors/gps/fix` |
+| 3D | the car, lidar scan, voxel cubes, local costmap, plan, goal, radar, stop zone | as in Driving, plus `/perception/voxels/cubes` |
+| Plots | speed and steering: asked against measured | `/control/cmd_vel`, `/vehicle/odom`, `/vehicle/steering` |
+| Tracker | swaps the path follower live | calls `/track/set_parameters` |
+| Launch switches | `planner:=`, `ndt:=`, `voxels:=`...: each needs a restart (`pixi run pick`) | the layout's own script |
+
+### Send a goal (sim, bench)
+
+In the 3D panel: the **Publish** tool (top right), set to **Pose**, then click and drag
+on the road. It sends `/goal_pose`; Nav2 plans and drives. The car's bridge is watch
+only: the click does nothing there.
+
+### Swap the tracker (sim only)
+
+| Step | Do |
+|---|---|
+| 1 | Start with a tracker: `pixi run sim world:=road foxglove:=true tracker:=pure_pursuit reversing:=false` |
+| 2 | In the Tracker panel, write the one you want in `string_value`: `pure_pursuit`, `stanley`, `lqr`, `mpc` or `mpc_full` |
+| 3 | Press **Set the tracker**. The answer says `successful: true` |
+
+`none` (Nav2's own MPPI) is a launch switch: with it, there is no `/track` to call. The
+car refuses a swap (`live_swap` is on only in `sim.launch.py`).
+
+### The chase camera
+
+A camera fixed 7 m behind the car and 3.5 m up, looking down at the road ahead. Gazebo's
+only, in the worlds that render sensors (road, test_lot): `chase_camera:=false` drops it.
+
+| | Without | With |
+|---|---|---|
+| Gazebo's real-time factor, road world, parked | 0.985 | 0.96-0.98 |
+| Gazebo's CPU | 72 % of a core | 83-88 % |
+
+Measured 1 Nov, two runs each, the Mac busy with others' runs. Cheap, so it's **on by
+default**. Its JPEG is about 20 kB a picture: **200 kB/s** in the cockpit, on 127.0.0.1.
+On the car the topic doesn't exist.
+
+!!! tip "Load the cockpit at start-up"
+    Lichtblick also reads every layout in `~/.lichtblick-suite/layouts/` when it starts:
+    `cp tools/foxglove/cockpit.json ~/.lichtblick-suite/layouts/`, then
+    `open -a Lichtblick --args --defaultLayout=cockpit` (from its code: not yet seen on screen).
 
 ## Where each bridge listens
 
@@ -90,4 +156,5 @@ pixi run layout-check ws://192.168.1.140:8765 --data   # the car: and how much e
 | `pixi run bench foxglove:=true` | 22 of 26 served; the bench has no lidar unless `lidar:=true` |
 | A watch-only bridge (the car's settings) | publishing refused: "Server does not support clientPublish" |
 | The layouts in the Lichtblick app | the setting names were checked against Lichtblick 1.29's own code; not yet opened in the app by a person |
+| The cockpit, 1 Nov, road world, `foxglove:=true tracker:=pure_pursuit voxels:=true` | `layout-check`: every topic served but the GPS route and the scan (`voxels:=true` replaces it) and `/localization/gps/fix` (early); `/track/set_parameters` advertised; the chase camera 10 Hz, 200 kB/s. Opened in Lichtblick, but the Mac was locked: **no screenshot**, and the tracker panel and the switch list are **untested in the app** |
 | The car | **untested** |

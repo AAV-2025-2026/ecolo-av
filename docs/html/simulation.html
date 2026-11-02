@@ -7,7 +7,7 @@
 <!-- Generated from docs/simulation.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Simulation: Gazebo, replay, and when nothing moves</h1>
-<div class="meta">47 min read · 8 sections</div></header>
+<div class="meta">48 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -319,6 +319,14 @@ real-time factor at 0.98-0.99.</p>
 <td>10 Hz</td>
 <td>3 cm</td>
 <td>road and test_lot; on by default, <code>lidar:=false</code> drops it</td>
+</tr>
+<tr>
+<td>Chase camera (Gazebo's view, not a sensor)</td>
+<td><code>/aav/chase_camera/image</code></td>
+<td><code>/vehicle/gazebo/chase_camera/image_raw</code>, and its JPEG <code>.../compressed</code>, for Lichtblick's <a href="foxglove.html#cockpit">cockpit</a></td>
+<td>10 Hz</td>
+<td>none</td>
+<td>road and test_lot; on by default, <code>chase_camera:=false</code> drops it</td>
 </tr>
 <tr>
 <td>Where the car really is</td>

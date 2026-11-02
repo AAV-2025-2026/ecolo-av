@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">73 min read · 4 sections</div></header>
+<div class="meta">74 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -857,6 +857,22 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>Where the Gazebo car really is (map frame - the world's origin is the datum - 50 Hz), like the bench's /vehicle/bench/truth. Only the stand-ins read it - gazebo_gps, for the receiver's velocity (/sensors/gps/fix_velocity), never for a position; tools/sim_check.py compares it with /localization/odom/global. Gazebo's other topics (/gazebo/odom, imu, navsat, cmd_vel, radar/points) only link the bridges, gazebo_adapter and the sensor nodes (gazebo_imu, gazebo_gps, gazebo_radar, gazebo_camera - one process per sensor, as on the car).</td>
 </tr>
 <tr>
+<td><code>/vehicle/gazebo/chase_camera/image_raw</code></td>
+<td><code>sensor_msgs/msg/Image</code></td>
+<td><code>gz_chase_bridge</code></td>
+<td><code>chase_jpeg</code></td>
+<td>road</td>
+<td>Gazebo's chase camera (aav_description aav.sensors.gazebo.xacro, chase_camera:=true, the default in sim.launch.py) - 7 m behind the rear axle and 3.5 m up, fixed to the car, 640 x 360 RGB, 10 Hz, frame base_link. Only where the world renders sensors (road, test_lot); never on the car. Big (6.9 MB/s), so the bridge's WiFi list leaves it out (image_raw); chase_jpeg makes the JPEG Lichtblick shows.</td>
+</tr>
+<tr>
+<td><code>/vehicle/gazebo/chase_camera/compressed</code></td>
+<td><code>sensor_msgs/msg/CompressedImage</code></td>
+<td><code>chase_jpeg</code></td>
+<td><code>foxglove_bridge</code></td>
+<td>road</td>
+<td>The chase camera as JPEG, every picture (10 Hz, about 30 kB each) - image_transport republish (chase_jpeg, aav_gazebo gazebo.launch.py). For Lichtblick's cockpit layout (tools/foxglove/cockpit.json), so it shows Gazebo's picture without Gazebo's window. Sim only - the car has no such topic.</td>
+</tr>
+<tr>
 <td><code>/vehicle/gazebo/spine_outputs</code></td>
 <td><code>aav_interfaces/msg/SpineOutputs</code></td>
 <td><code>spine_sim</code></td>
@@ -1214,7 +1230,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/track/set_parameters</code></td>
 <td><code>rcl_interfaces/srv/SetParameters</code></td>
 <td><code>track</code></td>
-<td>aav_track's own parameter service (every ROS node has one). Listed for the one change that matters - tracker, swapped live (a trial, docs/trials.md) - refused unless the node runs with live_swap:=true, which only sim.launch.py sets. Called by the debug HUD's keys 1-4 (debug_hud, aav_hud), only while /system/source says SIM, and by <code>ros2 param set /track tracker lqr</code>.</td>
+<td>aav_track's own parameter service (every ROS node has one). Listed for the one change that matters - tracker, swapped live (a trial, docs/trials.md) - refused unless the node runs with live_swap:=true, which only sim.launch.py sets. Called by the debug HUD's keys 1-4 (debug_hud, aav_hud), only while /system/source says SIM, by Lichtblick's cockpit layout (its Call Service panel, through foxglove_bridge on 127.0.0.1), and by <code>ros2 param set /track tracker lqr</code>.</td>
 </tr>
 </tbody>
 </table></div>

@@ -7,7 +7,7 @@
 <!-- Generated from docs/foxglove.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Watch from a laptop: Foxglove and Lichtblick</h1>
-<div class="meta">5 min read · 7 sections</div></header>
+<div class="meta">9 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -95,7 +95,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-two-apps">The two apps</a><a href="#connect-from-a-mac-3-steps">Connect from a Mac: 3 steps</a><a href="#which-layout">Which layout</a><a href="#where-each-bridge-listens">Where each bridge listens</a><a href="#bandwidth-the-wifi-list">Bandwidth: the WiFi list</a><a href="#check-it-without-the-app">Check it without the app</a><a href="#tested">Tested</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-two-apps">The two apps</a><a href="#connect-from-a-mac-3-steps">Connect from a Mac: 3 steps</a><a href="#which-layout">Which layout</a><a href="#cockpit">Cockpit</a><a href="#where-each-bridge-listens">Where each bridge listens</a><a href="#bandwidth-the-wifi-list">Bandwidth: the WiFi list</a><a href="#check-it-without-the-app">Check it without the app</a><a href="#tested">Tested</a></nav>
 <div class="lead"><p>Watch the car, or a simulator, from any laptop. No ROS on the laptop: one app, one
 WebSocket. Built in on 24 October (Ben asked on 11 Oct; go-ahead 24 Oct).</p>
 <pre class="highlight"><code class="language-text">  car or simulator                                    your laptop
@@ -191,12 +191,144 @@ Open → Open (<a href="mac.html#watch-without-ros-lichtblick">Your Mac</a>).</p
 <td><code>tools/foxglove/map.json</code></td>
 <td>the car on a street map: the EKF's position (blue) and the raw GPS (orange); fix or no fix; the street route's status</td>
 </tr>
+<tr>
+<td><strong>Cockpit</strong></td>
+<td><code>tools/foxglove/cockpit.json</code></td>
+<td>everything on one screen (<a href="#cockpit">below</a>)</td>
+</tr>
 </tbody>
 </table></div>
 <div class="admonition note">
 <p class="admonition-title">The map needs the internet</p>
 <p>The map panel loads OpenStreetMap's tiles from the web. At the car with no internet,
 it shows the dots on a blank map.</p>
+</div>
+</section>
+<section class="card"><h2 id="cockpit">Cockpit</h2>
+<p>Every driving detail on one screen, like Foxglove's nuScenes demo (Ben, 1 Nov). For
+Gazebo, the bench, a replayed bag, and the car (watch only).</p>
+<pre class="highlight"><code class="language-text">┌──────────────┬────────────┬──────────────────┐
+│ front camera │ status     │ street map       │
+├──────────────┤ (5 panels) │ (GPS and EKF)    │
+│ chase camera │            │                  │
+├──────────────┴────────────┼──────────────────┤
+│                           │ speed plot       │
+│  3D: the car, lidar,      │ steering plot    │
+│  cubes, costmap, plan     │ tracker switch   │
+│                           │ launch switches  │
+└───────────────────────────┴──────────────────┘</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Panel</th>
+<th>Shows</th>
+<th>Topic</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Front camera</td>
+<td>the front left camera, small, once a second</td>
+<td><code>/perception/camera/front_left/preview/compressed</code></td>
+</tr>
+<tr>
+<td>Chase camera</td>
+<td>Gazebo's picture from behind the car (sim only)</td>
+<td><code>/vehicle/gazebo/chase_camera/compressed</code></td>
+</tr>
+<tr>
+<td>Status</td>
+<td>e-stop, sensor watchdog, localization health (word and text), output gate, <code>/diagnostics</code> warnings</td>
+<td><code>/vehicle/status</code>, <code>/safety/...</code>, <code>/localization/health</code>, <code>/diagnostics</code></td>
+</tr>
+<tr>
+<td>Map</td>
+<td>the EKF (blue) and the raw GPS (orange)</td>
+<td><code>/localization/gps/fix</code>, <code>/sensors/gps/fix</code></td>
+</tr>
+<tr>
+<td>3D</td>
+<td>the car, lidar scan, voxel cubes, local costmap, plan, goal, radar, stop zone</td>
+<td>as in Driving, plus <code>/perception/voxels/cubes</code></td>
+</tr>
+<tr>
+<td>Plots</td>
+<td>speed and steering: asked against measured</td>
+<td><code>/control/cmd_vel</code>, <code>/vehicle/odom</code>, <code>/vehicle/steering</code></td>
+</tr>
+<tr>
+<td>Tracker</td>
+<td>swaps the path follower live</td>
+<td>calls <code>/track/set_parameters</code></td>
+</tr>
+<tr>
+<td>Launch switches</td>
+<td><code>planner:=</code>, <code>ndt:=</code>, <code>voxels:=</code>...: each needs a restart (<code>pixi run pick</code>)</td>
+<td>the layout's own script</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="send-a-goal-sim-bench">Send a goal (sim, bench)</h3>
+<p>In the 3D panel: the <strong>Publish</strong> tool (top right), set to <strong>Pose</strong>, then click and drag
+on the road. It sends <code>/goal_pose</code>; Nav2 plans and drives. The car's bridge is watch
+only: the click does nothing there.</p>
+<h3 id="swap-the-tracker-sim-only">Swap the tracker (sim only)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Start with a tracker: <code>pixi run sim world:=road foxglove:=true tracker:=pure_pursuit reversing:=false</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>In the Tracker panel, write the one you want in <code>string_value</code>: <code>pure_pursuit</code>, <code>stanley</code>, <code>lqr</code>, <code>mpc</code> or <code>mpc_full</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Press <strong>Set the tracker</strong>. The answer says <code>successful: true</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>none</code> (Nav2's own MPPI) is a launch switch: with it, there is no <code>/track</code> to call. The
+car refuses a swap (<code>live_swap</code> is on only in <code>sim.launch.py</code>).</p>
+<h3 id="the-chase-camera">The chase camera</h3>
+<p>A camera fixed 7 m behind the car and 3.5 m up, looking down at the road ahead. Gazebo's
+only, in the worlds that render sensors (road, test_lot): <code>chase_camera:=false</code> drops it.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Without</th>
+<th>With</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gazebo's real-time factor, road world, parked</td>
+<td>0.985</td>
+<td>0.96-0.98</td>
+</tr>
+<tr>
+<td>Gazebo's CPU</td>
+<td>72 % of a core</td>
+<td>83-88 %</td>
+</tr>
+</tbody>
+</table></div>
+<p>Measured 1 Nov, two runs each, the Mac busy with others' runs. Cheap, so it's <strong>on by
+default</strong>. Its JPEG is about 20 kB a picture: <strong>200 kB/s</strong> in the cockpit, on 127.0.0.1.
+On the car the topic doesn't exist.</p>
+<div class="admonition tip">
+<p class="admonition-title">Load the cockpit at start-up</p>
+<p>Lichtblick also reads every layout in <code>~/.lichtblick-suite/layouts/</code> when it starts:
+<code>cp tools/foxglove/cockpit.json ~/.lichtblick-suite/layouts/</code>, then
+<code>open -a Lichtblick --args --defaultLayout=cockpit</code> (from its code: not yet seen on screen).</p>
 </div>
 </section>
 <section class="card"><h2 id="where-each-bridge-listens">Where each bridge listens</h2>
@@ -311,6 +443,10 @@ pixi run layout-check ws://192.168.1.140:8765 --data   # the car: and how much e
 <tr>
 <td>The layouts in the Lichtblick app</td>
 <td>the setting names were checked against Lichtblick 1.29's own code; not yet opened in the app by a person</td>
+</tr>
+<tr>
+<td>The cockpit, 1 Nov, road world, <code>foxglove:=true tracker:=pure_pursuit voxels:=true</code></td>
+<td><code>layout-check</code>: every topic served but the GPS route and the scan (<code>voxels:=true</code> replaces it) and <code>/localization/gps/fix</code> (early); <code>/track/set_parameters</code> advertised; the chase camera 10 Hz, 200 kB/s. Opened in Lichtblick, but the Mac was locked: <strong>no screenshot</strong>, and the tracker panel and the switch list are <strong>untested in the app</strong></td>
 </tr>
 <tr>
 <td>The car</td>
