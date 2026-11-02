@@ -4,7 +4,8 @@
 //!
 //! | Theme | When | Where its colours come from |
 //! |---|---|---|
-//! | `mocha` (the default) | night, and a dark cabin | Catppuccin Mocha |
+//! | `initial_d` (the HUD's default) | the car, day or night: black, white and red | Carleton's red; a tribute to Initial D's arcade gauges |
+//! | `mocha` (the other screens' default) | night, and a dark cabin | Catppuccin Mocha |
 //! | `latte` | daytime | Catppuccin Latte |
 //! | `calm` | not yet: a copy of `mocha` | Ben's Carleton theme, to come |
 //!
@@ -20,6 +21,10 @@
 //!
 //! `config/hud.yaml`, `map.yaml`, `debug_hud.yaml` and `hw_panel.yaml` each choose one:
 //! `theme: mocha`.
+//!
+//! A theme also has a [`Style`]: `Glass` (soft see-through panels, the big speed number)
+//! or `Arcade` (`initial_d`: sharp black panels with thin white edges, the speed as an
+//! arcade gauge with 7-segment digits, the logo, a faint car behind).
 
 use std::{fmt, str::FromStr};
 
@@ -149,11 +154,19 @@ pub enum ThemeName {
     Latte,
     /// Ben's Carleton theme. For now a copy of Mocha (see [`CALM`]).
     Calm,
+    /// Black, white and Carleton's red, sharp: the arcade gauge. The HUD's default.
+    #[serde(rename = "initial_d")]
+    InitialD,
 }
 
 impl ThemeName {
     /// Every theme, in the order the docs list them.
-    pub const ALL: [ThemeName; 3] = [ThemeName::Mocha, ThemeName::Latte, ThemeName::Calm];
+    pub const ALL: [ThemeName; 4] = [
+        ThemeName::Mocha,
+        ThemeName::Latte,
+        ThemeName::Calm,
+        ThemeName::InitialD,
+    ];
 
     /// The name as written in the settings.
     pub fn as_str(self) -> &'static str {
@@ -161,6 +174,7 @@ impl ThemeName {
             Self::Mocha => "mocha",
             Self::Latte => "latte",
             Self::Calm => "calm",
+            Self::InitialD => "initial_d",
         }
     }
 
@@ -170,6 +184,7 @@ impl ThemeName {
             Self::Mocha => &MOCHA,
             Self::Latte => &LATTE,
             Self::Calm => &CALM,
+            Self::InitialD => &INITIAL_D,
         }
     }
 }
@@ -182,7 +197,7 @@ impl fmt::Display for ThemeName {
 
 /// A theme name that isn't one.
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
-#[error("no theme called {0:?}: mocha, latte or calm")]
+#[error("no theme called {0:?}: mocha, latte, calm or initial_d")]
 pub struct UnknownTheme(pub String);
 
 impl FromStr for ThemeName {
@@ -313,6 +328,37 @@ pub struct Pill {
     pub ink: Rgba,
 }
 
+/// How a theme draws, beyond its colours.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Style {
+    /// Frosted-glass panels with soft corners; the speed as a big number.
+    Glass,
+    /// Sharp: black panels with thin white edges and small corners, no glow; the HUD's
+    /// speed as an arcade gauge, the logo, and a faint car in the background.
+    Arcade(Arcade),
+}
+
+/// The arcade style's own colours: the gauge, its digital boxes, the car behind.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Arcade {
+    /// The dial's ticks and its thin ring.
+    pub tick: Rgba,
+    /// The dial's numbers (italic).
+    pub number: Rgba,
+    /// The thin needle.
+    pub needle: Rgba,
+    /// The redline's blocks, from the top speed up.
+    pub redline: Rgba,
+    /// The digital boxes (the speed, the gear): their fill and edge.
+    pub readout: Rgba,
+    pub readout_edge: Rgba,
+    /// A lit segment, and an unlit one (faint, as a real display's glass).
+    pub segment_on: Rgba,
+    pub segment_off: Rgba,
+    /// The car's lines in the background: faint, see-through.
+    pub silhouette: Rgba,
+}
+
 /// Every colour the four screens use.
 ///
 /// The pairs that must read (text on its panel, ink on its fill) are checked in the
@@ -405,6 +451,9 @@ pub struct Theme {
     pub button_off: Rgba,
     /// The debug screen's 3D view and top-downs.
     pub scene: SceneColours,
+
+    /// Glass or arcade.
+    pub style: Style,
 }
 
 impl Theme {
@@ -613,6 +662,7 @@ pub const MOCHA: Theme = {
                 TEAL.mix(BASE, 10),
             ],
         },
+        style: Style::Glass,
     }
 };
 
@@ -739,6 +789,7 @@ pub const LATTE: Theme = {
                 TEAL.mix(Rgba::BLACK, 25),
             ],
         },
+        style: Style::Glass,
     }
 };
 
@@ -747,6 +798,100 @@ pub const LATTE: Theme = {
 /// TODO(Ben): a placeholder, a copy of [`MOCHA`], until Ben gives the colours. Change
 /// only this constant: the tests check its contrast the same way.
 pub const CALM: Theme = MOCHA;
+
+/// Carleton's red: the "Red" swatch, RGB 233, 28, 36, in the RGB logo files of
+/// Carleton's Logo Guide 2023
+/// (<https://carleton.ca/brand/wp-content/uploads/sites/155/22-307-Carleton-Logo-Guide-2023.pdf>).
+/// TODO: check it against the brand guide's own colour page.
+pub const CARLETON_RED: Rgba = Rgba::hex(0xe91c24);
+
+/// `initial_d`: black, white and [`CARLETON_RED`], sharp: a tribute to Initial D's
+/// arcade gauges. The HUD's default.
+///
+/// Every panel is black (see-through only to let the faint car behind show), so words
+/// read the same on all of them. Carleton's red on black is 4.7 : 1; red words are a
+/// little lighter, to keep 4.5 : 1 over the car's lines; the e-stop's fill a touch
+/// deeper, for its white words. The map's streets and the
+/// debug screen's localizers keep Mocha's colours, on black.
+pub const INITIAL_D: Theme = {
+    let black = Rgba::BLACK;
+    let white = Rgba::WHITE;
+    let grey = Rgba::hex(0xb8b8b8);
+    let green = Rgba::hex(0x2fd36b);
+    let amber = Rgba::hex(0xffc21a);
+    let orange = Rgba::hex(0xff8a1f);
+    Theme {
+        background: black,
+        background_low: black,
+        glow_a: black.alpha(0),
+        glow_b: black.alpha(0),
+
+        panel: black.alpha(170),
+        glass_edge: white.alpha(110),
+        glass_shine: white.alpha(0),
+        overlay: black.alpha(215),
+        overlay_strong: black.alpha(228),
+        track: Rgba::hex(0x262626),
+        camera_back: black,
+
+        text: white,
+        caption: grey,
+        dim: Rgba::hex(0x9c9c9c),
+
+        good: green,
+        warn: amber,
+        // Small red words a fifth of the way to white: they still read where they cross
+        // the faint car's lines. Shapes (the needle, the redline, the logo) are the red.
+        bad: CARLETON_RED.mix(white, 20),
+        not_real_text: orange,
+
+        go_fill: green,
+        go_ink: black,
+        wait_fill: amber,
+        wait_ink: black,
+        stop_fill: CARLETON_RED.mix(black, 8),
+        stop_fill_alt: CARLETON_RED.mix(black, 22),
+        stop_ink: white,
+        not_real: orange,
+        not_real_ink: black,
+
+        accent: white,
+        accent_ink: black,
+        plan_casing: black.alpha(210),
+        goal: green,
+        confirm: orange,
+        confirm_ink: black,
+        car_body: black,
+        marker_edge: white,
+        selected_row: Rgba::hex(0x333333),
+        key: Rgba::hex(0x2a2a2a),
+        key_command: Rgba::hex(0x1c1c1c),
+        key_down: Rgba::hex(0x444444),
+
+        section: Rgba::hex(0x161616),
+        idle_fill: Rgba::hex(0x8c8c8c),
+        idle_ink: black,
+        button: Rgba::hex(0x2a2a2a),
+        button_down: Rgba::hex(0x3d3d3d),
+        button_off: Rgba::hex(0x1a1a1a),
+        scene: SceneColours {
+            back: black,
+            ..MOCHA.scene
+        },
+        style: Style::Arcade(Arcade {
+            tick: white,
+            number: white,
+            needle: CARLETON_RED,
+            redline: CARLETON_RED,
+            readout: Rgba::hex(0x0c0c0c),
+            readout_edge: white.alpha(150),
+            segment_on: white,
+            segment_off: white.alpha(26),
+            silhouette: white.alpha(70),
+        }),
+        ..MOCHA
+    }
+};
 
 #[cfg(test)]
 mod tests {
@@ -1130,6 +1275,67 @@ mod tests {
         assert!("Mocha".parse::<ThemeName>().is_err());
         assert!("".parse::<ThemeName>().is_err());
         assert_eq!(ThemeName::default(), ThemeName::Mocha);
+    }
+
+    #[test]
+    fn the_arcade_gauge_reads() {
+        let mut problems = Vec::new();
+        for name in ThemeName::ALL {
+            let t = name.theme();
+            let Style::Arcade(g) = t.style else { continue };
+            let mut want = |what: &str, fg: Rgba, back: Rgba, least: f64| {
+                problems.extend(check(name, what, fg, back, least));
+            };
+            let dial = t.panel.over(t.background);
+            for (what, fg) in [("a tick", g.tick), ("the needle", g.needle)] {
+                want(&format!("{what} on the dial"), fg, dial, LARGE_RATIO);
+            }
+            want("a number on the dial", g.number, dial, TEXT_RATIO);
+            want("the redline on the dial", g.redline, dial, LARGE_RATIO);
+            let readout = g.readout.over(dial);
+            want("a lit segment", g.segment_on, readout, TEXT_RATIO);
+            want("the gear's word", t.text, readout, TEXT_RATIO);
+            want("the box's edge", g.readout_edge, dial, LARGE_RATIO);
+            // The car behind: there, but faint even where no panel covers it, and
+            // fainter under a panel; words still read on it.
+            let open = g.silhouette.over(t.background);
+            let under = t.panel.over(open);
+            want("dim words over the car", t.dim, under, TEXT_RATIO);
+            want("red words over the car", t.bad, under, TEXT_RATIO);
+            // An unlit segment shows, faintly: well under a lit one.
+            let off = g.segment_off.over(readout).contrast(readout);
+            if !(1.1..2.0).contains(&off) {
+                problems.push(format!("{name}: an unlit segment is {off:.2} : 1"));
+            }
+            let behind = open.contrast(t.background);
+            if !(1.2..2.5).contains(&behind) {
+                problems.push(format!("{name}: the car behind is {behind:.2} : 1"));
+            }
+        }
+        assert!(problems.is_empty(), "{}", problems.join("\n"));
+    }
+
+    #[test]
+    fn initial_d_is_black_white_and_carletons_red() {
+        let t = &INITIAL_D;
+        assert_eq!(t.background, Rgba::BLACK);
+        assert_eq!(t.text, Rgba::WHITE);
+        assert!(
+            t.bad.difference(CARLETON_RED) < 0.1,
+            "red words stay Carleton's red"
+        );
+        assert_eq!(CARLETON_RED, Rgba::hex(0xe91c24));
+        let Style::Arcade(g) = t.style else {
+            panic!("initial_d is the arcade style")
+        };
+        assert_eq!((g.needle, g.redline), (CARLETON_RED, CARLETON_RED));
+        // Sharp: no glow, no shine.
+        assert_eq!((t.glow_a.a, t.glow_b.a, t.glass_shine.a), (0, 0, 0));
+        // The glass themes stay glass.
+        for glass in [&MOCHA, &LATTE, &CALM] {
+            assert_eq!(glass.style, Style::Glass);
+        }
+        assert_eq!("initial_d".parse::<ThemeName>(), Ok(ThemeName::InitialD));
     }
 
     #[test]
