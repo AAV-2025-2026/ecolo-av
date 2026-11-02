@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">36 min read · 14 sections</div></header>
+<div class="meta">37 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -1004,6 +1004,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Ben</td>
 <td>2026-10-29</td>
 <td>sim</td>
+</tr>
+<tr>
+<td><a href="hud.html#the-little-robot-easter-egg">The little robot</a> (easter egg, a tribute to WALL-E): the map's car as a little tracked robot from above (<code>car_marker: robot</code>); its round eyes peek over the bottom of the hardware panel and the debug screen when all is quiet (<code>easter_egg</code>, <code>easter_egg_after</code>); it drives across the panel at start-up and after a lock-to-lock check passes</td>
+<td>Fun for the team (Ben, 1 Nov: "a huge fan of wall-e and his round eyes"), without ever hiding a control, the e-stop or a warning: never while the car moves or anything warns</td>
+<td>Ben</td>
+<td>2026-11-01</td>
+<td>built</td>
 </tr>
 <tr>
 <td><a href="hud.html#the-steering-calibration-page">Steering calibration page</a> on the hardware panel (Tab): the live raw position, allowed or why not, GO LIMP, HOLD, STEP, MARK left / centre / right, equal limits and warnings (<code>steering_limits</code>' Rust twin, shared test vectors), SAVE to <code>~/.local/share/aav/steering-calibration/</code> for a person to copy, and a lock-to-lock check that stops and holds on resistance; <code>--demo</code> has a pretend steering actuator (<code>--demo-bind</code> a stiff spot)</td>

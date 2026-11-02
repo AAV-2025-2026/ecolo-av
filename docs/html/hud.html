@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">57 min read · 7 sections</div></header>
+<div class="meta">61 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -97,7 +97,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a class="here" href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-hud-in-rust-raylib">The HUD in Rust (raylib)</a><a href="#the-map-window-big-screen">The map window (big screen)</a><a href="#themes-the-screens-colours">Themes: the screens&#x27; colours</a><a href="#the-debug-hud">The debug HUD</a><a href="#the-hardware-panel">The hardware panel</a><a href="#the-flutter-app-2025-26-archived">The Flutter app (2025-26): archived</a><a href="#the-place-database">The place database</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-hud-in-rust-raylib">The HUD in Rust (raylib)</a><a href="#the-map-window-big-screen">The map window (big screen)</a><a href="#themes-the-screens-colours">Themes: the screens&#x27; colours</a><a href="#the-debug-hud">The debug HUD</a><a href="#the-hardware-panel">The hardware panel</a><a href="#the-little-robot-easter-egg">The little robot (easter egg)</a><a href="#the-flutter-app-2025-26-archived">The Flutter app (2025-26): archived</a><a href="#the-place-database">The place database</a></nav>
 <div class="lead"><p>Four raylib programs in one package, <code>ros/hud/aav_hud</code>, each also its own ROS node:</p>
 <div class="table-wrap"><table>
 <thead>
@@ -135,6 +135,7 @@
 </tr>
 </tbody>
 </table></div>
+<p>An easter egg hides in three of them: <a href="#the-little-robot-easter-egg">the little robot</a>.</p>
 <p><strong>Two screens for testing (Ben, 29 Oct evening):</strong> "one screen just to test all the
 sensors and operate all the actuators and another screen to show off the voxels". The
 seeing screen is <code>debug_hud</code>; the hardware screen is <code>hw_panel</code>. Design:
@@ -2138,6 +2139,135 @@ check must find:</p>
 check (a person's joystick beats the buttons); key L on the live window. Gazebo's output
 mux latched STOP once at start-up (an announcement race) and opened by itself the next
 runs; <code>pixi run clear gate</code> reopens it.</p>
+</section>
+<section class="card"><h2 id="the-little-robot-easter-egg">The little robot (easter egg)</h2>
+<p>A small robot hides in three of the screens: a boxy body on two tank treads, a neck,
+and two big round eyes. <strong>A tribute to WALL-E</strong> (Ben, 1 Nov: "a huge fan of wall-e and
+his round eyes"). It is our own drawing, made only of shapes, so it takes the theme's
+colours and grows with the window. No picture files.</p>
+<h3 id="where-it-shows">Where it shows</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Screen</th>
+<th>What it does</th>
+<th>When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Map window</td>
+<td>the car <strong>is</strong> the robot, from above, a little tilted; its treads roll as it drives</td>
+<td><code>car_marker: robot</code> (off by default)</td>
+</tr>
+<tr>
+<td>Hardware panel</td>
+<td>its eyes peek over the bottom edge, look left and right, and blink</td>
+<td>60 s with no input, nothing changing, the car still</td>
+</tr>
+<tr>
+<td>Hardware panel</td>
+<td>it drives across the bottom, under the page</td>
+<td>at start-up, and when a lock-to-lock check PASSES</td>
+</tr>
+<tr>
+<td>Debug screen</td>
+<td>its eyes peek over the bottom of the 3D view</td>
+<td>60 s with no input, nothing changing, the car still</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="The map's car as the little robot" src="../img/robot-map.png" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Peeking (hardware panel)</th>
+<th>Driving across (after a check passed)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><img alt="The eyes peek over the bottom right" src="../img/robot-eyes-panel.png" /></td>
+<td><img alt="The robot drives along the bottom" src="../img/robot-driving.png" /></td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="The eyes on the debug screen, between the keys and the panel" src="../img/robot-eyes-debug.png" /></p>
+<h3 id="the-rules-it-keeps">The rules it keeps</h3>
+<ul>
+<li>It <strong>never</strong> covers a button, the e-stop or a line of words: it only goes in a strip
+  the page left empty (no room: it doesn't show).</li>
+<li>It <strong>never</strong> shows while the car moves, the buttons ask for speed, the check sweeps,
+  an e-stop is on, or a warning shows (a STALE sensor, a zero, the health checks' WARN).</li>
+<li>It <strong>hides at once</strong> on any key, click, mouse move, or change on the screen.</li>
+<li>On the map, the robot sits exactly on the car's outline from <code>vehicle.yaml</code>: the same
+  position and heading as the plain marker. Its eyes face the way the car faces.</li>
+</ul>
+<h3 id="turn-it-on-or-off">Turn it on or off</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Screen</th>
+<th>Setting</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Map window</td>
+<td><code>car_marker: robot</code> or <code>outline</code> in <code>config/map.yaml</code> (or <code>-p car_marker:=robot</code>)</td>
+<td><code>outline</code></td>
+</tr>
+<tr>
+<td>Hardware panel</td>
+<td><code>easter_egg: false</code> in <code>config/hw_panel.yaml</code>; <code>easter_egg_after</code> (s)</td>
+<td>on, 60 s</td>
+</tr>
+<tr>
+<td>Debug screen</td>
+<td><code>easter_egg: false</code> in <code>config/debug_hud.yaml</code>; <code>easter_egg_after</code> (s)</td>
+<td>on, 60 s</td>
+</tr>
+</tbody>
+</table></div>
+<p>For screenshots, <code>--robot-now</code> shows it at once (the debug demo parks its car):</p>
+<pre class="highlight"><code class="language-sh">pixi run map --demo --robot-now --zoom 70 --screenshot $PWD/docs/img/robot-map.png
+pixi run hw-panel --demo --robot-now --screenshot $PWD/docs/img/robot-eyes-panel.png --after 12
+pixi run hw-panel --demo --cal-self-test --screenshot $PWD/docs/img/robot-driving.png --after 71
+pixi run debug-hud --demo --robot-now --screenshot $PWD/docs/img/robot-eyes-debug.png --after 8</code></pre>
+<h3 id="how-its-built_4">How it's built</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Its shapes (from above, peeking, from the side) and when it shows (<code>EasterEgg</code>)</td>
+<td><code>hud-core/src/robot.rs</code>, unit tests</td>
+</tr>
+<tr>
+<td>Its colours (<code>Theme::robot()</code>: an amber body, grey treads, dark glass)</td>
+<td><code>hud-core/src/theme.rs</code></td>
+</tr>
+<tr>
+<td>The map's robot on the car's outline (<code>car_marker</code>)</td>
+<td><code>map-core/src/robot.rs</code>, unit tests</td>
+</tr>
+<tr>
+<td>Still? A warning? Did the screen change?</td>
+<td><code>panel-core/src/easter_egg.rs</code>, <code>debug-core/src/easter_egg.rs</code>, unit tests</td>
+</tr>
+<tr>
+<td>Drawing it</td>
+<td><code>map-app/src/ui.rs</code>, <code>panel-app/src/robot.rs</code>, <code>debug-app/src/robot.rs</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Not yet on the in-car HUD: it is being restyled (the Initial D look); the eyes go there
+after that lands.</p>
 </section>
 <section class="card"><h2 id="the-flutter-app-2025-26-archived">The Flutter app (2025-26): archived</h2>
 <div class="table-wrap"><table>

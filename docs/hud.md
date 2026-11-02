@@ -9,6 +9,8 @@ Four raylib programs in one package, `ros/hud/aav_hud`, each also its own ROS no
 | [The debug HUD](#the-debug-hud) (the seeing screen) | `debug_hud` | a laptop, or the Orin's screen | the lidar's cubes in 3D, NDT's map and match from above, where each localizer puts the car; key L: every sensor |
 | [The hardware panel](#the-hardware-panel) | `hw_panel` | the Orin's screen, or a wired laptop | every sensor's number, and simple buttons for the actuators (Gazebo and the bench for now) |
 
+An easter egg hides in three of them: [the little robot](#the-little-robot-easter-egg).
+
 **Two screens for testing (Ben, 29 Oct evening):** "one screen just to test all the
 sensors and operate all the actuators and another screen to show off the voxels". The
 seeing screen is `debug_hud`; the hardware screen is `hw_panel`. Design:
@@ -862,6 +864,70 @@ check must find:
 check (a person's joystick beats the buttons); key L on the live window. Gazebo's output
 mux latched STOP once at start-up (an announcement race) and opened by itself the next
 runs; `pixi run clear gate` reopens it.
+
+## The little robot (easter egg)
+
+A small robot hides in three of the screens: a boxy body on two tank treads, a neck,
+and two big round eyes. **A tribute to WALL-E** (Ben, 1 Nov: "a huge fan of wall-e and
+his round eyes"). It is our own drawing, made only of shapes, so it takes the theme's
+colours and grows with the window. No picture files.
+
+### Where it shows
+
+| Screen | What it does | When |
+|---|---|---|
+| Map window | the car **is** the robot, from above, a little tilted; its treads roll as it drives | `car_marker: robot` (off by default) |
+| Hardware panel | its eyes peek over the bottom edge, look left and right, and blink | 60 s with no input, nothing changing, the car still |
+| Hardware panel | it drives across the bottom, under the page | at start-up, and when a lock-to-lock check PASSES |
+| Debug screen | its eyes peek over the bottom of the 3D view | 60 s with no input, nothing changing, the car still |
+
+![The map's car as the little robot](img/robot-map.png)
+
+| Peeking (hardware panel) | Driving across (after a check passed) |
+|---|---|
+| ![The eyes peek over the bottom right](img/robot-eyes-panel.png) | ![The robot drives along the bottom](img/robot-driving.png) |
+
+![The eyes on the debug screen, between the keys and the panel](img/robot-eyes-debug.png)
+
+### The rules it keeps
+
+- It **never** covers a button, the e-stop or a line of words: it only goes in a strip
+  the page left empty (no room: it doesn't show).
+- It **never** shows while the car moves, the buttons ask for speed, the check sweeps,
+  an e-stop is on, or a warning shows (a STALE sensor, a zero, the health checks' WARN).
+- It **hides at once** on any key, click, mouse move, or change on the screen.
+- On the map, the robot sits exactly on the car's outline from `vehicle.yaml`: the same
+  position and heading as the plain marker. Its eyes face the way the car faces.
+
+### Turn it on or off
+
+| Screen | Setting | Default |
+|---|---|---|
+| Map window | `car_marker: robot` or `outline` in `config/map.yaml` (or `-p car_marker:=robot`) | `outline` |
+| Hardware panel | `easter_egg: false` in `config/hw_panel.yaml`; `easter_egg_after` (s) | on, 60 s |
+| Debug screen | `easter_egg: false` in `config/debug_hud.yaml`; `easter_egg_after` (s) | on, 60 s |
+
+For screenshots, `--robot-now` shows it at once (the debug demo parks its car):
+
+```sh
+pixi run map --demo --robot-now --zoom 70 --screenshot $PWD/docs/img/robot-map.png
+pixi run hw-panel --demo --robot-now --screenshot $PWD/docs/img/robot-eyes-panel.png --after 12
+pixi run hw-panel --demo --cal-self-test --screenshot $PWD/docs/img/robot-driving.png --after 71
+pixi run debug-hud --demo --robot-now --screenshot $PWD/docs/img/robot-eyes-debug.png --after 8
+```
+
+### How it's built
+
+| Part | Where |
+|---|---|
+| Its shapes (from above, peeking, from the side) and when it shows (`EasterEgg`) | `hud-core/src/robot.rs`, unit tests |
+| Its colours (`Theme::robot()`: an amber body, grey treads, dark glass) | `hud-core/src/theme.rs` |
+| The map's robot on the car's outline (`car_marker`) | `map-core/src/robot.rs`, unit tests |
+| Still? A warning? Did the screen change? | `panel-core/src/easter_egg.rs`, `debug-core/src/easter_egg.rs`, unit tests |
+| Drawing it | `map-app/src/ui.rs`, `panel-app/src/robot.rs`, `debug-app/src/robot.rs` |
+
+Not yet on the in-car HUD: it is being restyled (the Initial D look); the eyes go there
+after that lands.
 
 ## The Flutter app (2025-26): archived
 

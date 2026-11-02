@@ -82,7 +82,8 @@ Parameters `stale_after` (1.0 s): a quieter topic shows STALE; `theme` (`mocha`,
 Other parameters: `stale_after` (1.0 s), `plan_stale_after` (3.0 s; `plan_kept_for`, 25 s, within
 `final_approach`, 8 m, of the plan's end: Nav2 keeps its path there), `arrive_within`
 (1.0 m), `street_map` (`maps/streets/ottawa.pmtiles`), `places` (`maps/places/ottawa.db`),
-`theme` (`mocha`), `blur` (true: the map blurred behind the glass).
+`theme` (`mocha`), `blur` (true: the map blurred behind the glass), `car_marker`
+(`outline`; `robot`: the car as the little robot, the easter egg).
 
 ### Node `debug_hud` (topic names from `config/debug_hud.yaml`)
 
@@ -108,7 +109,8 @@ Other parameters: `odom_frame`, `base_frame`, `map_frame`; `stale_after` (1.0 s)
 `cube_size` (0.2 m), `max_cubes` (20,000), `pose_window` (1.0 s), `ground_height` (0.25 m),
 `keep_cubes_for` (2.0 s: key K's cubes fade over it), `ndt_map` (`maps/ndt/test_lot.pcd`,
 relative to where it starts; key M), `ndt_map_cell` (1.0 m), `voxels_cube_size` (0.25 m),
-`health_stale_after` (3.0 s: the health checks come once a second) and `theme` (`mocha`).
+`health_stale_after` (3.0 s: the health checks come once a second), `theme` (`mocha`),
+`easter_egg` (true: the little robot's eyes peek when all is quiet) and `easter_egg_after` (60 s).
 
 ### Node `hw_panel` (topic names from `config/hw_panel.yaml`)
 
@@ -129,7 +131,9 @@ relative to where it starts; key M), `ndt_map_cell` (1.0 m), `voxels_cube_size` 
 Other parameters: `stale_after` (1.0 s), `speed_step` (0.1 m/s), `steer_step` (0.05 rad),
 `creep` (0.1 m/s, CENTRE), `sim_cap` (1.0 m/s), `stands_cap` (0.3 m/s), `theme` (`mocha`);
 the calibration page's `jog_step` (25 counts), `jog_min`, `jog_max` (400, 3500),
-`sweep_rate` (100 counts/s), `sweep_max_error` (150 counts), `sweep_stall` (0.6 s).
+`sweep_rate` (100 counts/s), `sweep_max_error` (150 counts), `sweep_stall` (0.6 s);
+`easter_egg` (true: the little robot peeks when all is quiet, and drives across at
+start-up and after a check passes) and `easter_egg_after` (60 s).
 SAVE writes `~/.local/share/aav/steering-calibration/steering-<time>.txt` (a person copies
 it; never vehicle.yaml).
 
@@ -145,6 +149,7 @@ it; never vehicle.yaml).
 | `cargo run --release -p debug-app --no-default-features -- --demo [--bench-cubes 20000]` | the debug HUD with pretend data; the drawing test |
 | `pixi run hw-panel [stands:=true] [fullscreen:=true]`; `pixi run hw-panel --demo` | `hw_panel.launch.py` (localhost-only); the panel with a pretend car |
 | `hw_panel --self-test 0.3:8` | for checks: Speed + to 0.3 m/s, GO held 8 s, through the same buttons and rules; prints asked and seen |
+| `map`, `hw_panel`, `debug_hud` `--demo --robot-now` | the little robot (the easter egg) at once, for screenshots (docs/hud.md, "The little robot") |
 | `hw_panel --demo --page calibration [--demo-bind 2800] [--cal-self-test]` | the steering calibration page with a pretend steering actuator; the self-test limps, marks, holds and runs the lock-to-lock check (with a stiff spot it must stop) |
 
 `sim.launch.py hud:=true` and `map:=true` start them too. On the car,
@@ -185,6 +190,9 @@ it; never vehicle.yaml).
   and their own thread (`nav2_cubes`).
 - Kept cubes age by the clouds' stamps, never the window's clock: when the lidar stops,
   they stop fading (and the lidar row says STALE).
+- The little robot (the easter egg, a tribute to WALL-E) never covers a button, the
+  e-stop or a line of words, never shows while the car moves or anything warns, and
+  hides on any input or change. On the map it sits on the car's true outline and heading.
 
 ## Side Effects
 
