@@ -13,9 +13,9 @@ pub const BRAKE_FULL: u16 = JRK_MAX;
 /// The throttle DAC's top code (`DAC_MAX_CAP`, of 1023).
 pub const DAC_CAP: u16 = 700;
 /// Below this |speed|, no throttle (`fabsf(speed) < 0.03f`).
-pub(crate) const SPEED_DEADBAND: f32 = 0.03;
+pub const SPEED_DEADBAND: f32 = 0.03;
 /// Below this accel, the brake (`accel < -0.05f`).
-pub(crate) const BRAKE_BELOW: f32 = -0.05;
+pub const BRAKE_BELOW: f32 = -0.05;
 
 /// The C++'s three outputs for one frame.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

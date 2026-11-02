@@ -62,7 +62,10 @@ pub use steer_cal::{
     Ask, CalRequest, CalState, Refusal, Situation, SteerCal, SteeringDrive, CAL_RATE,
     CAL_TIMEOUT_MS, COUNTS_MAX,
 };
-pub use targets::{Targets, Throttle, BRAKE_FULL, BRAKE_RELEASED, DAC_CAP, STEER_CENTRE};
+pub use targets::{
+    Targets, Throttle, BRAKE_BELOW, BRAKE_FULL, BRAKE_RELEASED, DAC_CAP, SPEED_DEADBAND,
+    STEER_CENTRE,
+};
 pub use uplink::{
     Counts, DriveMode, ModeSwitch, Sticks, Uplink, KIND_STATUS, UPLINK_LEN, UPLINK_V2_LEN,
 };
