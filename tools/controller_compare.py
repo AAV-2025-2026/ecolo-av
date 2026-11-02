@@ -4,49 +4,49 @@ Controller comparison: Nav2's followers and the trial trackers over the same rou
 
 Each drives the test lot, headless, and is measured against where the car really was.
 
-    pixi run controller-compare                   (both controllers, both tours: ~15 min)
-    pixi run controller-compare --tours obstacle   (only the box in the lane)
-    pixi run controller-compare --controllers mppi
-    pixi run controller-compare --speed 3          (Nav2 and ego up to 3 m/s: sim_speed:=3)
-    pixi run controller-compare --tours lot --legs 1   (only the first leg: a quick check)
-    pixi run controller-compare --reversing        (Nav2 may reverse: the car's reversing:=true)
-    pixi run controller-compare --plans            (keep every plan, not just each leg's first)
+    pixi run measure controllers                   (both controllers, both tours: ~15 min)
+    pixi run measure controllers --tours obstacle   (only the box in the lane)
+    pixi run measure controllers --controllers mppi
+    pixi run measure controllers --speed 3          (Nav2 and ego up to 3 m/s: sim_speed:=3)
+    pixi run measure controllers --tours lot --legs 1   (only the first leg: a quick check)
+    pixi run measure controllers --reversing        (Nav2 may reverse: the car's reversing:=true)
+    pixi run measure controllers --plans            (keep every plan, not just each leg's first)
 
 The trials (docs/trials.md):
-    pixi run controller-compare --trackers pure_pursuit stanley lqr mpc --runs 3
+    pixi run measure controllers --trackers pure_pursuit stanley lqr mpc --runs 3
                     aav_track's trackers (tracker:=), forward only; with --trackers alone,
                     only them: add --controllers rpp mppi for the whole-stack table too
-    pixi run controller-compare --runs 3           (each follower 3 times: the mean and spread)
-    pixi run controller-compare --amcl             (AMCL beside the EKF, amcl:=true: scored
+    pixi run measure controllers --runs 3           (each follower 3 times: the mean and spread)
+    pixi run measure controllers --amcl             (AMCL beside the EKF, amcl:=true: scored
                     against the truth, as the EKF is)
-    pixi run controller-compare --ndt              (NDT beside the EKF, ndt:=true, on the map
+    pixi run measure controllers --ndt              (NDT beside the EKF, ndt:=true, on the map
                     pixi run ndt-map drive made: its errors, the share of clouds that gave
                     a pose, time over 1 m off, each match's wall-clock time; and its
                     covariance against its errors: NEES, the k that would make it honest,
                     and how far off each band of score per point was)
-    pixi run controller-compare --ndt-ekf          (the same, with NDT's pose into the global
+    pixi run measure controllers --ndt-ekf          (the same, with NDT's pose into the global
                     EKF, ndt_ekf:=true: compare its EKF numbers with --ndt's)
-    pixi run controller-compare --ndt --gps-off    (the GPS stops once the EKF has its first
+    pixi run measure controllers --ndt --gps-off    (the GPS stops once the EKF has its first
                     fix; with watchdog:=false geofence:=false, or they would hold Nav2)
-    pixi run controller-compare --voxels --tours lot
+    pixi run measure controllers --voxels --tours lot
                     the costmap and collision_monitor read the lidar as cubes (voxels:=true,
                     aav_voxels) instead of the flat scan: the same legs, and each leg's
                     note says the voxels node's ms a cloud and cubes a cloud
-    pixi run controller-compare --kiss-icp         (KISS-ICP lidar odometry, kiss_icp:=true,
+    pixi run measure controllers --kiss-icp         (KISS-ICP lidar odometry, kiss_icp:=true,
                     beside ekf_local: each lined up with the truth at the start, its drift
                     per 100 m, its heading at the end, each match's wall-clock time; per
                     leg and for the whole tour. Needs pixi install --locked -e kiss)
-    pixi run controller-compare --kiss-ekf         (the same, with KISS-ICP's twist into
+    pixi run measure controllers --kiss-ekf         (the same, with KISS-ICP's twist into
                     ekf_local, kiss_ekf:=true: compare its ekf_local numbers with
                     --kiss-icp's)
-    pixi run controller-compare --planners hybrid lattice smac2d --tours lot
+    pixi run measure controllers --planners hybrid lattice smac2d --tours lot
                     Nav2's planners (planner:=), each with MPPI unless --controllers or
                     --trackers says otherwise. Before each leg it also asks the planner
                     alone for a path (/compute_path_to_pose): its planning time, the path's
                     length and its tightest turn against the car's full lock. Then a
                     table of the whole tour: legs finished, time, path length, planning
                     time, kept to the turning radius (docs/controllers.md, Planners)
-    pixi run controller-compare --planners hybrid lattice lattice32 --reversing --runs 3
+    pixi run measure controllers --planners hybrid lattice lattice32 --reversing --runs 3
                     the same with reversing on (MPPI follows backwards too; the trackers
                     can't), and lattice32: the lattice on its 32-heading file
 

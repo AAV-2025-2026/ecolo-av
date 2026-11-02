@@ -1,7 +1,7 @@
 """
 The ESP32 firmware in QEMU: the heartbeat, the uplink and the RC's modes, checked.
 
-`pixi run esp-qemu-check` (tools/esp32.sh qemu) builds the Rust firmware with
+`pixi run esp qemu-check` (tools/esp32.sh qemu-check) builds the Rust firmware with
 `--features qemu,uplink`, makes a flash image, and runs this. No ROS here, so the tests run
 anywhere (tools/tests/test_esp32_qemu.py). docs/esp32-bench.md, "Before the board: the
 emulator", has the picture and the results.

@@ -21,7 +21,7 @@ asks the bridge for each topic the panels show.
 Each file is the app's own JSON: `configById`, `globalVariables`, `userNodes`, `layout`.
 
 Read by: the Foxglove and Lichtblick apps; `tools/layout_check.py`
-(`pixi run layout-check`); `tools/car_day_check.py`.
+(`pixi run python3 tools/layout_check.py`); `tools/car_day_check.py`.
 
 ## Invariants
 
@@ -44,6 +44,6 @@ The Map panel loads OpenStreetMap tiles from the internet.
 
 ```sh
 python3 -m pytest -q tools/tests/test_foxglove_layouts.py   # also in tools/test.sh
-pixi run layout-check                       # against a running bridge (default: the sim here)
-pixi run layout-check ws://192.168.1.140:8765               # the car's Orin
+pixi run python3 tools/layout_check.py                       # against a running bridge (default: the sim here)
+pixi run python3 tools/layout_check.py ws://192.168.1.140:8765               # the car's Orin
 ```
