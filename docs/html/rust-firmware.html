@@ -7,7 +7,7 @@
 <!-- Generated from docs/rust-firmware.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Rust on the hardware</h1>
-<div class="meta">53 min read · 15 sections</div></header>
+<div class="meta">55 min read · 15 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -832,6 +832,82 @@ at both ends.</p>
 </table></div>
 <p>115200 baud: 3 ms a frame, 15 % of the line. It fits the UART's 128-byte FIFO, so the
 write never waits.</p>
+<p><strong>Version 3 (1 Nov), what the firmware sends now:</strong> 40 bytes. Byte 1 is <code>3</code>; bytes 2-33
+as above; then:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Byte</th>
+<th>Field</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>7</td>
+<td>flags</td>
+<td>as above, and bit 6 steering counts known, bit 7 brake counts known</td>
+</tr>
+<tr>
+<td>34-35</td>
+<td>steering counts, u16 LE</td>
+<td>0..4095: the Jrk's scaled feedback, <strong>not</strong> converted with the calibration; 0 when unknown</td>
+</tr>
+<tr>
+<td>36-37</td>
+<td>brake counts, u16 LE</td>
+<td>the same, for the brake Jrk</td>
+</tr>
+<tr>
+<td>38</td>
+<td>steering calibration state</td>
+<td>0 off, 1 limp, 2 jog, 3 hold, 4 return, 5-9 refused (moving, not braked, no feedback, e-stop, another driver)</td>
+</tr>
+<tr>
+<td>39</td>
+<td>CRC-8 of bytes 1-38</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>legacy_protocol.py</code> reads version 2 and 3 uplinks alike.</p>
+<h4 id="version-3-of-the-downlink-the-steering-calibration-1-nov">Version 3 of the downlink: the steering calibration (1 Nov)</h4>
+<p>To find the steering actuator's ends and centre from the hardware panel
+(<a href="actuator-tests.html#find-the-steering-actuators-ends-and-centre">the procedure</a>).
+20 bytes: version 2's first 16 (with version <code>3</code>), then:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Byte</th>
+<th>Field</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>16</td>
+<td>calibration mode</td>
+<td>0 off (drive), 1 limp (the motor off), 2 jog</td>
+</tr>
+<tr>
+<td>17-18</td>
+<td>jog target, u16 LE</td>
+<td>0..4095 counts; 0 unless jog</td>
+</tr>
+<tr>
+<td>19</td>
+<td>CRC-8 of bytes 1-18</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>A version, not new flags:</strong> the target needs two more bytes, and a firmware that knows
+only version 2 turns a version 3 frame down whole (then its watchdog brakes), never
+misreads it. The Rust firmware reads versions 2 and 3 alike (<code>ParserV3</code>), so
+<code>frame_version: 2</code> still works. The rules are <code>legacy-link</code>'s <code>SteerCal</code>
+(<a href="../../firmware/spine/crates/legacy-link/README.md">its README</a>): standing still and braked
+only, the throttle held at 0, jog clamped to the software limits at 300 counts a second,
+leaving holds where the wheels are, and 100 ms without the Orin's heartbeat ends it.</p>
 <h4 id="the-jrks-positions">The Jrks' positions</h4>
 <div class="table-wrap"><table>
 <thead>

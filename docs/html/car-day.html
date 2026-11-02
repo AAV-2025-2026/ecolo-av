@@ -7,7 +7,7 @@
 <!-- Generated from docs/car-day.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Car day: the runbook</h1>
-<div class="meta">44 min read · 17 sections</div></header>
+<div class="meta">45 min read · 17 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -1414,6 +1414,10 @@ Their <code>foxglove-bridge</code> already holds port 8765 on the Orin, so ours 
 </tr>
 <tr>
 <td>☐</td>
+<td>for 3.0: Pololu's Jrk G2 utility on a laptop, a USB cable, a protractor, <a href="actuator-tests.html#the-sheet">the sheet</a> printed. The steering actuator's settings <strong>saved</strong> and its current limit low before any sweep (the hardware lead)</td>
+</tr>
+<tr>
+<td>☐</td>
 <td>with the C++ (1): the bridge's log says <code>no-timeout lock ON</code>. twist_mux then holds every program (scripted, point, Nav2, AI); the keyboard and the actuator tests below still drive. Leave <code>allow_programs_without_timeout: false</code></td>
 </tr>
 <tr>
@@ -1519,6 +1523,12 @@ Their <code>foxglove-bridge</code> already holds port 8765 on the Orin, so ours 
 <td>Unplug the Motor Pi's serial cable while driving</td>
 <td>the Rust: brakes within 200 ms. The C++: it doesn't (S3)</td>
 <td></td>
+</tr>
+<tr>
+<td>3.0</td>
+<td><strong>Find the steering actuator's ends and centre</strong>, before 3.10: way A today (Pololu's utility over USB; <strong>save its settings first</strong>; its current limit low, with the hardware lead)</td>
+<td>the sheet filled in: left end, centre, right end (counts), the angle at each end (<a href="actuator-tests.html#find-the-steering-actuators-ends-and-centre">procedure and sheet</a>)</td>
+<td>no analog feedback: tell the hardware lead; the Jrk's own limits are theirs</td>
 </tr>
 <tr>
 <td>3.10</td>

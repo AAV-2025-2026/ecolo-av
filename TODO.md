@@ -21,6 +21,7 @@ Ben, 1 Nov: "do all the ideas. I like them all but car day. Keep that in a list 
 | 64 | **Set the datum to the test lot** (`navsat.yaml`, a placeholder near Carleton) | ⬜ once the lot is chosen: before the first recording |
 | 66 | **The lab's Ubuntu desktop** (stays in the lab: CARLA, the Orin's full image) | ✅ 1 Nov: [car day session 11](docs/car-day.md#session-11-the-labs-ubuntu-desktop); Ben's MacBook is the ground station at the drive. ⬜ fill in: CARLA's version, Ubuntu's, the GPU; 11a the week before |
 | 65 | **The 2024-25 / 2025-26 drive recording** (Humble): find it; if it has the lidar, NDT's map of that lot | ⬜ Ben: who has it |
+| 67 | **The steering pulls right: find the steering actuator's ends and centre** (calibration.rs `TODO(Q1)`, `TODO(Q2)`) | 🔧 1 Nov, `steer-cal`: below the screen done: serial frame version 3 (limp, jog), the uplink's raw counts, the firmware's rules (`SteerCal`), `/drivers/buttons/steering_calibration`, `/vehicle/steering_actuator/raw`, `steering_limits`, [the procedure and sheet](docs/actuator-tests.md#find-the-steering-actuators-ends-and-centre). ⬜ the panel's page (another helper). ⬜ car day: way A with Pololu's utility (test 3.0); way B once the Rust firmware and the uplink wire are in. Untested on the car |
 
 ## Friday 30 October: the lattice, fairly
 

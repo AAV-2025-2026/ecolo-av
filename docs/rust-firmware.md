@@ -279,6 +279,39 @@ The downlink's sync byte, version and CRC-8 ([above](#the-frame-17-bytes)).
 115200 baud: 3 ms a frame, 15 % of the line. It fits the UART's 128-byte FIFO, so the
 write never waits.
 
+**Version 3 (1 Nov), what the firmware sends now:** 40 bytes. Byte 1 is `3`; bytes 2-33
+as above; then:
+
+| Byte | Field | Notes |
+|---|---|---|
+| 7 | flags | as above, and bit 6 steering counts known, bit 7 brake counts known |
+| 34-35 | steering counts, u16 LE | 0..4095: the Jrk's scaled feedback, **not** converted with the calibration; 0 when unknown |
+| 36-37 | brake counts, u16 LE | the same, for the brake Jrk |
+| 38 | steering calibration state | 0 off, 1 limp, 2 jog, 3 hold, 4 return, 5-9 refused (moving, not braked, no feedback, e-stop, another driver) |
+| 39 | CRC-8 of bytes 1-38 | |
+
+`legacy_protocol.py` reads version 2 and 3 uplinks alike.
+
+#### Version 3 of the downlink: the steering calibration (1 Nov)
+
+To find the steering actuator's ends and centre from the hardware panel
+([the procedure](actuator-tests.md#find-the-steering-actuators-ends-and-centre)).
+20 bytes: version 2's first 16 (with version `3`), then:
+
+| Byte | Field | Notes |
+|---|---|---|
+| 16 | calibration mode | 0 off (drive), 1 limp (the motor off), 2 jog |
+| 17-18 | jog target, u16 LE | 0..4095 counts; 0 unless jog |
+| 19 | CRC-8 of bytes 1-18 | |
+
+**A version, not new flags:** the target needs two more bytes, and a firmware that knows
+only version 2 turns a version 3 frame down whole (then its watchdog brakes), never
+misreads it. The Rust firmware reads versions 2 and 3 alike (`ParserV3`), so
+`frame_version: 2` still works. The rules are `legacy-link`'s `SteerCal`
+([its README](../firmware/spine/crates/legacy-link/README.md)): standing still and braked
+only, the throttle held at 0, jog clamped to the software limits at 300 counts a second,
+leaving holds where the wheels are, and 100 ms without the Orin's heartbeat ends it.
+
 #### The Jrks' positions
 
 | Step | How |

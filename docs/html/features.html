@@ -693,6 +693,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>built</td>
 </tr>
 <tr>
+<td><a href="actuator-tests.html#find-the-steering-actuators-ends-and-centre">Steering actuator calibration</a> (serial frame version 3, <code>steering_limits</code>)</td>
+<td>The car steers right and nobody has measured the steering actuator's ends or centre; the hardware panel can make it limp or jog it, the uplink sends its raw counts, and <code>steering_limits</code> turns the marked ends and centre into equal limits each side</td>
+<td>Ben</td>
+<td>2026-11-01</td>
+<td>built</td>
+</tr>
+<tr>
 <td>Speed loop in the UART bridge (<code>speed_loop.mode: pi</code>, <code>speed_control.py</code>)</td>
 <td>Today's ESP32 drives open loop and brakes only standing still, so the car coasts past B; feed-forward plus PI on the wheel speed, out as throttle or brake, stops it where ego planned; a smooth stop (Autoware's design) eases the last of the braking so the car stops without a jolt, then holds it firmly</td>
 <td>Ben</td>

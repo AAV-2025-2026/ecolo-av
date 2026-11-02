@@ -503,6 +503,7 @@ The map panel needs the internet for its tiles: offline it shows the dots on a b
 | ☐ | theirs stopped: `aav_serial_bridge` inactive. **Never two drive paths** |
 | ☐ | which ESP32 firmware: the Rust (session 6 passed) or the C++ (**no timeout**: test 3.9 then fails, as expected) |
 | ☐ | `legacy.yaml`'s `frame_version`: 2 with the Rust, 1 with the C++ |
+| ☐ | for 3.0: Pololu's Jrk G2 utility on a laptop, a USB cable, a protractor, [the sheet](actuator-tests.md#the-sheet) printed. The steering actuator's settings **saved** and its current limit low before any sweep (the hardware lead) |
 | ☐ | with the C++ (1): the bridge's log says `no-timeout lock ON`. twist_mux then holds every program (scripted, point, Nav2, AI); the keyboard and the actuator tests below still drive. Leave `allow_programs_without_timeout: false` |
 | ☐ | everyone knows: **the throttle's strength is a guess.** Two guesses disagree by 5 times ([the car's model](vehicle-model.md): full throttle holds 15 m/s by the drag guess, 3 m/s by the ESP32's open loop). 0.3 m/s asked may spin the wheels much faster: the e-stop person watches 3.2 |
 
@@ -528,6 +529,7 @@ The HUD's GO / STOP panel says whether the car may move, and why not. A latched 
 | 3.7 | Ctrl-C the Motor Pi's bridge | a last stop frame | |
 | 3.8 | The Kar-Tech e-stop | everything stops | |
 | 3.9 | Unplug the Motor Pi's serial cable while driving | the Rust: brakes within 200 ms. The C++: it doesn't (S3) | |
+| 3.0 | **Find the steering actuator's ends and centre**, before 3.10: way A today (Pololu's utility over USB; **save its settings first**; its current limit low, with the hardware lead) | the sheet filled in: left end, centre, right end (counts), the angle at each end ([procedure and sheet](actuator-tests.md#find-the-steering-actuators-ends-and-centre)) | no analog feedback: tell the hardware lead; the Jrk's own limits are theirs |
 | 3.10 | `pixi run actuator-test steer-sweep --stands` (the laptop) | it asks each wheel angle: the protractor | |
 | 3.11 | `pixi run actuator-test steer-centre --stands` | under 1°, or the offset written down | |
 | 3.12 | Wheel speed: `/vehicle/odom` against a phone tachometer app | within 10% | |
