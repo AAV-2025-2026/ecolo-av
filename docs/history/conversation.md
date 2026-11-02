@@ -32,6 +32,7 @@ Reading notes:
 - [10 October, evening: chips, Rust, Embassy and tools](#10-october-evening-chips-rust-embassy-and-tools)
 - [11 October: the night's results, and what we can try at home](#11-october-the-nights-results-and-what-we-can-try-at-home)
 - [15 October: topic names by area](#15-october-topic-names-by-area)
+- [1 November: fewer pixi commands](#1-november-fewer-pixi-commands)
 - [Open threads](#open-threads)
 
 ## The inherited repos and what we found
@@ -1397,6 +1398,29 @@ Ben: "All the perception stack maybe, what part does what. When sitting at the c
   rolling back, the EKF thinks forward: test 4.25 measures it.
 - **The ground plan** is `tests.md` stages 4 and 5 (it existed; Claude first said it
   didn't), now with 4e (record the lot: maps and scores) and 4f (reversing, the U-turn).
+
+## 1 November: fewer pixi commands
+
+### "we have tons of pixi run options that are maybe not needed anymore... Less is more. Everything should be easy and obvious"
+
+- **Done:** 89 `pixi run` tasks became 45. A family is one task and a word after it, and
+  with no word it lists its choices. There are no old names kept as aliases.
+
+| Before | Now |
+|---|---|
+| `hud-demo`, `map-demo`, `debug-hud-demo`, `hw-panel-demo` | `hud --demo` (and the other three) |
+| `debugdemo` | `demo --debug` |
+| `estop-clear`, `gate-clear`, `geofence-clear`, `watchdog-clear` | `clear <estop, gate, geofence, watchdog>` |
+| `spine-uf2`, `wheel-flash`... (8 tasks) | `pico <spine, wheel, sentinel> <tools, build, flash>` |
+| `esp-tools`, `esp-qemu-check`... (5 tasks) | `esp <tools, build, flash, qemu-tools, qemu-check>` |
+| `vendor`, `get-models`, `get-routes`... (7 tasks) | `get <vendor, models, ..., routes, all>` |
+| `controller-compare`, `timing-test`, `stream-check`, `atob-score`, `bandwidth` | `measure <controllers, timing, stream, atob, bandwidth>` |
+| `preflight` | `actuator-test preflight --stands` |
+| teaching and rare tools (`vehicle-model`, `ndt-demo`, `can-load`, `gz-window`...) | no task: `pixi run python3 tools/<script>.py` (tools/README.md) |
+
+- **Kept as they were:** the everyday ones (`build`, `test`, `sim`, `car`, `pick`,
+  `check`, `doctor`, `car-day-check`...) and the stand-ins that must stay on this computer
+  (`carla-car`, `laptop-bench`).
 
 ## Open threads
 

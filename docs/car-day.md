@@ -83,12 +83,12 @@ Our stack runs in **ROS domain 42**, so it never mixes with theirs (domain 0).
 | # | Do | You should see | If not |
 |---|---|---|---|
 | 1 | `git fetch upstream && git switch main && git merge --ff-only upstream/main` (the team's main: [CONTRIBUTING.md](../CONTRIBUTING.md)), then `pixi run build` | `Summary: ... packages finished` | `pixi run build` again; the end says which package |
-| 2 | `pixi run get-models` (once) | `models/rf-detr-nano.pth`, `models/yolo11n.pt` | the internet |
+| 2 | `pixi run get models` (once) | `models/rf-detr-nano.pth`, `models/yolo11n.pt` | the internet |
 | 3 | The ONNX for the Orin (box below) | `models/rf-detr-nano.onnx` (108 MB) | skip: session 4 has a slower way |
-| 4 | `pixi run car-day-build` | `v2: PASS`, `v1: PASS`, `esp-qemu-check: PASS`, `legacy-esp32: PASS`, `docs: PASS` | each step's log is in `car-day/esp32/` |
+| 4 | `pixi run car-day-build` | `v2: PASS`, `v1: PASS`, `esp qemu-check: PASS`, `legacy-esp32: PASS`, `docs: PASS` | each step's log is in `car-day/esp32/` |
 | 5 | `pixi run car-kit`, then copy `car-kit/` to the stick | `car-kit/` (about 2 GB); `cp -R car-kit /Volumes/<stick>/` | [From a USB stick](car-install.md) |
 | 6 | The laptop's Cyclone file (box below) | `~/.config/aav/cyclonedds-car.xml` | |
-| 7 | `pixi run net-map` and `pixi run doctor` once | macOS asks about the local network: **Allow** | System Settings → Privacy → Local Network |
+| 7 | `pixi run bash tools/net_map.sh` and `pixi run doctor` once | macOS asks about the local network: **Allow** | System Settings → Privacy → Local Network |
 | 8 | **`pixi run car-day-check`** | `0 missing` | run each `->` line it prints, then again |
 | 9 | Print the measuring sheet; pack the bag (above) | | |
 
@@ -161,7 +161,7 @@ Car day: is /Users/ben/Code/ecolo-av ready? (car-day.md)
   OK       MediaMTX     vendor/mediamtx (to test a stream on the laptop)
   OK       ESP32 tools  Xtensa Rust, espflash (vendor/esp, vendor/cargo-tools)
   OK       ESP32 Rust   v2 and v1 built 24 Oct 2026 15:47, in car-day/esp32/
-  OK       ESP32 QEMU   esp-qemu-check passed 24 Oct 2026 15:47: brakes when the heartbeat stops
+  OK       ESP32 QEMU   esp qemu-check passed 24 Oct 2026 15:47: brakes when the heartbeat stops
   OK       ESP32 C++    the 2025-26 C++ builds (the way back), 24 Oct 2026 15:47
   REMIND   ESP32 C++    secrets.h has the placeholders: a C++ built again can't join the WiFi; the backup (session 6) restores it all
                         -> firmware/legacy/aav_umod_esp32/src/secrets.h: the WiFi from the team, typed in, never committed
@@ -255,7 +255,7 @@ dongle in, then `pixi run doctor` (it should find the car's network).
 
 | # | Do | You should see | If not |
 |---|---|---|---|
-| 1 | `ssh <user>@192.168.1.140` (the user: `hosts.txt`, JETSON) | a prompt on `ubuntu` | `pixi run net-map`: the Orin's address may have changed |
+| 1 | `ssh <user>@192.168.1.140` (the user: `hosts.txt`, JETSON) | a prompt on `ubuntu` | `pixi run bash tools/net_map.sh`: the Orin's address may have changed |
 | 2 | `cat /etc/nv_tegra_release` | `R36 (release), REVISION: 4.7` = JetPack 6 (21 Oct) | write down what it says (W7) |
 | 3 | `cat /proc/device-tree/model; free -h; df -h ~` | the module (AGX Orin), its memory (32 or 64 GB), **13 GB free** or more | not enough room: stop, ask the team |
 | 4 | On the laptop, a second terminal: `rsync -a --exclude .cache --exclude aav-jazzy <user>@192.168.1.140:/home/<user>/ ~/aav-backup/jetson-$(date +%F)/home/` | it copies (1-3 h); go on meanwhile | it stops: run it again, it resumes |
@@ -481,9 +481,9 @@ Their `foxglove-bridge` already holds port 8765 on the Orin, so ours goes on 876
 
 | # | Do | You should see | If not |
 |---|---|---|---|
-| 1 | Theirs, read-only: `pixi run layout-check ws://192.168.1.140:8765` | their topics (Humble, domain 0); ours aren't there | |
+| 1 | Theirs, read-only: `pixi run python3 tools/layout_check.py ws://192.168.1.140:8765` | their topics (Humble, domain 0); ours aren't there | |
 | 2 | Ours, on the Orin: `~/aav-jazzy/aav.sh ros2 launch aav_bringup foxglove.launch.py foxglove_address:=0.0.0.0 foxglove_port:=8766 foxglove_control:=false` | `listening on port 8766` | |
-| 3 | `pixi run layout-check ws://192.168.1.140:8766 --data` | every layout topic of the running parts served, and kB/s each | missing ones: their part isn't running |
+| 3 | `pixi run python3 tools/layout_check.py ws://192.168.1.140:8766 --data` | every layout topic of the running parts served, and kB/s each | missing ones: their part isn't running |
 | 4 | Lichtblick → Open connection → Foxglove WebSocket → `ws://192.168.1.140:8766`; Layouts → Import → `tools/foxglove/driving.json` (then the other two) | the car's model, the gate, the e-stop | [Watch from a laptop](foxglove.md) |
 | 5 | The same over the car's WiFi | under 2.5 MB/s for every laptop together | the WiFi drops multicast? ([Friday](history/friday-2026-10-16.md)) |
 
@@ -515,7 +515,7 @@ The map panel needs the internet for its tiles: offline it shows the dots on a b
 | the Orin, a second terminal | `~/aav-jazzy/aav.sh tools/record.sh stands` (session 10) |
 
 The HUD's GO / STOP panel says whether the car may move, and why not. A latched gate:
-`pixi run gate-clear`; a latched watchdog (such as `hud LOST`): `pixi run watchdog-clear`.
+`pixi run clear gate`; a latched watchdog (such as `hud LOST`): `pixi run clear watchdog`.
 
 | # | Test | Expect | If not |
 |---|---|---|---|
@@ -524,7 +524,7 @@ The HUD's GO / STOP panel says whether the car may move, and why not. A latched 
 | 3.2b | Backward, gently (the keyboard's back key) | the drive wheels turn **backward**, slowly; the HUD's speed reads negative | forward: the ESP32's direction switch (ask the hardware lead). **Nav2 must not reverse on the ground until this passes:** `reversing:=false` |
 | 3.3 | Left | the front wheels turn **left** | right: `steering_sign` (Q2) |
 | 3.4 | Let go of the key | slows to 0 within 0.3 s | |
-| 3.5 | The HUD's e-stop button | brakes at once; nothing moves until `pixi run estop-clear` | |
+| 3.5 | The HUD's e-stop button | brakes at once; nothing moves until `pixi run clear estop` | |
 | 3.6 | Stop the keyboard program | the bridge brakes: its commands go stale | |
 | 3.7 | Ctrl-C the Motor Pi's bridge | a last stop frame | |
 | 3.8 | The Kar-Tech e-stop | everything stops | |
@@ -533,12 +533,12 @@ The HUD's GO / STOP panel says whether the car may move, and why not. A latched 
 | 3.10 | `pixi run actuator-test steer-sweep --stands` (the laptop) | it asks each wheel angle: the protractor | |
 | 3.11 | `pixi run actuator-test steer-centre --stands` | under 1°, or the offset written down | |
 | 3.12 | Wheel speed: `/vehicle/odom` against a phone tachometer app | within 10% | |
-| 3.P | `pixi run preflight --no-drive --skip steering gps lidar` (the Orin, ssh + tmux) | every sensor line PASS; nothing moves | a FAIL names the sensor: its driver, its cable, its rate |
+| 3.P | `pixi run actuator-test preflight --stands --no-drive --skip steering gps lidar` (the Orin, ssh + tmux) | every sensor line PASS; nothing moves | a FAIL names the sensor: its driver, its cable, its rate |
 
 **The preflight's drive** (speed up, hold, brake, steer, every sensor at once) is refused
 on the car today: the wheel sensors are on the front, the motor drives the rear, so on
 stands nothing measures the spinning wheels (TODO 49b). Once a rear-wheel speed exists
-(`vehicle.yaml` `speed_wheels: rear`): `pixi run preflight --skip steering gps lidar`,
+(`vehicle.yaml` `speed_wheels: rear`): `pixi run actuator-test preflight --stands --skip steering gps lidar`,
 with the e-stop person and someone on the rear wheels' tachometer ([the preflight](actuator-tests.md#the-preflight-on-stands)).
 
 **Not today: the car on the ground.** That waits for tests 4.2 (`coast`) and 4.4 (`throttle-map`): they measure the drag and the throttle, and settle the 5 times disagreement (TODO 52b). Then the ground: [Every test](tests.md#stage-4-the-car-in-an-empty-lot), stage 4, recorded with the lidar (4e).
@@ -626,6 +626,6 @@ reboots into recovery mode and is off for the whole copy. Not possible at the dr
 |---|---|
 | The write-up, no secrets | `docs/history/audit-<date>-car.md`, like [21 Oct's](history/audit-2026-10-21-car.md) |
 | The numbers | `vehicle.yaml`; then `pixi run test` and `pixi run view` |
-| The car's linear model, refit | `pixi run vehicle-model`: new poles and margins from the measured lags ([The car as a linear model](vehicle-model.md)) |
+| The car's linear model, refit | `pixi run python3 tools/vehicle_model.py`: new poles and margins from the measured lags ([The car as a linear model](vehicle-model.md)) |
 | The answers | `docs/audit-questions.md`; the hardware lead's in `docs/can-plan.md` |
 | Gate 1 and Gate 2 | [The plan](plan.md) |

@@ -36,14 +36,15 @@ localization):
                     over the roof, all the way round), for the costmap and collision_monitor
   lifecycle_manager brings them all up
 
-Trials (docs/trials.md), each beside the default and scored by pixi run controller-compare:
+Trials (docs/trials.md), each beside the default and scored by pixi run measure controllers:
   planner:=hybrid|lattice|smac2d|navfn|theta_star  the planner behind the plugin name
                           GridBased (the behaviour trees never change; docs/controllers.md,
                           Planners). hybrid, the default: SmacPlannerHybrid, Dubins or
                           Reeds-Shepp. lattice: SmacPlannerLattice on our own primitives
-                          (config/lattice_ackermann.json, pixi run lattice-primitives), for
-                          the car's turning radius and the map's cells (refused if either
-                          differs), backwards too with reversing:=true.
+                          (config/lattice_ackermann.json, from
+                          pixi run python3 tools/lattice_primitives.py), for the car's turning
+                          radius and the map's cells (refused if either differs),
+                          backwards too with reversing:=true.
                           lattice_headings:=32 takes the trial file with 32 headings
                           (lattice_ackermann_32.json). smac2d, navfn,
                           theta_star: grid paths that ignore the turning radius, so the
@@ -155,7 +156,7 @@ def lattice_for(share, v, map_yaml, headings=vehicle.LATTICE_HEADINGS[0]):
 
     SmacPlannerLattice measures its moves in the file's cells: on a map with other cells,
     or for a car that now turns wider, it would plan moves the car can't make. Refuse
-    rather than start it so (pixi run lattice-primitives makes a new file).
+    rather than start it so (pixi run python3 tools/lattice_primitives.py makes a new file).
     """
     path = f'{share}/config/{vehicle.lattice_file_name(headings)}'
     with open(path) as f:
@@ -167,7 +168,8 @@ def lattice_for(share, v, map_yaml, headings=vehicle.LATTICE_HEADINGS[0]):
         wrong.append(f"{meta.get('num_of_headings')} headings, not {headings}")
     if wrong:
         raise ValueError(f'planner:=lattice: {path}: ' + '; '.join(wrong) +
-                         '. Run pixi run lattice-primitives, or pick another planner')
+                         '. Run pixi run python3 tools/lattice_primitives.py, '
+                         'or pick another planner')
     return path
 
 

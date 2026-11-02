@@ -38,7 +38,7 @@ slot: below every person (joystick, RC, keyboard), above Nav2 and every other pr
 | `throttle-map` | 4.4 | lot | speed-ups to ¼, ½, ¾ and all of the cap | throttle % → acceleration; `throttle_deadband` |
 | `circles` | 4.5, 4.6 | lot | one full circle per angle, both ways, at 1 m/s | real wheel angle per command; tightest circle |
 | `straight` | 4.7 | lot | 10 m at 0.5 m/s, steering straight | sideways drift; `steer_offset` |
-| `preflight` | 3.P | stands | speed up, hold, slow, brake; steer left, right, centre; every sensor counted | PASS / FAIL per line, no `vehicle.yaml` lines ([below](#the-preflight-on-stands)) |
+| `actuator-test preflight --stands` | 3.P | stands | speed up, hold, slow, brake; steer left, right, centre; every sensor counted | PASS / FAIL per line, no `vehicle.yaml` lines ([below](#the-preflight-on-stands)) |
 
 The steering tests creep at 0.2 m/s: ego only turns the wheels while the car moves. On
 stands the wheels spin slowly; in Gazebo the car crawls in arcs.
@@ -280,10 +280,10 @@ One run before the car goes on the ground (Ben, 29 Oct; the design:
 `docs/designs/2026-10-29_preflight.md`). It drives and checks every sensor at once.
 
 ```bash
-pixi run preflight --sim                          # Gazebo (pixi run sim first)
-pixi run preflight --bench                        # bench mode (pixi run bench first)
-pixi run preflight --no-drive --skip steering     # the car today: the sensors only
-pixi run preflight --skip steering gps lidar      # the car, once it has a rear-wheel speed
+pixi run actuator-test preflight --stands --sim                          # Gazebo (pixi run sim first)
+pixi run actuator-test preflight --stands --bench                        # bench mode (pixi run bench first)
+pixi run actuator-test preflight --stands --no-drive --skip steering     # the car today: the sensors only
+pixi run actuator-test preflight --stands --skip steering gps lidar      # the car, once it has a rear-wheel speed
 ```
 
 | Step | Command |
@@ -382,7 +382,7 @@ firmware keeps `default`. Try `smooth` here, in this order:
 | When | What to run | What you should see |
 |---|---|---|
 | Before the car | `pixi run sim-check --speed-steps-only --speed-loop smooth` | each step ends within 5%, overshoot under 3% |
-| After 4.1, 4.2, 4.4 (`max_accel`, `drag`) | `pixi run vehicle-model --set max_accel=... --set drag=... --speed-loop` | `smooth` still 0% at K with the measured numbers; if not, redo its gains (pole placement, then b) |
+| After 4.1, 4.2, 4.4 (`max_accel`, `drag`) | `pixi run python3 tools/vehicle_model.py --set max_accel=... --set drag=... --speed-loop` | `smooth` still 0% at K with the measured numbers; if not, redo its gains (pole placement, then b) |
 | Stage 3, on stands, **once the spine closes the loop** (it has the wheel speed) | build the board with `speed_loop: SpeedLoopConfig::smooth()` in its `SpineConfig`; a held step (below) at 0.3 m/s | the wheels reach 0.3 m/s without passing 0.31; `/vehicle/throttle` steady, no jitter |
 | Stage 4, in the lot | the held step at 0.5 and 1.0 m/s, each profile, the same day | the peak speed in `/vehicle/odom` against the target; then pick one |
 

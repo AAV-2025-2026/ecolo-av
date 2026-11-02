@@ -12,10 +12,10 @@ pixi run pick list     # every switch, then stop
 It prints the whole command too, for example:
 
 ```
-pixi run debugdemo tracker:=mpc reversing:=false ndt:=true ndt_map:=maps/ndt/test_lot.pcd amcl:=false speed_loop:=lqi
+pixi run demo --debug tracker:=mpc reversing:=false ndt:=true ndt_map:=maps/ndt/test_lot.pcd amcl:=false speed_loop:=lqi
 ```
 
-`sim`, `demo` and `debugdemo` all take switches as `name:=value`. If a switch is given
+`sim`, `demo` and `demo --debug` all take switches as `name:=value`. If a switch is given
 twice, the last one wins.
 
 ## Who draws the route
@@ -46,7 +46,7 @@ the U-turn. The real car takes only `hybrid` or `lattice`. More: [Controllers, P
 | `tracker:=mpc_full` | ours: MPC that plans the speed too | 10 of 12 |
 
 Our trackers drive forward only: give them `reversing:=false` (the menu does).
-In `debugdemo`, keys 1-4 swap the tracker live. More: [Controllers](controllers.md),
+In `demo --debug`, keys 1-4 swap the tracker live. More: [Controllers](controllers.md),
 [Trials](trials.md).
 
 ## Where am I
@@ -54,7 +54,7 @@ In `debugdemo`, keys 1-4 swap the tracker live. More: [Controllers](controllers.
 These run **beside** the EKFs and are only scored for now. They never steer, except
 `ndt_ekf:=true`: then the global EKF, which Nav2 plans by, takes NDT's pose too; and
 `kiss_ekf:=true`: then the local EKF, which Nav2 steers by, takes KISS-ICP's speed too.
-In `pixi run pick`, `debugdemo` offers NDT + AMCL first (to see every finder); the
+In `pixi run pick`, `demo --debug` offers NDT + AMCL first (to see every finder); the
 others offer the EKFs only first.
 
 | Switch | In plain words | Off from the truth |
@@ -88,7 +88,7 @@ KISS-ICP needs its own environment once: `pixi install --locked -e kiss`.
 | `lidar:=false`, `radar:=false` | sensors off |
 | `voxels:=true` | Nav2 sees the lidar as 0.25 m cubes, not a flat scan (a trial: [Trials](trials.md#voxels-30-oct-the-lidar-as-cubes)) |
 
-**Tried, 29 Oct 23:05:** the menu's pick (debugdemo, `mpc`, NDT, LQI) in Gazebo on Ben's
+**Tried, 29 Oct 23:05:** the menu's pick (demo --debug, `mpc`, NDT, LQI) in Gazebo on Ben's
 Mac: the track node ran MPC, NDT tracked (2 ms a match), AMCL stayed off, the speed loop
 said LQI, and a Nav2 goal 15 m ahead ended SUCCEEDED.
 

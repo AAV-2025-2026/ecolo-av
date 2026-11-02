@@ -52,7 +52,7 @@ one colour:
 |---|---|
 | ![STOP](img/hud-gate-stop.png) | ![AUTO STOP](img/hud-gate-autostop.png) |
 
-Taken with `pixi run hud-demo --screenshot FILE --screenshot-after 50` (STOP) and `37.5`
+Taken with `pixi run hud --demo --screenshot FILE --screenshot-after 50` (STOP) and `37.5`
 (AUTO STOP): the demo goes round GO, WAIT, AUTO STOP and STOP every minute.
 
 
@@ -61,7 +61,7 @@ Taken with `pixi run hud-demo --screenshot FILE --screenshot-after 50` (STOP) an
  |  (tick)   GO                  |   |  (stop    STOP                |
  |           all REAL            |   |   sign)   GPS is SIM          |
  |           the car may move    |   |           clear: pixi run     |
- +-------------------------------+   |           gate-clear          |
+ +-------------------------------+   |           clear gate          |
         green                        +-------------------------------+
                                             red
 ```
@@ -78,11 +78,11 @@ The one main reason, the first that applies:
 
 | # | Who says no | Reason on screen | Small line |
 |---|---|---|---|
-| 1 | the car's e-stop (`/vehicle/status`) | E-STOP ON | clear: pixi run estop-clear |
-| 2 | the output mux, latched ([sources and targets](sources-and-targets.md)) | GPS is SIM, 2 sources: IMU, sensor mux wants SIM... | clear: pixi run gate-clear |
+| 1 | the car's e-stop (`/vehicle/status`) | E-STOP ON | clear: pixi run clear estop |
+| 2 | the output mux, latched ([sources and targets](sources-and-targets.md)) | GPS is SIM, 2 sources: IMU, sensor mux wants SIM... | clear: pixi run clear gate |
 | 3 | the output mux, silent 2 s | gate silent | nothing reaches the car |
 | 4 | the sensor watchdog, silent | watchdog silent | people can still drive |
-| 5 | the sensor watchdog's lock: its first input that stops | GPS STALE, HUD LOST, WHEELS DISAGREE... | people can still drive; latched ones: clear: pixi run watchdog-clear |
+| 5 | the sensor watchdog's lock: its first input that stops | GPS STALE, HUD LOST, WHEELS DISAGREE... | people can still drive; latched ones: clear: pixi run clear watchdog |
 | 6 | the output mux, waiting | settling, sensor mux quiet, unsure: GPS... | opens by itself |
 | 7 | nothing heard from the output mux | no output mux heard | nothing reaches the car |
 | - | none of these | all REAL (or all SIM, in a simulator) | the car may move |
@@ -96,7 +96,7 @@ The one main reason, the first that applies:
 ### Run it
 
 ```bash
-pixi run hud-demo                  # pretend data: no ROS, no car, any Mac
+pixi run hud --demo                  # pretend data: no ROS, no car, any Mac
 pixi run build && pixi run hud     # the real node (ros2 launch aav_hud hud.launch.py)
 pixi run hud fullscreen:=true      # full screen; F11 switches too
 pixi run hud fullscreen:=true monitor:=HDMI-2   # on that monitor, by name or number
@@ -148,7 +148,7 @@ The safety drivers rely on this screen, so the sensor watchdog must know it's al
    one dropout in the grace: forgiven      any dropout: hud LOST, latched
    (held only while it lasts)              (held even once it beats again)
 
- a person checks the screen ──► pixi run watchdog-clear ──► Nav2 may drive
+ a person checks the screen ──► pixi run clear watchdog ──► Nav2 may drive
 ```
 
 | Case | What happens |
@@ -156,7 +156,7 @@ The safety drivers rely on this screen, so the sensor watchdog must know it's al
 | A slow first frame, within 5 s of the first beat | held while it lasts, then drives by itself (once) |
 | A crash, a freeze or a closed window after that | `hud LOST`: held, even once systemd restarts it |
 | A HUD that keeps crashing while it starts | the second dropout latches |
-| `pixi run watchdog-clear` | Nav2 drives again, if the HUD beats; the grace starts again |
+| `pixi run clear watchdog` | Nav2 drives again, if the HUD beats; the grace starts again |
 | The watchdog itself stalled (a busy computer) | not the HUD's fault: nothing latches |
 
 The rule is `latch: true` on the `hud` input (`sensor_watchdog.yaml`, `latch_grace: 5.0`),
@@ -191,7 +191,7 @@ in `aav_safety` `watchdog.py`, with tests. The HUD shows it: **AUTO STOP, HUD LO
 | The heartbeat in Gazebo (23 Oct, `sim-check --faults`, `hud stop`, twice) | the check beats in the window's place; when it stops, Nav2's car stands still 2.5 s later |
 | The GO / STOP panel's logic (24 Oct, `cargo test`, hud-core `gate`, `state`) | every state and reason above; the output mux's lines as its own tests have them, and one from the live output mux next to the turtle (latched by a node announcing a REAL GPS: "GPS is REAL"; cleared by the service) |
 | The output mux's line through the real node (24 Oct, `cargo test`, hud-app) | published by another node, it reaches the screen |
-| The GO / STOP panel on screen (24 Oct) | ✅ seen: Ben ran `pixi run hud-demo --screenshot docs/img/hud-gate.png` (GO, green, "all REAL"; the picture above). STOP and AUTO STOP seen too (24 Oct, the pictures above) |
+| The GO / STOP panel on screen (24 Oct) | ✅ seen: Ben ran `pixi run hud --demo --screenshot docs/img/hud-gate.png` (GO, green, "all REAL"; the picture above). STOP and AUTO STOP seen too (24 Oct, the pictures above) |
 | The HUD latch (24 Oct, `aav_safety` tests) | a start-up dropout forgiven; any later one latched until cleared; a crash loop latches the second time; a stalled watchdog latches nothing |
 | The HUD latch in Gazebo (24 Oct, `sim-check --faults`, `hud stop`) | stood still 2.4 s after the beats stopped: "hud LOST"; beating again, still held 5 s later; cleared, Nav2 drove again. 25 of 25 faults pass |
 
@@ -252,7 +252,7 @@ Nav2.
 ### Run it
 
 ```bash
-pixi run map-demo                          # pretend data: no ROS, no car
+pixi run map --demo                          # pretend data: no ROS, no car
 pixi run build && pixi run map             # the real node (ros2 launch aav_hud map.launch.py)
 pixi run sim world:=test_lot map:=true     # Gazebo, Nav2 and the map window together
 pixi run map fullscreen:=true monitor:=HDMI-1   # full screen on that monitor
@@ -297,14 +297,14 @@ and its path sit on real streets. It works with no internet: the map is a file.
 
 | Get it, once | |
 |---|---|
-| `pixi run get-street-map` | 40 MB into `maps/streets/ottawa.pmtiles` (git ignores `maps/`) |
+| `pixi run get street-map` | 40 MB into `maps/streets/ottawa.pmtiles` (git ignores `maps/`) |
 | What it is | Ottawa, lon -76.0 to -75.4, lat 45.2 to 45.55, zoom 0 to 15: vector tiles |
 | From | [Protomaps](https://docs.protomaps.com/basemaps/downloads)' world basemap, build 20260811 (OpenStreetMap of 11 Aug 2026) |
 | How | go-pmtiles' `pmtiles extract`: only the tiles in the box, never the 139 GB file |
 | Checked | the tool and the file, each against a pinned SHA-256 |
-| Newer streets | `STREET_MAP_BUILD=latest pixi run get-street-map` (delete the old file first; no checksum then) |
+| Newer streets | `STREET_MAP_BUILD=latest pixi run get street-map` (delete the old file first; no checksum then) |
 
-No file: the window still runs, and says **No street map: pixi run get-street-map**.
+No file: the window still runs, and says **No street map: pixi run get street-map**.
 
 #### Licence and credit
 
@@ -436,7 +436,7 @@ a bug.
 
 | | |
 |---|---|
-| File | `maps/places/ottawa.db` (`places` in `config/map.yaml`, or `--places FILE`): `pixi run get-places` |
+| File | `maps/places/ottawa.db` (`places` in `config/map.yaml`, or `--places FILE`): `pixi run get places` |
 | Opened | read-only |
 | Matches | a name that starts with the words (any case), an address ("580 rideau"), then names with the words inside |
 | Left out | street lamps, benches, crossings, footways, service roads, link roads... (a deny-list, `NOT_DESTINATIONS` in `places.rs`: over 300 types, so a new one should show up) |
@@ -630,12 +630,12 @@ cloud (stamp t) --/tf_static--> base_link --EKF local's pose AT t--> odom --> 20
 ### Run it
 
 ```bash
-pixi run debugdemo               # Gazebo, RViz, the HUD, the map window and the debug HUD
-pixi run debug-hud-demo          # pretend data: no ROS (a walled lot, a ray-cast lidar)
+pixi run demo --debug               # Gazebo, RViz, the HUD, the map window and the debug HUD
+pixi run debug-hud --demo          # pretend data: no ROS (a walled lot, a ray-cast lidar)
 pixi run build && pixi run debug-hud    # the node alone, beside a running sim
 ```
 
-`debugdemo` is `demo` with `amcl:=true tracker:=pure_pursuit reversing:=false`, so AMCL
+`demo --debug` is `demo` with `amcl:=true tracker:=pure_pursuit reversing:=false`, so AMCL
 and the trial tracker have something to show; and `ndt:=true` too when
 `maps/ndt/test_lot.pcd` is there. No map yet: `pixi run ndt-map drive` once (about 6
 min, headless; the map stays out of git). Swap the tracker live with keys 1-4, or
@@ -660,7 +660,7 @@ own screen.
 |---|---|
 | `cargo test`: debug-core 38, debug-app 11 (with ROS: a cloud placed by the pose at its stamp, map -> odom, a swap's answer, through the real node) | all pass |
 | `live_sim` against headless Gazebo, test lot, `amcl:=true tracker:=pure_pursuit`, driving a Nav2 goal | 10 scans a second, ~6,000-7,000 cubes from ~16,000-19,000 points, none cut; every panel row OK; EKF global 0.02 m, truth 0.24 m, AMCL 0.70 m from EKF local; key 3's swap to lqr accepted mid-path, which then drove 9 mm off the path |
-| The window itself, `pixi run debugdemo`, the 20,000-cube drawing test | **untested** that night: the Mac's screen was locked |
+| The window itself, `pixi run demo --debug`, the 20,000-cube drawing test | **untested** that night: the Mac's screen was locked |
 
 ### Tested (29 October, later: step 5, Ben's Mac, screen unlocked)
 
@@ -681,7 +681,7 @@ own screen.
 | Against Gazebo with `voxels:=true` and `health:=true` | **untested** |
 
 **Not yet seen:** NDT's LOST and WAITING on the live window (only in `--demo`); `pixi run
-debugdemo` itself (RViz, the HUD and the map window as well: run here piece by piece);
+demo --debug` itself (RViz, the HUD and the map window as well: run here piece by piece);
 the keys pressed by hand (K, M, A, H: their logic is tested, the window wasn't clicked).
 
 ## The hardware panel
@@ -738,8 +738,8 @@ press --> panel-core (cap, hold-to-drive) --> /drivers/buttons/cmd_vel --> twist
 ### Run it
 
 ```bash
-pixi run hw-panel-demo                 # a pretend car: no ROS, any laptop
-pixi run sim world:=test_lot           # Gazebo (or: pixi run debugdemo) ...
+pixi run hw-panel --demo                 # a pretend car: no ROS, any laptop
+pixi run sim world:=test_lot           # Gazebo (or: pixi run demo --debug) ...
 pixi run hw-panel                      # ... and the panel beside it, localhost-only
 pixi run hw-panel stands:=true         # on the car's stands (speed stays off until 49b)
 ```
@@ -769,7 +769,7 @@ same buttons and rules, and prints what was asked and seen.
 | Gazebo: the geofence's lock true (its node stopped) | twist_mux passed nothing; the car **never moved** |
 | Gazebo: the panel frozen (SIGSTOP) while driving | `/drivers/buttons/cmd_vel` went silent; the car read **0.0 m/s** 2-6 s into the freeze (161 samples). Thawed with GO still held, it drove again |
 
-| Gazebo (`pixi run debugdemo`), **both windows on screen**, 29 Oct 22:50: `hw_panel --self-test 0.3:8` | asked 0.30, twist_mux 0.300, seen 0.30-0.35 m/s; GO let go: 0.00 about 0.5 s later. Pictures below |
+| Gazebo (`pixi run demo --debug`), **both windows on screen**, 29 Oct 22:50: `hw_panel --self-test 0.3:8` | asked 0.30, twist_mux 0.300, seen 0.30-0.35 m/s; GO let go: 0.00 about 0.5 s later. Pictures below |
 | The same run, the seeing screen | NDT TRACKING, 3.3 per point, 3.3 ms a match; the lot's map, every localizer's car and the scan on NDT's cells all drawn, 58 fps |
 
 ![The seeing screen against Gazebo, NDT tracking](img/debug-hud-seeing-gazebo.png)
@@ -779,7 +779,7 @@ same buttons and rules, and prints what was asked and seen.
 **Not yet seen:** the keys and the mouse pressed by hand (macOS blocks scripted keys); the bench
 check (a person's joystick beats the buttons); key L on the live window. Gazebo's output
 mux latched STOP once at start-up (an announcement race) and opened by itself the next
-runs; `pixi run gate-clear` reopens it.
+runs; `pixi run clear gate` reopens it.
 
 ## The Flutter app (2025-26): archived
 
@@ -800,7 +800,7 @@ The map window's [place search](#search-for-a-place-and-drive-there) reads `otta
 downloads it:
 
 ```bash
-pixi run get-places      # into maps/places/ottawa.db
+pixi run get places      # into maps/places/ottawa.db
 ```
 
 | | |

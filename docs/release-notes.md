@@ -100,7 +100,7 @@ change since):
 - **One model, three formats:** `.pt` for PyTorch anywhere, `.mlpackage` for Core ML on a
   Mac, `.engine` for TensorRT on the Orin.
 - **Core ML on a MacBook:** 21 ms a picture, so all 10 pictures a second, and the stop sign
-  first seen 20 m away. One command makes the model: `pixi run -e ml export-coreml`.
+  first seen 20 m away. One command makes the model: `pixi run -e ml python3 tools/export_model.py --format coreml`.
 - **TensorRT on the Orin:** a tool builds the engine on the Orin itself, ready for its
   JetPack reflash.
 - **One detector per computer,** each under its own name. The stop-sign watcher hears them

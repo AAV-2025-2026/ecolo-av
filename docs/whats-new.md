@@ -34,7 +34,7 @@ left, right, centre, stop. The car moves only while you **hold** Space (or GO).
 | Hold to drive, through twist_mux's slot 45 | a person always outranks it; let go and it stops | sim |
 | SIM and BENCH only | not on the real car until its own test (TODO 49b) | built |
 
-### The debug screen (`pixi run debugdemo`)
+### The debug screen (`pixi run demo --debug`)
 
 Left: the lidar as cubes in 3D, and where each localizer thinks the car is. Right: the
 lidar map from above, and NDT's match. New on 1 Nov: **Nav2's cubes** in red (key V), and
@@ -56,7 +56,7 @@ lidar map from above, and NDT's match. New on 1 Nov: **Nav2's cubes** in red (ke
 |---|---|---|
 | The spine's state machine, self-test at boot, hardware test mode | Arsh | built |
 | The ESP32's Rust firmware: brakes 111-120 ms after the Orin's heartbeat stops | Ben | built (QEMU) |
-| The preflight on stands (`pixi run preflight`) | Ben | sim |
+| The preflight on stands (`pixi run actuator-test preflight --stands`) | Ben | sim |
 | Geofence and stop hold (new twist_mux locks) | Ben | sim |
 
 ## Localization: where am I?
@@ -132,7 +132,7 @@ The lidar sends about 29,000 points ten times a second. Nav2 reads them one of t
 ![The lattice drives the lot tour 29 s quicker than Hybrid-A*](img/whats-new-planners.png)
 
 The lattice strings together short moves our car can really make, worked out from
-`vehicle.yaml` (`pixi run lattice-primitives`):
+`vehicle.yaml` (`pixi run python3 tools/lattice_primitives.py`):
 
 ![The lattice's moves for our car](img/lattice-primitives.png)
 

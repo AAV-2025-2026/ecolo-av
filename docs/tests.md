@@ -27,7 +27,7 @@ Nothing real moves. Run these on any laptop.
 | 1.3 | The roof lidar | `pixi run sim-check` (on by default) | 1800 × 16 rays at 10 Hz in `lidar_link` | ✅ |
 | 1.4 | Stop for an obstacle | `pixi run sim-check --obstacle` | stops 0-2 m before the box; drives on when it's gone | ✅ at 272 kg; ⚠️ at 181 kg, unconfirmed (the Mac was overloaded) |
 | 1.5 | Lane keeping | `pixi run sim-check --lane` | back to the lane's centre within 5 cm | ✅ 15 Oct |
-| 1.6 | The HUD, with pretend data | `pixi run hud-demo` | the window opens with speed, camera, GPS, e-stop | ✅ Ben, 15 Oct |
+| 1.6 | The HUD, with pretend data | `pixi run hud --demo` | the window opens with speed, camera, GPS, e-stop | ✅ Ben, 15 Oct |
 | 1.7 | The HUD with the turtle | `pixi run turtle`, `pixi run hud`, `pixi run keyboard --local` | speed and steering move as you drive | ✅ Ben, 15 Oct |
 | 1.8 | Plain-English driving | `pixi run -e llm talk`: "drive 10 m forward" | drives 10 m (±0.2 m) after you type yes | ✅ Gazebo |
 | 1.9 | **"SIMULATED" on the HUD** | run Gazebo, look at the HUD | an orange SIMULATED banner; REAL / SIM tag per sensor | ✅ built 15 Oct (its logic tested); not yet seen on a screen |
@@ -62,7 +62,7 @@ software stopped; speed capped (`max_speed:=0.3`).
 | 3.2b | **Backward, gently** (the keyboard's back key) | the drive wheels turn **backward**, slowly; `/vehicle/odom` reads **negative** (its sign is the command's until H5) | 🔧 |
 | 3.3 | Left | the front wheels turn **left** | 🔧 |
 | 3.4 | Let go of the key | slows to 0 within 0.3 s; brake frames sent | 🔧 |
-| 3.5 | The HUD's e-stop button | brakes at once; nothing moves until `pixi run estop-clear` | 🔧 |
+| 3.5 | The HUD's e-stop button | brakes at once; nothing moves until `pixi run clear estop` | 🔧 |
 | 3.6 | Stop the keyboard program | the bridge brakes: its commands go stale | 🔧 |
 | 3.7 | Ctrl-C the Motor-Pi bridge | it sends a last stop frame | 🔧 |
 | 3.8 | The Kar-Tech e-stop | everything stops | 🔧 |
@@ -185,9 +185,9 @@ trials wait for 4.22.
 
 | # | Check | Run | Status |
 |---|---|---|---|
-| F.1 | Every machine on the network, with its ROS domain | `pixi run net-map` | ✅ at home |
+| F.1 | Every machine on the network, with its ROS domain | `pixi run bash tools/net_map.sh` | ✅ at home |
 | F.2 | The Mac can join ROS | `pixi run doctor` | ✅ at home |
-| F.3 | Every machine surveyed: what runs, what's plugged in, what exists only there | `pixi run survey ~/aav-audit/hosts.txt` | ✅ Linux CI; 🔧 the car |
+| F.3 | Every machine surveyed: what runs, what's plugged in, what exists only there | `pixi run bash tools/survey_car.sh ~/aav-audit/hosts.txt` | ✅ Linux CI; 🔧 the car |
 | F.4 | Multicast between the car's machines, wired and WiFi | `ros2 multicast send` / `receive` | 🔧 |
 | F.5 | Clocks within a second | `date` on each | 🔧 |
 | F.6 | The camera freeze: the 10-minute watch | `history/friday-todo-2026-10-16.md` part 5 | 🔧 |

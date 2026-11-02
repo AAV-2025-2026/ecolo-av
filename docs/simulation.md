@@ -59,7 +59,7 @@ pixi run sim world:=road         # the bench's road, for the car's camera and ra
 | `faults` | `false` | `true`: the front left picture goes through `gazebo_camera` too, so it can freeze on purpose |
 | `actuator_model` | `true` | the car answers like `vehicle.yaml`'s `actuators:` say ([below](#the-actuator-model)); `false`: the old instant car, to compare |
 
-**Debugging Gazebo itself:** its source is in `vendor/gazebo/` (`pixi run vendor`), at the
+**Debugging Gazebo itself:** its source is in `vendor/gazebo/` (`pixi run get vendor`), at the
 releases we run. `vendor/README.md` says which library does each job: the steering, the
 sensors, the physics, the ROS bridge.
 
@@ -261,7 +261,7 @@ Gazebo, RViz, Nav2 and the HUD window together. Give goals with RViz's 2D Goal P
 | `foxglove:=true` | the Foxglove bridge on 127.0.0.1:8765: open Lichtblick, then `ws://localhost:8765` and a layout from `tools/foxglove/` ([Watch from a laptop](foxglove.md)) |
 | Tried, 15 Oct | the parking lot, sim speed 3, the HUD on: a 36 m Nav2 goal reached |
 
-If you reopen Gazebo's window (`pixi run gz-window`), its camera follows the car again.
+If you reopen Gazebo's window (`pixi run tools/ros.sh tools/gz_window.sh`), its camera follows the car again.
 
 ## The road world: the car's whole graph
 

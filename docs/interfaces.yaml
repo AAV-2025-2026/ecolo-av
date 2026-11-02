@@ -48,7 +48,7 @@ topics:
     type: geometry_msgs/msg/TwistStamped
     pub: [actuator_test]
     sub: [twist_mux, language_drive]
-    note: Priority 60, below both people (joystick 100, keyboard 90) and above every other program. Only while an actuator test runs (aav_actuator_tests, pixi run actuator-test; docs/tests.md stages 3-4), or the preflight on stands (pixi run preflight, that is actuator-test preflight, which also counts every sensor topic it subscribes to). It also reads /control/cmd_vel, to stop when someone else takes over.
+    note: Priority 60, below both people (joystick 100, keyboard 90) and above every other program. Only while an actuator test runs (aav_actuator_tests, pixi run actuator-test; docs/tests.md stages 3-4), or the preflight on stands (pixi run actuator-test preflight --stands, that is actuator-test preflight, which also counts every sensor topic it subscribes to). It also reads /control/cmd_vel, to stop when someone else takes over.
   /drivers/buttons/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [hw_panel]
@@ -473,7 +473,7 @@ topics:
     type: diagnostic_msgs/msg/DiagnosticStatus
     pub: [voxels]
     sub: [debug_hud]
-    note: The voxels trial after every cloud - name voxels, level OK (the road fitted) or WARN (no good fit - taken as flat, as lidar_scan does); values ms (wall clock, the cloud read to the cubes published), cubes, ground_cubes, points (finite, off the car, in range), fitted, roll_deg, pitch_deg (the body's lean on the fitted road, REP-103), clouds_dropped (from the stamps). sim-check --voxels and controller-compare --voxels read it; so does the debug HUD (its Nav2 cubes section and row).
+    note: The voxels trial after every cloud - name voxels, level OK (the road fitted) or WARN (no good fit - taken as flat, as lidar_scan does); values ms (wall clock, the cloud read to the cubes published), cubes, ground_cubes, points (finite, off the car, in range), fitted, roll_deg, pitch_deg (the body's lean on the fitted road, REP-103), clouds_dropped (from the stamps). sim-check --voxels and measure controllers --voxels read it; so does the debug HUD (its Nav2 cubes section and row).
   /perception/radar/clusters:
     type: sensor_msgs/msg/PointCloud2
     pub: [radar_clusters]
@@ -647,7 +647,7 @@ topics:
     type: geometry_msgs/msg/PoseWithCovarianceStamped
     pub: [amcl]
     sub: [controller_compare, debug_hud]
-    note: A trial (docs/trials.md) - stock nav2_amcl's particle filter on the 2D map and the lidar scan, map frame (its amcl_pose, renamed). Only with amcl:=true (sim.launch.py world:=test_lot nav:=true lidar:=true). Its tf_broadcast is false - ekf_global keeps map -> odom - so nothing drives by it; controller-compare --amcl scores it against Gazebo's truth. Published only once the car has moved (update_min_d, update_min_a).
+    note: A trial (docs/trials.md) - stock nav2_amcl's particle filter on the 2D map and the lidar scan, map frame (its amcl_pose, renamed). Only with amcl:=true (sim.launch.py world:=test_lot nav:=true lidar:=true). Its tf_broadcast is false - ekf_global keeps map -> odom - so nothing drives by it; measure controllers --amcl scores it against Gazebo's truth. Published only once the car has moved (update_min_d, update_min_a).
   /localization/amcl/particles:
     type: nav2_msgs/msg/ParticleCloud
     pub: [amcl]
@@ -672,7 +672,7 @@ topics:
     type: diagnostic_msgs/msg/DiagnosticStatus
     pub: [ndt]
     sub: [debug_hud]
-    note: NDT's state after every cloud - name ndt, level OK (a good fit), WARN (a poor fit, or no start yet) or ERROR (LOST), message TRACKING, WAITING or LOST and why; values stamp (the cloud's, s), score_per_point, overlap, iterations, match_ms (wall clock, the match alone), points (after the filters), poor_in_row, restarts (from ekf_global after LOST), clouds_dropped (arrived while one was being matched), x, y, yaw, and for a fit cov_xx, cov_xy, cov_xyaw, cov_yy, cov_yyaw, cov_yawyaw (-H^-1 before the scale k and the floors, to fit k). WARN's why says which poor fit - score too low, out of iterations, or jumped from the guess. The debug HUD's panel shows it; controller-compare --ndt scores it.
+    note: NDT's state after every cloud - name ndt, level OK (a good fit), WARN (a poor fit, or no start yet) or ERROR (LOST), message TRACKING, WAITING or LOST and why; values stamp (the cloud's, s), score_per_point, overlap, iterations, match_ms (wall clock, the match alone), points (after the filters), poor_in_row, restarts (from ekf_global after LOST), clouds_dropped (arrived while one was being matched), x, y, yaw, and for a fit cov_xx, cov_xy, cov_xyaw, cov_yy, cov_yyaw, cov_yawyaw (-H^-1 before the scale k and the floors, to fit k). WARN's why says which poor fit - score too low, out of iterations, or jumped from the guess. The debug HUD's panel shows it; measure controllers --ndt scores it.
   /localization/ndt/initial_pose:
     type: geometry_msgs/msg/PoseWithCovarianceStamped
     pub: []
@@ -682,7 +682,7 @@ topics:
     type: nav_msgs/msg/Odometry
     pub: [kiss_icp]
     sub: [ekf_local]
-    note: A trial (docs/designs/2026-10-30_kiss-icp.md) - lidar odometry by KISS-ICP (MIT, PRBonn; aav_kiss_icp, its PyPI wheel in the kiss Pixi environment, run as a child program). How far base_link moved, from the lidar alone - frame kiss_odom (its own, where the car was at the first scan; drifts), child base_link, stamped with the cloud's stamp. Twist in base_link from the last step over the time between clouds. KISS-ICP gives no covariance - the pose's is a fixed 1, the twist's the node's twist_linear_sd and twist_angular_sd (0.15 m/s, 0.01 rad/s, measured against Gazebo's truth 1 Nov). Only with kiss_icp:=true or kiss_ekf:=true (sim.launch.py, a world with the lidar). Never TF. With kiss_ekf:=true (a trial, off by default) ekf_local fuses its twist - vx and vyaw only, never its pose (it drifts, in its own frame) - beside the wheels and the IMU (odom1, refused past 5 sigma; aav_localization config/ekf_local_kiss.yaml); otherwise nothing reads it to drive. controller-compare --kiss-icp scores it against Gazebo's truth and ekf_local; --kiss-ekf scores ekf_local with it.
+    note: A trial (docs/designs/2026-10-30_kiss-icp.md) - lidar odometry by KISS-ICP (MIT, PRBonn; aav_kiss_icp, its PyPI wheel in the kiss Pixi environment, run as a child program). How far base_link moved, from the lidar alone - frame kiss_odom (its own, where the car was at the first scan; drifts), child base_link, stamped with the cloud's stamp. Twist in base_link from the last step over the time between clouds. KISS-ICP gives no covariance - the pose's is a fixed 1, the twist's the node's twist_linear_sd and twist_angular_sd (0.15 m/s, 0.01 rad/s, measured against Gazebo's truth 1 Nov). Only with kiss_icp:=true or kiss_ekf:=true (sim.launch.py, a world with the lidar). Never TF. With kiss_ekf:=true (a trial, off by default) ekf_local fuses its twist - vx and vyaw only, never its pose (it drifts, in its own frame) - beside the wheels and the IMU (odom1, refused past 5 sigma; aav_localization config/ekf_local_kiss.yaml); otherwise nothing reads it to drive. measure controllers --kiss-icp scores it against Gazebo's truth and ekf_local; --kiss-ekf scores ekf_local with it.
   /localization/kiss_icp/status:
     type: diagnostic_msgs/msg/DiagnosticStatus
     pub: [kiss_icp]
@@ -818,11 +818,11 @@ services:
   /safety/sensor_watchdog/clear:
     type: std_srvs/srv/Trigger
     server: sensor_watchdog
-    note: A person says all is right again after a fault the watchdog latches - a GPS jump, wheels that disagreed with the IMU and GPS, a HUD that dropped out (LOST). pixi run watchdog-clear (pixi run sim-fault clear in Gazebo).
+    note: A person says all is right again after a fault the watchdog latches - a GPS jump, wheels that disagreed with the IMU and GPS, a HUD that dropped out (LOST). pixi run clear watchdog (pixi run sim-fault clear in Gazebo).
   /safety/geofence/clear:
     type: std_srvs/srv/Trigger
     server: geofence
-    note: A person drove the car back inside the fence after OUTSIDE, or understood a JUMP (both latch) - pixi run geofence-clear. Refused, with the reason, while the car is still outside or the global pose can't be trusted. NEAR and LOST let go by themselves. Only people call it - never aav_language's drive server or the MCP tools (aav_language test_drive_tools.py checks).
+    note: A person drove the car back inside the fence after OUTSIDE, or understood a JUMP (both latch) - pixi run clear geofence. Refused, with the reason, while the car is still outside or the global pose can't be trusted. NEAR and LOST let go by themselves. Only people call it - never aav_language's drive server or the MCP tools (aav_language test_drive_tools.py checks).
   /drivers/nav/route/follow:
     type: std_srvs/srv/Trigger
     server: street_router

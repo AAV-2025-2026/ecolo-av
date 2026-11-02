@@ -8,7 +8,7 @@ and is **scored on the same routes**. It becomes the default only once it wins.
 > - **Trackers** (`aav_track`): pure pursuit, Stanley, LQR, MPC, and `mpc_full` (speed and steering together), in Nav2's own chain, in controller_server's place. `tracker:=lqr`.
 > - **AMCL** (stock `nav2_amcl`): a particle filter on the map and the lidar, scored against the EKF, never steering. `amcl:=true`.
 > - **NDT** (`aav_ndt`, ours in Rust): the lidar matched to a saved lidar map, scored against the EKF, never steering. `ndt:=true`.
-> - **Score:** `pixi run controller-compare --trackers pure_pursuit lqr --runs 3`.
+> - **Score:** `pixi run measure controllers --trackers pure_pursuit lqr --runs 3`.
 > - **Results (29 Oct, Gazebo, 3 runs):** pure pursuit, Stanley and MPC finished every leg; MPPI, RPP and LQR lost legs on the U-turn. AMCL lost itself; the EKF wins. [Results](#results-29-october).
 > - **NDT**, 29 Oct: about 1-3 cm off on the lot tour, 2 ms a match (below).
 > - **NDT into the global EKF** (`ndt_ekf:=true`), 30 Oct: the EKF **17 cm → 1.6 cm** off; with the GPS off, 1.2 m → 1.6 cm. [Results](#ndt-into-the-global-ekf-30-oct).
@@ -73,16 +73,16 @@ e-stops.
 ```bash
 pixi run sim world:=test_lot reversing:=false tracker:=mpc      # watch one
 pixi run sim world:=test_lot amcl:=true                         # AMCL beside the EKF
-pixi run controller-compare --trackers pure_pursuit stanley lqr mpc mpc_full --controllers mppi --runs 3
-pixi run controller-compare --amcl                              # score AMCL too
+pixi run measure controllers --trackers pure_pursuit stanley lqr mpc mpc_full --controllers mppi --runs 3
+pixi run measure controllers --amcl                              # score AMCL too
 pixi run ndt-map drive                                          # NDT's map, once (~6 min)
-pixi run controller-compare --amcl --ndt                        # score NDT beside AMCL
-pixi run controller-compare --ndt-ekf --runs 3 --tours lot      # NDT into the global EKF
+pixi run measure controllers --amcl --ndt                        # score NDT beside AMCL
+pixi run measure controllers --ndt-ekf --runs 3 --tours lot      # NDT into the global EKF
 pixi run sim-check --lidar-obstacle --voxels                     # the cubes stop for a post?
-pixi run controller-compare --voxels --tours lot                 # the lot tour on cubes
+pixi run measure controllers --voxels --tours lot                 # the lot tour on cubes
 pixi install --locked -e kiss                                   # KISS-ICP, once
-pixi run controller-compare --kiss-icp --tours lot --controllers mppi   # its drift vs ekf_local
-pixi run controller-compare --kiss-ekf --tours lot --controllers mppi   # ekf_local with its twist
+pixi run measure controllers --kiss-icp --tours lot --controllers mppi   # its drift vs ekf_local
+pixi run measure controllers --kiss-ekf --tours lot --controllers mppi   # ekf_local with its twist
 pixi run sim-check --kiss-ekf                                   # the road world, kiss_ekf:=true
 ```
 
@@ -92,7 +92,7 @@ Each run's results go here, with its date and its folder in `log/controller-comp
 
 ### 29 Oct, 04:00: NDT and AMCL beside the EKF (one run, MPPI, the lot tour)
 
-`controller-compare --tours lot --controllers mppi --amcl --ndt`, on the map
+`measure controllers --tours lot --controllers mppi --amcl --ndt`, on the map
 `ndt-map drive` made at 03:55 (169,121 points, 2,450 clouds). Off = from Gazebo's truth.
 
 | Leg | EKF off, mean (m) | AMCL off, mean (m) | NDT off, mean / worst (m) | NDT: clouds with a pose | NDT match, mean / worst (ms) |
@@ -114,7 +114,7 @@ Each run's results go here, with its date and its folder in `log/controller-comp
 
 ### 29 Oct, afternoon: AMCL tuned, and why it was lost
 
-Each run: `controller-compare --tours lot --controllers mppi --amcl`, with a bag of the
+Each run: `measure controllers --tours lot --controllers mppi --amcl`, with a bag of the
 scan, the truth and AMCL beside it (`ros2 bag record`, not in git). Off = from Gazebo's truth.
 
 **What the bags showed:**
@@ -246,7 +246,7 @@ checked on the 3 `ekf2` runs (6,442):
 | NEES on the check runs | - | **2.9** | k fitted again there: 7.2 |
 
 NEES = e′P⁻¹e, e the error from the truth, P the covariance published. Around 3: the
-spread matches the errors. `controller-compare --ndt` prints it, and the k that would
+spread matches the errors. `measure controllers --ndt` prints it, and the k that would
 make it 3, after every run.
 
 ### Keeping bad matches out of the EKF
@@ -279,14 +279,14 @@ NDT starts again from `ekf_global`'s pose. The first fit after a restart may mov
 
 ```bash
 pixi run ndt-map drive                                     # the map, once
-pixi run controller-compare --ndt --runs 3 --tours lot      # NDT beside: the EKF on GPS alone
-pixi run controller-compare --ndt-ekf --runs 3 --tours lot  # NDT into the EKF
-pixi run controller-compare --ndt-ekf --gps-off --tours lot # the GPS stops after its first fix
+pixi run measure controllers --ndt --runs 3 --tours lot      # NDT beside: the EKF on GPS alone
+pixi run measure controllers --ndt-ekf --runs 3 --tours lot  # NDT into the EKF
+pixi run measure controllers --ndt-ekf --gps-off --tours lot # the GPS stops after its first fix
 ```
 
 ### 30 Oct: KISS-ICP beside ekf_local (one run, MPPI, the lot tour)
 
-`pixi run controller-compare --kiss-icp --tours lot --controllers mppi`, headless, on Ben's
+`pixi run measure controllers --kiss-icp --tours lot --controllers mppi`, headless, on Ben's
 Mac (Apple silicon), another Gazebo run just finished. Folders `log/kiss-run1/` and
 `log/kiss-run2/` (not in git).
 
@@ -359,7 +359,7 @@ and the next scan takes it back. Over 0.1 s, 1.5 cm is 0.15 m/s.
 
 ### The drift (the lot tour, MPPI, one run each)
 
-`controller-compare --kiss-icp` (off) and `--kiss-ekf` (on), headless on Ben's Mac, other
+`measure controllers --kiss-icp` (off) and `--kiss-ekf` (on), headless on Ben's Mac, other
 Gazebo and test runs beside it. Folders `log/kiss-ekf/` (not in git). MPPI lost the turn
 back in every run, so "driven" differs.
 
@@ -526,7 +526,7 @@ What each planner is: [Controllers, Planners](controllers.md#planners).
 The run: Gazebo's test lot, the lot tour (4 legs), **one run each**, MPPI following,
 forward only, 1 m/s. Branch `planner-switch` (74544111), 23:13, a quiet Mac (load 4).
 Before each leg the planner alone was asked for the path, to time it and measure its
-turns. `pixi run controller-compare --planners hybrid lattice smac2d --tours lot`;
+turns. `pixi run measure controllers --planners hybrid lattice smac2d --tours lot`;
 results in `~/aav-runs/2026-10-29/planners-results/` on Ben's Mac (not in git).
 
 ### The whole tour
@@ -575,7 +575,7 @@ too; our trackers can't), 1 m/s, the lot tour. `lattice32` is the lattice on its
 32-heading file (`lattice_headings:=32`). Branch `lattice-rerun`.
 
 ```bash
-AAV_SIM_DOMAIN=224 pixi run controller-compare --planners lattice32 lattice hybrid \
+AAV_SIM_DOMAIN=224 pixi run measure controllers --planners lattice32 lattice hybrid \
     --reversing --tours lot --runs 3
 ```
 
@@ -662,7 +662,7 @@ A person-sized post (0.5 × 0.5 × 1.8 m) 15 m ahead; the planner blind to it.
 Cubes per cloud: **4** in the road world (the stop sign), **15** with the post (45 at
 most), **1,067-1,378** on the lot tour (walls, the building, parked cars).
 
-### The lot tour (`controller-compare --tours lot --controllers mppi`, with and without `--voxels`)
+### The lot tour (`measure controllers --tours lot --controllers mppi`, with and without `--voxels`)
 
 | Leg | Flat scan | Cubes |
 |---|---|---|

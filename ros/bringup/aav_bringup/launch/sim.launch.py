@@ -59,11 +59,11 @@ bench's argument names:
                       the car's 1.0 m/s cap (ego.yaml, nav2.yaml) is for its first drives.
                       ego refuses it outside a simulator
   controller:=rpp     Nav2 follows the path with Regulated Pure Pursuit, not MPPI (the
-                      default): pixi run controller-compare drives both (docs/path-followers.md)
+                      default): pixi run measure controllers drives both (docs/path-followers.md)
   planner:=hybrid     Nav2 plans with another planner (navigation.launch.py planner:=):
                       lattice (the default) or hybrid keep to the car's turning radius;
                       smac2d, navfn and theta_star don't, trials only. pixi run
-                      controller-compare --planners scores them (docs/controllers.md).
+                      measure controllers --planners scores them (docs/controllers.md).
                       lattice_headings:=32: the lattice's trial file, 32 headings
   tracker:=lqr        a trial path follower (aav_track: pure_pursuit, stanley, lqr or mpc)
                       in controller_server's place, on Nav2's same planner, smoother and
@@ -265,14 +265,14 @@ def launch_setup(context):
                                          if amcl else ''),
                                plan_around=str(flag['plan_around']).lower()))
     if ndt:
-        # Scored only (controller-compare --ndt), unless ndt_ekf:=true: then ekf_global
-        # reads its pose (controller-compare --ndt-ekf scores the difference).
+        # Scored only (measure controllers --ndt), unless ndt_ekf:=true: then ekf_global
+        # reads its pose (measure controllers --ndt-ekf scores the difference).
         actions.append(include(context, 'aav_ndt', 'ndt.launch.py', use_sim_time='true',
                                ndt_map=arg('ndt_map'), ndt_x=0.0, ndt_y=arg('start_y'),
                                ndt_yaw=arg('start_yaw')))
     if kiss_icp:
-        # Scored only (controller-compare --kiss-icp), unless kiss_ekf:=true: then
-        # ekf_local reads its twist (controller-compare --kiss-ekf scores the difference).
+        # Scored only (measure controllers --kiss-icp), unless kiss_ekf:=true: then
+        # ekf_local reads its twist (measure controllers --kiss-ekf scores the difference).
         actions.append(include(context, 'aav_kiss_icp', 'kiss_icp.launch.py',
                                use_sim_time='true'))
     if flag['watchdog']:
