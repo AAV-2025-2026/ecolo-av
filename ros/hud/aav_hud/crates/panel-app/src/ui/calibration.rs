@@ -155,7 +155,9 @@ impl Ui {
             self.button(d, b, r, f, enabled);
         }
 
-        if let Some(note) = cal.note() {
+        // The check's result has its own column below: don't say it twice.
+        let checked = cal.checked().map(|o| o.to_string());
+        if let Some(note) = cal.note().filter(|n| checked.as_deref() != Some(*n)) {
             let ink = if note.starts_with("PASSED") || note.starts_with("marked") {
                 t.good
             } else if note.starts_with("STOPPED")
