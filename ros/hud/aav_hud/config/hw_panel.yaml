@@ -25,7 +25,7 @@ hw_panel:
     radar_topic: /sensors/radar/points            # sensor_msgs/msg/PointCloud2: counted (Hz)
     camera_topic: /sensors/camera/front_left/image_raw  # sensor_msgs/msg/Image: counted (Hz), best effort, keep last 1
     battery_topic: /vehicle/battery               # sensor_msgs/msg/BatteryState: volts
-    # --- the steering calibration page (key K; docs/actuator-tests.md, way B) ---
+    # --- the steering calibration page (Tab; docs/actuator-tests.md, way B) ---
     steering_raw_topic: /vehicle/steering_actuator/raw          # aav_interfaces/msg/ActuatorRaw: counts, and the firmware's calibration state
     steering_calibration_topic: /drivers/buttons/steering_calibration  # aav_interfaces/msg/SteeringCalibration: sent at 10 Hz while the page asks (limp, jog)
     calibration_line_topic: /vehicle/steering_actuator/calibration  # std_msgs/msg/String: the bridge's line, what it does and why not

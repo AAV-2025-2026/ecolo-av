@@ -541,8 +541,9 @@ mod tests {
     use std::sync::atomic::AtomicUsize;
 
     /// The real node, as twist_mux would hear it: no command before the window draws;
-    /// the buttons' command at about 10 Hz while it draws; none once it stops drawing,
-    /// even with a command still held; and an E-STOP press is five trues, never false.
+    /// the buttons' command (and the calibration request, as the bridge would hear it)
+    /// at about 10 Hz while it draws; none once it stops drawing, even with a command
+    /// still held; and an E-STOP press is five trues, never false.
     /// Needs ROS sourced; runs on this computer only, on ROS_DOMAIN_ID (95 unless set),
     /// with topics of its own.
     #[test]
@@ -556,6 +557,8 @@ mod tests {
         let mut config = PanelConfig::default();
         config.set_topic(Topic::Buttons, buttons.clone());
         config.set_topic(Topic::Estop, estop.clone());
+        let cal_topic = format!("{prefix}/steering_calibration");
+        config.set_topic(Topic::SteeringCalibration, cal_topic.clone());
         let (mut panel, _) = RosSource::start(vec!["hw_panel".into()], config)?;
 
         let context = Context::default_from_env()?;
@@ -571,6 +574,17 @@ mod tests {
                     .push(m.twist.linear.x)
             }
         })?;
+        let requests = Arc::new(Mutex::new(Vec::<(u8, u16)>::new()));
+        let _cal_sub =
+            listener.create_subscription(cal_topic.as_str().reliable().keep_last(10), {
+                let requests = Arc::clone(&requests);
+                move |m: SteeringCalibration| {
+                    requests
+                        .lock()
+                        .unwrap_or_else(PoisonError::into_inner)
+                        .push((m.mode, m.target))
+                }
+            })?;
         let (trues, falses) = (Arc::new(AtomicUsize::new(0)), Arc::new(AtomicUsize::new(0)));
         let _estop_sub =
             listener.create_subscription(estop.as_str().reliable().keep_last(10), {
@@ -597,7 +611,7 @@ mod tests {
         let held = Command::from_steering(0.3, 0.0, 1.57);
         let end = Instant::now() + Duration::from_secs(2);
         while Instant::now() < end {
-            panel.frame_drawn(Some(held), None);
+            panel.frame_drawn(Some(held), Some(Request::Jog(2000)));
             spin(&mut executor, 33);
         }
         let drawing = count();
@@ -608,8 +622,27 @@ mod tests {
             .iter()
             .all(|&v| (v - 0.3).abs() < 1e-9));
 
+        // The calibration request goes at the same beat, as the bridge reads it.
+        let asked = requests
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone();
+        assert!(
+            (15..=21).contains(&asked.len()),
+            "{} requests in 2 s",
+            asked.len()
+        );
+        assert!(asked
+            .iter()
+            .all(|&r| r == (SteeringCalibration::MODE_JOG, 2000)));
+
         // The window freezes with the command still held: nothing more goes out.
         spin(&mut executor, 1000);
+        let after = requests
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .len();
+        assert!(after <= asked.len() + 1, "requests after the freeze");
         assert!(
             count() <= drawing + 1,
             "{} after the window froze",
