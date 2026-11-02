@@ -7,7 +7,7 @@
 
 use std::time::Duration;
 
-use hud_core::theme::ThemeName;
+use hud_core::{robot::EggSettings, theme::ThemeName};
 
 use crate::{calibration::CalSettings, sweep::SweepSettings};
 use serde::Deserialize;
@@ -112,10 +112,11 @@ pub enum Number {
     StandsCap,
     SweepRate,
     SweepStall,
+    EasterEggAfter,
 }
 
 impl Number {
-    pub const ALL: [Number; 8] = [
+    pub const ALL: [Number; 9] = [
         Number::StaleAfter,
         Number::SpeedStep,
         Number::SteerStep,
@@ -124,6 +125,7 @@ impl Number {
         Number::StandsCap,
         Number::SweepRate,
         Number::SweepStall,
+        Number::EasterEggAfter,
     ];
 
     pub fn parameter(self) -> &'static str {
@@ -136,6 +138,7 @@ impl Number {
             Self::StandsCap => "stands_cap",
             Self::SweepRate => "sweep_rate",
             Self::SweepStall => "sweep_stall",
+            Self::EasterEggAfter => "easter_egg_after",
         }
     }
 }
@@ -216,6 +219,11 @@ pub struct PanelConfig {
     pub sweep_stall: f64,
     /// The colours (`hud_core::theme`), as the HUD's.
     pub theme: ThemeName,
+    /// The little robot (hud-core's `robot`): its eyes peek after `easter_egg_after`
+    /// seconds of quiet; it drives across at start-up and after a check passes.
+    pub easter_egg: bool,
+    /// Seconds without input, change or movement before the eyes peek.
+    pub easter_egg_after: f64,
 }
 
 /// Why a settings file can't be used.
@@ -345,6 +353,7 @@ impl PanelConfig {
             Number::StandsCap => self.stands_cap,
             Number::SweepRate => self.sweep_rate,
             Number::SweepStall => self.sweep_stall,
+            Number::EasterEggAfter => self.easter_egg_after,
         }
     }
 
@@ -358,6 +367,7 @@ impl PanelConfig {
             Number::StandsCap => &mut self.stands_cap,
             Number::SweepRate => &mut self.sweep_rate,
             Number::SweepStall => &mut self.sweep_stall,
+            Number::EasterEggAfter => &mut self.easter_egg_after,
         };
         *slot = value;
     }
@@ -382,6 +392,14 @@ impl PanelConfig {
         };
         *slot = v;
         Ok(())
+    }
+
+    /// The little robot's settings.
+    pub fn easter_egg_settings(&self) -> EggSettings {
+        EggSettings {
+            on: self.easter_egg,
+            idle_after: Duration::from_secs_f64(self.easter_egg_after),
+        }
     }
 
     /// The calibration page's numbers; the check's others are sweep's defaults.
@@ -428,6 +446,8 @@ mod tests {
         assert_eq!((c.sim_cap, c.stands_cap), (1.0, 0.3));
         assert_eq!(c.topic(Topic::Buttons), "/drivers/buttons/cmd_vel");
         assert_eq!(c.theme, ThemeName::Mocha);
+        assert!(c.easter_egg);
+        assert_eq!(c.easter_egg_settings().idle_after, Duration::from_secs(60));
         let cal = c.calibration();
         assert_eq!((cal.jog_step, cal.jog_min, cal.jog_max), (25, 400, 3500));
         assert!(cal.sweep.rate < 300.0, "slower than the firmware's own jog");

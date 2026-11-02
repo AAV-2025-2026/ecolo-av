@@ -27,6 +27,7 @@ the three marks ──► steering_limits ──► the lines to copy;  CHECK �
 | `state` | `PanelState`, `Update`, `Row`: each sensor's number, OK / STALE / NEVER, rates for the big topics, `kind()`, `estop_on()`, `geofence_holds()`, `fresh_raw()`, `calibration_situation()`; `wheels_note` ("front, not driven") |
 | `calibration` | the steering calibration page: `readiness(&Situation)` -> every `NotReady`; `CalPage`: `press(CalPress)`, `tick()` -> `Option<Request>` (`Limp`, `Jog(counts)`, `Off`), the marks, `limits()`; `FirmwareState` (ActuatorRaw's byte); `result_file` (the lines a person copies) |
 | `steering_limits` | `compute(&Marks)` -> `Limits` (equal limits, sign, gain, warnings) or `MeasurementError`; `firmware_steering`, `vehicle_yaml`, `report`: `aav_legacy`'s `steering_limits.py`, ported |
+| `easter_egg` | the little robot (hud-core's `robot`): `watch(...)` -> `Watch` (still? an e-stop or a warning? the screen's fingerprint); `PassWatch::just_passed` (a check just PASSED: it drives across) |
 | `sweep` | `Sweep::start`, `step()` -> the jog target, `outcome()`: `Passed`, or `Stopped` with the leg, why (`Stop`: resistance, no movement, not arrived, position lost, the firmware) and where |
 
 It builds on [`hud-core`](../hud-core/README.md) (`health`, `origin`, `vehicle`, `gps`,
@@ -51,6 +52,8 @@ It builds on [`hud-core`](../hud-core/README.md) (`health`, `origin`, `vehicle`,
   limits, and it won't start with the wheels outside them.
 - The check stops, and holds where the wheels are, at the first sign of resistance.
 - Nothing here writes vehicle.yaml or the firmware: `result_file` is for a person to copy.
+- The little robot is not still while the car moves, the buttons ask for speed, CENTRE
+  runs or the check sweeps; an e-stop, a STALE sensor or a zero is a warning (`easter_egg`).
 
 ## Side Effects
 

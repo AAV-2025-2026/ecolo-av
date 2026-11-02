@@ -45,3 +45,5 @@ hw_panel:
     sweep_stall: 0.6      # s without movement while the target moves: resistance, stop and hold
     # --- the look ---
     theme: mocha          # the colours: mocha (dark, night), latte (light, day), calm (Ben's, to come)
+    easter_egg: true      # the little robot: eyes peek over the bottom after easter_egg_after of quiet; it drives across at start-up and after a check passes. Never while the car moves, an e-stop or a warning shows
+    easter_egg_after: 60.0  # s without input, change or movement before the eyes peek

@@ -34,7 +34,8 @@
 //! Parameters  the topics above; stale_after (s), speed_step (m/s), steer_step (rad),
 //!             creep (m/s), sim_cap (m/s), stands_cap (m/s), theme (mocha, latte, calm);
 //!             the calibration page's jog_step, jog_min, jog_max, sweep_max_error (counts),
-//!             sweep_rate (counts/s), sweep_stall (s)
+//!             sweep_rate (counts/s), sweep_stall (s); easter_egg (the little robot, true),
+//!             easter_egg_after (s)
 //! Writes      SAVE on the calibration page: the result, for a person to copy, in
 //!             $XDG_DATA_HOME/aav/steering-calibration/ (~/.local/share/...); never
 //!             vehicle.yaml or the firmware
@@ -45,10 +46,11 @@
 //! usage: hw_panel [--demo [--demo-bind COUNTS]] [--stands] [--fullscreen] [--monitor NAME|N]
 //!                 [--list-monitors] [--config FILE] [--vehicle FILE] [--page calibration]
 //!                 [--screenshot FILE [--after S]] [--self-test SPEED:SECONDS]
-//!                 [--cal-self-test] [--ros-args ...]
+//!                 [--cal-self-test] [--robot-now] [--ros-args ...]
 
 mod cal_script;
 mod demo;
+mod robot;
 #[cfg(feature = "ros")]
 mod ros;
 mod source;
@@ -61,11 +63,15 @@ use std::{
 
 use anyhow::{bail, Context as _, Result};
 use hud_app::window;
-use hud_core::screen::Monitor;
+use hud_core::{
+    robot::{EasterEgg, Show},
+    screen::Monitor,
+};
 use panel_core::{
     buttons::{Buttons, Press, Steps, World, Zeroed},
     calibration::{self, CalPage, CalPress, NotReady, Request},
     config::PanelConfig,
+    easter_egg::{self, PassWatch},
     gate::{self, Caps, Gate, Situation},
     rules::Kind,
     state::{self as panel_state, PanelState, Update},
@@ -85,7 +91,7 @@ const USAGE: &str = "\
 usage: hw_panel [--demo [--demo-bind COUNTS]] [--stands] [--fullscreen] [--monitor NAME|N]
                 [--list-monitors] [--config FILE] [--vehicle FILE] [--page calibration]
                 [--screenshot FILE [--after S]] [--self-test SPEED:SECONDS]
-                [--cal-self-test] [--ros-args ...]
+                [--cal-self-test] [--robot-now] [--ros-args ...]
 
   --demo             a pretend car: no ROS, no car
   --demo-bind COUNTS the demo's steering has a stiff spot there (the check finds it)
@@ -103,6 +109,8 @@ usage: hw_panel [--demo [--demo-bind COUNTS]] [--stands] [--fullscreen] [--monit
   --cal-self-test    with --demo only: the calibration page goes limp, marks each end and
                      the centre, holds, runs the lock-to-lock check, prints the result
                      (with --demo-bind it must stop on the stiff spot)
+  --robot-now        the little robot (the easter egg) at once: it drives across, then
+                     its eyes peek after 1 s of quiet (for screenshots)
   --ros-args ...     passed to ROS, e.g. --ros-args -p gps_topic:=/x
 
 keys: Space held = GO (the car moves only while it is held), Up or + / Down or -
@@ -127,6 +135,7 @@ struct Options {
     page: Option<Page>,
     demo_bind: Option<u16>,
     cal_self_test: bool,
+    robot_now: bool,
 }
 
 impl Options {
@@ -162,6 +171,7 @@ impl Options {
                 }
                 "--self-test" => opts.self_test = Some(SelfTest::parse(&value("--self-test")?)?),
                 "--cal-self-test" => opts.cal_self_test = true,
+                "--robot-now" => opts.robot_now = true,
                 "--page" => {
                     opts.page = Some(match value("--page")?.as_str() {
                         "calibration" => Page::Calibration,
@@ -207,6 +217,8 @@ struct SelfTest {
 
 /// After the self-test lets go, the window stays this long (to see the car stop).
 const SELF_TEST_TAIL: Duration = Duration::from_secs(3);
+/// `--robot-now`: the quiet before the eyes peek.
+const ROBOT_NOW_AFTER: Duration = Duration::from_secs(1);
 
 impl SelfTest {
     fn parse(s: &str) -> Result<Self> {
@@ -545,10 +557,30 @@ fn run(
         .cal_self_test
         .then(|| CalScript::new(opts.demo_bind.is_some()));
     let screenshot_after = Duration::from_secs_f64(opts.after.unwrap_or(4.0));
+    // The little robot: it drives across once at start-up, then peeks when all is quiet.
+    let mut egg_settings = config.easter_egg_settings();
+    if opts.robot_now {
+        egg_settings.on = true;
+        egg_settings.idle_after = ROBOT_NOW_AFTER;
+    }
+    let mut egg = EasterEgg::new(egg_settings, started);
+    egg.drive_across(started);
+    let mut passes = PassWatch::default();
 
     while !rl.window_should_close() && !source.has_stopped() {
         let now = Instant::now();
         let gate = panel.news(source.as_mut(), now);
+
+        // Any touch at all hides the little robot.
+        let touched = rl.get_key_pressed().is_some()
+            || [
+                MouseButton::MOUSE_BUTTON_LEFT,
+                MouseButton::MOUSE_BUTTON_RIGHT,
+            ]
+            .into_iter()
+            .any(|b| rl.is_mouse_button_down(b))
+            || rl.get_mouse_delta().length() > 0.0
+            || rl.get_mouse_wheel_move() != 0.0;
 
         // The mouse and the keys. A window without focus never holds GO.
         let focused = rl.is_window_focused();
@@ -606,6 +638,23 @@ fn run(
             panel.save();
         }
         let cal_ready = panel.cal_ready(now);
+        if passes.just_passed(&panel.cal) {
+            egg.drive_across(now);
+        }
+        let page = match panel.page {
+            Page::Drive => 0,
+            Page::Calibration => 1,
+        };
+        let watch = easter_egg::watch(
+            &panel.state,
+            &panel.buttons,
+            &gate,
+            &panel.cal,
+            page,
+            touched,
+            now,
+        );
+        let show = egg.update(now, watch);
 
         let note = panel.wheels_note();
         let frame = Frame {
@@ -620,9 +669,11 @@ fn run(
             cal: &panel.cal,
             cal_ready: &cal_ready,
             saved: panel.saved.as_deref(),
+            hide_keys: matches!(show, Show::Drive { .. }),
         };
         let mut d = rl.begin_drawing(&thread);
-        ui.draw(&mut d, &panel.state, &frame);
+        let room = ui.draw(&mut d, &panel.state, &frame);
+        robot::draw(&mut d, config.theme.theme(), show, &room);
         drop(d);
         source.frame_drawn(command, cal_request);
 

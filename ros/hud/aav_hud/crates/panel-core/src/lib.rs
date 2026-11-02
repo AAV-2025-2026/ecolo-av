@@ -17,6 +17,7 @@
 //! | [`calibration`] | the steering calibration page: allowed or why not, limp, hold, steps, the marks, what to send |
 //! | [`steering_limits`] | equal limits from the marks: `aav_legacy`'s `steering_limits.py`, on shared vectors |
 //! | [`sweep`] | the lock-to-lock check: a state machine that stops and holds on resistance |
+//! | [`easter_egg`] | when the little robot may show: still, no warning, nothing changed; a check just PASSED |
 //!
 //! The E-STOP burst and the heartbeat that keeps the buttons to a live window are
 //! hud-core's (`estop`, `heartbeat`).
@@ -24,6 +25,7 @@
 pub mod buttons;
 pub mod calibration;
 pub mod config;
+pub mod easter_egg;
 pub mod gate;
 pub mod rules;
 pub mod state;

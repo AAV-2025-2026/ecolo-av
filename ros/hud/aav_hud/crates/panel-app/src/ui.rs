@@ -215,6 +215,56 @@ pub struct Frame<'a> {
     pub cal_ready: &'a [NotReady],
     /// The calibration result's file, once saved.
     pub saved: Option<&'a str>,
+    /// The little robot drives across the bottom lane: the keys line steps aside.
+    pub hide_keys: bool,
+}
+
+/// The little robot's room (the easter egg): where nothing else is drawn this frame.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Room {
+    /// A band across the window under everything but the keys line: where it drives.
+    pub lane: Option<Rectangle>,
+    /// A box on the bottom edge, right of every word: where its eyes peek.
+    pub corner: Option<Rectangle>,
+}
+
+/// The corner's height at most, and at least.
+const CORNER_H: f32 = 130.0;
+const CORNER_MIN_H: f32 = 48.0;
+/// The lane's least height.
+const LANE_MIN_H: f32 = 28.0;
+/// Space kept round the robot.
+const ROOM_GAP: f32 = 16.0;
+
+impl Room {
+    /// `content_end`: the lowest y anything but the keys line reaches. `keys_end`: the
+    /// keys line's right end. `words`: other things near the bottom, as (top, bottom,
+    /// right end).
+    pub fn new(w: f32, h: f32, content_end: f32, keys_end: f32, words: &[(f32, f32, f32)]) -> Self {
+        let lane_top = content_end + 4.0;
+        let lane =
+            (h - lane_top >= LANE_MIN_H).then(|| Rectangle::new(0.0, lane_top, w, h - lane_top));
+        let keys = (h - 30.0, h, keys_end);
+        let mut corner = None;
+        let mut top = h - CORNER_H;
+        while h - top >= CORNER_MIN_H {
+            let x0 = words
+                .iter()
+                .chain([&keys])
+                .filter(|(t, b, _)| *b > top && *t < h)
+                .map(|&(_, _, right)| right)
+                .fold(0.0, f32::max)
+                + ROOM_GAP;
+            let width = w - MARGIN - x0;
+            let need = hud_core::robot::peek_width(f64::from(h - top)) as f32;
+            if width >= need {
+                corner = Some(Rectangle::new(x0, top, width, h - top));
+                break;
+            }
+            top += 8.0;
+        }
+        Self { lane, corner }
+    }
 }
 
 pub struct Ui {
@@ -239,7 +289,8 @@ impl Ui {
         Self { font, theme }
     }
 
-    pub fn draw(&self, d: &mut RaylibDrawHandle, state: &PanelState, f: &Frame<'_>) {
+    /// Draws one frame; returns the little robot's room.
+    pub fn draw(&self, d: &mut RaylibDrawHandle, state: &PanelState, f: &Frame<'_>) -> Room {
         let t = self.theme;
         let (w, h) = (d.get_screen_width() as f32, d.get_screen_height() as f32);
         // The window's soft gradient, as the HUD's (no glow: words sit straight on it).
@@ -288,8 +339,7 @@ impl Ui {
             self.button(d, b, r, f, true);
         }
         if f.page == Page::Calibration {
-            self.draw_calibration(d, state, f, &buttons[3..]);
-            return;
+            return self.draw_calibration(d, state, f, &buttons[3..]);
         }
 
         // Where the speed buttons may drive.
@@ -420,6 +470,7 @@ impl Ui {
         );
         y += 36.0;
         let row_h = ((h - y - 34.0) / Row::SENSORS.len() as f32).clamp(20.0, 30.0);
+        let mut words = Vec::new();
         for row in Row::SENSORS {
             let health = state.health(row, f.now);
             self.text(d, row.label(), MARGIN, y, 19.0, t.text);
@@ -437,12 +488,20 @@ impl Ui {
             let detail = fit(&self.font, &detail, w - MARGIN - (MARGIN + 210.0), 18.0);
             let ink = if health.is_ok() { t.caption } else { t.dim };
             self.text(d, &detail, MARGIN + 210.0, y + 2.0, 18.0, ink);
+            let right = MARGIN + 210.0 + self.font.measure(&detail, 18.0);
+            words.push((y, y + row_h, right));
             y += row_h;
         }
         let keys = "keys: Space held = GO   Up/+ Down/- speed   Left Right steer   C centre   \
                     S stop   E e-stop   Tab steering calibration   F11 full screen";
         let keys = fit(&self.font, keys, w - 2.0 * MARGIN, 15.0);
-        self.text(d, &keys, MARGIN, h - 26.0, 15.0, t.dim);
+        if !f.hide_keys {
+            self.text(d, &keys, MARGIN, h - 26.0, 15.0, t.dim);
+        }
+        let keys_end = MARGIN + self.font.measure(&keys, 15.0);
+        // The last row's words end 24 px under its top.
+        let words_end = y - row_h + 24.0;
+        Room::new(w, h, words_end, keys_end, &words)
     }
 
     /// One line: what the buttons are doing, or why not.
@@ -594,6 +653,33 @@ mod tests {
             }
         }
         assert_eq!(layout(1280.0, Page::Drive).len(), 10);
+    }
+
+    #[test]
+    fn the_robots_room_keeps_clear_of_the_words() {
+        // Rows of words reaching x = 700 down to y = 824; the keys line to 800.
+        let rows: Vec<(f32, f32, f32)> = (0..8)
+            .map(|i| {
+                let y = 584.0 + 30.0 * i as f32;
+                (y, y + 30.0, 700.0)
+            })
+            .collect();
+        let room = Room::new(1280.0, 860.0, 824.0, 800.0, &rows);
+        let corner = room.corner.expect("room right of the words");
+        assert!(corner.x >= 800.0 + ROOM_GAP);
+        assert!(corner.x + corner.width <= 1280.0 - MARGIN);
+        assert!(
+            (corner.y + corner.height - 860.0).abs() < 1e-3,
+            "on the bottom edge"
+        );
+        assert!(f64::from(corner.width) >= hud_core::robot::peek_width(f64::from(corner.height)));
+        let lane = room.lane.expect("a lane under the rows");
+        assert!(lane.y >= 824.0);
+        // Words right across: no corner; no space under them: no lane.
+        let wide = [(700.0, 860.0, 1280.0)];
+        let room = Room::new(1280.0, 860.0, 850.0, 800.0, &wide);
+        assert_eq!(room.corner, None);
+        assert_eq!(room.lane, None);
         assert_eq!(layout(1280.0, Page::Calibration).len(), 3 + 11);
     }
 }

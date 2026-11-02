@@ -22,7 +22,7 @@ use panel_core::{
 };
 use raylib::prelude::*;
 
-use super::{fit, wrap, Button, Frame, Ui, MARGIN};
+use super::{fit, wrap, Button, Frame, Room, Ui, MARGIN};
 
 const ROW1: f32 = 262.0;
 const ROW_H: f32 = 62.0;
@@ -89,7 +89,7 @@ impl Ui {
         state: &PanelState,
         f: &Frame<'_>,
         buttons: &[(Button, Rectangle)],
-    ) {
+    ) -> Room {
         let t = self.theme;
         let w = d.get_screen_width() as f32;
         let h = d.get_screen_height() as f32;
@@ -193,13 +193,22 @@ impl Ui {
             17.0,
             t.caption,
         );
-        self.limits_column(d, cal, MARGIN, SECTION_Y + 38.0, col_w, h - 34.0, f.saved);
-        self.check_column(d, cal, position, right_x, SECTION_Y + 38.0, col_w);
+        let left_end =
+            self.limits_column(d, cal, MARGIN, SECTION_Y + 38.0, col_w, h - 34.0, f.saved);
+        let right_end = self.check_column(d, cal, position, right_x, SECTION_Y + 38.0, col_w);
 
         let keys = "keys: L limp   H hold   Left Right step   1 2 3 mark left centre right   \
                     K check   W save   O end   Tab drive page   E e-stop";
         let keys = fit(&self.font, keys, w - 2.0 * MARGIN, 15.0);
-        self.text(d, &keys, MARGIN, h - 26.0, 15.0, t.dim);
+        if !f.hide_keys {
+            self.text(d, &keys, MARGIN, h - 26.0, 15.0, t.dim);
+        }
+        let keys_end = MARGIN + self.font.measure(&keys, 15.0);
+        let words = [
+            (SECTION_Y, left_end, MARGIN + col_w),
+            (SECTION_Y, right_end, w - MARGIN),
+        ];
+        Room::new(w, h, left_end.max(right_end), keys_end, &words)
     }
 
     /// The counts as a bar, with the steering's left on the screen's left: the jog
@@ -282,7 +291,7 @@ impl Ui {
         width: f32,
         bottom: f32,
         saved: Option<&str>,
-    ) {
+    ) -> f32 {
         let t = self.theme;
         let mark = |m: Mark| {
             cal.mark(m)
@@ -353,6 +362,7 @@ impl Ui {
                 );
             }
         }
+        y
     }
 
     fn check_column(
@@ -363,7 +373,7 @@ impl Ui {
         x: f32,
         mut y: f32,
         width: f32,
-    ) {
+    ) -> f32 {
         let t = self.theme;
         let mut line = |d: &mut RaylibDrawHandle, s: &str, size: f32, ink: Rgba| {
             for l in wrap(&self.font, s, width, size) {
@@ -396,7 +406,7 @@ impl Ui {
                 15.0,
                 t.dim,
             );
-            return;
+            return y;
         }
         match cal.checked() {
             None => line(
@@ -414,6 +424,7 @@ impl Ui {
             }
             Some(o @ Outcome::Stopped { .. }) => line(d, &o.to_string(), 19.0, t.bad),
         }
+        y
     }
 }
 

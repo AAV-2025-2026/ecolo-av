@@ -485,6 +485,7 @@ struct Params {
     _names: Vec<ReadOnlyParameter<Arc<str>>>,
     _numbers: Vec<ReadOnlyParameter<f64>>,
     _counts: Vec<ReadOnlyParameter<i64>>,
+    _easter_egg: ReadOnlyParameter<bool>,
 }
 
 impl Params {
@@ -524,11 +525,17 @@ impl Params {
             config.set_count(c, p.get())?;
             counts.push(p);
         }
+        let easter_egg = node
+            .declare_parameter("easter_egg")
+            .default(config.easter_egg)
+            .read_only()?;
+        config.easter_egg = easter_egg.get();
         config.validate()?;
         let params = Self {
             _names: names,
             _numbers: numbers,
             _counts: counts,
+            _easter_egg: easter_egg,
         };
         Ok((params, config))
     }
