@@ -1,5 +1,6 @@
-//! The screens' colours: one [`Theme`] holds every colour the HUD and the map window
-//! draw with, so the drawing code has no colour of its own.
+//! The screens' colours: one [`Theme`] holds every colour the four screens (the HUD,
+//! the map window, the debug screen and the hardware panel) draw with, so the drawing
+//! code has no colour of its own.
 //!
 //! | Theme | When | Where its colours come from |
 //! |---|---|---|
@@ -13,7 +14,12 @@
 //! background (Latte's green and yellow on white), it is darkened, and the unit tests
 //! check every pair against WCAG's contrast ratios.
 //!
-//! `config/hud.yaml` and `config/map.yaml` choose one: `theme: mocha`.
+//! The debug screen's localizers keep their colours too (local blue, global green, truth
+//! white, AMCL orange, NDT purple; Nav2's cubes red, the plan yellow). The tests check
+//! they stand out on the 3D view and stay apart from each other ([`Rgba::difference`]).
+//!
+//! `config/hud.yaml`, `map.yaml`, `debug_hud.yaml` and `hw_panel.yaml` each choose one:
+//! `theme: mocha`.
 
 use std::{fmt, str::FromStr};
 
@@ -95,6 +101,40 @@ impl Rgba {
     pub fn contrast(self, other: Rgba) -> f64 {
         let (a, b) = (self.luminance(), other.luminance());
         (a.max(b) + 0.05) / (a.min(b) + 0.05)
+    }
+
+    /// The colour in OKLab (<https://bottosson.github.io/posts/oklab/>): lightness, then
+    /// green-red, then blue-yellow, spaced as eyes see them. Alpha ignored.
+    pub fn oklab(self) -> [f64; 3] {
+        let lin = |c: u8| {
+            let c = f64::from(c) / 255.0;
+            if c <= 0.040_45 {
+                c / 12.92
+            } else {
+                ((c + 0.055) / 1.055).powf(2.4)
+            }
+        };
+        let (r, g, b) = (lin(self.r), lin(self.g), lin(self.b));
+        let l = (0.412_221_470_8 * r + 0.536_332_536_3 * g + 0.051_445_992_9 * b).cbrt();
+        let m = (0.211_903_498_2 * r + 0.680_699_545_1 * g + 0.107_396_956_6 * b).cbrt();
+        let s = (0.088_302_461_9 * r + 0.281_718_837_6 * g + 0.629_978_700_5 * b).cbrt();
+        [
+            0.210_454_255_3 * l + 0.793_617_785 * m - 0.004_072_046_8 * s,
+            1.977_998_495_1 * l - 2.428_592_205 * m + 0.450_593_709_9 * s,
+            0.025_904_037_1 * l + 0.782_771_766_2 * m - 0.808_675_766 * s,
+        ]
+    }
+
+    /// How different two colours look: the distance between them in OKLab. 0 is the same
+    /// colour, about 0.02 the least an eye notices, 0.1 or more plainly two colours;
+    /// black to white is 1. Alpha ignored.
+    pub fn difference(self, other: Rgba) -> f64 {
+        let (a, b) = (self.oklab(), other.oklab());
+        a.iter()
+            .zip(b)
+            .map(|(x, y)| (x - y).powi(2))
+            .sum::<f64>()
+            .sqrt()
     }
 }
 
@@ -188,7 +228,92 @@ pub struct StreetColours {
     pub highway: Rgba,
 }
 
-/// Every colour the HUD and the map window use.
+/// Where each localizer puts the car, on the debug screen: its car, its marker, its
+/// swatch in the legend.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct LocalizerColours {
+    /// The local EKF (odom): blue.
+    pub local: Rgba,
+    /// The global EKF (map): green.
+    pub global: Rgba,
+    /// Gazebo's truth: white (the theme's ink in a light theme).
+    pub truth: Rgba,
+    /// AMCL: orange.
+    pub amcl: Rgba,
+    /// NDT: purple.
+    pub ndt: Rgba,
+}
+
+/// The debug screen's 3D view and its two top-downs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct SceneColours {
+    /// Behind the 3D view and the top-downs. A fading cube darkens (or, in a light
+    /// theme, pales) towards it.
+    pub back: Rgba,
+    /// The ground's lines: every metre, and every 5 m.
+    pub grid: Rgba,
+    pub grid_major: Rgba,
+    pub localizers: LocalizerColours,
+    /// Nav2's plan: yellow.
+    pub plan: Rgba,
+    /// Where the car has been.
+    pub trail: Rgba,
+    /// AMCL's particles: AMCL's orange, see-through.
+    pub particle: Rgba,
+    /// NDT's map in 3D (key M): faint purple wireframes.
+    pub ndt_map: Rgba,
+    /// NDT's map's points from above.
+    pub map_point: Rgba,
+    /// NDT's cells round the car, as rings.
+    pub ndt_cell: Rgba,
+    /// The latest scan from above: on a map cell (green), off the map (red).
+    pub scan_on: Rgba,
+    pub scan_off: Rgba,
+    /// Nav2's cubes (the voxels trial's): red wireframes; dimmer once STALE.
+    pub nav2_cube: Rgba,
+    pub nav2_cube_stale: Rgba,
+    /// The cubes' height ramp, lowest first: ground, knee, waist, head, high, above.
+    /// Teal, standing further from `back` the higher it is.
+    pub heights: [Rgba; 6],
+}
+
+/// What a pill (a rounded word: OK, STALE, LOST, E-STOP...) says, and so its colours.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Tone {
+    /// OK, TRACKING, ARMED, GO held: green.
+    Go,
+    /// STALE, WARN, FLAT: amber.
+    Wait,
+    /// LOST, E-STOP on, a REAL car: the e-stop's red.
+    Stop,
+    /// NEVER, DISARMED, NDT gone quiet: grey.
+    Idle,
+    /// Off, not running, a tag: the section's colour, quiet words.
+    Off,
+    /// SIM, BENCH, REPLAY.
+    NotReal,
+}
+
+impl Tone {
+    /// Every tone, for the tests.
+    pub const ALL: [Tone; 6] = [
+        Tone::Go,
+        Tone::Wait,
+        Tone::Stop,
+        Tone::Idle,
+        Tone::Off,
+        Tone::NotReal,
+    ];
+}
+
+/// A pill's colours: its fill, and its words.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Pill {
+    pub fill: Rgba,
+    pub ink: Rgba,
+}
+
+/// Every colour the four screens use.
 ///
 /// The pairs that must read (text on its panel, ink on its fill) are checked in the
 /// tests: 4.5 : 1 for text, 3 : 1 for large text and shapes.
@@ -267,6 +392,34 @@ pub struct Theme {
     pub grid_line: Rgba,
     pub grid_line_over_streets: Rgba,
     pub streets: StreetColours,
+
+    // The debug screen and the hardware panel.
+    /// A section's band across a panel, under its caption; an Off pill.
+    pub section: Rgba,
+    /// An Idle pill: NEVER, DISARMED.
+    pub idle_fill: Rgba,
+    pub idle_ink: Rgba,
+    /// The hardware panel's buttons: ready, held, and off (greyed out).
+    pub button: Rgba,
+    pub button_down: Rgba,
+    pub button_off: Rgba,
+    /// The debug screen's 3D view and top-downs.
+    pub scene: SceneColours,
+}
+
+impl Theme {
+    /// A pill's fill and words for `tone`.
+    pub fn pill(&self, tone: Tone) -> Pill {
+        let (fill, ink) = match tone {
+            Tone::Go => (self.go_fill, self.go_ink),
+            Tone::Wait => (self.wait_fill, self.wait_ink),
+            Tone::Stop => (self.stop_fill, self.stop_ink),
+            Tone::Idle => (self.idle_fill, self.idle_ink),
+            Tone::Off => (self.section, self.caption),
+            Tone::NotReal => (self.not_real, self.not_real_ink),
+        };
+        Pill { fill, ink }
+    }
 }
 
 /// Catppuccin's official palettes (<https://catppuccin.com/palette>, MIT licence).
@@ -281,6 +434,7 @@ pub mod catppuccin {
         pub const PEACH: Rgba = Rgba::hex(0xfab387);
         pub const YELLOW: Rgba = Rgba::hex(0xf9e2af);
         pub const GREEN: Rgba = Rgba::hex(0xa6e3a1);
+        pub const TEAL: Rgba = Rgba::hex(0x94e2d5);
         pub const SKY: Rgba = Rgba::hex(0x89dceb);
         pub const BLUE: Rgba = Rgba::hex(0x89b4fa);
         pub const LAVENDER: Rgba = Rgba::hex(0xb4befe);
@@ -308,6 +462,7 @@ pub mod catppuccin {
         pub const PEACH: Rgba = Rgba::hex(0xfe640b);
         pub const YELLOW: Rgba = Rgba::hex(0xdf8e1d);
         pub const GREEN: Rgba = Rgba::hex(0x40a02b);
+        pub const TEAL: Rgba = Rgba::hex(0x179299);
         pub const SKY: Rgba = Rgba::hex(0x04a5e5);
         pub const BLUE: Rgba = Rgba::hex(0x1e66f5);
         pub const LAVENDER: Rgba = Rgba::hex(0x7287fd);
@@ -335,6 +490,10 @@ const ESTOP_RED: Rgba = catppuccin::latte::RED;
 /// still 3 : 1 on Mocha's dark window.
 const ESTOP_RED_ALT: Rgba = ESTOP_RED.mix(Rgba::hex(0xff2050), 30);
 const ESTOP_INK: Rgba = Rgba::WHITE;
+
+/// Nav2's cubes in Mocha: half way from Mocha's pink-red to the e-stop's red, so they
+/// read as red, not as NDT's purple or AMCL's orange.
+const MOCHA_NAV2_RED: Rgba = catppuccin::mocha::RED.mix(ESTOP_RED, 50);
 
 /// Catppuccin Mocha: dark. The car's default (night, cabin glare).
 pub const MOCHA: Theme = {
@@ -416,6 +575,44 @@ pub const MOCHA: Theme = {
             major: OVERLAY1,
             highway: PEACH.mix(BASE, 45),
         },
+
+        section: MANTLE,
+        idle_fill: OVERLAY1,
+        idle_ink: CRUST,
+        button: SURFACE1,
+        button_down: SURFACE2,
+        button_off: SURFACE0,
+        scene: SceneColours {
+            back: CRUST,
+            grid: SURFACE0,
+            grid_major: SURFACE1,
+            localizers: LocalizerColours {
+                local: BLUE,
+                global: GREEN,
+                truth: Rgba::WHITE,
+                amcl: PEACH,
+                // A little towards pink: Mocha's mauve is too near its blue.
+                ndt: MAUVE.mix(PINK, 30),
+            },
+            plan: YELLOW,
+            trail: OVERLAY1,
+            particle: PEACH.alpha(170),
+            ndt_map: MAUVE.alpha(70),
+            map_point: MAUVE.alpha(200),
+            ndt_cell: MAUVE.alpha(150),
+            scan_on: GREEN,
+            scan_off: MOCHA_NAV2_RED,
+            nav2_cube: MOCHA_NAV2_RED.alpha(235),
+            nav2_cube_stale: MOCHA_NAV2_RED.mix(CRUST, 45).alpha(160),
+            heights: [
+                SURFACE1,
+                TEAL.mix(BASE, 75),
+                TEAL.mix(BASE, 60),
+                TEAL.mix(BASE, 45),
+                TEAL.mix(BASE, 30),
+                TEAL.mix(BASE, 10),
+            ],
+        },
     }
 };
 
@@ -425,7 +622,7 @@ pub const LATTE: Theme = {
     use catppuccin::latte::*;
     let green = GREEN.mix(Rgba::BLACK, 35);
     let amber = YELLOW.mix(Rgba::BLACK, 40);
-    let orange = PEACH.mix(Rgba::BLACK, 30);
+    let orange = PEACH.mix(Rgba::BLACK, 35);
     Theme {
         background: BASE,
         background_low: CRUST,
@@ -442,11 +639,12 @@ pub const LATTE: Theme = {
 
         text: TEXT,
         caption: SUBTEXT1,
-        dim: SUBTEXT0.mix(TEXT, 30),
+        dim: SUBTEXT0.mix(TEXT, 45),
 
         good: green,
         warn: amber,
-        bad: RED,
+        // A touch deeper: words straight on the window, as on hw_panel.
+        bad: RED.mix(Rgba::BLACK, 10),
         not_real_text: orange,
 
         go_fill: green,
@@ -502,6 +700,44 @@ pub const LATTE: Theme = {
             medium: Rgba::WHITE,
             major: Rgba::WHITE,
             highway: YELLOW.mix(Rgba::WHITE, 50),
+        },
+
+        section: CRUST,
+        idle_fill: SUBTEXT0,
+        idle_ink: Rgba::WHITE,
+        button: Rgba::WHITE,
+        button_down: SURFACE0,
+        button_off: MANTLE,
+        scene: SceneColours {
+            back: BASE,
+            grid: SURFACE0,
+            grid_major: SURFACE2,
+            localizers: LocalizerColours {
+                local: BLUE,
+                global: green,
+                truth: TEXT,
+                // Deeper than the panels' orange, to stay apart from the plan's amber.
+                amcl: PEACH.mix(Rgba::BLACK, 40),
+                ndt: MAUVE,
+            },
+            plan: YELLOW.mix(Rgba::BLACK, 20),
+            trail: OVERLAY1,
+            particle: PEACH.mix(Rgba::BLACK, 40).alpha(170),
+            ndt_map: MAUVE.alpha(70),
+            map_point: MAUVE.alpha(200),
+            ndt_cell: MAUVE.alpha(150),
+            scan_on: green,
+            scan_off: RED,
+            nav2_cube: RED.alpha(235),
+            nav2_cube_stale: RED.mix(BASE, 45).alpha(160),
+            heights: [
+                SURFACE1,
+                TEAL.mix(BASE, 50),
+                TEAL.mix(BASE, 40),
+                TEAL.mix(BASE, 30),
+                TEAL.mix(BASE, 15),
+                TEAL.mix(Rgba::BLACK, 25),
+            ],
         },
     }
 };
@@ -641,7 +877,108 @@ mod tests {
         if car < LARGE_RATIO {
             out.push(format!("{name}: the car is {car:.2} : 1 on the land"));
         }
+        out.extend(panel_problems(name));
+        out.extend(scene_problems(name));
         out
+    }
+
+    /// The debug screen's panel and the hardware panel: words on the window itself, on a
+    /// section's band, on each pill, on each button.
+    fn panel_problems(name: ThemeName) -> Vec<String> {
+        let t = name.theme();
+        let mut out = Vec::new();
+        let mut want = |what: &str, fg: Rgba, back: Rgba, least: f64| {
+            out.extend(check(name, what, fg, back, least));
+        };
+        // hw_panel writes straight on the window.
+        for back in [t.background, t.background_low] {
+            for (what, fg) in [
+                ("text", t.text),
+                ("caption", t.caption),
+                ("dim", t.dim),
+                ("good", t.good),
+                ("warn", t.warn),
+                ("bad", t.bad),
+                ("not-real banner", t.not_real_text),
+            ] {
+                want(&format!("{what} on the window"), fg, back, TEXT_RATIO);
+            }
+        }
+        for (what, fg) in [("text", t.text), ("caption", t.caption), ("dim", t.dim)] {
+            want(&format!("{what} on a section"), fg, t.section, TEXT_RATIO);
+        }
+        for tone in Tone::ALL {
+            let p = t.pill(tone);
+            want(
+                &format!("a {tone:?} pill's word"),
+                p.ink,
+                p.fill,
+                TEXT_RATIO,
+            );
+        }
+        for (what, button) in [("a button", t.button), ("a held button", t.button_down)] {
+            want(&format!("{what}'s label"), t.text, button, TEXT_RATIO);
+        }
+        // Greyed out: quieter, but its big letters still read.
+        want("an off button's label", t.dim, t.button_off, LARGE_RATIO);
+        // E-STOP and STOP: white on red, as the HUD's e-stop.
+        for fill in [t.stop_fill, t.stop_fill_alt] {
+            want("E-STOP's and STOP's label", t.stop_ink, fill, TEXT_RATIO);
+        }
+        out
+    }
+
+    /// The debug screen's 3D view: every mark on its background; the legend's glass over
+    /// the scene.
+    fn scene_problems(name: ThemeName) -> Vec<String> {
+        let t = name.theme();
+        let s = &t.scene;
+        let mut out = Vec::new();
+        let mut want = |what: &str, fg: Rgba, back: Rgba, least: f64| {
+            out.extend(check(name, what, fg, back, least));
+        };
+        for (what, mark) in marks(s) {
+            want(&format!("{what} on the 3D view"), mark, s.back, LARGE_RATIO);
+        }
+        for (what, fg) in [("scan on the map", s.scan_on), ("scan off it", s.scan_off)] {
+            want(&format!("the {what} from above"), fg, s.back, LARGE_RATIO);
+        }
+        // The legends sit on glass over whatever the 3D view shows there.
+        let scene = [s.back, s.grid, s.grid_major]
+            .into_iter()
+            .chain(s.heights)
+            .map(|g| t.overlay.over(g));
+        for back in scene {
+            for (what, fg) in [
+                ("text", t.text),
+                ("caption", t.caption),
+                ("dim", t.dim),
+                ("warn", t.warn),
+            ] {
+                want(
+                    &format!("{what} on the legend's glass"),
+                    fg,
+                    back,
+                    TEXT_RATIO,
+                );
+            }
+        }
+        out
+    }
+
+    /// The marks that must be told apart on the debug screen: each localizer, Nav2's
+    /// plan and its cubes.
+    fn marks(s: &SceneColours) -> [(&'static str, Rgba); 7] {
+        let l = s.localizers;
+        [
+            ("EKF local", l.local),
+            ("EKF global", l.global),
+            ("truth", l.truth),
+            ("AMCL", l.amcl),
+            ("NDT", l.ndt),
+            ("Nav2's plan", s.plan),
+            ("Nav2's cubes", s.nav2_cube.alpha(255)),
+        ]
     }
 
     #[test]
@@ -666,6 +1003,96 @@ mod tests {
                 assert!(c.r > c.b && c.g > c.b, "{name}: {what} isn't amber: {c:?}");
             }
         }
+    }
+
+    /// Two marks this far apart in OKLab are plainly two colours (an eye notices 0.02).
+    const APART: f64 = 0.10;
+    /// A mark this far from every cube colour: the cubes are big fills, the marks lines
+    /// and arrows over them.
+    const APART_FROM_CUBES: f64 = 0.07;
+
+    #[test]
+    fn the_localizers_stay_apart() {
+        let mut problems = Vec::new();
+        for name in ThemeName::ALL {
+            let s = &name.theme().scene;
+            let marks = marks(s);
+            for (i, (a, ca)) in marks.iter().enumerate() {
+                for (b, cb) in &marks[i + 1..] {
+                    let d = ca.difference(*cb);
+                    if d < APART {
+                        problems.push(format!("{name}: {a} and {b} are {d:.3} apart"));
+                    }
+                }
+                for (band, cube) in s.heights.iter().enumerate() {
+                    let d = ca.difference(*cube);
+                    if d < APART_FROM_CUBES {
+                        problems.push(format!("{name}: {a} and cube band {band}: {d:.3}"));
+                    }
+                }
+            }
+        }
+        assert!(problems.is_empty(), "{}", problems.join("\n"));
+    }
+
+    #[test]
+    fn the_localizers_keep_their_colours() {
+        // Blue, green, orange, purple: the design's colours, by their strongest channel.
+        for name in ThemeName::ALL {
+            let s = &name.theme().scene;
+            let l = s.localizers;
+            assert!(
+                l.local.b > l.local.r && l.local.b > l.local.g,
+                "{name}: local"
+            );
+            assert!(
+                l.global.g > l.global.r && l.global.g > l.global.b,
+                "{name}: global"
+            );
+            assert!(l.amcl.r > l.amcl.g && l.amcl.g > l.amcl.b, "{name}: AMCL");
+            assert!(l.ndt.r > l.ndt.g && l.ndt.b > l.ndt.g, "{name}: NDT");
+            let red = s.nav2_cube;
+            assert!(red.r > red.g && red.r > red.b, "{name}: Nav2's cubes");
+            assert!(
+                s.plan.r > s.plan.b && s.plan.g > s.plan.b,
+                "{name}: the plan"
+            );
+        }
+    }
+
+    #[test]
+    fn the_cubes_climb_away_from_the_background() {
+        for name in ThemeName::ALL {
+            let s = &name.theme().scene;
+            let steps: Vec<f64> = s.heights.iter().map(|h| h.contrast(s.back)).collect();
+            assert!(
+                steps.windows(2).all(|w| w[1] > w[0]),
+                "{name}: the height ramp isn't a ramp: {steps:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn pills_take_their_tones_colours() {
+        let t = &MOCHA;
+        assert_eq!(
+            t.pill(Tone::Stop),
+            Pill {
+                fill: t.stop_fill,
+                ink: t.stop_ink
+            }
+        );
+        assert_eq!(t.pill(Tone::Off).fill, t.section);
+        assert_eq!(t.pill(Tone::Go).fill, t.go_fill);
+    }
+
+    #[test]
+    fn differences_look_right() {
+        assert!(Rgba::WHITE.difference(Rgba::WHITE) < 1e-9);
+        assert!((Rgba::BLACK.difference(Rgba::WHITE) - 1.0).abs() < 1e-3);
+        // Red and green: far apart; two near greys: hardly.
+        assert!(Rgba::hex(0xff0000).difference(Rgba::hex(0x00ff00)) > 0.3);
+        assert!(Rgba::hex(0x808080).difference(Rgba::hex(0x828282)) < 0.02);
     }
 
     #[test]

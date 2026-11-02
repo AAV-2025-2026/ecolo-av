@@ -109,7 +109,7 @@ Already installed? Just the screens: `bash ~/aav-jazzy/aav/tools/car_screens_ins
 | Stop them until the next boot | `systemctl --user stop aav-hud aav-map` |
 | Never start them | `bash ~/aav-jazzy/aav/tools/car_screens_install.sh uninstall` (keeps `screens.env`) |
 | Try one by hand | `~/aav-jazzy/aav.sh ros2 launch aav_hud map.launch.py fullscreen:=true monitor:=HDMI-1` |
-| Light colours for a sunny day | `theme: latte` in `ros/hud/aav_hud/config/hud.yaml` and `map.yaml`, then restart them ([Themes](hud.md#themes-the-screens-colours)); `mocha` is the dark default |
+| Light colours for a sunny day | `theme: latte` in `ros/hud/aav_hud/config/hud.yaml`, `map.yaml`, `debug_hud.yaml` and `hw_panel.yaml`, then restart them ([Themes](hud.md#themes-the-screens-colours)); `mocha` is the dark default |
 
 > **No HUD, no Nav2.** The HUD sends a [heartbeat](hud.md#the-heartbeat). On the car,
 > the sensor watchdog stops Nav2 and the AI slot while it's missing: stopping `aav-hud`

@@ -1,4 +1,5 @@
-//! The hardware panel's settings: every topic name, and the buttons' steps and caps.
+//! The hardware panel's settings: every topic name, the buttons' steps and caps, and the
+//! look.
 //!
 //! They live in `config/hw_panel.yaml`, a ROS parameters file. The program carries a copy
 //! of it as its defaults ([`PanelConfig::default`]), so no topic name is written in the
@@ -6,6 +7,7 @@
 
 use std::time::Duration;
 
+use hud_core::theme::ThemeName;
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -150,6 +152,8 @@ pub struct PanelConfig {
     pub sim_cap: f64,
     /// m/s: on stands.
     pub stands_cap: f64,
+    /// The colours (`hud_core::theme`), as the HUD's.
+    pub theme: ThemeName,
 }
 
 /// Why a settings file can't be used.
@@ -298,6 +302,19 @@ mod tests {
         assert_eq!((c.speed_step, c.steer_step), (0.1, 0.05));
         assert_eq!((c.sim_cap, c.stands_cap), (1.0, 0.3));
         assert_eq!(c.topic(Topic::Buttons), "/drivers/buttons/cmd_vel");
+        assert_eq!(c.theme, ThemeName::Mocha);
+    }
+
+    #[test]
+    fn the_theme_can_change() {
+        let day = BUILT_IN_YAML.replace("theme: mocha", "theme: latte");
+        let c = PanelConfig::from_yaml(&day).expect("latte is a theme");
+        assert_eq!(c.theme, ThemeName::Latte);
+        let bad = BUILT_IN_YAML.replace("theme: mocha", "theme: purple");
+        assert!(matches!(
+            PanelConfig::from_yaml(&bad),
+            Err(ConfigError::Yaml(_))
+        ));
     }
 
     #[test]

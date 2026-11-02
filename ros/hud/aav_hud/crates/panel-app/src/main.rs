@@ -26,7 +26,7 @@
 //!                                                                  while the window draws
 //!             estop_topic           std_msgs/Bool                  E-STOP: true 5 times, never false
 //! Parameters  the topics above; stale_after (s), speed_step (m/s), steer_step (rad),
-//!             creep (m/s), sim_cap (m/s), stands_cap (m/s)
+//!             creep (m/s), sim_cap (m/s), stands_cap (m/s), theme (mocha, latte, calm)
 //!
 //! raylib owns the main thread (macOS needs that); rclrs spins on its own thread. `--demo`
 //! swaps the ROS node for a pretend car. The logic is in panel-core.
@@ -414,7 +414,7 @@ fn run(
     rl.set_target_fps(60);
     rl.set_window_min_size(1100, 760);
     window::place(&mut rl, opts.monitor.as_ref(), opts.fullscreen)?;
-    let ui = Ui::new(&mut rl, &thread);
+    let ui = Ui::new(&mut rl, &thread, config.theme.theme());
     let mut panel = Panel::new(config, vehicle, opts.stands);
     let started = Instant::now();
     let screenshot_after = Duration::from_secs_f64(opts.after.unwrap_or(4.0));

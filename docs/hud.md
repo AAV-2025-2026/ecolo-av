@@ -477,7 +477,8 @@ inside the test lot. On the car, the datum is the real test site.
 
 ## Themes: the screens' colours
 
-The HUD and the map window share one set of colours, a **theme** (1 Nov). Ben found the
+All four screens share one set of colours, a **theme** (1 Nov): the HUD, the map
+window, the debug screen and the hardware panel. Ben found the
 old look "kind of ugly": too many bright primary colours. Now the colours are soft, and
 the panels are **frosted glass**.
 
@@ -485,13 +486,15 @@ the panels are **frosted glass**.
 |---|---|---|
 | HUD | ![Before](img/hud-before-theme.png) | ![Mocha](img/hud-raylib.png) |
 | Map | ![Before](img/map-before-theme.png) | ![Mocha](img/map-streets-demo.png) |
+| Debug screen | ![Before](img/debug-hud-before-theme.png) | ![Mocha](img/debug-hud-seeing.png) |
+| Hardware panel | ![Before](img/hw-panel-before-theme.png) | ![Mocha](img/hw-panel-demo.png) |
 
 ### The themes
 
 | Theme | When | Picture |
 |---|---|---|
 | `mocha` (default) | night, and glare in the cabin: dark | the "After" pictures above |
-| `latte` | daytime: light | ![Latte HUD](img/hud-latte.png) ![Latte map](img/map-latte.png) |
+| `latte` | daytime: light | ![Latte HUD](img/hud-latte.png) ![Latte map](img/map-latte.png) ![Latte debug screen](img/debug-hud-latte.png) ![Latte hardware panel](img/hw-panel-latte.png) |
 | `calm` | Ben's own theme, from his Carleton web work | **not yet**: a copy of Mocha until Ben gives its colours |
 
 Mocha and Latte are [Catppuccin](https://catppuccin.com)'s palettes (MIT licence), with
@@ -501,7 +504,7 @@ its official colour values.
 
 | Where | How |
 |---|---|
-| The car (ROS) | `theme: latte` in `config/hud.yaml` or `config/map.yaml`, or `--ros-args -p theme:=latte` |
+| The car (ROS) | `theme: latte` in `config/hud.yaml`, `map.yaml`, `debug_hud.yaml` or `hw_panel.yaml` (each screen has its own), or `--ros-args -p theme:=latte` |
 | A demo | `--config FILE`, a copy of the yaml with `theme: latte` |
 | Blur off (map) | `blur: false` in `config/map.yaml`, or `-p blur:=false` |
 
@@ -532,6 +535,8 @@ darkens them (the test caught it).
 |---|---|
 | HUD | see-through panels over a soft gradient; no blur (nothing behind them moves) |
 | Map | the search box, results, keyboard, chips and scale bar show the map **blurred** behind them (`blur: true`) |
+| Debug screen | the legends over the 3D view (where the car is, the keys) |
+| Hardware panel | none: words sit straight on the window, so they read best |
 
 How the blur works (`map-app/src/frost.rs`): once the map is drawn, the graphics card
 copies the screen, shrinks it to a quarter and blurs it (two Gaussian passes, twice).
@@ -549,7 +554,25 @@ shaders, the window says so and keeps see-through glass.
 The blur costs little. Zoomed far out the street map itself is slow, blur or not (many
 tiles); the window asks for 30 fps.
 
-The debug screen and the hardware panel keep their own colours for now.
+### The debug screen's colours
+
+Each localizer keeps its colour in every theme, so a picture means the same by day and
+by night:
+
+| What | Colour |
+|---|---|
+| EKF local (the car) | blue |
+| EKF global | green |
+| Gazebo's truth | white (dark grey in Latte) |
+| AMCL, its particles | orange |
+| NDT, its map | purple |
+| Nav2's plan | yellow |
+| Nav2's cubes | red wireframes |
+| The lidar's cubes | Catppuccin teal, standing out more the higher they are |
+
+Tests (`hud_core::theme`) check that these marks stand out on the 3D view, stay apart
+from each other and from the cubes (a colour distance, OKLab), and keep their hue.
+The pills (OK, STALE, WARN, LOST, E-STOP) are the same on both screens.
 
 ## The debug HUD
 
@@ -580,7 +603,7 @@ The 3D view, in both layouts:
 
 | On screen | From | Frame |
 |---|---|---|
-| Cubes (20 cm), coloured by height: dark ground, then teal to pale. **Kept** for 2 s and fading darker (key K: this scan's only) | `/sensors/lidar/points` | lidar_link -> base_link -> odom |
+| Cubes (20 cm), coloured by height: grey ground, then the theme's teal, standing out more the higher. **Kept** for 2 s and fading darker (key K: this scan's only) | `/sensors/lidar/points` | lidar_link -> base_link -> odom |
 | **Nav2's cubes**: red 0.25 m wireframes over the screen's own (key V), the newest cloud only; dimmer when STALE. What Nav2 stops for (`voxels:=true`), beside what the lidar sees | `/perception/voxels/cubes` | base_link -> odom, EKF local's pose at the cloud's stamp |
 | The car: a blue box to scale (`vehicle.yaml`) | `/localization/odom/local` (EKF local) | odom |
 | EKF global (green), AMCL (orange), **NDT (purple)**, truth (white, sim): an outline, an arrow, a pole | their topics (NDT's: `/localization/ndt/pose`, good fits only) | map, through map -> odom |

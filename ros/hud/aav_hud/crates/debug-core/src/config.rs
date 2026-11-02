@@ -1,4 +1,4 @@
-//! The debug HUD's settings: every topic name, the frames, and its limits.
+//! The debug HUD's settings: every topic name, the frames, its limits, and the look.
 //!
 //! They live in `config/debug_hud.yaml`, a ROS parameters file. The program carries a
 //! copy of it as its defaults ([`DebugConfig::default`]), so no topic name is written in
@@ -7,6 +7,7 @@
 
 use std::time::Duration;
 
+use hud_core::theme::ThemeName;
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -210,6 +211,8 @@ pub struct DebugConfig {
     pub voxels_cube_size: f64,
     /// Seconds without `/localization/health` before it shows STALE (it comes at 1 Hz).
     pub health_stale_after: f64,
+    /// The colours (`hud_core::theme`), as the HUD's.
+    pub theme: ThemeName,
     /// The car and its sensors from above, whose points make no cube: not a parameter,
     /// the command line's `--own-box` (the launch file works it out from vehicle.yaml).
     #[serde(skip)]
@@ -446,6 +449,19 @@ mod tests {
         assert!(c.ndt_map.ends_with(".pcd"));
         assert_eq!(c.voxel_settings().size, Metres(0.25));
         assert!(c.health_stale_after() > c.stale_after());
+        assert_eq!(c.theme, ThemeName::Mocha);
+    }
+
+    #[test]
+    fn the_theme_can_change() {
+        let day = BUILT_IN_YAML.replace("theme: mocha", "theme: latte");
+        let c = DebugConfig::from_yaml(&day).expect("latte is a theme");
+        assert_eq!(c.theme, ThemeName::Latte);
+        let bad = BUILT_IN_YAML.replace("theme: mocha", "theme: purple");
+        assert!(matches!(
+            DebugConfig::from_yaml(&bad),
+            Err(ConfigError::Yaml(_))
+        ));
     }
 
     #[test]

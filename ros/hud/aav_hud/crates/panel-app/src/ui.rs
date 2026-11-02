@@ -14,29 +14,23 @@
 //! |          wheels, GPS, lidar Hz, radar Hz, camera Hz, battery |
 //! +--------------------------------------------------------------+
 //! ```
+//!
+//! Every colour comes from the theme (`hud_core::theme`, `theme:` in
+//! config/hw_panel.yaml), as the HUD's: the pills, the buttons, the E-STOP's red.
 
 use std::time::Instant;
 
-use hud_core::health::Health;
+use hud_app::paint::ToColor;
+use hud_core::{
+    health::Health,
+    theme::{Rgba, Theme, Tone},
+};
 use panel_core::{
     buttons::{Buttons, Press},
     gate::Gate,
     state::{PanelState, Row},
 };
 use raylib::prelude::*;
-
-const BACKGROUND: Color = Color::new(16, 18, 24, 255);
-const SECTION: Color = Color::new(31, 35, 46, 255);
-const BUTTON: Color = Color::new(52, 60, 78, 255);
-const BUTTON_DOWN: Color = Color::new(90, 104, 134, 255);
-const BUTTON_OFF: Color = Color::new(34, 38, 48, 255);
-const CAPTION: Color = Color::new(140, 150, 170, 255);
-const TEXT: Color = Color::new(240, 242, 246, 255);
-const DIM: Color = Color::new(105, 110, 125, 255);
-const GOOD: Color = Color::new(60, 200, 90, 255);
-const WARN: Color = Color::new(245, 180, 40, 255);
-const BAD: Color = Color::new(230, 60, 60, 255);
-const NOT_REAL: Color = Color::new(255, 140, 0, 255);
 
 /// Fonts tried in order; raylib's own small pixel font if none is there.
 const FONT_FILES: [&str; 4] = [
@@ -155,10 +149,11 @@ pub struct Frame<'a> {
 
 pub struct Ui {
     font: UiFont,
+    theme: &'static Theme,
 }
 
 impl Ui {
-    pub fn new(rl: &mut RaylibHandle, thread: &RaylibThread) -> Self {
+    pub fn new(rl: &mut RaylibHandle, thread: &RaylibThread, theme: &'static Theme) -> Self {
         let loaded = FONT_FILES
             .iter()
             .filter(|path| std::path::Path::new(path).exists())
@@ -171,17 +166,26 @@ impl Ui {
             }
             None => UiFont::BuiltIn(rl.get_font_default()),
         };
-        Self { font }
+        Self { font, theme }
     }
 
     pub fn draw(&self, d: &mut RaylibDrawHandle, state: &PanelState, f: &Frame<'_>) {
-        d.clear_background(BACKGROUND);
+        let t = self.theme;
         let (w, h) = (d.get_screen_width() as f32, d.get_screen_height() as f32);
+        // The window's soft gradient, as the HUD's (no glow: words sit straight on it).
+        d.draw_rectangle_gradient_v(
+            0,
+            0,
+            w.ceil() as i32,
+            h.ceil() as i32,
+            t.background.rl(),
+            t.background_low.rl(),
+        );
         let buttons = layout(w);
         let speed_on = matches!(f.gate, Gate::On { .. });
 
         // Title, the source, the label.
-        self.text(d, "HARDWARE PANEL", MARGIN, 18.0, 32.0, TEXT);
+        self.text(d, "HARDWARE PANEL", MARGIN, 18.0, 32.0, t.text);
         let kind = state.kind();
         let mut tx = MARGIN + self.font.measure("HARDWARE PANEL", 32.0) + 20.0;
         let kind_word = if f.stands {
@@ -189,25 +193,25 @@ impl Ui {
         } else {
             kind.to_string()
         };
-        for (word, colour) in [
-            (
-                kind_word.as_str(),
-                if kind.is_real() { BAD } else { NOT_REAL },
-            ),
-            (f.label, SECTION),
-        ] {
+        let kind_tone = if kind.is_real() {
+            Tone::Stop
+        } else {
+            Tone::NotReal
+        };
+        for (word, tone) in [(kind_word.as_str(), kind_tone), (f.label, Tone::Off)] {
+            let p = t.pill(tone);
             let ww = self.font.measure(word, 20.0);
-            d.draw_rectangle_rounded(Rectangle::new(tx, 22.0, ww + 20.0, 30.0), 0.3, 6, colour);
-            let ink = if colour == SECTION {
-                CAPTION
-            } else {
-                Color::BLACK
-            };
-            self.text(d, word, tx + 10.0, 26.0, 20.0, ink);
+            d.draw_rectangle_rounded(
+                Rectangle::new(tx, 22.0, ww + 20.0, 30.0),
+                0.3,
+                6,
+                p.fill.rl(),
+            );
+            self.text(d, word, tx + 10.0, 26.0, 20.0, p.ink);
             tx += ww + 32.0;
         }
         if let Some(banner) = state.origins.banner() {
-            self.text(d, &banner, MARGIN, 62.0, 18.0, NOT_REAL);
+            self.text(d, &banner, MARGIN, 62.0, 18.0, t.not_real_text);
         }
 
         // Where the speed buttons may drive.
@@ -222,14 +226,14 @@ impl Ui {
                         ""
                     }
                 );
-                self.text(d, &s, MARGIN, gate_y, 22.0, GOOD);
+                self.text(d, &s, MARGIN, gate_y, 22.0, t.good);
             }
             Gate::Off(why) => {
-                self.text(d, "SPEED BUTTONS OFF:", MARGIN, gate_y, 22.0, WARN);
+                self.text(d, "SPEED BUTTONS OFF:", MARGIN, gate_y, 22.0, t.warn);
                 let x = MARGIN + self.font.measure("SPEED BUTTONS OFF:", 22.0) + 12.0;
                 let lines = wrap(&self.font, &why.to_string(), w - x - MARGIN - 260.0, 16.0);
                 for (i, l) in lines.iter().take(3).enumerate() {
-                    self.text(d, l, x, gate_y - 14.0 + 19.0 * i as f32, 16.0, WARN);
+                    self.text(d, l, x, gate_y - 14.0 + 19.0 * i as f32, 16.0, t.warn);
                 }
             }
         }
@@ -238,7 +242,7 @@ impl Ui {
         let col_w = (w - 4.0 * MARGIN) / 3.0;
         for (i, caption) in ["SPEED", "BRAKE", "STEERING"].into_iter().enumerate() {
             let x = MARGIN + i as f32 * (col_w + MARGIN);
-            self.text(d, caption, x, 146.0, 17.0, CAPTION);
+            self.text(d, caption, x, 146.0, 17.0, t.caption);
         }
 
         for &(b, r) in &buttons {
@@ -273,10 +277,10 @@ impl Ui {
             x0,
             ya,
             22.0,
-            TEXT,
+            t.text,
         );
         let s = format!("seen  {}", seen(state.seen_speed(f.now), "m/s", 1.0));
-        self.text(d, &s, x0, ya + 30.0, 22.0, CAPTION);
+        self.text(d, &s, x0, ya + 30.0, 22.0, t.caption);
         if f.wheels_note.is_some() {
             self.text(
                 d,
@@ -284,7 +288,7 @@ impl Ui {
                 x0,
                 ya + 60.0,
                 16.0,
-                WARN,
+                t.warn,
             );
         }
         self.text(
@@ -293,23 +297,23 @@ impl Ui {
             x1,
             ya,
             22.0,
-            CAPTION,
+            t.caption,
         );
         let s = format!("throttle seen {}", pct(Row::Throttle));
-        self.text(d, &s, x1, ya + 30.0, 22.0, CAPTION);
+        self.text(d, &s, x1, ya + 30.0, 22.0, t.caption);
         let note = "STOP: speed 0 at once. Brake %: later (option B)";
         let note = fit(&self.font, note, col_w, 15.0);
-        self.text(d, &note, x1, ya + 62.0, 15.0, DIM);
+        self.text(d, &note, x1, ya + 62.0, 15.0, t.dim);
         let s = format!(
             "asked {:+.2} rad   seen {}",
             b.asked_steer(),
             seen(state.seen_steer(f.now), "rad", 1.0)
         );
         let s = fit(&self.font, &s, col_w, 19.0);
-        self.text(d, &s, x2, ya + 72.0, 19.0, TEXT);
+        self.text(d, &s, x2, ya + 72.0, 19.0, t.text);
         let note = "the wheels turn only while moving (ego)";
         let note = fit(&self.font, note, col_w, 15.0);
-        self.text(d, &note, x2, ya + 100.0, 15.0, DIM);
+        self.text(d, &note, x2, ya + 100.0, 15.0, t.dim);
 
         // What the buttons are doing.
         let (line, colour) = self.status(state, f);
@@ -322,86 +326,81 @@ impl Ui {
             ),
             _ => "twist_mux passes nothing now".to_owned(),
         };
-        self.text(d, &mux, MARGIN, 518.0, 16.0, DIM);
+        self.text(d, &mux, MARGIN, 518.0, 16.0, t.dim);
 
         // The sensors.
         let mut y = 548.0;
-        d.draw_rectangle_rec(Rectangle::new(0.0, y, w, 28.0), SECTION);
+        d.draw_rectangle_rec(Rectangle::new(0.0, y, w, 28.0), t.section.rl());
         self.text(
             d,
             "SENSORS, EACH FROM ITS OWN NODE",
             MARGIN,
             y + 5.0,
             17.0,
-            CAPTION,
+            t.caption,
         );
         y += 36.0;
         let row_h = ((h - y - 34.0) / Row::SENSORS.len() as f32).clamp(20.0, 30.0);
         for row in Row::SENSORS {
             let health = state.health(row, f.now);
-            self.text(d, row.label(), MARGIN, y, 19.0, TEXT);
-            let (word, colour) = health_word(health);
+            self.text(d, row.label(), MARGIN, y, 19.0, t.text);
+            let (word, tone) = health_word(health);
+            let p = t.pill(tone);
             let pill = Rectangle::new(MARGIN + 110.0, y + 1.0, 80.0, 22.0);
-            d.draw_rectangle_rounded(pill, 0.4, 6, colour);
+            d.draw_rectangle_rounded(pill, 0.4, 6, p.fill.rl());
             let ww = self.font.measure(word, 15.0);
-            self.text(
-                d,
-                word,
-                pill.x + (pill.width - ww) / 2.0,
-                y + 4.0,
-                15.0,
-                Color::BLACK,
-            );
+            let tx = pill.x + (pill.width - ww) / 2.0;
+            self.text(d, word, tx, y + 4.0, 15.0, p.ink);
             let detail = match health {
                 Health::Never => String::new(),
                 _ => state.detail(row, f.now, f.wheels_note),
             };
             let detail = fit(&self.font, &detail, w - MARGIN - (MARGIN + 210.0), 18.0);
-            let ink = if health.is_ok() { CAPTION } else { DIM };
+            let ink = if health.is_ok() { t.caption } else { t.dim };
             self.text(d, &detail, MARGIN + 210.0, y + 2.0, 18.0, ink);
             y += row_h;
         }
         let keys = "keys: Space held = GO   Up/+ Down/- speed   Left Right steer   C centre   \
                     S stop   E e-stop   F11 full screen";
         let keys = fit(&self.font, keys, w - 2.0 * MARGIN, 15.0);
-        self.text(d, &keys, MARGIN, h - 26.0, 15.0, DIM);
+        self.text(d, &keys, MARGIN, h - 26.0, 15.0, t.dim);
     }
 
     /// One line: what the buttons are doing, or why not.
-    fn status(&self, state: &PanelState, f: &Frame<'_>) -> (String, Color) {
-        let b = f.buttons;
+    fn status(&self, state: &PanelState, f: &Frame<'_>) -> (String, Rgba) {
+        let (b, t) = (f.buttons, self.theme);
         if state.estop_on() {
             return (
                 "E-STOP ON: nothing is sent. A person clears it (pixi run estop-clear); then \
                  let GO go, and press Speed + again"
                     .to_owned(),
-                BAD,
+                t.bad,
             );
         }
         if b.needs_release() {
             let why = b
                 .last_zero()
                 .map_or_else(String::new, |z| format!(" (zeroed: {z})"));
-            return (format!("let GO go, then press it again{why}"), WARN);
+            return (format!("let GO go, then press it again{why}"), t.warn);
         }
         if state.geofence_holds(f.now) && b.is_driving() {
             return (
                 "held: the geofence's lock (51) is above the buttons (45)".to_owned(),
-                WARN,
+                t.warn,
             );
         }
         if b.is_centring() {
             return (
                 "CENTRE: straightening the wheels at a creep".to_owned(),
-                WARN,
+                t.warn,
             );
         }
         if b.is_driving() {
-            return (format!("DRIVING at {:.2} m/s", b.asked_speed()), GOOD);
+            return (format!("DRIVING at {:.2} m/s", b.asked_speed()), t.good);
         }
         match b.last_zero() {
-            Some(z) => (format!("zeroed: {z}"), WARN),
-            None => ("hold Space (or GO) to drive".to_owned(), CAPTION),
+            Some(z) => (format!("zeroed: {z}"), t.warn),
+            None => ("hold Space (or GO) to drive".to_owned(), t.caption),
         }
     }
 
@@ -413,25 +412,23 @@ impl Ui {
         f: &Frame<'_>,
         enabled: bool,
     ) {
+        let t = self.theme;
         let down = f.held == Some(b) || (b == Button::Go && f.buttons.is_driving());
-        let colour = match (b, enabled, down) {
-            (Button::Estop, _, _) => BAD,
-            (_, false, _) => BUTTON_OFF,
-            (Button::Go, true, true) => GOOD,
-            (_, true, true) => BUTTON_DOWN,
-            (_, true, false) => BUTTON,
+        let (fill, ink) = match (b, enabled, down) {
+            (Button::Estop, _, true) => (t.stop_fill_alt, t.stop_ink),
+            (Button::Estop, _, false) => (t.stop_fill, t.stop_ink),
+            (_, false, _) => (t.button_off, t.dim),
+            (Button::Go, true, true) => (t.go_fill, t.go_ink),
+            (_, true, true) => (t.button_down, t.text),
+            (_, true, false) => (t.button, t.text),
         };
-        d.draw_rectangle_rounded(r, 0.18, 8, colour);
+        d.draw_rectangle_rounded(r, 0.18, 8, fill.rl());
+        if enabled && !down && b != Button::Estop {
+            d.draw_rectangle_rounded_lines_ex(r, 0.18, 8, 1.0, t.glass_edge.rl());
+        }
         let size = if b == Button::Estop { 34.0 } else { 26.0 };
         let label = b.label();
         let tw = self.font.measure(label, size);
-        let ink = if b == Button::Estop || (b == Button::Go && enabled && down) {
-            Color::BLACK
-        } else if enabled {
-            TEXT
-        } else {
-            DIM
-        };
         self.text(
             d,
             label,
@@ -442,16 +439,17 @@ impl Ui {
         );
     }
 
-    fn text(&self, d: &mut RaylibDrawHandle, s: &str, x: f32, y: f32, size: f32, colour: Color) {
-        d.draw_text_ex(&self.font, s, Vector2::new(x, y), size, size / 24.0, colour);
+    fn text(&self, d: &mut RaylibDrawHandle, s: &str, x: f32, y: f32, size: f32, colour: Rgba) {
+        let at = Vector2::new(x, y);
+        d.draw_text_ex(&self.font, s, at, size, size / 24.0, colour.rl());
     }
 }
 
-fn health_word(h: Health) -> (&'static str, Color) {
+fn health_word(h: Health) -> (&'static str, Tone) {
     match h {
-        Health::Ok(_) => ("OK", GOOD),
-        Health::Stale(_) => ("STALE", WARN),
-        Health::Never => ("NEVER", DIM),
+        Health::Ok(_) => ("OK", Tone::Go),
+        Health::Stale(_) => ("STALE", Tone::Wait),
+        Health::Never => ("NEVER", Tone::Idle),
     }
 }
 
