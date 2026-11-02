@@ -7,7 +7,7 @@
 <!-- Generated from docs/car-day.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Car day: the runbook</h1>
-<div class="meta">40 min read · 16 sections</div></header>
+<div class="meta">44 min read · 17 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -94,7 +94,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-day-at-a-glance">The day at a glance</a><a href="#the-machines">The machines</a><a href="#what-to-bring">What to bring</a><a href="#session-0-before-leaving-at-home">Session 0: before leaving (at home)</a><a href="#session-1-safety-first">Session 1: safety first</a><a href="#session-2-measure-and-weigh">Session 2: measure and weigh</a><a href="#session-3-questions-for-the-hardware-lead">Session 3: questions for the hardware lead</a><a href="#session-4-the-orin-and-the-motor-pi">Session 4: the Orin (and the Motor Pi)</a><a href="#session-5-the-camera-pi">Session 5: the camera Pi</a><a href="#session-6-the-esp32">Session 6: the ESP32</a><a href="#session-7-can-read-only">Session 7: CAN, read-only</a><a href="#session-8-foxglove-from-a-laptop">Session 8: Foxglove from a laptop</a><a href="#session-9-the-first-drive-on-stands">Session 9: the first drive, on stands</a><a href="#session-10-what-to-record">Session 10: what to record</a><a href="#before-you-leave-the-car">Before you leave the car</a><a href="#afterwards-at-home">Afterwards, at home</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-day-at-a-glance">The day at a glance</a><a href="#the-machines">The machines</a><a href="#what-to-bring">What to bring</a><a href="#session-0-before-leaving-at-home">Session 0: before leaving (at home)</a><a href="#session-1-safety-first">Session 1: safety first</a><a href="#session-2-measure-and-weigh">Session 2: measure and weigh</a><a href="#session-3-questions-for-the-hardware-lead">Session 3: questions for the hardware lead</a><a href="#session-4-the-orin-and-the-motor-pi">Session 4: the Orin (and the Motor Pi)</a><a href="#session-5-the-camera-pi">Session 5: the camera Pi</a><a href="#session-6-the-esp32">Session 6: the ESP32</a><a href="#session-7-can-read-only">Session 7: CAN, read-only</a><a href="#session-8-foxglove-from-a-laptop">Session 8: Foxglove from a laptop</a><a href="#session-9-the-first-drive-on-stands">Session 9: the first drive, on stands</a><a href="#session-10-what-to-record">Session 10: what to record</a><a href="#session-11-the-ubuntu-pc">Session 11: the Ubuntu PC</a><a href="#before-you-leave-the-car">Before you leave the car</a><a href="#afterwards-at-home">Afterwards, at home</a></nav>
 <div class="lead"><p>Written 24 October 2026, for the team. Ben, 24 Oct: "Lets get everything prepared so the
 only thing left is to get into the car." Everything that can be done without the car is
 done or built; this page is the rest, <strong>in order</strong>.</p>
@@ -214,6 +214,14 @@ done or built; this page is the rest, <strong>in order</strong>.</p>
 <td>4</td>
 <td></td>
 </tr>
+<tr>
+<td>11</td>
+<td><a href="#session-11-the-ubuntu-pc">The Ubuntu PC</a>: CARLA rehearsal (at home), the Orin's full image, a second ground station</td>
+<td>the PC person</td>
+<td>11a: an evening; 11b: 1-2 h</td>
+<td>4</td>
+<td>11b: the hardware lead's OK</td>
+</tr>
 </tbody>
 </table></div>
 </section>
@@ -272,6 +280,12 @@ Access → search the entry → Show password). Every address is <code>192.168.1
 <td>.201</td>
 <td>none</td>
 <td>sends to the Orin</td>
+</tr>
+<tr>
+<td><strong>the team's Ubuntu PC</strong> (x86, NVIDIA)</td>
+<td>☐ write it here</td>
+<td>☐</td>
+<td>ours: CARLA, the Orin's image, a ground station (session 11)</td>
 </tr>
 </tbody>
 </table></div>
@@ -356,6 +370,11 @@ Access → search the entry → Show password). Every address is <code>192.168.1
 <td>☐</td>
 <td>the backup drive (encrypted: the backups hold passwords)</td>
 <td>sessions 4, 6</td>
+</tr>
+<tr>
+<td>☐</td>
+<td><strong>the Ubuntu PC</strong>, its power, a screen and keyboard, a USB-C data cable for the Orin's flashing port</td>
+<td>session 11</td>
 </tr>
 </tbody>
 </table></div>
@@ -763,8 +782,8 @@ dongle in, then <code>pixi run doctor</code> (it should find the car's network).
 </tr>
 </tbody>
 </table></div>
-<p>The full disk image (<code>l4t_backup_restore.sh</code>) needs an x86 Ubuntu PC: not today. It comes
-before the reflash (T1.3), never after.</p>
+<p>The full disk image (<code>l4t_backup_restore.sh</code>) needs an x86 Ubuntu PC: the team's,
+<a href="#11b-at-the-car-the-orins-full-image">session 11b</a>. It comes before any reflash (T1.3), never after.</p>
 <h3 id="4b-our-stack-from-the-stick">4b. Our stack, from the stick</h3>
 <p>Changes nothing of theirs: everything goes in <code>~/aav-jazzy</code> (<a href="car-install.html">From a USB stick</a>).</p>
 <div class="table-wrap"><table>
@@ -1598,6 +1617,162 @@ the sensors' real noise (T2.4) and the replay (T2.5). Bags stay out of git.</p>
 </table></div>
 <p>Copy home: <code>rsync -a &lt;user&gt;@192.168.1.140:aav-jazzy/aav/bags/ ~/aav-bags/jetson/</code>, and
 <code>~/aav-bags/</code> from LOCALIZATION and the Orin the same way.</p>
+</section>
+<section class="card"><h2 id="session-11-the-ubuntu-pc">Session 11: the Ubuntu PC</h2>
+<p>The team's x86 Ubuntu PC with the NVIDIA card: CARLA's computer, and the one computer
+that can take a <strong>full disk image of the Orin</strong>. A Mac can't do either.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Job</th>
+<th>Where</th>
+<th>When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Rehearse car day in CARLA</strong></td>
+<td>at home</td>
+<td>before the day (11a)</td>
+</tr>
+<tr>
+<td><strong>The Orin's full disk image</strong> (<code>l4t_backup_restore.sh</code>)</td>
+<td>at the car</td>
+<td>the day, before anything changes (11b)</td>
+</tr>
+<tr>
+<td><strong>A second ground station</strong>: record, replay, build NDT's map on the spot</td>
+<td>at the car</td>
+<td>the day (11c)</td>
+</tr>
+<tr>
+<td>Reflash the Orin with SDK Manager (Q24)</td>
+<td>anywhere</td>
+<td><strong>only if the hardware lead decides</strong>: not this day</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="11a-at-home-the-week-before">11a. At home, the week before</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>You should see</th>
+<th>If not</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>lsb_release -d; nvidia-smi; df -h ~</code></td>
+<td>Ubuntu 22.04 or 24.04; the GPU and its memory; 200 GB free</td>
+<td>CARLA 0.10 needs 16 GB of video memory: else 0.9.16 (<a href="carla.html">CARLA</a>)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Clone ecolo-av, then <code>pixi run build</code> and <code>pixi run test</code></td>
+<td>all green</td>
+<td>as on any laptop (<a href="getting-started.html">Getting started</a>)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>CARLA's server, headless (<a href="carla.html">CARLA</a>, steps 1-2)</td>
+<td>the server listens on 2000</td>
+<td>the driver: 550 or newer</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>The rehearsal:</strong> <code>pixi run carla-car host:=127.0.0.1</code>, then the car day's own steps: the keyboard, a scripted drive, a Nav2 goal, a goal behind (the U-turn)</td>
+<td>the car drives each, in CARLA</td>
+<td>write down what failed: fix it before the day</td>
+</tr>
+<tr>
+<td>5</td>
+<td>NVIDIA's L4T BSP <strong>matching the Orin's release</strong> (session 4a, step 2: R36.4.x), unpacked; then <code>sudo ./tools/l4t_flash_prerequisites.sh</code> in it. Read <code>tools/backup_restore/README</code> there</td>
+<td><code>l4t_backup_restore.sh</code></td>
+<td>NVIDIA's Jetson Linux archive</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Make room for the image: the Orin's disk size, plus 10 %</td>
+<td>free space on the PC or an external drive</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="11b-at-the-car-the-orins-full-image">11b. At the car: the Orin's full image</h3>
+<p>Ask the hardware lead first: the Orin reboots into recovery mode, and the car's computer
+is off for the whole copy.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>You should see</th>
+<th>If not</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>The home folder and <code>/etc</code> copied first (session 4a, 4-5)</td>
+<td>done</td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td>USB-C from the PC to the Orin's flashing port; the Orin into <strong>recovery mode</strong> (its buttons: the dev kit's guide)</td>
+<td><code>lsusb</code> on the PC shows NVIDIA (<code>0955:</code>)</td>
+<td>the cable: a data cable, the right port</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>sudo ./tools/backup_restore/l4t_backup_restore.sh -e &lt;disk&gt; -b jetson-agx-orin-devkit</code> (in the BSP folder; <code>&lt;disk&gt;</code> is <code>mmcblk0</code> on the built-in storage, <code>nvme0n1</code> on an SSD: 4a, step 3's <code>df</code>). The README is the authority</td>
+<td>it copies every partition (30-90 min)</td>
+<td>the BSP's version must match the Orin's</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Reboot the Orin normally; <code>ssh</code> in</td>
+<td>it boots as before</td>
+<td>the hardware lead</td>
+</tr>
+<tr>
+<td>5</td>
+<td>The image onto the encrypted backup drive too</td>
+<td>two copies</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="11c-at-the-car-the-second-ground-station">11c. At the car: the second ground station</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>On the car's network, domain 42: <code>pixi run doctor</code>, then <code>pixi run hud</code> or Foxglove</td>
+<td>a bigger screen than the laptop's</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Copy each recording off the Orin as it ends (session 10's <code>rsync</code>)</td>
+<td>the recordings in two places</td>
+</tr>
+<tr>
+<td>3</td>
+<td>After the lot's recording (tests.md 4.19): <code>pixi run ndt-map build ... --poses /localization/odom/global</code></td>
+<td><strong>NDT's map before leaving</strong>: if it blurs, record again while the car is there</td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="before-you-leave-the-car">Before you leave the car</h2>
 <div class="table-wrap"><table>

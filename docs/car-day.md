@@ -36,6 +36,7 @@ done or built; this page is the rest, **in order**.
 | 8 | [Foxglove from a laptop](#session-8-foxglove-from-a-laptop) | anyone | 15 min | 4 | |
 | 9 | [The first drive, on stands](#session-9-the-first-drive-on-stands) | safety driver, e-stop person, laptop person | 45 min | 1, 4, 6 (or the C++) | H1, S1-S3 |
 | 10 | [What to record](#session-10-what-to-record) | the laptop person | all day | 4 | |
+| 11 | [The Ubuntu PC](#session-11-the-ubuntu-pc): CARLA rehearsal (at home), the Orin's full image, a second ground station | the PC person | 11a: an evening; 11b: 1-2 h | 4 | 11b: the hardware lead's OK |
 
 ## The machines
 
@@ -52,6 +53,7 @@ Access → search the entry → Show password). Every address is `192.168.1.x`.
 | CAM2-PI | .118 | `aav-cam2` | MediaMTX with a USB camera |
 | the ESP32 | .132 (WiFi) | none | the 2025-26 C++ firmware: **no command timeout** |
 | the Velodyne | .201 | none | sends to the Orin |
+| **the team's Ubuntu PC** (x86, NVIDIA) | ☐ write it here | ☐ | ours: CARLA, the Orin's image, a ground station (session 11) |
 
 Our stack runs in **ROS domain 42**, so it never mixes with theirs (domain 0).
 
@@ -73,6 +75,7 @@ Our stack runs in **ROS domain 42**, so it never mixes with theirs (domain 0).
 | ☐ | a printed checkerboard on a stiff board (9 x 6 inner corners, 25 mm squares) | session 5 |
 | ☐ | 2 phones: a stopwatch, and one to film | session 5 |
 | ☐ | the backup drive (encrypted: the backups hold passwords) | sessions 4, 6 |
+| ☐ | **the Ubuntu PC**, its power, a screen and keyboard, a USB-C data cable for the Orin's flashing port | session 11 |
 
 ## Session 0: before leaving (at home)
 
@@ -259,8 +262,8 @@ dongle in, then `pixi run doctor` (it should find the car's network).
 | 4 | On the laptop, a second terminal: `rsync -a --exclude .cache --exclude aav-jazzy <user>@192.168.1.140:/home/<user>/ ~/aav-backup/jetson-$(date +%F)/home/` | it copies (1-3 h); go on meanwhile | it stops: run it again, it resumes |
 | 5 | `/etc`: `ssh <user>@192.168.1.140 'sudo tar czf /tmp/etc.tgz /etc'`, then `scp` it to the same folder, then `sudo rm /tmp/etc.tgz` | `etc.tgz`, under 50 MB | no sudo: skip, write it down |
 
-The full disk image (`l4t_backup_restore.sh`) needs an x86 Ubuntu PC: not today. It comes
-before the reflash (T1.3), never after.
+The full disk image (`l4t_backup_restore.sh`) needs an x86 Ubuntu PC: the team's,
+[session 11b](#11b-at-the-car-the-orins-full-image). It comes before any reflash (T1.3), never after.
 
 ### 4b. Our stack, from the stick
 
@@ -561,6 +564,50 @@ the sensors' real noise (T2.4) and the replay (T2.5). Bags stay out of git.
 
 Copy home: `rsync -a <user>@192.168.1.140:aav-jazzy/aav/bags/ ~/aav-bags/jetson/`, and
 `~/aav-bags/` from LOCALIZATION and the Orin the same way.
+
+## Session 11: the Ubuntu PC
+
+The team's x86 Ubuntu PC with the NVIDIA card: CARLA's computer, and the one computer
+that can take a **full disk image of the Orin**. A Mac can't do either.
+
+| Job | Where | When |
+|---|---|---|
+| **Rehearse car day in CARLA** | at home | before the day (11a) |
+| **The Orin's full disk image** (`l4t_backup_restore.sh`) | at the car | the day, before anything changes (11b) |
+| **A second ground station**: record, replay, build NDT's map on the spot | at the car | the day (11c) |
+| Reflash the Orin with SDK Manager (Q24) | anywhere | **only if the hardware lead decides**: not this day |
+
+### 11a. At home, the week before
+
+| # | Do | You should see | If not |
+|---|---|---|---|
+| 1 | `lsb_release -d; nvidia-smi; df -h ~` | Ubuntu 22.04 or 24.04; the GPU and its memory; 200 GB free | CARLA 0.10 needs 16 GB of video memory: else 0.9.16 ([CARLA](carla.md)) |
+| 2 | Clone ecolo-av, then `pixi run build` and `pixi run test` | all green | as on any laptop ([Getting started](getting-started.md)) |
+| 3 | CARLA's server, headless ([CARLA](carla.md), steps 1-2) | the server listens on 2000 | the driver: 550 or newer |
+| 4 | **The rehearsal:** `pixi run carla-car host:=127.0.0.1`, then the car day's own steps: the keyboard, a scripted drive, a Nav2 goal, a goal behind (the U-turn) | the car drives each, in CARLA | write down what failed: fix it before the day |
+| 5 | NVIDIA's L4T BSP **matching the Orin's release** (session 4a, step 2: R36.4.x), unpacked; then `sudo ./tools/l4t_flash_prerequisites.sh` in it. Read `tools/backup_restore/README` there | `l4t_backup_restore.sh` | NVIDIA's Jetson Linux archive |
+| 6 | Make room for the image: the Orin's disk size, plus 10 % | free space on the PC or an external drive | |
+
+### 11b. At the car: the Orin's full image
+
+Ask the hardware lead first: the Orin reboots into recovery mode, and the car's computer
+is off for the whole copy.
+
+| # | Do | You should see | If not |
+|---|---|---|---|
+| 1 | The home folder and `/etc` copied first (session 4a, 4-5) | done | |
+| 2 | USB-C from the PC to the Orin's flashing port; the Orin into **recovery mode** (its buttons: the dev kit's guide) | `lsusb` on the PC shows NVIDIA (`0955:`) | the cable: a data cable, the right port |
+| 3 | `sudo ./tools/backup_restore/l4t_backup_restore.sh -e <disk> -b jetson-agx-orin-devkit` (in the BSP folder; `<disk>` is `mmcblk0` on the built-in storage, `nvme0n1` on an SSD: 4a, step 3's `df`). The README is the authority | it copies every partition (30-90 min) | the BSP's version must match the Orin's |
+| 4 | Reboot the Orin normally; `ssh` in | it boots as before | the hardware lead |
+| 5 | The image onto the encrypted backup drive too | two copies | |
+
+### 11c. At the car: the second ground station
+
+| # | Do | For |
+|---|---|---|
+| 1 | On the car's network, domain 42: `pixi run doctor`, then `pixi run hud` or Foxglove | a bigger screen than the laptop's |
+| 2 | Copy each recording off the Orin as it ends (session 10's `rsync`) | the recordings in two places |
+| 3 | After the lot's recording (tests.md 4.19): `pixi run ndt-map build ... --poses /localization/odom/global` | **NDT's map before leaving**: if it blurs, record again while the car is there |
 
 ## Before you leave the car
 

@@ -19,6 +19,7 @@ Ben, 1 Nov: "do all the ideas. I like them all but car day. Keep that in a list 
 | 62 | **Reversing and the U-turn on the car** | ✅ 1 Nov (Ben: "reverse and uturn should be in"): `reversing:=true` on the car again where the lidar sees behind; its planner the lattice (Hybrid-A* forward only). Tests: stands 3.2b, ground 4.23-4.26 (tests.md 4f). ⬜ car day: run them. Until H5, the speed's sign is the command's |
 | 63 | **The ground plan: maps and scores from the first drive** | ✅ 1 Nov: [tests.md 4e](docs/tests.md#4e-record-the-lot-the-maps-and-the-scores) (record with the lidar, the wheel diameter, NDT's map, score the trials on replay) and the stack for every ground test, pinned by `test_car_launch.py`. `tools/record.sh --lidar`; `ndt-map build --poses` for a real drive. No `best:=true`: the best of the trials *is* the defaults |
 | 64 | **Set the datum to the test lot** (`navsat.yaml`, a placeholder near Carleton) | ⬜ once the lot is chosen: before the first recording |
+| 66 | **The team's Ubuntu PC on car day** (CARLA, the Orin's full image, a second ground station) | ✅ 1 Nov: [car day session 11](docs/car-day.md#session-11-the-ubuntu-pc). ⬜ fill in: its Ubuntu version, GPU, address; 11a the week before |
 | 65 | **The 2024-25 / 2025-26 drive recording** (Humble): find it; if it has the lidar, NDT's map of that lot | ⬜ Ben: who has it |
 
 ## Friday 30 October: the lattice, fairly
