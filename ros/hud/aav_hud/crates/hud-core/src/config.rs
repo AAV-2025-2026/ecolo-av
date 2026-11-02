@@ -1,4 +1,4 @@
-//! The HUD's settings: every topic name, and when a topic counts as stale.
+//! The HUD's settings: every topic name, when a topic counts as stale, and the colours.
 //!
 //! They live in `config/hud.yaml`, a ROS parameters file. The program carries a copy of
 //! it as its defaults ([`HudConfig::default`]), so no topic name is written in the code.
@@ -8,6 +8,8 @@ use std::time::Duration;
 
 use serde::Deserialize;
 use thiserror::Error;
+
+use crate::theme::ThemeName;
 
 /// `config/hud.yaml`, built in.
 pub const BUILT_IN_YAML: &str = include_str!("../../../config/hud.yaml");
@@ -91,6 +93,8 @@ pub struct HudConfig {
     pub heartbeat_topic: String,
     /// Seconds without a message before a topic shows STALE.
     pub stale_after: f64,
+    /// The colours (`hud_core::theme`).
+    pub theme: ThemeName,
 }
 
 /// Why a settings file can't be used.
@@ -187,6 +191,7 @@ mod tests {
     fn the_built_in_file_reads() {
         let c = HudConfig::from_yaml(BUILT_IN_YAML).expect("config/hud.yaml must parse");
         assert!(c.stale_after() > Duration::ZERO);
+        assert_eq!(c.theme, ThemeName::Mocha);
         // Every name is absolute (docs/conventions.md), and none is empty.
         for t in Topic::LISTENED.into_iter().chain(Topic::UNLISTED) {
             assert!(c.topic(t).starts_with('/'), "{t:?}: {}", c.topic(t));
@@ -212,5 +217,13 @@ mod tests {
             HudConfig::from_yaml(&bad),
             Err(ConfigError::StaleAfter(_))
         ));
+        let bad = BUILT_IN_YAML.replace("theme: mocha", "theme: purple");
+        assert!(matches!(
+            HudConfig::from_yaml(&bad),
+            Err(ConfigError::Yaml(_))
+        ));
+        let light = BUILT_IN_YAML.replace("theme: mocha", "theme: latte");
+        let c = HudConfig::from_yaml(&light).expect("latte is a theme");
+        assert_eq!(c.theme, ThemeName::Latte);
     }
 }
