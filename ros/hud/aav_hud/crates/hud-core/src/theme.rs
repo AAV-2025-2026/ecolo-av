@@ -348,8 +348,8 @@ pub const MOCHA: Theme = {
         panel: SURFACE0.alpha(184),
         glass_edge: TEXT.alpha(30),
         glass_shine: TEXT.alpha(16),
-        overlay: MANTLE.alpha(215),
-        overlay_strong: MANTLE.alpha(240),
+        overlay: MANTLE.alpha(212),
+        overlay_strong: MANTLE.alpha(220),
         track: CRUST.alpha(170),
         camera_back: CRUST,
 
@@ -435,8 +435,8 @@ pub const LATTE: Theme = {
         panel: Rgba::WHITE.alpha(175),
         glass_edge: TEXT.alpha(30),
         glass_shine: Rgba::WHITE.alpha(200),
-        overlay: Rgba::WHITE.alpha(225),
-        overlay_strong: Rgba::WHITE.alpha(240),
+        overlay: Rgba::WHITE.alpha(220),
+        overlay_strong: Rgba::WHITE.alpha(228),
         track: SURFACE0.alpha(200),
         camera_back: TEXT,
 
