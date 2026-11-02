@@ -33,7 +33,7 @@ The watchdog works through a twist_mux lock (priority 30, in `aav_command_mux`).
 | `DISAGREE` | the wheels' speed or turn against the IMU and the GPS (`wheel_check.py`). Latched |
 | `LOST` | a `latch` input (the HUD) dropped out after its start-up. Latched |
 
-A person clears latched faults: `pixi run watchdog-clear`. More in
+A person clears latched faults: `pixi run clear watchdog`. More in
 `docs/simulation.md` ("Sensor failures on purpose").
 
 ## Interface
@@ -68,7 +68,7 @@ Parameters (`config/stop_hold.yaml`): `clear_time` (s, 1.0), `rate_hz` (10).
 | out | `/safety/geofence/lock`, at `rate_hz` | `std_msgs/Bool`: twist_mux's `geofence` lock (priority 51, fail-safe 1 s) |
 | out | `/safety/geofence/state`, at `rate_hz` | `std_msgs/String`: `STATE: why` |
 | out | `/safety/geofence/fence` | `geometry_msgs/PolygonStamped`, map frame, transient local |
-| serves | `/safety/geofence/clear` | `std_srvs/Trigger`: a person clears OUTSIDE or JUMP (`pixi run geofence-clear`) |
+| serves | `/safety/geofence/clear` | `std_srvs/Trigger`: a person clears OUTSIDE or JUMP (`pixi run clear geofence`) |
 
 | State | Lock | Lets go |
 |---|---|---|

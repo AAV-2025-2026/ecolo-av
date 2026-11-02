@@ -371,7 +371,7 @@ impl Ui {
         let (b, t) = (f.buttons, self.theme);
         if state.estop_on() {
             return (
-                "E-STOP ON: nothing is sent. A person clears it (pixi run estop-clear); then \
+                "E-STOP ON: nothing is sent. A person clears it (pixi run clear estop); then \
                  let GO go, and press Speed + again"
                     .to_owned(),
                 t.bad,

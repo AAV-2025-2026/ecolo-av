@@ -109,9 +109,9 @@ devices; commands from the Motor-Pi's UART (default) or CAN
 
 | Command | Does |
 |---|---|
-| `pixi run esp-tools` | installs it for your user, once (needs rustup) |
-| `pixi run esp-build` | builds the program |
-| `pixi run esp-flash` | flashes it on the USB cable: bench only (`docs/esp32-bench.md`) |
+| `pixi run esp tools` | installs it for your user, once (needs rustup) |
+| `pixi run esp build` | builds the program |
+| `pixi run esp flash` | flashes it on the USB cable: bench only (`docs/esp32-bench.md`) |
 
 Untested on the board: nothing has been flashed yet. The C++ stays until it is proven.
 
@@ -123,9 +123,9 @@ The pin maps, the wiring rules, and what is untested: `docs/rust-firmware.md`.
 
 | Board | Does | Build a UF2 | Flash through a probe |
 |---|---|---|---|
-| `boards/pico2` | the spine, on the bench: `spine-board`, and CAN through an MCP2515, every 10 ms. The car's chip is still Q10-Q13 | `pixi run spine-uf2` | `pixi run spine-flash` |
-| `boards/wheel-encoder-pico2` | the wheel encoder: spokes to the Motor Pi over UDP, through a W5500. Replaces the 2025-26 C++ one | `pixi run wheel-uf2` | `pixi run wheel-flash` |
-| `boards/sentinel-pico2` | the status display: an I2C device at 0x42; an LCD, a matrix, LEDs, a buzzer. Replaces the 2025-26 C++ one | `pixi run sentinel-uf2` | `pixi run sentinel-flash` |
+| `boards/pico2` | the spine, on the bench: `spine-board`, and CAN through an MCP2515, every 10 ms. The car's chip is still Q10-Q13 | `pixi run pico spine build` | `pixi run pico spine flash` |
+| `boards/wheel-encoder-pico2` | the wheel encoder: spokes to the Motor Pi over UDP, through a W5500. Replaces the 2025-26 C++ one | `pixi run pico wheel build` | `pixi run pico wheel flash` |
+| `boards/sentinel-pico2` | the status display: an I2C device at 0x42; an LCD, a matrix, LEDs, a buzzer. Replaces the 2025-26 C++ one | `pixi run pico sentinel build` | `pixi run pico sentinel flash` |
 
 The UF2 file lands in the board's folder: hold BOOTSEL, plug the Pico 2 in, drag it on.
-Flashing through a probe needs `pixi run spine-tools` once.
+Flashing through a probe needs `pixi run pico spine tools` once.

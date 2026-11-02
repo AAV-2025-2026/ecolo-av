@@ -118,7 +118,7 @@ Already installed? Just the screens: `bash ~/aav-jazzy/aav/tools/car_screens_ins
 >
 > **Latched (24 Oct).** Once the HUD has run 5 s, a crash, freeze or stop holds Nav2
 > even after systemd restarts it: the screen says **AUTO STOP, HUD LOST**. A person
-> checks the screen, then `pixi run watchdog-clear`.
+> checks the screen, then `pixi run clear watchdog`.
 
 ## The 2025-26 way, for comparison
 

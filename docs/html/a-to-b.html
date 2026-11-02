@@ -107,7 +107,7 @@ request's "accelerate / hold / stop" demo, and the first step to GPS point-to-po
 <li>A straight drive in an empty lot needs <strong>no costmap and no map</strong>: only "where am I" and "where is B".</li>
 <li>The hard part isn't the driving. It's <strong>knowing where the car is and which way it faces</strong> at the start.</li>
 <li>Test it on the turtle, then the bench, then Gazebo, then the car on stands, then the car.</li>
-<li><strong><code>pixi run atob-score</code></strong> scores a recorded run: speeding up, holding, the stop on B (<a href="#scoring-a-run">Scoring a run</a>).</li>
+<li><strong><code>pixi run measure atob</code></strong> scores a recorded run: speeding up, holding, the stop on B (<a href="#scoring-a-run">Scoring a run</a>).</li>
 </ul>
 </blockquote></div>
 <section class="card"><h2 id="1-the-three-ways">1. The three ways</h2>
@@ -399,13 +399,13 @@ pixi run sim-check --drive-to-point-only                   # the Gazebo proof be
 </table></div>
 <p>Untested on the bench and on the car: the car needs the brake test (4.3) for <code>max_brake</code> first.</p>
 <h3 id="scoring-a-run">Scoring a run</h3>
-<p><code>pixi run atob-score</code> turns one recorded run into numbers: how well the car sped up, held
+<p><code>pixi run measure atob</code> turns one recorded run into numbers: how well the car sped up, held
 its speed, and stopped on B. The same numbers for Gazebo and for the car.</p>
-<pre class="highlight"><code class="language-bash">pixi run atob-score bags/&lt;run&gt;                              # B from the point driver's feedback
-pixi run atob-score bags/&lt;run&gt; --b-latlon 45.38630 -75.69580  # or give B (or --b-xy X Y)
-pixi run atob-score bags/&lt;run&gt; --taped -0.12 0.05           # the car: the tape's stop error
-pixi run atob-score run1.csv run2.csv --json                # CSV runs; JSON out
-pixi run atob-score bags/&lt;run&gt; --save-csv run.csv           # the run as CSV, to share</code></pre>
+<pre class="highlight"><code class="language-bash">pixi run measure atob bags/&lt;run&gt;                              # B from the point driver's feedback
+pixi run measure atob bags/&lt;run&gt; --b-latlon 45.38630 -75.69580  # or give B (or --b-xy X Y)
+pixi run measure atob bags/&lt;run&gt; --taped -0.12 0.05           # the car: the tape's stop error
+pixi run measure atob run1.csv run2.csv --json                # CSV runs; JSON out
+pixi run measure atob bags/&lt;run&gt; --save-csv run.csv           # the run as CSV, to share</code></pre>
 <p>The stop error is measured on the line from A to B:</p>
 <pre class="highlight"><code class="language-text">                         + left
    A ───────────────────── B ──► + past B

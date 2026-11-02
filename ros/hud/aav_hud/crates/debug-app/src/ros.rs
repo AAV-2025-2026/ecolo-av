@@ -1142,7 +1142,7 @@ mod tests {
     /// Against a running simulator (not run by default): the node with the built-in
     /// topics, for `secs` seconds (DEBUG_HUD_LIVE_SECS, 20), printing what the panel and
     /// the cubes would show, then asking the track node for `lqr` and printing its answer.
-    /// `pixi run debugdemo` without a screen: start the sim headless on a domain, then
+    /// `pixi run demo --debug` without a screen: start the sim headless on a domain, then
     /// `cargo test --release -p debug-app -- --ignored --nocapture live_sim` on it.
     #[test]
     #[ignore]

@@ -76,7 +76,7 @@ Files:
 | Folder | Holds |
 |---|---|
 | `config/nav2.yaml` | every server's parameters |
-| `config/lattice_ackermann.json` | the State Lattice planner's moves for our car (`planner:=lattice`): made by Nav2's generator, `pixi run lattice-primitives` (`tools/lattice_primitives.py`); never edit by hand. `lattice_ackermann_32.json`: the same with 32 headings, a trial (`--headings 32`, `lattice_headings:=32`) |
+| `config/lattice_ackermann.json` | the State Lattice planner's moves for our car (`planner:=lattice`): made by Nav2's generator, `pixi run python3 tools/lattice_primitives.py` (`tools/lattice_primitives.py`); never edit by hand. `lattice_ackermann_32.json`: the same with 32 headings, a trial (`--headings 32`, `lattice_headings:=32`) |
 | `config/amcl.yaml` | AMCL, the trial (`amcl:=true`): `tf_broadcast: false`, the lidar scan, base_link |
 | `behavior_trees/` | `navigate_to_pose_car.xml`, `navigate_through_poses_car.xml`, and `*_car_reversing.xml` twins with BackUp. The to-pose trees keep their path within 8 m of the goal (`vehicle.final_approach`, TODO 17) |
 | `maps/` | `empty` and `example_lot` maps and their specs ([maps/README.md](./maps/README.md)) |
@@ -117,4 +117,4 @@ pixi run build && colcon test --packages-select aav_navigation && colcon test-re
 Quick, without ROS: `cd ros/drivers/aav_navigation && python3 -m pytest -q`
 (`tools/test.sh` runs it). `test/test_behavior_trees.py` checks the twins, no spin, and the final approach.
 `pixi run test` runs everything. In Gazebo: `pixi run sim-check`; to compare the
-controllers: `pixi run controller-compare`.
+controllers: `pixi run measure controllers`.

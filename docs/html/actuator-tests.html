@@ -195,7 +195,7 @@ slot: below every person (joystick, RC, keyboard), above Nav2 and every other pr
 <td>sideways drift; <code>steer_offset</code></td>
 </tr>
 <tr>
-<td><code>preflight</code></td>
+<td><code>actuator-test preflight --stands</code></td>
 <td>3.P</td>
 <td>stands</td>
 <td>speed up, hold, slow, brake; steer left, right, centre; every sensor counted</td>
@@ -698,10 +698,10 @@ pull request, with the sheet's photo; the hardware lead reviews it.</p>
 <section class="card"><h2 id="the-preflight-on-stands">The preflight on stands</h2>
 <p>One run before the car goes on the ground (Ben, 29 Oct; the design:
 <code>docs/designs/2026-10-29_preflight.md</code>). It drives and checks every sensor at once.</p>
-<pre class="highlight"><code class="language-bash">pixi run preflight --sim                          # Gazebo (pixi run sim first)
-pixi run preflight --bench                        # bench mode (pixi run bench first)
-pixi run preflight --no-drive --skip steering     # the car today: the sensors only
-pixi run preflight --skip steering gps lidar      # the car, once it has a rear-wheel speed</code></pre>
+<pre class="highlight"><code class="language-bash">pixi run actuator-test preflight --stands --sim                          # Gazebo (pixi run sim first)
+pixi run actuator-test preflight --stands --bench                        # bench mode (pixi run bench first)
+pixi run actuator-test preflight --stands --no-drive --skip steering     # the car today: the sensors only
+pixi run actuator-test preflight --stands --skip steering gps lidar      # the car, once it has a rear-wheel speed</code></pre>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -921,7 +921,7 @@ firmware keeps <code>default</code>. Try <code>smooth</code> here, in this order
 </tr>
 <tr>
 <td>After 4.1, 4.2, 4.4 (<code>max_accel</code>, <code>drag</code>)</td>
-<td><code>pixi run vehicle-model --set max_accel=... --set drag=... --speed-loop</code></td>
+<td><code>pixi run python3 tools/vehicle_model.py --set max_accel=... --set drag=... --speed-loop</code></td>
 <td><code>smooth</code> still 0% at K with the measured numbers; if not, redo its gains (pole placement, then b)</td>
 </tr>
 <tr>

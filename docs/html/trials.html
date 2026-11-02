@@ -105,7 +105,7 @@ and is <strong>scored on the same routes</strong>. It becomes the default only o
 <li><strong>Trackers</strong> (<code>aav_track</code>): pure pursuit, Stanley, LQR, MPC, and <code>mpc_full</code> (speed and steering together), in Nav2's own chain, in controller_server's place. <code>tracker:=lqr</code>.</li>
 <li><strong>AMCL</strong> (stock <code>nav2_amcl</code>): a particle filter on the map and the lidar, scored against the EKF, never steering. <code>amcl:=true</code>.</li>
 <li><strong>NDT</strong> (<code>aav_ndt</code>, ours in Rust): the lidar matched to a saved lidar map, scored against the EKF, never steering. <code>ndt:=true</code>.</li>
-<li><strong>Score:</strong> <code>pixi run controller-compare --trackers pure_pursuit lqr --runs 3</code>.</li>
+<li><strong>Score:</strong> <code>pixi run measure controllers --trackers pure_pursuit lqr --runs 3</code>.</li>
 <li><strong>Results (29 Oct, Gazebo, 3 runs):</strong> pure pursuit, Stanley and MPC finished every leg; MPPI, RPP and LQR lost legs on the U-turn. AMCL lost itself; the EKF wins. <a href="#results-29-october">Results</a>.</li>
 <li><strong>NDT</strong>, 29 Oct: about 1-3 cm off on the lot tour, 2 ms a match (below).</li>
 <li><strong>NDT into the global EKF</strong> (<code>ndt_ekf:=true</code>), 30 Oct: the EKF <strong>17 cm → 1.6 cm</strong> off; with the GPS off, 1.2 m → 1.6 cm. <a href="#ndt-into-the-global-ekf-30-oct">Results</a>.</li>
@@ -253,22 +253,22 @@ e-stops.</p>
 <section class="card"><h2 id="run-it">Run it</h2>
 <pre class="highlight"><code class="language-bash">pixi run sim world:=test_lot reversing:=false tracker:=mpc      # watch one
 pixi run sim world:=test_lot amcl:=true                         # AMCL beside the EKF
-pixi run controller-compare --trackers pure_pursuit stanley lqr mpc mpc_full --controllers mppi --runs 3
-pixi run controller-compare --amcl                              # score AMCL too
+pixi run measure controllers --trackers pure_pursuit stanley lqr mpc mpc_full --controllers mppi --runs 3
+pixi run measure controllers --amcl                              # score AMCL too
 pixi run ndt-map drive                                          # NDT's map, once (~6 min)
-pixi run controller-compare --amcl --ndt                        # score NDT beside AMCL
-pixi run controller-compare --ndt-ekf --runs 3 --tours lot      # NDT into the global EKF
+pixi run measure controllers --amcl --ndt                        # score NDT beside AMCL
+pixi run measure controllers --ndt-ekf --runs 3 --tours lot      # NDT into the global EKF
 pixi run sim-check --lidar-obstacle --voxels                     # the cubes stop for a post?
-pixi run controller-compare --voxels --tours lot                 # the lot tour on cubes
+pixi run measure controllers --voxels --tours lot                 # the lot tour on cubes
 pixi install --locked -e kiss                                   # KISS-ICP, once
-pixi run controller-compare --kiss-icp --tours lot --controllers mppi   # its drift vs ekf_local
-pixi run controller-compare --kiss-ekf --tours lot --controllers mppi   # ekf_local with its twist
+pixi run measure controllers --kiss-icp --tours lot --controllers mppi   # its drift vs ekf_local
+pixi run measure controllers --kiss-ekf --tours lot --controllers mppi   # ekf_local with its twist
 pixi run sim-check --kiss-ekf                                   # the road world, kiss_ekf:=true</code></pre>
 </section>
 <section class="card"><h2 id="results">Results</h2>
 <p>Each run's results go here, with its date and its folder in <code>log/controller-compare/</code>.</p>
 <h3 id="29-oct-0400-ndt-and-amcl-beside-the-ekf-one-run-mppi-the-lot-tour">29 Oct, 04:00: NDT and AMCL beside the EKF (one run, MPPI, the lot tour)</h3>
-<p><code>controller-compare --tours lot --controllers mppi --amcl --ndt</code>, on the map
+<p><code>measure controllers --tours lot --controllers mppi --amcl --ndt</code>, on the map
 <code>ndt-map drive</code> made at 03:55 (169,121 points, 2,450 clouds). Off = from Gazebo's truth.</p>
 <div class="table-wrap"><table>
 <thead>
@@ -328,7 +328,7 @@ pixi run sim-check --kiss-ekf                                   # the road world
   not fitted yet.</li>
 </ul>
 <h3 id="29-oct-afternoon-amcl-tuned-and-why-it-was-lost">29 Oct, afternoon: AMCL tuned, and why it was lost</h3>
-<p>Each run: <code>controller-compare --tours lot --controllers mppi --amcl</code>, with a bag of the
+<p>Each run: <code>measure controllers --tours lot --controllers mppi --amcl</code>, with a bag of the
 scan, the truth and AMCL beside it (<code>ros2 bag record</code>, not in git). Off = from Gazebo's truth.</p>
 <p><strong>What the bags showed:</strong></p>
 <div class="table-wrap"><table>
@@ -661,7 +661,7 @@ checked on the 3 <code>ekf2</code> runs (6,442):</p>
 </tbody>
 </table></div>
 <p>NEES = e′P⁻¹e, e the error from the truth, P the covariance published. Around 3: the
-spread matches the errors. <code>controller-compare --ndt</code> prints it, and the k that would
+spread matches the errors. <code>measure controllers --ndt</code> prints it, and the k that would
 make it 3, after every run.</p>
 <h3 id="keeping-bad-matches-out-of-the-ekf">Keeping bad matches out of the EKF</h3>
 <div class="table-wrap"><table>
@@ -714,11 +714,11 @@ NDT starts again from <code>ekf_global</code>'s pose. The first fit after a rest
 <li>Before it goes on the car: the trials' rule (<a href="#before-a-winner-goes-on-the-car">below</a>).</li>
 </ul>
 <pre class="highlight"><code class="language-bash">pixi run ndt-map drive                                     # the map, once
-pixi run controller-compare --ndt --runs 3 --tours lot      # NDT beside: the EKF on GPS alone
-pixi run controller-compare --ndt-ekf --runs 3 --tours lot  # NDT into the EKF
-pixi run controller-compare --ndt-ekf --gps-off --tours lot # the GPS stops after its first fix</code></pre>
+pixi run measure controllers --ndt --runs 3 --tours lot      # NDT beside: the EKF on GPS alone
+pixi run measure controllers --ndt-ekf --runs 3 --tours lot  # NDT into the EKF
+pixi run measure controllers --ndt-ekf --gps-off --tours lot # the GPS stops after its first fix</code></pre>
 <h3 id="30-oct-kiss-icp-beside-ekf_local-one-run-mppi-the-lot-tour">30 Oct: KISS-ICP beside ekf_local (one run, MPPI, the lot tour)</h3>
-<p><code>pixi run controller-compare --kiss-icp --tours lot --controllers mppi</code>, headless, on Ben's
+<p><code>pixi run measure controllers --kiss-icp --tours lot --controllers mppi</code>, headless, on Ben's
 Mac (Apple silicon), another Gazebo run just finished. Folders <code>log/kiss-run1/</code> and
 <code>log/kiss-run2/</code> (not in git).</p>
 <p><strong>First try: the ground left in.</strong> KISS-ICP read <strong>12 m for 21 m</strong> driven and 65° for an 85°
@@ -861,7 +861,7 @@ and the next scan takes it back. Over 0.1 s, 1.5 cm is 0.15 m/s.</p>
 </tbody>
 </table></div>
 <h3 id="the-drift-the-lot-tour-mppi-one-run-each">The drift (the lot tour, MPPI, one run each)</h3>
-<p><code>controller-compare --kiss-icp</code> (off) and <code>--kiss-ekf</code> (on), headless on Ben's Mac, other
+<p><code>measure controllers --kiss-icp</code> (off) and <code>--kiss-ekf</code> (on), headless on Ben's Mac, other
 Gazebo and test runs beside it. Folders <code>log/kiss-ekf/</code> (not in git). MPPI lost the turn
 back in every run, so "driven" differs.</p>
 <div class="table-wrap"><table>
@@ -1235,7 +1235,7 @@ U-turn was the planner's clockwise loop, to the south wall.</p>
 <p>The run: Gazebo's test lot, the lot tour (4 legs), <strong>one run each</strong>, MPPI following,
 forward only, 1 m/s. Branch <code>planner-switch</code> (74544111), 23:13, a quiet Mac (load 4).
 Before each leg the planner alone was asked for the path, to time it and measure its
-turns. <code>pixi run controller-compare --planners hybrid lattice smac2d --tours lot</code>;
+turns. <code>pixi run measure controllers --planners hybrid lattice smac2d --tours lot</code>;
 results in <code>~/aav-runs/2026-10-29/planners-results/</code> on Ben's Mac (not in git).</p>
 <h3 id="the-whole-tour">The whole tour</h3>
 <div class="table-wrap"><table>
@@ -1347,7 +1347,7 @@ results in <code>~/aav-runs/2026-10-29/planners-results/</code> on Ben's Mac (no
 <p>The 29 Oct run again, fairly: <strong>reversing on</strong>, MPPI following (it follows backwards
 too; our trackers can't), 1 m/s, the lot tour. <code>lattice32</code> is the lattice on its new
 32-heading file (<code>lattice_headings:=32</code>). Branch <code>lattice-rerun</code>.</p>
-<pre class="highlight"><code class="language-bash">AAV_SIM_DOMAIN=224 pixi run controller-compare --planners lattice32 lattice hybrid \
+<pre class="highlight"><code class="language-bash">AAV_SIM_DOMAIN=224 pixi run measure controllers --planners lattice32 lattice hybrid \
     --reversing --tours lot --runs 3</code></pre>
 <p>Then one more run of each with every point of the plan kept (the cusp scoring, below).
 Results in <code>~/aav-runs/2026-10-30/lattice-rerun*/</code> on Ben's Mac (not in git).</p>
@@ -1553,7 +1553,7 @@ Gazebo on Ben's Mac, one run each, MPPI.</p>
 </table></div>
 <p>Cubes per cloud: <strong>4</strong> in the road world (the stop sign), <strong>15</strong> with the post (45 at
 most), <strong>1,067-1,378</strong> on the lot tour (walls, the building, parked cars).</p>
-<h3 id="the-lot-tour-controller-compare-tours-lot-controllers-mppi-with-and-without-voxels">The lot tour (<code>controller-compare --tours lot --controllers mppi</code>, with and without <code>--voxels</code>)</h3>
+<h3 id="the-lot-tour-measure-controllers-tours-lot-controllers-mppi-with-and-without-voxels">The lot tour (<code>measure controllers --tours lot --controllers mppi</code>, with and without <code>--voxels</code>)</h3>
 <div class="table-wrap"><table>
 <thead>
 <tr>

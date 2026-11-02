@@ -275,7 +275,7 @@ server checks it.</p>
 </tr>
 <tr>
 <td>Clearing the e-stop</td>
-<td><strong>never</strong>: a person runs <code>pixi run estop-clear</code></td>
+<td><strong>never</strong>: a person runs <code>pixi run clear estop</code></td>
 <td>it has no such tool</td>
 </tr>
 <tr>
@@ -499,8 +499,8 @@ the download. Its licence is Apache 2.0. Change it with <code>--model</code>.</p
 </table></div>
 <p>The first round (before those changes) scored 6, 21, 16, 21 and 15 of 23. The test is
 small (23 requests): one or two answers either way is noise.</p>
-<p>Run it again: <code>pixi run -e llm llm-eval</code> (all five), or
-<code>pixi run -e llm llm-eval --models mlx-community/Qwen3-8B-4bit --only fwd100 far5k</code>.</p>
+<p>Run it again: <code>pixi run -e llm tools/ros.sh python3 -m aav_language.run_eval</code> (all five), or
+<code>pixi run -e llm tools/ros.sh python3 -m aav_language.run_eval --models mlx-community/Qwen3-8B-4bit --only fwd100 far5k</code>.</p>
 <h3 id="licences">Licences</h3>
 <div class="table-wrap"><table>
 <thead>

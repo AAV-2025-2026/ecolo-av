@@ -132,9 +132,9 @@ Other parameters: `stale_after` (1.0 s), `speed_step` (0.1 m/s), `steer_step` (0
 | `pixi run map [fullscreen:=true] [monitor:=HDMI-1] [streets:=] [places:=]` | `map.launch.py`, with `vehicle.yaml` and `navsat.yaml` |
 | `cargo run -p hud-app --no-default-features -- --demo` | the HUD with pretend data, no ROS |
 | `cargo run -p map-app --no-default-features -- --demo [--bench 6]` | the map with pretend data; `--bench` prints the frame rate (the blur's test) |
-| `pixi run debug-hud`; `pixi run debugdemo` | `debug_hud.launch.py` (passes `--vehicle` and `--own-box`, the car's own box from `vehicle.self_box`); `demo` plus the debug HUD |
+| `pixi run debug-hud`; `pixi run demo --debug` | `debug_hud.launch.py` (passes `--vehicle` and `--own-box`, the car's own box from `vehicle.self_box`); `demo` plus the debug HUD |
 | `cargo run --release -p debug-app --no-default-features -- --demo [--bench-cubes 20000]` | the debug HUD with pretend data; the drawing test |
-| `pixi run hw-panel [stands:=true] [fullscreen:=true]`; `pixi run hw-panel-demo` | `hw_panel.launch.py` (localhost-only); the panel with a pretend car |
+| `pixi run hw-panel [stands:=true] [fullscreen:=true]`; `pixi run hw-panel --demo` | `hw_panel.launch.py` (localhost-only); the panel with a pretend car |
 | `hw_panel --self-test 0.3:8` | for checks: Speed + to 0.3 m/s, GO held 8 s, through the same buttons and rules; prints asked and seen |
 
 `sim.launch.py hud:=true` and `map:=true` start them too. On the car,
@@ -197,7 +197,7 @@ pixi run bash -c 'source install/setup.bash && export ROS_DOMAIN_ID=94 \
 ```
 
 The drawing test (the design's pass mark: 20,000 cubes at 30 fps or more, release build,
-a team Mac): `pixi run debug-hud-demo --bench-cubes 20000` prints the frame rate over 10 s.
+a team Mac): `pixi run debug-hud --demo --bench-cubes 20000` prints the frame rate over 10 s.
 Measured 29 Oct on Ben's Mac: **358 fps** (kept cubes, NDT's map and AMCL's particles on).
 
 `tools/test.sh` runs the logic's tests; `pixi run test` runs everything else.

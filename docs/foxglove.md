@@ -26,7 +26,7 @@ The bridge itself, `foxglove_bridge`, is MIT and already in our Pixi environment
 | Step | Do |
 |---|---|
 | 1 | Start a bridge: `pixi run sim foxglove:=true` (or `bench`, `carla-car`); on the car it runs already (the Orin's `foxglove` part) |
-| 2 | In the app: **Open connection → Foxglove WebSocket**, then `ws://localhost:8765` (a simulator here) or `ws://<the Orin's IP>:8765` (the car; `pixi run net-map` finds it) |
+| 2 | In the app: **Open connection → Foxglove WebSocket**, then `ws://localhost:8765` (a simulator here) or `ws://<the Orin's IP>:8765` (the car; `pixi run bash tools/net_map.sh` finds it) |
 | 3 | **Layouts → Import from file**: pick one from `tools/foxglove/` (below) |
 
 Lichtblick's Mac app isn't notarized: the first time, right-click it in Applications →
@@ -143,8 +143,8 @@ lets everything through.
 ## Check it without the app
 
 ```bash
-pixi run layout-check                       # the sim here: is every topic served?
-pixi run layout-check ws://192.168.1.140:8765 --data   # the car: and how much each sends
+pixi run python3 tools/layout_check.py                       # the sim here: is every topic served?
+pixi run python3 tools/layout_check.py ws://192.168.1.140:8765 --data   # the car: and how much each sends
 ```
 
 ## Tested
@@ -156,5 +156,5 @@ pixi run layout-check ws://192.168.1.140:8765 --data   # the car: and how much e
 | `pixi run bench foxglove:=true` | 22 of 26 served; the bench has no lidar unless `lidar:=true` |
 | A watch-only bridge (the car's settings) | publishing refused: "Server does not support clientPublish" |
 | The layouts in the Lichtblick app | the setting names were checked against Lichtblick 1.29's own code; not yet opened in the app by a person |
-| The cockpit, 1 Nov, road world, `foxglove:=true tracker:=pure_pursuit voxels:=true` | `layout-check`: every topic served but the GPS route and the scan (`voxels:=true` replaces it) and `/localization/gps/fix` (early); `/track/set_parameters` advertised; the chase camera 10 Hz, 200 kB/s. Opened in Lichtblick, but the Mac was locked: **no screenshot**, and the tracker panel and the switch list are **untested in the app** |
+| The cockpit, 1 Nov, road world, `foxglove:=true tracker:=pure_pursuit voxels:=true` | `python3 tools/layout_check.py`: every topic served but the GPS route and the scan (`voxels:=true` replaces it) and `/localization/gps/fix` (early); `/track/set_parameters` advertised; the chase camera 10 Hz, 200 kB/s. Opened in Lichtblick, but the Mac was locked: **no screenshot**, and the tracker panel and the switch list are **untested in the app** |
 | The car | **untested** |

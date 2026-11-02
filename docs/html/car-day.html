@@ -397,7 +397,7 @@ Access → search the entry → Show password). Every address is <code>192.168.1
 </tr>
 <tr>
 <td>2</td>
-<td><code>pixi run get-models</code> (once)</td>
+<td><code>pixi run get models</code> (once)</td>
 <td><code>models/rf-detr-nano.pth</code>, <code>models/yolo11n.pt</code></td>
 <td>the internet</td>
 </tr>
@@ -410,7 +410,7 @@ Access → search the entry → Show password). Every address is <code>192.168.1
 <tr>
 <td>4</td>
 <td><code>pixi run car-day-build</code></td>
-<td><code>v2: PASS</code>, <code>v1: PASS</code>, <code>esp-qemu-check: PASS</code>, <code>legacy-esp32: PASS</code>, <code>docs: PASS</code></td>
+<td><code>v2: PASS</code>, <code>v1: PASS</code>, <code>esp qemu-check: PASS</code>, <code>legacy-esp32: PASS</code>, <code>docs: PASS</code></td>
 <td>each step's log is in <code>car-day/esp32/</code></td>
 </tr>
 <tr>
@@ -427,7 +427,7 @@ Access → search the entry → Show password). Every address is <code>192.168.1
 </tr>
 <tr>
 <td>7</td>
-<td><code>pixi run net-map</code> and <code>pixi run doctor</code> once</td>
+<td><code>pixi run bash tools/net_map.sh</code> and <code>pixi run doctor</code> once</td>
 <td>macOS asks about the local network: <strong>Allow</strong></td>
 <td>System Settings → Privacy → Local Network</td>
 </tr>
@@ -526,7 +526,7 @@ entry exists.</p>
   OK       MediaMTX     vendor/mediamtx (to test a stream on the laptop)
   OK       ESP32 tools  Xtensa Rust, espflash (vendor/esp, vendor/cargo-tools)
   OK       ESP32 Rust   v2 and v1 built 24 Oct 2026 15:47, in car-day/esp32/
-  OK       ESP32 QEMU   esp-qemu-check passed 24 Oct 2026 15:47: brakes when the heartbeat stops
+  OK       ESP32 QEMU   esp qemu-check passed 24 Oct 2026 15:47: brakes when the heartbeat stops
   OK       ESP32 C++    the 2025-26 C++ builds (the way back), 24 Oct 2026 15:47
   REMIND   ESP32 C++    secrets.h has the placeholders: a C++ built again can't join the WiFi; the backup (session 6) restores it all
                         -&gt; firmware/legacy/aav_umod_esp32/src/secrets.h: the WiFi from the team, typed in, never committed
@@ -752,7 +752,7 @@ dongle in, then <code>pixi run doctor</code> (it should find the car's network).
 <td>1</td>
 <td><code>ssh &lt;user&gt;@192.168.1.140</code> (the user: <code>hosts.txt</code>, JETSON)</td>
 <td>a prompt on <code>ubuntu</code></td>
-<td><code>pixi run net-map</code>: the Orin's address may have changed</td>
+<td><code>pixi run bash tools/net_map.sh</code>: the Orin's address may have changed</td>
 </tr>
 <tr>
 <td>2</td>
@@ -1348,7 +1348,7 @@ Their <code>foxglove-bridge</code> already holds port 8765 on the Orin, so ours 
 <tbody>
 <tr>
 <td>1</td>
-<td>Theirs, read-only: <code>pixi run layout-check ws://192.168.1.140:8765</code></td>
+<td>Theirs, read-only: <code>pixi run python3 tools/layout_check.py ws://192.168.1.140:8765</code></td>
 <td>their topics (Humble, domain 0); ours aren't there</td>
 <td></td>
 </tr>
@@ -1360,7 +1360,7 @@ Their <code>foxglove-bridge</code> already holds port 8765 on the Orin, so ours 
 </tr>
 <tr>
 <td>3</td>
-<td><code>pixi run layout-check ws://192.168.1.140:8766 --data</code></td>
+<td><code>pixi run python3 tools/layout_check.py ws://192.168.1.140:8766 --data</code></td>
 <td>every layout topic of the running parts served, and kB/s each</td>
 <td>missing ones: their part isn't running</td>
 </tr>
@@ -1453,7 +1453,7 @@ Their <code>foxglove-bridge</code> already holds port 8765 on the Orin, so ours 
 </tbody>
 </table></div>
 <p>The HUD's GO / STOP panel says whether the car may move, and why not. A latched gate:
-<code>pixi run gate-clear</code>; a latched watchdog (such as <code>hud LOST</code>): <code>pixi run watchdog-clear</code>.</p>
+<code>pixi run clear gate</code>; a latched watchdog (such as <code>hud LOST</code>): <code>pixi run clear watchdog</code>.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -1497,7 +1497,7 @@ Their <code>foxglove-bridge</code> already holds port 8765 on the Orin, so ours 
 <tr>
 <td>3.5</td>
 <td>The HUD's e-stop button</td>
-<td>brakes at once; nothing moves until <code>pixi run estop-clear</code></td>
+<td>brakes at once; nothing moves until <code>pixi run clear estop</code></td>
 <td></td>
 </tr>
 <tr>
@@ -1550,7 +1550,7 @@ Their <code>foxglove-bridge</code> already holds port 8765 on the Orin, so ours 
 </tr>
 <tr>
 <td>3.P</td>
-<td><code>pixi run preflight --no-drive --skip steering gps lidar</code> (the Orin, ssh + tmux)</td>
+<td><code>pixi run actuator-test preflight --stands --no-drive --skip steering gps lidar</code> (the Orin, ssh + tmux)</td>
 <td>every sensor line PASS; nothing moves</td>
 <td>a FAIL names the sensor: its driver, its cable, its rate</td>
 </tr>
@@ -1559,7 +1559,7 @@ Their <code>foxglove-bridge</code> already holds port 8765 on the Orin, so ours 
 <p><strong>The preflight's drive</strong> (speed up, hold, brake, steer, every sensor at once) is refused
 on the car today: the wheel sensors are on the front, the motor drives the rear, so on
 stands nothing measures the spinning wheels (TODO 49b). Once a rear-wheel speed exists
-(<code>vehicle.yaml</code> <code>speed_wheels: rear</code>): <code>pixi run preflight --skip steering gps lidar</code>,
+(<code>vehicle.yaml</code> <code>speed_wheels: rear</code>): <code>pixi run actuator-test preflight --stands --skip steering gps lidar</code>,
 with the e-stop person and someone on the rear wheels' tachometer (<a href="actuator-tests.html#the-preflight-on-stands">the preflight</a>).</p>
 <p><strong>Not today: the car on the ground.</strong> That waits for tests 4.2 (<code>coast</code>) and 4.4 (<code>throttle-map</code>): they measure the drag and the throttle, and settle the 5 times disagreement (TODO 52b). Then the ground: <a href="tests.html#stage-4-the-car-in-an-empty-lot">Every test</a>, stage 4, recorded with the lidar (4e).</p>
 <p>Then put it back: Ctrl-C everything; theirs again (<code>sudo systemctl start aav_serial_bridge</code>)
@@ -1828,7 +1828,7 @@ reboots into recovery mode and is off for the whole copy. Not possible at the dr
 </tr>
 <tr>
 <td>The car's linear model, refit</td>
-<td><code>pixi run vehicle-model</code>: new poles and margins from the measured lags (<a href="vehicle-model.html">The car as a linear model</a>)</td>
+<td><code>pixi run python3 tools/vehicle_model.py</code>: new poles and margins from the measured lags (<a href="vehicle-model.html">The car as a linear model</a>)</td>
 </tr>
 <tr>
 <td>The answers</td>

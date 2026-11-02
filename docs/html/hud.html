@@ -211,13 +211,13 @@ one colour:</p>
 </tr>
 </tbody>
 </table></div>
-<p>Taken with <code>pixi run hud-demo --screenshot FILE --screenshot-after 50</code> (STOP) and <code>37.5</code>
+<p>Taken with <code>pixi run hud --demo --screenshot FILE --screenshot-after 50</code> (STOP) and <code>37.5</code>
 (AUTO STOP): the demo goes round GO, WAIT, AUTO STOP and STOP every minute.</p>
 <pre class="highlight"><code class="language-text"> +-------------------------------+   +-------------------------------+
  |  (tick)   GO                  |   |  (stop    STOP                |
  |           all REAL            |   |   sign)   GPS is SIM          |
  |           the car may move    |   |           clear: pixi run     |
- +-------------------------------+   |           gate-clear          |
+ +-------------------------------+   |           clear gate          |
         green                        +-------------------------------+
                                             red</code></pre>
 <div class="table-wrap"><table>
@@ -271,13 +271,13 @@ one colour:</p>
 <td>1</td>
 <td>the car's e-stop (<code>/vehicle/status</code>)</td>
 <td>E-STOP ON</td>
-<td>clear: pixi run estop-clear</td>
+<td>clear: pixi run clear estop</td>
 </tr>
 <tr>
 <td>2</td>
 <td>the output mux, latched (<a href="sources-and-targets.html">sources and targets</a>)</td>
 <td>GPS is SIM, 2 sources: IMU, sensor mux wants SIM...</td>
-<td>clear: pixi run gate-clear</td>
+<td>clear: pixi run clear gate</td>
 </tr>
 <tr>
 <td>3</td>
@@ -295,7 +295,7 @@ one colour:</p>
 <td>5</td>
 <td>the sensor watchdog's lock: its first input that stops</td>
 <td>GPS STALE, HUD LOST, WHEELS DISAGREE...</td>
-<td>people can still drive; latched ones: clear: pixi run watchdog-clear</td>
+<td>people can still drive; latched ones: clear: pixi run clear watchdog</td>
 </tr>
 <tr>
 <td>6</td>
@@ -325,7 +325,7 @@ one colour:</p>
 <li><code>--demo</code> walks through GO, WAIT, AUTO STOP (the GPS silent) and STOP (a SIM camera).</li>
 </ul>
 <h3 id="run-it">Run it</h3>
-<pre class="highlight"><code class="language-bash">pixi run hud-demo                  # pretend data: no ROS, no car, any Mac
+<pre class="highlight"><code class="language-bash">pixi run hud --demo                  # pretend data: no ROS, no car, any Mac
 pixi run build &amp;&amp; pixi run hud     # the real node (ros2 launch aav_hud hud.launch.py)
 pixi run hud fullscreen:=true      # full screen; F11 switches too
 pixi run hud fullscreen:=true monitor:=HDMI-2   # on that monitor, by name or number</code></pre>
@@ -402,7 +402,7 @@ pixi run hud fullscreen:=true monitor:=HDMI-2   # on that monitor, by name or nu
    one dropout in the grace: forgiven      any dropout: hud LOST, latched
    (held only while it lasts)              (held even once it beats again)
 
- a person checks the screen ──► pixi run watchdog-clear ──► Nav2 may drive</code></pre>
+ a person checks the screen ──► pixi run clear watchdog ──► Nav2 may drive</code></pre>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -424,7 +424,7 @@ pixi run hud fullscreen:=true monitor:=HDMI-2   # on that monitor, by name or nu
 <td>the second dropout latches</td>
 </tr>
 <tr>
-<td><code>pixi run watchdog-clear</code></td>
+<td><code>pixi run clear watchdog</code></td>
 <td>Nav2 drives again, if the HUD beats; the grace starts again</td>
 </tr>
 <tr>
@@ -527,7 +527,7 @@ in <code>aav_safety</code> <code>watchdog.py</code>, with tests. The HUD shows i
 </tr>
 <tr>
 <td>The GO / STOP panel on screen (24 Oct)</td>
-<td>✅ seen: Ben ran <code>pixi run hud-demo --screenshot docs/img/hud-gate.png</code> (GO, green, "all REAL"; the picture above). STOP and AUTO STOP seen too (24 Oct, the pictures above)</td>
+<td>✅ seen: Ben ran <code>pixi run hud --demo --screenshot docs/img/hud-gate.png</code> (GO, green, "all REAL"; the picture above). STOP and AUTO STOP seen too (24 Oct, the pictures above)</td>
 </tr>
 <tr>
 <td>The HUD latch (24 Oct, <code>aav_safety</code> tests)</td>
@@ -699,7 +699,7 @@ Nav2.</p>
 </tbody>
 </table></div>
 <h3 id="run-it_1">Run it</h3>
-<pre class="highlight"><code class="language-bash">pixi run map-demo                          # pretend data: no ROS, no car
+<pre class="highlight"><code class="language-bash">pixi run map --demo                          # pretend data: no ROS, no car
 pixi run build &amp;&amp; pixi run map             # the real node (ros2 launch aav_hud map.launch.py)
 pixi run sim world:=test_lot map:=true     # Gazebo, Nav2 and the map window together
 pixi run map fullscreen:=true monitor:=HDMI-1   # full screen on that monitor</code></pre>
@@ -786,7 +786,7 @@ and its path sit on real streets. It works with no internet: the map is a file.<
 </thead>
 <tbody>
 <tr>
-<td><code>pixi run get-street-map</code></td>
+<td><code>pixi run get street-map</code></td>
 <td>40 MB into <code>maps/streets/ottawa.pmtiles</code> (git ignores <code>maps/</code>)</td>
 </tr>
 <tr>
@@ -807,11 +807,11 @@ and its path sit on real streets. It works with no internet: the map is a file.<
 </tr>
 <tr>
 <td>Newer streets</td>
-<td><code>STREET_MAP_BUILD=latest pixi run get-street-map</code> (delete the old file first; no checksum then)</td>
+<td><code>STREET_MAP_BUILD=latest pixi run get street-map</code> (delete the old file first; no checksum then)</td>
 </tr>
 </tbody>
 </table></div>
-<p>No file: the window still runs, and says <strong>No street map: pixi run get-street-map</strong>.</p>
+<p>No file: the window still runs, and says <strong>No street map: pixi run get street-map</strong>.</p>
 <h4 id="licence-and-credit">Licence and credit</h4>
 <div class="table-wrap"><table>
 <thead>
@@ -1139,7 +1139,7 @@ a bug.</p>
 <tbody>
 <tr>
 <td>File</td>
-<td><code>maps/places/ottawa.db</code> (<code>places</code> in <code>config/map.yaml</code>, or <code>--places FILE</code>): <code>pixi run get-places</code></td>
+<td><code>maps/places/ottawa.db</code> (<code>places</code> in <code>config/map.yaml</code>, or <code>--places FILE</code>): <code>pixi run get places</code></td>
 </tr>
 <tr>
 <td>Opened</td>
@@ -1701,10 +1701,10 @@ another tracker, in the simulator only (the design's D3: never an actuator).</p>
 </tbody>
 </table></div>
 <h3 id="run-it_2">Run it</h3>
-<pre class="highlight"><code class="language-bash">pixi run debugdemo               # Gazebo, RViz, the HUD, the map window and the debug HUD
-pixi run debug-hud-demo          # pretend data: no ROS (a walled lot, a ray-cast lidar)
+<pre class="highlight"><code class="language-bash">pixi run demo --debug               # Gazebo, RViz, the HUD, the map window and the debug HUD
+pixi run debug-hud --demo          # pretend data: no ROS (a walled lot, a ray-cast lidar)
 pixi run build &amp;&amp; pixi run debug-hud    # the node alone, beside a running sim</code></pre>
-<p><code>debugdemo</code> is <code>demo</code> with <code>amcl:=true tracker:=pure_pursuit reversing:=false</code>, so AMCL
+<p><code>demo --debug</code> is <code>demo</code> with <code>amcl:=true tracker:=pure_pursuit reversing:=false</code>, so AMCL
 and the trial tracker have something to show; and <code>ndt:=true</code> too when
 <code>maps/ndt/test_lot.pcd</code> is there. No map yet: <code>pixi run ndt-map drive</code> once (about 6
 min, headless; the map stays out of git). Swap the tracker live with keys 1-4, or
@@ -1760,7 +1760,7 @@ own screen.</p>
 <td>10 scans a second, ~6,000-7,000 cubes from ~16,000-19,000 points, none cut; every panel row OK; EKF global 0.02 m, truth 0.24 m, AMCL 0.70 m from EKF local; key 3's swap to lqr accepted mid-path, which then drove 9 mm off the path</td>
 </tr>
 <tr>
-<td>The window itself, <code>pixi run debugdemo</code>, the 20,000-cube drawing test</td>
+<td>The window itself, <code>pixi run demo --debug</code>, the 20,000-cube drawing test</td>
 <td><strong>untested</strong> that night: the Mac's screen was locked</td>
 </tr>
 </tbody>
@@ -1820,7 +1820,7 @@ own screen.</p>
 </tbody>
 </table></div>
 <p><strong>Not yet seen:</strong> NDT's LOST and WAITING on the live window (only in <code>--demo</code>); <code>pixi run
-debugdemo</code> itself (RViz, the HUD and the map window as well: run here piece by piece);
+demo --debug</code> itself (RViz, the HUD and the map window as well: run here piece by piece);
 the keys pressed by hand (K, M, A, H: their logic is tested, the window wasn't clicked).</p>
 </section>
 <section class="card"><h2 id="the-hardware-panel">The hardware panel</h2>
@@ -1927,8 +1927,8 @@ relies on <code>speed_wheels</code> and the no-timeout lock (both refuse today's
 </tbody>
 </table></div>
 <h3 id="run-it_3">Run it</h3>
-<pre class="highlight"><code class="language-bash">pixi run hw-panel-demo                 # a pretend car: no ROS, any laptop
-pixi run sim world:=test_lot           # Gazebo (or: pixi run debugdemo) ...
+<pre class="highlight"><code class="language-bash">pixi run hw-panel --demo                 # a pretend car: no ROS, any laptop
+pixi run sim world:=test_lot           # Gazebo (or: pixi run demo --debug) ...
 pixi run hw-panel                      # ... and the panel beside it, localhost-only
 pixi run hw-panel stands:=true         # on the car's stands (speed stays off until 49b)</code></pre>
 <p>Run it from the Orin's own screen or a wired laptop, not a Mac over WiFi. For checks,
@@ -2000,14 +2000,14 @@ same buttons and rules, and prints what was asked and seen.</p>
 </tr>
 </tbody>
 </table></div>
-<p>| Gazebo (<code>pixi run debugdemo</code>), <strong>both windows on screen</strong>, 29 Oct 22:50: <code>hw_panel --self-test 0.3:8</code> | asked 0.30, twist_mux 0.300, seen 0.30-0.35 m/s; GO let go: 0.00 about 0.5 s later. Pictures below |
+<p>| Gazebo (<code>pixi run demo --debug</code>), <strong>both windows on screen</strong>, 29 Oct 22:50: <code>hw_panel --self-test 0.3:8</code> | asked 0.30, twist_mux 0.300, seen 0.30-0.35 m/s; GO let go: 0.00 about 0.5 s later. Pictures below |
 | The same run, the seeing screen | NDT TRACKING, 3.3 per point, 3.3 ms a match; the lot's map, every localizer's car and the scan on NDT's cells all drawn, 58 fps |</p>
 <p><img alt="The seeing screen against Gazebo, NDT tracking" src="../img/debug-hud-seeing-gazebo.png" /></p>
 <p><img alt="The hardware panel against Gazebo: every sensor OK (Gazebo has no battery)" src="../img/hw-panel-gazebo.png" /></p>
 <p><strong>Not yet seen:</strong> the keys and the mouse pressed by hand (macOS blocks scripted keys); the bench
 check (a person's joystick beats the buttons); key L on the live window. Gazebo's output
 mux latched STOP once at start-up (an announcement race) and opened by itself the next
-runs; <code>pixi run gate-clear</code> reopens it.</p>
+runs; <code>pixi run clear gate</code> reopens it.</p>
 </section>
 <section class="card"><h2 id="the-flutter-app-2025-26-archived">The Flutter app (2025-26): archived</h2>
 <div class="table-wrap"><table>
@@ -2043,7 +2043,7 @@ runs; <code>pixi run gate-clear</code> reopens it.</p>
 <p>The map window's <a href="#search-for-a-place-and-drive-there">place search</a> reads <code>ottawa.db</code>:
 51 MB of SQLite, 606,628 named places around Ottawa. It's too big for git, so a task
 downloads it:</p>
-<pre class="highlight"><code class="language-bash">pixi run get-places      # into maps/places/ottawa.db</code></pre>
+<pre class="highlight"><code class="language-bash">pixi run get places      # into maps/places/ottawa.db</code></pre>
 <div class="table-wrap"><table>
 <thead>
 <tr>

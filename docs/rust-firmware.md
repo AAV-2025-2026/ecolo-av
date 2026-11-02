@@ -125,7 +125,7 @@ The same pins as the C++ (`hardware_configs.h`, `main.cpp`). The program's copy 
 
 ### The toolchain (installed 15 Oct)
 
-The ESP32 is Xtensa: the stock Rust, and Pixi's, can't build for it. `pixi run esp-tools`
+The ESP32 is Xtensa: the stock Rust, and Pixi's, can't build for it. `pixi run esp tools`
 installs Espressif's, for one user, with no admin rights. It needs `rustup`.
 
 | What | Version | Where | Size |
@@ -141,12 +141,12 @@ The board's `rust-toolchain.toml` picks `esp`; `tools/esp32.sh` reads the export
 
 | Command | Does |
 |---|---|
-| `pixi run esp-tools` | installs all of the above (once; several minutes) |
-| `pixi run esp-build` | builds the default (Motor-Pi UART) program |
-| `pixi run esp-build --no-default-features --features can` | builds the CAN one |
-| `pixi run esp-flash` | builds, flashes the board on the USB cable, shows its log: [bench only](esp32-bench.md) |
-| `pixi run esp-qemu-tools` | downloads Espressif's QEMU into `vendor/qemu` (once; macOS arm64) |
-| `pixi run esp-qemu-check` | boots it in QEMU; checks it brakes when the frames stop ([the emulator](esp32-bench.md#before-the-board-the-emulator)) |
+| `pixi run esp tools` | installs all of the above (once; several minutes) |
+| `pixi run esp build` | builds the default (Motor-Pi UART) program |
+| `pixi run esp build --no-default-features --features can` | builds the CAN one |
+| `pixi run esp flash` | builds, flashes the board on the USB cable, shows its log: [bench only](esp32-bench.md) |
+| `pixi run esp qemu-tools` | downloads Espressif's QEMU into `vendor/qemu` (once; macOS arm64) |
+| `pixi run esp qemu-check` | boots it in QEMU; checks it brakes when the frames stop ([the emulator](esp32-bench.md#before-the-board-the-emulator)) |
 | `tools/test.sh` | also builds both, with clippy, where the toolchain is, and runs the QEMU check where QEMU is; "skipped" where not |
 
 ### Proof it speaks the C++'s language
@@ -229,7 +229,7 @@ can't re-arm it.
 Tests: `cargo test -p legacy-link -p spine-board`; aav_legacy's `test_uart_relay.py`,
 `test_legacy_protocol.py` (the shared vectors: 14 version 2 cases and a noisy stream, in
 `legacy-link/vectors.json`) and `test_heartbeat_chain.py` (the muxes and the bridge on a
-pseudo-terminal); `pixi run esp-qemu-check` (a frozen counter, bad CRCs, silence).
+pseudo-terminal); `pixi run esp qemu-check` (a frozen counter, bad CRCs, silence).
 
 ### The uplink: the ESP32's status, back to the Pi (24 Oct)
 
@@ -340,7 +340,7 @@ gives computer and RC direct with both maps.
 Tests: `cargo test -p legacy-link -p spine-board -p spine-core -p ibus -p jrk-g2`; the
 shared vectors (12 uplink cases in `legacy-link/vectors.json`, checked by
 `test_legacy_protocol.py`); aav_legacy's `test_uplink_reader.py` and
-`test_uplink_chain.py` (the bridge and `rc_driver` on ROS); `pixi run esp-qemu-check` (the
+`test_uplink_chain.py` (the bridge and `rc_driver` on ROS); `pixi run esp qemu-check` (the
 uplink at 50 Hz, its echo, the three modes: [the emulator](esp32-bench.md#before-the-board-the-emulator)).
 
 ### The C++ beside the Rust
@@ -479,15 +479,15 @@ Everything is in Pixi; nothing to install by hand.
 
 | Step | Command | What happens |
 |---|---|---|
-| 1. Build | `pixi run spine-uf2` | builds the program, and writes `firmware/spine/boards/pico2/spine-pico2.uf2` |
+| 1. Build | `pixi run pico spine build` | builds the program, and writes `firmware/spine/boards/pico2/spine-pico2.uf2` |
 | 2. Flash, with a USB cable | hold BOOTSEL, plug the Pico 2 in, let go | a drive called RP2350 appears: copy the .uf2 onto it. The Pico 2 restarts into the spine |
-| or 2. Flash, with a debug probe | `pixi run spine-tools` (once), then `pixi run spine-flash` | flashes through the probe, then prints the program's logs |
+| or 2. Flash, with a debug probe | `pixi run pico spine tools` (once), then `pixi run pico spine flash` | flashes through the probe, then prints the program's logs |
 
 - The UF2 file comes from `tools/elf2uf2.py`. It uses the RP2350's family ID
   (`rp2350_arm_s`, datasheet 5.5.3) and refuses a program without its IMAGE_DEF block in
   the first 4 kB, or the boot ROM wouldn't start it (5.9.5). `pixi run test` checks the
   real program each time.
-- `spine-tools` installs probe-rs 0.32.0 into `vendor/cargo-tools/bin` (about a minute).
+- `pico spine tools` installs probe-rs 0.32.0 into `vendor/cargo-tools/bin` (about a minute).
   A probe: the Raspberry Pi Debug Probe, or a second Pico running `debugprobe`, on the
   Pico 2's SWD pins. On Linux, probe-rs needs its udev rules (probe.rs, "Probe setup").
 - The logs only come through a probe. With the UF2 file alone, the LED is all you see.
@@ -504,7 +504,7 @@ Everything is in Pixi; nothing to install by hand.
 |---|---|---|
 | Everything on a real Pico 2 | no board here; flashing waits for Ben | the bench |
 | The UF2 file booting | it matches `llvm-objcopy`'s image byte for byte, and its IMAGE_DEF is checked; no boot ROM has seen it | the first flash |
-| `spine-flash` | probe-rs is installed and knows the RP235x; never run with a probe | the first flash with a probe |
+| `pico spine flash` | probe-rs is installed and knows the RP235x; never run with a probe | the first flash with a probe |
 | The chip's watchdog reset | embassy-rp 0.10 sets the RP2040's reset bits on an RP2350, so the program sets the Pico SDK's instead (`reset_all_but_the_oscillators`) | hang the loop on purpose, on the bench |
 | CAN on a real bus | needs the module, a USB-CAN adapter, and `spine_bridge` on SocketCAN (Linux) | the bench |
 | I2C to the Jrks, the DAC and the expander | needs the car's boards | the bench, then the car |
@@ -563,9 +563,9 @@ needs RST and INT wired the same way.
 
 | Step | Command |
 |---|---|
-| Build | `pixi run wheel-uf2`: writes `firmware/spine/boards/wheel-encoder-pico2/wheel-encoder-pico2.uf2` |
+| Build | `pixi run pico wheel build`: writes `firmware/spine/boards/wheel-encoder-pico2/wheel-encoder-pico2.uf2` |
 | Flash, USB | hold BOOTSEL, plug in, drag the .uf2 onto the RP2350 drive |
-| Flash, probe | `pixi run wheel-flash` (after `pixi run spine-tools` once): shows the logs too |
+| Flash, probe | `pixi run pico wheel flash` (after `pixi run pico spine tools` once): shows the logs too |
 | Check | on the Motor Pi, `ros2 topic echo /vehicle/odom`, or stop `encoder_udp` and run a UDP listener on port 10111 |
 
 ## The status display on a Pico 2 (15 Oct)
@@ -621,9 +621,9 @@ What changed from the 2025-26 one: `boards/sentinel-pico2/PROVENANCE.md`. The pa
 
 | Step | Command |
 |---|---|
-| Build | `pixi run sentinel-uf2`: writes `firmware/spine/boards/sentinel-pico2/sentinel-pico2.uf2` |
+| Build | `pixi run pico sentinel build`: writes `firmware/spine/boards/sentinel-pico2/sentinel-pico2.uf2` |
 | Flash, USB | hold BOOTSEL, plug in, drag the .uf2 onto the RP2350 drive |
-| Flash, probe | `pixi run sentinel-flash` (after `pixi run spine-tools` once) |
+| Flash, probe | `pixi run pico sentinel flash` (after `pixi run pico spine tools` once) |
 | Check | it beeps three times, then once long; the LCD says "Waiting for Pi" and the matrix smiles |
 
 ## What is untested on the two new boards
@@ -671,9 +671,9 @@ front wheels' sensors are the hardware lead's Arduino (23 Oct), not ESP32 boards
 
 ### The toolchain
 
-The ESP32 is Xtensa, which stock Rust can't build for. `pixi run esp-tools`
+The ESP32 is Xtensa, which stock Rust can't build for. `pixi run esp tools`
 installs Espressif's Rust and `espflash` for one user, at fixed versions (above, with
-`esp-build` and `esp-flash`).
+`esp build` and `esp flash`).
 
 Like `boards/pico2`, each board crate is a workspace of its own, outside the default build:
 `pixi run test` keeps working on a laptop without Espressif's Rust (it says "skipped"). The logic crates need nothing:
@@ -726,10 +726,10 @@ Rust.
 
 | Chip | Rust target | In Pixi? | Flashing |
 |---|---|---|---|
-| Pico 2 (RP2350, ARM) | `thumbv8m.main-none-eabihf` | [[works]] all thirteen crates and the three Pico 2 board programs build for it; `pixi run test` checks them | its USB drive (`pixi run spine-uf2`, `wheel-uf2`, `sentinel-uf2`), or probe-rs (`pixi run spine-tools`) |
+| Pico 2 (RP2350, ARM) | `thumbv8m.main-none-eabihf` | [[works]] all thirteen crates and the three Pico 2 board programs build for it; `pixi run test` checks them | its USB drive (`pixi run pico spine build`, `pico wheel build`, `pico sentinel build`), or probe-rs (`pixi run pico spine tools`) |
 | STM32-class ARM (Cortex-M4F, M7) | `thumbv7em-none-eabihf` | [[works]] the crates build for it too | `probe-rs` |
 | ESP32-C3, C6 (RISC-V) | `riscv32imc` / `riscv32imac` | [[missing]] not in Pixi; `rustup` has them | `espflash` |
-| Classic ESP32 (today's board) | `xtensa-esp32-none-elf` | [[works]] not in Pixi: `pixi run esp-tools` installs Espressif's Rust for one user (above); `tools/test.sh` builds the board where it is | `espflash` (`pixi run esp-flash`) |
+| Classic ESP32 (today's board) | `xtensa-esp32-none-elf` | [[works]] not in Pixi: `pixi run esp tools` installs Espressif's Rust for one user (above); `tools/test.sh` builds the board where it is | `espflash` (`pixi run esp flash`) |
 | Arduino (AVR) | `avr-*` | [[missing]] needs nightly Rust (`avr-hal`) | `ravedude` |
 
 > An ARM chip (Pico 2 or STM32) would keep the whole toolchain inside Pixi. The KEFC plan

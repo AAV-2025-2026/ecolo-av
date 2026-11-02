@@ -393,7 +393,7 @@ def test_lattice_uses_our_primitives_forward_only_unless_reversing():
 def test_lattice_is_refused_on_a_map_with_other_cells(tmp_path):
     fine = tmp_path / 'fine.yaml'
     fine.write_text('image: fine.pgm\nresolution: 0.05\norigin: [0.0, 0.0, 0.0]\n')
-    with pytest.raises(ValueError, match='lattice-primitives'):
+    with pytest.raises(ValueError, match='python3 tools/lattice_primitives.py'):
         settings(map=str(fine), planner='lattice')
 
 

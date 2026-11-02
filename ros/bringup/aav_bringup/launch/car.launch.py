@@ -141,9 +141,10 @@ PARTS = ('description', 'mux', 'ego', 'teleop', 'scripted', 'drive_to_point', 'i
 SECTIONS = ('parts', 'detector', 'camera_stream', 'geofence')
 # Each model format: what runs it, besides PyTorch and Ultralytics, and how to make it.
 FORMATS = {
-    '.pth': ([], 'pixi run get-models'),
-    '.pt': ([], 'pixi run get-models'),
-    '.mlpackage': (['coremltools'], 'pixi run -e ml export-coreml [its .pth or .pt] (on a Mac)'),
+    '.pth': ([], 'pixi run get models'),
+    '.pt': ([], 'pixi run get models'),
+    '.mlpackage': (['coremltools'], 'pixi run -e ml python3 tools/export_model.py '
+                                    '--format coreml [its .pth or .pt] (on a Mac)'),
     '.engine': (['tensorrt'], 'python3 tools/build_engine.py [its .pth or .pt] (on this '
                               'computer, with the python3 of JetPack)'),
 }

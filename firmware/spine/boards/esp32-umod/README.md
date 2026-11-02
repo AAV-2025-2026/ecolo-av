@@ -83,10 +83,10 @@ The direction output is pin P00 of the PCA9555, not an ESP32 pin.
 ## Verification
 
 ```sh
-pixi run esp-tools        # once: Espressif's Rust, espup, espflash (needs rustup)
-pixi run esp-build        # or: --no-default-features --features can
-pixi run esp-qemu-check   # in QEMU: it brakes within 0.2 s when the heartbeat stops
-pixi run esp-flash        # bench only, wheels off the ground: docs/esp32-bench.md
+pixi run esp tools        # once: Espressif's Rust, espup, espflash (needs rustup)
+pixi run esp build        # or: --no-default-features --features can
+pixi run esp qemu-check   # in QEMU: it brakes within 0.2 s when the heartbeat stops
+pixi run esp flash        # bench only, wheels off the ground: docs/esp32-bench.md
 ```
 
 It is a workspace of its own: it builds only for `xtensa-esp32-none-elf`, with the `esp`

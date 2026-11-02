@@ -27,7 +27,7 @@ the lidar's noise through: the roof's corners and the front cameras drew a ghost
 line 1.5 m up along the whole route (found 30 Oct).
 
 The truth is used only here, offline: aav_ndt's node never reads it (aav_gazebo's rule).
-The mapping route is not one of controller-compare's tours, and has no obstacle.
+The mapping route is not one of the tours of pixi run measure controllers, and has no obstacle.
 Gazebo's lidar noise isn't seeded by us, so two drives give maps a few millimetres apart.
 
 The maths (everything but read_bag and drive) needs no ROS: tools/tests/test_ndt_map.py.

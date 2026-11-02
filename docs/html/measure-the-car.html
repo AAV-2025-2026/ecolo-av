@@ -152,7 +152,7 @@ circles are the steps, in order. The blue dots are the sensors.</p>
 </table></div>
 <h3 id="the-route">The route</h3>
 <p>The steps, with today's guesses (the script writes this table: don't edit it by hand).</p>
-<!-- measure-map:start (pixi run measure-map writes this table) -->
+<!-- measure-map:start (pixi run python3 tools/measure_map.py writes this table) -->
 
 <div class="table-wrap"><table>
 <thead>
@@ -379,7 +379,7 @@ circles are the steps, in order. The blue dots are the sensors.</p>
 <tbody>
 <tr>
 <td>1</td>
-<td><code>pixi run measure-map --blank &gt; readings.yaml</code>: a file with one line per step</td>
+<td><code>pixi run python3 tools/measure_map.py --blank &gt; readings.yaml</code>: a file with one line per step</td>
 </tr>
 <tr>
 <td>2</td>
@@ -387,11 +387,11 @@ circles are the steps, in order. The blue dots are the sensors.</p>
 </tr>
 <tr>
 <td>3</td>
-<td><code>pixi run measure-map --readings readings.yaml</code>: it prints the yaml's numbers, in metres</td>
+<td><code>pixi run python3 tools/measure_map.py --readings readings.yaml</code>: it prints the yaml's numbers, in metres</td>
 </tr>
 <tr>
 <td>4</td>
-<td>Copy them into <code>vehicle.yaml</code>, delete each <code>TODO</code>, then <code>pixi run measure-map</code> to redraw the map</td>
+<td>Copy them into <code>vehicle.yaml</code>, delete each <code>TODO</code>, then <code>pixi run python3 tools/measure_map.py</code> to redraw the map</td>
 </tr>
 </tbody>
 </table></div>

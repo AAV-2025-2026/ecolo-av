@@ -315,7 +315,7 @@ pixi run graph                                             # terminal 3</code></
 <li>rqt_graph shows <code>circle_driver</code> → <code>/drivers/circle/cmd_vel</code> → <code>twist_mux</code>;</li>
 <li><code>pixi run keyboard</code> in another terminal: hold <code>i</code>, and the keyboard (90) takes over at
   once. Let go, and the circle comes back after half a second;</li>
-<li><code>pixi run estop</code> stops everything, and <code>pixi run estop-clear</code> lets it go again.</li>
+<li><code>pixi run estop</code> stops everything, and <code>pixi run clear estop</code> lets it go again.</li>
 </ul>
 <p>Then <code>pixi run check turtle</code> should still say <code>0 failed</code>, and Gazebo is the next rung:
 <code>pixi run sim</code>.</p>
@@ -383,7 +383,7 @@ pixi run graph                                             # terminal 3</code></
 <td><span class="badge b-works">works</span> it takes over and drives straight; the circle returns after it stops</td>
 </tr>
 <tr>
-<td><code>pixi run estop</code>, then <code>pixi run estop-clear</code></td>
+<td><code>pixi run estop</code>, then <code>pixi run clear estop</code></td>
 <td><span class="badge b-works">works</span> the turtle stops, then drives again</td>
 </tr>
 <tr>
