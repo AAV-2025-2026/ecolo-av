@@ -15,8 +15,14 @@
 //! +--------------------------------------------------------------+
 //! ```
 //!
+//! Two pages, by the tabs or Tab: DRIVE (above) and STEERING CALIBRATION
+//! ([`calibration`]: find the steering actuator's ends and centre, the limits, the
+//! lock-to-lock check).
+//!
 //! Every colour comes from the theme (`hud_core::theme`, `theme:` in
 //! config/hw_panel.yaml), as the HUD's: the pills, the buttons, the E-STOP's red.
+
+mod calibration;
 
 use std::time::Instant;
 
@@ -27,8 +33,10 @@ use hud_core::{
 };
 use panel_core::{
     buttons::{Buttons, Press},
+    calibration::{CalPage, CalPress, NotReady},
     gate::Gate,
     state::{PanelState, Row},
+    steering_limits::Mark,
 };
 use raylib::prelude::*;
 
@@ -42,6 +50,30 @@ const FONT_FILES: [&str; 4] = [
 const FONT_LOAD_SIZE: i32 = 96;
 const MARGIN: f32 = 24.0;
 
+/// A page of the panel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Page {
+    Drive,
+    Calibration,
+}
+
+impl Page {
+    fn label(self) -> &'static str {
+        match self {
+            Self::Drive => "DRIVE",
+            Self::Calibration => "STEERING CAL",
+        }
+    }
+
+    /// The other page (Tab).
+    pub fn other(self) -> Self {
+        match self {
+            Self::Drive => Self::Calibration,
+            Self::Calibration => Self::Drive,
+        }
+    }
+}
+
 /// An on-screen button.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Button {
@@ -50,11 +82,28 @@ pub enum Button {
     /// Held to drive.
     Go,
     Estop,
+    Tab(Page),
+    /// The calibration page's presses.
+    Cal(CalPress),
+    /// The calibration page: write the result to a file.
+    Save,
 }
 
 impl Button {
     fn label(self) -> &'static str {
         match self {
+            Self::Tab(p) => p.label(),
+            Self::Cal(CalPress::Limp) => "GO LIMP",
+            Self::Cal(CalPress::Hold) => "HOLD",
+            Self::Cal(CalPress::StepLeft) => "< STEP LEFT",
+            Self::Cal(CalPress::StepRight) => "STEP RIGHT >",
+            Self::Cal(CalPress::End) => "END",
+            Self::Cal(CalPress::Mark(Mark::Left)) => "MARK LEFT",
+            Self::Cal(CalPress::Mark(Mark::Centre)) => "MARK CENTRE",
+            Self::Cal(CalPress::Mark(Mark::Right)) => "MARK RIGHT",
+            Self::Cal(CalPress::ClearMarks) => "CLEAR MARKS",
+            Self::Cal(CalPress::Check) => "LOCK-TO-LOCK CHECK",
+            Self::Save => "SAVE",
             Self::Press(Press::SpeedUp) => "SPEED +",
             Self::Press(Press::SpeedDown) => "SPEED -",
             Self::Press(Press::Left) => "< LEFT",
@@ -67,17 +116,32 @@ impl Button {
     }
 }
 
-/// Where each button is, in a window `w` x `h`: the same for drawing and for the mouse.
-pub fn layout(w: f32) -> Vec<(Button, Rectangle)> {
+/// Where each button is, in a window `w` wide: the same for drawing and for the mouse.
+pub fn layout(w: f32, page: Page) -> Vec<(Button, Rectangle)> {
+    let mut buttons = vec![(
+        Button::Estop,
+        Rectangle::new(w - MARGIN - 240.0, 14.0, 240.0, 84.0),
+    )];
+    let tab_w = 170.0;
+    let tab_x = w - MARGIN - 240.0 - 16.0 - 2.0 * tab_w - 8.0;
+    for (i, p) in [Page::Drive, Page::Calibration].into_iter().enumerate() {
+        let x = tab_x + i as f32 * (tab_w + 8.0);
+        buttons.push((Button::Tab(p), Rectangle::new(x, 58.0, tab_w, 36.0)));
+    }
+    match page {
+        Page::Drive => buttons.extend(drive_layout(w)),
+        Page::Calibration => buttons.extend(calibration::layout(w)),
+    }
+    buttons
+}
+
+/// The drive page's buttons.
+fn drive_layout(w: f32) -> Vec<(Button, Rectangle)> {
     let col_w = (w - 2.0 * MARGIN - 2.0 * MARGIN) / 3.0;
     let x = |col: f32| MARGIN + col * (col_w + MARGIN);
     let half = (col_w - 12.0) / 2.0;
     let (row1, row2, bh) = (172.0, 252.0, 70.0);
     vec![
-        (
-            Button::Estop,
-            Rectangle::new(w - MARGIN - 240.0, 14.0, 240.0, 84.0),
-        ),
         (
             Button::Press(Press::SpeedUp),
             Rectangle::new(x(0.0), row1, half, bh),
@@ -145,6 +209,12 @@ pub struct Frame<'a> {
     /// "front, not driven" on stands (TODO 49b).
     pub wheels_note: Option<&'a str>,
     pub stands: bool,
+    pub page: Page,
+    pub cal: &'a CalPage,
+    /// Why the calibration page may not ask now (empty: allowed).
+    pub cal_ready: &'a [NotReady],
+    /// The calibration result's file, once saved.
+    pub saved: Option<&'a str>,
 }
 
 pub struct Ui {
@@ -181,7 +251,7 @@ impl Ui {
             t.background.rl(),
             t.background_low.rl(),
         );
-        let buttons = layout(w);
+        let buttons = layout(w, f.page);
         let speed_on = matches!(f.gate, Gate::On { .. });
 
         // Title, the source, the label.
@@ -212,6 +282,14 @@ impl Ui {
         }
         if let Some(banner) = state.origins.banner() {
             self.text(d, &banner, MARGIN, 62.0, 18.0, t.not_real_text);
+        }
+
+        for &(b, r) in buttons.iter().take(3) {
+            self.button(d, b, r, f, true);
+        }
+        if f.page == Page::Calibration {
+            self.draw_calibration(d, state, f, &buttons[3..]);
+            return;
         }
 
         // Where the speed buttons may drive.
@@ -245,10 +323,11 @@ impl Ui {
             self.text(d, caption, x, 146.0, 17.0, t.caption);
         }
 
-        for &(b, r) in &buttons {
+        for &(b, r) in &buttons[3..] {
             let enabled = match b {
-                Button::Estop | Button::Press(Press::Stop | Press::Centre) => true,
+                Button::Press(Press::Stop | Press::Centre) => true,
                 Button::Go | Button::Press(_) => speed_on,
+                _ => true,
             };
             self.button(d, b, r, f, enabled);
         }
@@ -361,7 +440,7 @@ impl Ui {
             y += row_h;
         }
         let keys = "keys: Space held = GO   Up/+ Down/- speed   Left Right steer   C centre   \
-                    S stop   E e-stop   F11 full screen";
+                    S stop   E e-stop   Tab steering calibration   F11 full screen";
         let keys = fit(&self.font, keys, w - 2.0 * MARGIN, 15.0);
         self.text(d, &keys, MARGIN, h - 26.0, 15.0, t.dim);
     }
@@ -413,7 +492,9 @@ impl Ui {
         enabled: bool,
     ) {
         let t = self.theme;
-        let down = f.held == Some(b) || (b == Button::Go && f.buttons.is_driving());
+        let down = f.held == Some(b)
+            || (b == Button::Go && f.buttons.is_driving())
+            || b == Button::Tab(f.page);
         let (fill, ink) = match (b, enabled, down) {
             (Button::Estop, _, true) => (t.stop_fill_alt, t.stop_ink),
             (Button::Estop, _, false) => (t.stop_fill, t.stop_ink),
@@ -426,7 +507,12 @@ impl Ui {
         if enabled && !down && b != Button::Estop {
             d.draw_rectangle_rounded_lines_ex(r, 0.18, 8, 1.0, t.glass_edge.rl());
         }
-        let size = if b == Button::Estop { 34.0 } else { 26.0 };
+        let size = match b {
+            Button::Estop => 34.0,
+            Button::Tab(_) => 18.0,
+            Button::Cal(_) | Button::Save => 21.0,
+            _ => 26.0,
+        };
         let label = b.label();
         let tw = self.font.measure(label, size);
         self.text(
@@ -493,15 +579,21 @@ mod tests {
 
     #[test]
     fn the_buttons_never_overlap() {
-        let buttons = layout(1280.0);
-        for (i, (a, ra)) in buttons.iter().enumerate() {
-            for (b, rb) in &buttons[i + 1..] {
-                assert!(
-                    ra.get_collision_rec(*rb).is_none(),
-                    "{a:?} and {b:?} overlap"
-                );
+        for page in [Page::Drive, Page::Calibration] {
+            for w in [1100.0, 1280.0, 1920.0] {
+                let buttons = layout(w, page);
+                for (i, (a, ra)) in buttons.iter().enumerate() {
+                    assert!(ra.x >= 0.0 && ra.x + ra.width <= w, "{a:?} at {w}");
+                    for (b, rb) in &buttons[i + 1..] {
+                        assert!(
+                            ra.get_collision_rec(*rb).is_none(),
+                            "{a:?} and {b:?} overlap at {w}"
+                        );
+                    }
+                }
             }
         }
-        assert_eq!(buttons.len(), 8);
+        assert_eq!(layout(1280.0, Page::Drive).len(), 10);
+        assert_eq!(layout(1280.0, Page::Calibration).len(), 3 + 11);
     }
 }

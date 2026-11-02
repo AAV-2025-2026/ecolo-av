@@ -275,6 +275,11 @@ impl CalPage {
         }
     }
 
+    /// The three marks (left, centre, right), once all are there.
+    pub fn marks(&self) -> Option<(u16, u16, u16)> {
+        Some((self.left?, self.centre?, self.right?))
+    }
+
     /// The limits from the three marks, once all are there.
     pub fn limits(&self) -> Option<Result<Limits, MeasurementError>> {
         let marks = Marks {
@@ -480,8 +485,29 @@ pub fn result_file(limits: &Limits, marks: (u16, u16, u16), checked: Option<&Out
          # Marked: left {l}, centre {c}, right {r} (counts).\n\
          # Lock-to-lock check: {check}\n\
          # Copy by hand, in a pull request, with this file and the sheet\n\
-         # (docs/actuator-tests.md); the hardware lead reviews it.\n\n{}\n",
+         # (docs/actuator-tests.md); the hardware lead reviews it.\n         # With the wheel angles (a protractor, each end), for the gain and\n         # max_steering_angle:\n         #   ros2 run aav_legacy steering_limits --left {l} --centre {c} --right {r} \\\n         #       --left-deg <mean> --right-deg <mean>\n\n{}\n",
         steering_limits::report(limits)
+    )
+}
+
+/// A file name's time, UTC, from seconds since 1970: `2026-11-01T21-05-33Z`.
+pub fn utc_stamp(unix_secs: u64) -> String {
+    let (days, secs) = (unix_secs / 86_400, unix_secs % 86_400);
+    // Howard Hinnant's civil_from_days, for days since 1970-01-01.
+    let z = days as i64 + 719_468;
+    let era = z.div_euclid(146_097);
+    let doe = z.rem_euclid(146_097);
+    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2) / 153;
+    let day = doy - (153 * mp + 2) / 5 + 1;
+    let month = if mp < 10 { mp + 3 } else { mp - 9 };
+    let year = yoe + era * 400 + i64::from(month <= 2);
+    format!(
+        "{year:04}-{month:02}-{day:02}T{:02}-{:02}-{:02}Z",
+        secs / 3600,
+        secs % 3600 / 60,
+        secs % 60
     )
 }
 
@@ -608,6 +634,15 @@ mod tests {
         let text = result_file(&l, (3420, 1985, 610), None);
         assert!(text.contains("min: 679") && text.contains("Lock-to-lock check: not run"));
         assert!(text.contains("hardware lead"));
+        assert!(text.contains("steering_limits --left 3420 --centre 1985 --right 610"));
+    }
+
+    #[test]
+    fn utc_stamps() {
+        assert_eq!(utc_stamp(0), "1970-01-01T00-00-00Z");
+        // 1 Nov 2026, 21:05:33 UTC.
+        assert_eq!(utc_stamp(1_793_567_133), "2026-11-01T21-05-33Z");
+        assert_eq!(utc_stamp(951_782_400), "2000-02-29T00-00-00Z");
     }
 
     #[test]
