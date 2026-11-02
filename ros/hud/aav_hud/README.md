@@ -17,7 +17,9 @@ node (rclrs):
   the right side for every sensor from its own topic. It only listens;
 - `hw_panel`, the **hardware screen**: every sensor's number from its own node, and very
   simple buttons for the actuators (Speed +/-, steering, CENTRE, STOP, GO held, E-STOP),
-  through twist_mux's `buttons` slot (45). Speed only on SIM and BENCH.
+  through twist_mux's `buttons` slot (45). Speed only on SIM and BENCH. Its second page
+  (Tab), **STEERING CAL**, finds the steering actuator's ends and centre (limp or jog,
+  mark, equal limits, save) and checks them lock to lock, stopping on resistance.
 
 It was called `aav_hud_raylib` until 25 Oct, when the 2025-26 Flutter app and its Flask
 back end (then `aav_hud`) went to `archive/2026-27-flutter-hud/` and this package took
@@ -46,8 +48,8 @@ NDT purple). docs/hud.md, "Themes".
 | `crates/map-app` | binary `map`: the same shape, plus the street map, place search and the blur behind the glass (`frost.rs`) |
 | [`debug-core`](./crates/debug-core/README.md) | the debug HUD's logic: cubes (kept, fading), frames, poses at a stamp, NDT's status and map, the keys, the camera; no ROS, no raylib |
 | `crates/debug-app` | binary `debug_hud`: the window (`ui.rs`, instanced cubes, the seeing screen's top-downs), the node (`ros.rs`), `--demo` |
-| [`panel-core`](./crates/panel-core/README.md) | the hardware panel's logic: the buttons, where they may drive (`gate`), every sensor's number, `safety.py`'s rules ported; no ROS, no raylib |
-| `crates/panel-app` | binary `hw_panel`: the window (`ui.rs`), the node (`ros.rs`), `--demo`, `--self-test` |
+| [`panel-core`](./crates/panel-core/README.md) | the hardware panel's logic: the buttons, where they may drive (`gate`), every sensor's number, `safety.py`'s rules ported, the steering calibration page (`calibration`, `steering_limits`, `sweep`); no ROS, no raylib |
+| `crates/panel-app` | binary `hw_panel`: the window (`ui.rs`, the calibration page in `ui/calibration.rs`), the node (`ros.rs`), `--demo`, `--self-test`, `--cal-self-test` (`cal_script.rs`) |
 
 ### Node `hud` (topic names from `config/hud.yaml`)
 
@@ -120,9 +122,16 @@ relative to where it starts; key M), `ndt_map_cell` (1.0 m), `voxels_cube_size` 
 | sub | `vehicle_status_topic`: `/vehicle/status`; `steering_topic`, `throttle_topic`, `brake_topic`: `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake`; `wheels_topic`: `/vehicle/wheels` | aav_interfaces/VehicleStatus, ActuatorState, WheelSpeeds |
 | sub | `imu_topic`: `/sensors/imu/data`; `gps_topic`: `/sensors/gps/fix`; `battery_topic`: `/vehicle/battery` | sensor_msgs/Imu, NavSatFix, BatteryState |
 | sub | `lidar_topic`, `radar_topic`: `/sensors/lidar/points`, `/sensors/radar/points`; `camera_topic`: `/sensors/camera/front_left/image_raw` (counted only: Hz; best effort, keep last 1) | sensor_msgs/PointCloud2, Image |
+| sub | `steering_raw_topic`: `/vehicle/steering_actuator/raw` (the calibration page: counts, the firmware's state) | aav_interfaces/ActuatorRaw |
+| sub | `calibration_line_topic`: `/vehicle/steering_actuator/calibration` (the bridge's line) | std_msgs/String |
+| pub | `steering_calibration_topic`: `/drivers/buttons/steering_calibration` (the calibration page's limp or jog, 10 Hz while it asks and the window draws; END: MODE_OFF 0.5 s) | aav_interfaces/SteeringCalibration |
 
 Other parameters: `stale_after` (1.0 s), `speed_step` (0.1 m/s), `steer_step` (0.05 rad),
-`creep` (0.1 m/s, CENTRE), `sim_cap` (1.0 m/s), `stands_cap` (0.3 m/s), `theme` (`mocha`).
+`creep` (0.1 m/s, CENTRE), `sim_cap` (1.0 m/s), `stands_cap` (0.3 m/s), `theme` (`mocha`);
+the calibration page's `jog_step` (25 counts), `jog_min`, `jog_max` (400, 3500),
+`sweep_rate` (100 counts/s), `sweep_max_error` (150 counts), `sweep_stall` (0.6 s).
+SAVE writes `~/.local/share/aav/steering-calibration/steering-<time>.txt` (a person copies
+it; never vehicle.yaml).
 
 ### Launch and commands
 
@@ -136,6 +145,7 @@ Other parameters: `stale_after` (1.0 s), `speed_step` (0.1 m/s), `steer_step` (0
 | `cargo run --release -p debug-app --no-default-features -- --demo [--bench-cubes 20000]` | the debug HUD with pretend data; the drawing test |
 | `pixi run hw-panel [stands:=true] [fullscreen:=true]`; `pixi run hw-panel-demo` | `hw_panel.launch.py` (localhost-only); the panel with a pretend car |
 | `hw_panel --self-test 0.3:8` | for checks: Speed + to 0.3 m/s, GO held 8 s, through the same buttons and rules; prints asked and seen |
+| `hw_panel --demo --page calibration [--demo-bind 2800] [--cal-self-test]` | the steering calibration page with a pretend steering actuator; the self-test limps, marks, holds and runs the lock-to-lock check (with a stiff spot it must stop) |
 
 `sim.launch.py hud:=true` and `map:=true` start them too. On the car,
 `tools/car_screen.sh` starts them at boot; `car.launch.py` does not.
@@ -164,6 +174,11 @@ Other parameters: `stale_after` (1.0 s), `speed_step` (0.1 m/s), `steer_step` (0
   change zeroes the buttons; GO and Speed + must be pressed again. Speed buttons: SIM and
   BENCH only (1.0 m/s); off on the real car, on stands too until TODO 49b (the reason is
   on screen).
+- `hw_panel`'s calibration page never drives (GO is off there) and asks nothing while it
+  isn't allowed (an e-stop, the car moving, the speed or the position unseen); leaving
+  the page ends its mode. Jog targets stay in `jog_min`..`jog_max`, the check's inside
+  the measured limits; the check stops and holds on resistance. It never writes
+  vehicle.yaml or the firmware: SAVE writes a file for a person to copy.
 - `debug_hud`'s clouds never go through the shared queue: a newest-only slot to the
   `cubes` thread, then a newest-only slot to the screen. Each is placed with the local
   EKF's pose at its own stamp. Nav2's cubes go the same way, through their own slots

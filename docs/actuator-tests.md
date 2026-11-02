@@ -205,7 +205,41 @@ uplink: true
 steering_calibration: stands     # back to none afterwards
 ```
 
-The panel's calibration page is to come. Until then, from a laptop on the car's network:
+Then, on the laptop (on the car's network, the car's `ROS_DOMAIN_ID`; [mac.md](mac.md)),
+the hardware panel's **STEERING CAL** page (Tab):
+
+```bash
+pixi run tools/ros.sh ros2 launch aav_hud hw_panel.launch.py    # then Tab
+```
+
+Not `pixi run hw-panel`: it is localhost-only, so it never sees the car. The page:
+[hud.md](hud.md#the-steering-calibration-page).
+
+![The steering calibration page (--demo)](img/hw-panel-calibration.png)
+
+| # | Do (button, key) | Expect |
+|---|---|---|
+| B1 | Nothing driving; the brake on. Open the page | **ALLOWED**; the bridge's line says `OFF`; the position in counts |
+| B2 | **By hand:** GO LIMP (L) | firmware `LIMP`; the motor off; the counts follow the wheels |
+| B3 | Full left: MARK LEFT (1). Straight: MARK CENTRE (2). Full right: MARK RIGHT (3) | the three marks; the limits and any warnings under them |
+| B4 | **Or with the motor:** HOLD (H), then STEP LEFT / STEP RIGHT (Left, Right), 25 counts a press, a few seconds apart | the wheels move slowly (300 counts a second at most) |
+| B5 | Stop a step before the steering binds or the motor strains; MARK that end | the end |
+| B6 | The same toward the other end, and back to straight, MARK CENTRE | |
+| B7 | HOLD near the centre, then LOCK-TO-LOCK CHECK (K) | centre to the left limit and back, to the right limit and back, at 100 counts a second; **PASSED**, or **STOPPED** and why, holding where the wheels are |
+| B8 | SAVE (W) | the file's path on screen and in the log (below) |
+| B9 | END (O) | `RETURN`, then `OFF`: the wheels go back slowly to the steering asked for |
+
+**The check stops** (and holds) when the position falls 150 counts behind the target, stops
+moving for 0.6 s while the target moves, misses a leg's end, is lost, or the firmware stops
+jogging. A stop near an end: mark that end again, a little inside; then check again.
+
+**Where the result goes.** SAVE writes
+`~/.local/share/aav/steering-calibration/steering-<UTC time>.txt`: the marks, the check's
+result, and the lines for `calibration.rs` and `vehicle.yaml`. The panel never writes
+either file: copy them by hand, as below, with the sheet. For `max_steering_angle`, add
+the wheel angles with the `steering_limits` command (the file has it, filled in).
+
+Without the panel, from any laptop on the car's network:
 
 ```bash
 ros2 topic echo /vehicle/steering_actuator/raw                 # position: counts
@@ -215,16 +249,6 @@ ros2 topic pub -r 10 /drivers/buttons/steering_calibration aav_interfaces/msg/St
 # jog (mode 2) to a target, in counts:
 ros2 topic pub -r 10 /drivers/buttons/steering_calibration aav_interfaces/msg/SteeringCalibration "{mode: 2, target: 2000}"
 ```
-
-| # | Do | Expect |
-|---|---|---|
-| B1 | Nothing driving; the brake on | the calibration line says `OFF` |
-| B2 | **By hand:** limp (mode 1) | `LIMP`; the motor off; the counts follow the wheels |
-| B3 | Turn to full left, straight, full right; read each | three numbers on the sheet |
-| B4 | **Buttons:** jog (mode 2) in steps of 25 counts toward one end, a few seconds apart | the wheels move slowly (300 counts a second at most) |
-| B5 | Stop a step before the steering binds or the motor strains; read the counts | the end |
-| B6 | The same toward the other end, and back to straight | |
-| B7 | Ctrl-C | `RETURN`, then `OFF`: the wheels go back slowly to the steering asked for |
 
 **Refused?** The line says why: not braked, a speed asked for, an e-stop, the RC or a
 test driving, no position (the Jrk's feedback isn't analog), or the bridge's own rules
@@ -240,6 +264,7 @@ beyond them, use limp: the counts are read there all the same.
 | leaving limp holds where the wheels are, then moves back slowly | the firmware |
 | the Orin's heartbeat lost (100 ms): leave, and hold there | the firmware |
 | the panel stops asking (0.5 s): leave | the bridge |
+| the panel asks nothing with an e-stop, the car moving, or no position; its jog stays in 400-3500; its check stays inside the limits and stops on resistance | the panel (panel-core `calibration`, `sweep`) |
 | `steering_calibration: none` by default | the bridge, `legacy.yaml` |
 
 ### The sheet

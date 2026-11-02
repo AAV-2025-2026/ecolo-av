@@ -771,13 +771,72 @@ Run it from the Orin's own screen or a wired laptop, not a Mac over WiFi. For ch
 `hw_panel --self-test 0.3:8` presses Speed + to 0.3 m/s and holds GO for 8 s, through the
 same buttons and rules, and prints what was asked and seen.
 
+### The steering calibration page
+
+Tab (or the STEERING CAL tab) opens it: find the steering actuator's ends and centre,
+set equal limits, then check them lock to lock (Ben, 1 Nov). The procedure, and the
+bridge's settings it needs: [actuator-tests.md, way B](actuator-tests.md#way-b-the-hardware-panel-rust-firmware).
+
+![The steering calibration page (--demo): marked, equal limits, the check passed](img/hw-panel-calibration.png)
+
+| Part of the page | Shows |
+|---|---|
+| top line | **ALLOWED**, or **NOT ALLOWED** and every reason: the e-stop, the car moving, the speed or the position not seen |
+| bridge | the bridge's own line (`/vehicle/steering_actuator/calibration`): what it does, or REFUSED and why |
+| big number | the position now, in counts (`/vehicle/steering_actuator/raw`); the firmware's state; what the page asks |
+| the bar | 0 to 4095, the steering's **left on the left**: the jog range, the limits (green), the marks L C R, the target (box), the position (arrow) |
+| MARKS AND LIMITS | the three marks, the equal limits, the warnings, the lines to copy |
+| LOCK-TO-LOCK CHECK | running: the leg, target and position; then PASSED, or STOPPED and why |
+
+| Button (key) | Does |
+|---|---|
+| GO LIMP (L) | the steering actuator's motor off: turn the wheels by hand |
+| HOLD (H) | jog to where the wheels are now: they stay there |
+| < STEP LEFT, STEP RIGHT > (Left, Right) | jog 25 counts that way; never outside 400-3500 (the firmware's software limits) |
+| END (O) | stop asking: the firmware moves the wheels back slowly |
+| MARK LEFT, MARK CENTRE, MARK RIGHT (1, 2, 3) | the position now is that end, or the centre |
+| CLEAR MARKS | forget the three marks |
+| SAVE (W) | write the result to a file (below) |
+| LOCK-TO-LOCK CHECK (K) | centre to the left limit, back, to the right limit, back, at 100 counts a second |
+
+**What it sends:** `/drivers/buttons/steering_calibration` at 10 Hz, only while the window
+draws: limp, or jog to a target. END sends "off" for 0.5 s, then nothing. Not allowed, or
+the page left (Tab): it ends at once. GO never drives on this page.
+
+**The lock-to-lock check stops and holds** (HOLD where the wheels are) at the first of:
+
+| Sign | Default (`hw_panel.yaml`) |
+|---|---|
+| the position more than this behind the target | 150 counts (`sweep_max_error`) |
+| no movement while the target moves | 0.6 s (`sweep_stall`) |
+| a leg's end not reached | within 20 counts in 2 s |
+| no position | 0.3 s |
+| the firmware not jogging: refused, holding, returning | at once (refused), or after 0.5 s |
+
+It only asks for targets between the limits, and won't start with the wheels outside them.
+
+**Save, and where the numbers go.** SAVE writes a new file,
+`~/.local/share/aav/steering-calibration/steering-<UTC time>.txt` (or under
+`$XDG_DATA_HOME`), and prints the same to the log. It holds the marks, the check's
+result, and the lines for `calibration.rs` (`Steering`) and `vehicle.yaml`. **It never
+writes `vehicle.yaml` or the firmware**: a person copies the lines, in a pull request, with
+the sheet; the hardware lead reviews it. `max_steering_angle` and the gain need the wheel
+angles: the file has the `steering_limits` command to run with them.
+
+**Try it without a car:** `hw_panel --demo --page calibration`. The demo's actuator has
+ends at 3420 and 610 and a centre at 1985 (it steers right). `--cal-self-test` drives the
+page itself (limp, mark, hold, check); `--demo-bind 2800` adds a stiff spot, which the
+check must find:
+
+![The check stopped by a stiff spot at 2800 (--demo-bind 2800)](img/hw-panel-calibration-stopped.png)
+
 ### How it's built
 
 | Part | What it does |
 |---|---|
-| `crates/panel-core` | the logic, no ROS, no raylib: `buttons`, `gate`, `rules` (safety.py's), `state` (every sensor's number), `config`, `vehicle`. `cargo test -p panel-core` |
-| `crates/panel-app` | the window (raylib) and the node (rclrs): the 10 ms timer sends the buttons' command (heartbeat-gated) and the e-stop burst |
-| `config/hw_panel.yaml` | every topic name, the steps (0.1 m/s, 0.05 rad), the creep, the caps (1.0, 0.3 m/s) |
+| `crates/panel-core` | the logic, no ROS, no raylib: `buttons`, `gate`, `rules` (safety.py's), `state` (every sensor's number), `config`, `vehicle`; the calibration page's `calibration`, `steering_limits` (steering_limits.py's, on shared vectors) and `sweep` (the lock-to-lock check). `cargo test -p panel-core` |
+| `crates/panel-app` | the window (raylib) and the node (rclrs): the 10 ms timer sends the buttons' command and the calibration request (heartbeat-gated) and the e-stop burst |
+| `config/hw_panel.yaml` | every topic name, the steps (0.1 m/s, 0.05 rad), the creep, the caps (1.0, 0.3 m/s); the calibration page's jog step and range, and the check's speed and stops |
 
 ### Tested (29 October, Ben's Mac)
 
