@@ -23,4 +23,5 @@ pub mod config;
 pub mod gate;
 pub mod rules;
 pub mod state;
+pub mod steering_limits;
 pub mod vehicle;
