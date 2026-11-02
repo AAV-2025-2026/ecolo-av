@@ -7,6 +7,8 @@
 use std::time::Duration;
 
 use hud_core::theme::ThemeName;
+
+use crate::robot::CarMarker;
 use serde::Deserialize;
 use thiserror::Error;
 
@@ -89,6 +91,8 @@ pub struct MapConfig {
     pub theme: ThemeName,
     /// Frosted glass: the map blurred behind the boxes drawn over it.
     pub blur: bool,
+    /// How the car is drawn: its outline (the default) or the little robot.
+    pub car_marker: CarMarker,
 }
 
 /// Why a settings file can't be used.
@@ -201,6 +205,7 @@ mod tests {
         assert!(c.final_approach > c.arrive_within);
         assert_eq!(c.theme, ThemeName::Mocha);
         assert!(c.blur);
+        assert_eq!(c.car_marker, CarMarker::Outline);
         // Every name is absolute (docs/conventions.md), and none is empty.
         for t in Topic::ALL {
             assert!(c.topic(t).starts_with('/'), "{t:?}: {}", c.topic(t));
@@ -244,5 +249,10 @@ mod tests {
         let c = MapConfig::from_yaml(&day).expect("latte, no blur");
         assert_eq!(c.theme, ThemeName::Latte);
         assert!(!c.blur);
+        let robot = BUILT_IN_YAML.replace("car_marker: outline", "car_marker: robot");
+        let c = MapConfig::from_yaml(&robot).expect("the little robot");
+        assert_eq!(c.car_marker, CarMarker::Robot);
+        let bad = BUILT_IN_YAML.replace("car_marker: outline", "car_marker: tank");
+        assert!(MapConfig::from_yaml(&bad).is_err());
     }
 }

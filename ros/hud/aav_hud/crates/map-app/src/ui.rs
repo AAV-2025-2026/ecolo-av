@@ -34,6 +34,7 @@ use hud_app::paint::{self, ToColor};
 use hud_core::{
     format,
     health::Health,
+    robot::{Form, Odometer, Xy, TILT},
     theme::{GridColours, Rgba, Theme},
     watchdog::Alarm,
 };
@@ -45,6 +46,7 @@ use map_core::{
     grid::{Grid, Palette},
     keyboard::{KeyCap, Keyboard},
     places::{self, MIN_QUERY_CHARS},
+    robot::{self as robot_marker, CarMarker},
     state::{MapState, Remaining},
     streets::TileShapes,
     trip::{time_left, Tone},
@@ -82,6 +84,8 @@ const FONT_GLYPHS: &str = concat!(
 const PANEL_W: f32 = 400.0;
 /// Below this many pixels long, the car is drawn as a plain arrow, so it never vanishes.
 const CAR_MIN_PX: f32 = 22.0;
+/// The little robot is never drawn shorter than this many pixels (at the reference size).
+const ROBOT_MIN_PX: f32 = 40.0;
 
 /// raylib's font handle: one loaded from a file, or its built-in one.
 enum MapFont {
@@ -122,6 +126,10 @@ pub struct Ui {
     map: Option<MapTexture>,
     /// The blur behind the glass: `None` when `blur` is off, or the card refused it.
     frost: Option<Frost>,
+    /// How the car is drawn (`car_marker`).
+    marker: CarMarker,
+    /// Metres the car has rolled: the little robot's treads.
+    odometer: Odometer,
 }
 
 /// A grid's colours as the picture's pixels.
@@ -186,6 +194,7 @@ impl Ui {
         thread: &RaylibThread,
         theme: &'static Theme,
         blur: bool,
+        marker: CarMarker,
     ) -> Self {
         let loaded = FONT_FILES
             .iter()
@@ -210,7 +219,15 @@ impl Ui {
             theme,
             map: None,
             frost,
+            marker,
+            odometer: Odometer::default(),
         }
+    }
+
+    /// The car is at `pose` this frame: turns the little robot's treads.
+    pub fn roll(&mut self, pose: map_core::geom::Pose) {
+        let at = Xy::new(pose.position.x, pose.position.y);
+        self.odometer.roll(at, pose.yaw);
     }
 
     /// Whether the glass blurs the map (`blur`, and the card took the shaders).
@@ -429,7 +446,10 @@ impl Ui {
         }
         if let Some(c) = &state.car {
             let fresh = state.health(Topic::Odom, now).is_ok();
-            car_marker(p, view, vp, car, c.pose, fresh);
+            match self.marker {
+                CarMarker::Outline => car_marker(p, view, vp, car, c.pose, fresh),
+                CarMarker::Robot => robot(p, view, vp, car, c.pose, fresh, self.odometer.travelled),
+            }
         }
     }
 }
@@ -955,6 +975,53 @@ fn car_marker(
             edge,
         );
         fill_triangle(p, [tip, back_l, back_r], body);
+    }
+}
+
+/// The car as the little robot (`car_marker: robot`): on the car's true outline, facing
+/// its heading, a little tilted (heights drawn up the screen). Faded when its position
+/// is old.
+fn robot(
+    p: &mut Painter<impl RaylibDraw>,
+    view: &View,
+    vp: &Viewport,
+    shape: &CarShape,
+    pose: map_core::geom::Pose,
+    fresh: bool,
+    travelled: f64,
+) {
+    let colours = p.t.robot();
+    let k = view.scale.0;
+    let min_length = f64::from(ROBOT_MIN_PX * p.u) / k;
+    let lift = (k * TILT) as f32;
+    let at = |q: hud_core::robot::Xyz| {
+        screen(view, Point::new(q.x, q.y), vp) - Vector2::new(0.0, q.z as f32 * lift)
+    };
+    let edge = colours.edge;
+    for piece in robot_marker::pieces(shape, pose, min_length, travelled) {
+        let colour = colours.of(piece.part);
+        let colour = if fresh {
+            colour
+        } else {
+            colour.mix(p.t.dim, 65)
+        };
+        match &piece.form {
+            Form::Polygon(points) => {
+                let pts: Vec<Vector2> = points.iter().map(|&q| at(q)).collect();
+                for i in 1..pts.len().saturating_sub(1) {
+                    fill_triangle(p, [pts[0], pts[i], pts[i + 1]], colour);
+                }
+                for (i, &a) in pts.iter().enumerate() {
+                    let b = pts[(i + 1) % pts.len()];
+                    p.d.draw_line_ex(a, b, 1.0 * p.u, edge.rl());
+                }
+            }
+            Form::Circle { centre, radius } => {
+                let r = (*radius * k) as f32;
+                p.d.draw_circle_v(at(*centre), r + 1.0 * p.u, edge.rl());
+                p.d.draw_circle_v(at(*centre), r, colour.rl());
+            }
+        }
     }
 }
 

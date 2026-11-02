@@ -309,6 +309,7 @@ struct Params {
     _numbers: Vec<ReadOnlyParameter<f64>>,
     _theme: ReadOnlyParameter<Arc<str>>,
     _blur: ReadOnlyParameter<bool>,
+    _car_marker: ReadOnlyParameter<Arc<str>>,
 }
 
 impl Params {
@@ -358,6 +359,14 @@ impl Params {
             .default(config.blur)
             .read_only()?;
         config.blur = blur.get();
+        let car_marker = node
+            .declare_parameter::<Arc<str>>("car_marker")
+            .default(config.car_marker.as_str().into())
+            .read_only()?;
+        config.car_marker = car_marker
+            .get()
+            .parse()
+            .map_err(|e: String| anyhow::anyhow!(e))?;
         config.validate()?;
         let params = Self {
             _topics: topics,
@@ -365,6 +374,7 @@ impl Params {
             _numbers: numbers,
             _theme: theme,
             _blur: blur,
+            _car_marker: car_marker,
         };
         Ok((params, config))
     }
