@@ -579,7 +579,7 @@ fn street_notes(p: &mut Painter<impl RaylibDraw>, vp: &Viewport, streets: &Stree
     }
     let note = match &streets.status {
         _ if !streets.shown => "STREETS OFF (S)".to_owned(),
-        StreetStatus::Missing(_) => "No street map: pixi run get-street-map".to_owned(),
+        StreetStatus::Missing(_) => "No street map: pixi run get street-map".to_owned(),
         StreetStatus::Failed(why) => format!("No street map: {why}"),
         StreetStatus::Loading | StreetStatus::Ready => return,
     };

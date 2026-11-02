@@ -1,5 +1,5 @@
 //! The street map under Nav2's map: OpenStreetMap's water, parks, buildings and roads,
-//! from the offline Protomaps extract (`pixi run get-street-map`).
+//! from the offline Protomaps extract (`pixi run get street-map`).
 //!
 //! A thread reads the file and decodes tiles (map-core's `streets`), the ones the view
 //! wants, the middle first; the window draws what's ready, a frame at a time, so the
