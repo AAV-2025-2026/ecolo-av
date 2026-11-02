@@ -4,7 +4,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
   ros2 launch aav_bringup sim.launch.py [world:=empty|test_lot|road] [nav:=true]
       [teleop:=false] [gui:=true] [rviz:=true]
       [perception:=false] [lane:=false|true|fake] [camera_obstacles:=false] [hud:=false]
-      [map:=false] [foxglove:=false]
+      [map:=false] [foxglove:=false] [chase_camera:=true]
       [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true] [radar:=true]
       [actuator_model:=true] [speed_loop:=default|smooth|lqi] [sim_speed:=]
       [reversing:=true] [controller:=mppi] [planner:=lattice] [tracker:=none]
@@ -46,6 +46,9 @@ bench's argument names:
                       computer: open ws://localhost:8765 and a layout from tools/foxglove/
                       (foxglove.launch.py: the car's topic list, and the front camera's
                       preview where the world renders it; docs/foxglove.md)
+  chase_camera:=false no chase camera: by default a camera behind and above the car
+                      (aav_gazebo), for Lichtblick's cockpit layout (tools/foxglove/
+                      cockpit.json): /vehicle/gazebo/chase_camera/compressed
   obstacle:=true      the bench's 1 m box in the lane, 15 m ahead (aav_gazebo)
   lidar:=false        no roof lidar. It's on by default (15 Oct): a simulated 16-beam
                       lidar on /sensors/lidar/points, which Nav2 reads as a 2D scan
@@ -207,7 +210,7 @@ def launch_setup(context):
         SetParameter(name='use_sim_time', value=True),
         include(context, 'aav_gazebo', 'gazebo.launch.py', world=world, gui=arg('gui'),
                 obstacle=arg('obstacle'), start_y=arg('start_y'), start_yaw=arg('start_yaw'),
-                lidar=arg('lidar'), radar=arg('radar'),
+                lidar=arg('lidar'), radar=arg('radar'), chase_camera=arg('chase_camera'),
                 actuator_model=arg('actuator_model'), speed_loop=arg('speed_loop'),
                 faults=flag['faults'],
                 spine=arg('spine'), arm=arg('arm'), bridge=arg('bridge'),
@@ -365,6 +368,10 @@ def generate_launch_description():
         DeclareLaunchArgument('start_yaw', default_value='0.0',
                               description='rad: start the car turned this far left of east '
                                           '(the EKFs still start facing east)'),
+        DeclareLaunchArgument('chase_camera', default_value='true',
+                              description='a camera behind and above the car, for '
+                                          "Lichtblick's cockpit layout (world:=road or "
+                                          'test_lot)'),
         DeclareLaunchArgument('lidar', default_value='true',
                               description='a simulated 16-beam roof lidar, on '
                                           '/sensors/lidar/points, read by Nav2 '

@@ -79,6 +79,7 @@ real-time factor at 0.98-0.99.
 | Rear camera, looking back | `/aav/camera_rear/image` | `/sensors/camera/rear/image_raw`, `.../camera_info` | 10 Hz | none | road |
 | Radar | `/aav/radar/points` (a lidar shaped like the radar) | `/sensors/radar/points` | 10 Hz | 5 cm | road |
 | Lidar (roof) | `/aav/lidar/points` | `/sensors/lidar/points` | 10 Hz | 3 cm | road and test_lot; on by default, `lidar:=false` drops it |
+| Chase camera (Gazebo's view, not a sensor) | `/aav/chase_camera/image` | `/vehicle/gazebo/chase_camera/image_raw`, and its JPEG `.../compressed`, for Lichtblick's [cockpit](foxglove.md#cockpit) | 10 Hz | none | road and test_lot; on by default, `chase_camera:=false` drops it |
 | Where the car really is | `/model/aav/truth` | `/vehicle/gazebo/truth`, for checks only | 50 Hz | none | road |
 | Steering, throttle, brake | (the actuator model) | `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake`: command and measured | 50 Hz | none | all |
 | Each wheel's speed | `/world/aav/model/aav/joint_state` | `/vehicle/wheels` (m/s, all four) | 50 Hz | none | all |

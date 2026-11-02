@@ -318,6 +318,20 @@ def test_the_lidar_is_on_by_default():
     assert 'gz_lidar_bridge' not in names(off)
 
 
+def test_the_chase_camera_only_where_the_world_renders_it():
+    road = started(GAZEBO, world='road', gui='false')
+    assert included(road)['description.launch.py']['chase_camera'] == 'true'
+    assert parameters(node(road, 'gz_chase_bridge'))['config_file'].endswith(
+        'bridge_chase.yaml')
+    jpeg = node(road, 'chase_jpeg')
+    assert (jpeg.node_package, jpeg.node_executable) == ('image_transport', 'republish')
+    assert included(started(SIM, world='road'))['gazebo.launch.py']['chase_camera'] == 'true'
+    for actions in (started(GAZEBO, world='empty', gui='false'),
+                    started(GAZEBO, world='road', gui='false', chase_camera='false')):
+        assert included(actions)['description.launch.py']['chase_camera'] == 'false'
+        assert not {'gz_chase_bridge', 'chase_jpeg'} & names(actions)
+
+
 def test_the_spine_in_the_loop_runs_the_rust_bridge_unless_asked():
     def bridge(**args):
         actions = started(GAZEBO, world='empty', gui='false', spine='true', **args)

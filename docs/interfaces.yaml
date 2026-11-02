@@ -554,6 +554,18 @@ topics:
     sub: [gazebo_gps, debug_hud]
     live: [sim]
     note: Where the Gazebo car really is (map frame - the world's origin is the datum - 50 Hz), like the bench's /vehicle/bench/truth. Only the stand-ins read it - gazebo_gps, for the receiver's velocity (/sensors/gps/fix_velocity), never for a position; tools/sim_check.py compares it with /localization/odom/global. Gazebo's other topics (/gazebo/odom, imu, navsat, cmd_vel, radar/points) only link the bridges, gazebo_adapter and the sensor nodes (gazebo_imu, gazebo_gps, gazebo_radar, gazebo_camera - one process per sensor, as on the car).
+  /vehicle/gazebo/chase_camera/image_raw:
+    type: sensor_msgs/msg/Image
+    pub: [gz_chase_bridge]
+    sub: [chase_jpeg]
+    live: [road]
+    note: Gazebo's chase camera (aav_description aav.sensors.gazebo.xacro, chase_camera:=true, the default in sim.launch.py) - 7 m behind the rear axle and 3.5 m up, fixed to the car, 640 x 360 RGB, 10 Hz, frame base_link. Only where the world renders sensors (road, test_lot); never on the car. Big (6.9 MB/s), so the bridge's WiFi list leaves it out (image_raw); chase_jpeg makes the JPEG Lichtblick shows.
+  /vehicle/gazebo/chase_camera/compressed:
+    type: sensor_msgs/msg/CompressedImage
+    pub: [chase_jpeg]
+    sub: [foxglove_bridge]
+    live: [road]
+    note: The chase camera as JPEG, every picture (10 Hz, about 30 kB each) - image_transport republish (chase_jpeg, aav_gazebo gazebo.launch.py). For Lichtblick's cockpit layout (tools/foxglove/cockpit.json), so it shows Gazebo's picture without Gazebo's window. Sim only - the car has no such topic.
   /vehicle/gazebo/spine_outputs:
     type: aav_interfaces/msg/SpineOutputs
     pub: [spine_sim]
@@ -798,7 +810,7 @@ services:
   /track/set_parameters:
     type: rcl_interfaces/srv/SetParameters
     server: track
-    note: aav_track's own parameter service (every ROS node has one). Listed for the one change that matters - tracker, swapped live (a trial, docs/trials.md) - refused unless the node runs with live_swap:=true, which only sim.launch.py sets. Called by the debug HUD's keys 1-4 (debug_hud, aav_hud), only while /system/source says SIM, and by `ros2 param set /track tracker lqr`.
+    note: aav_track's own parameter service (every ROS node has one). Listed for the one change that matters - tracker, swapped live (a trial, docs/trials.md) - refused unless the node runs with live_swap:=true, which only sim.launch.py sets. Called by the debug HUD's keys 1-4 (debug_hud, aav_hud), only while /system/source says SIM, by Lichtblick's cockpit layout (its Call Service panel, through foxglove_bridge on 127.0.0.1), and by `ros2 param set /track tracker lqr`.
 
 actions:
   /scripted_drive:

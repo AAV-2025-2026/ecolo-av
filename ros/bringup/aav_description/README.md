@@ -12,7 +12,7 @@ through the Python helper `aav_description.vehicle`.
 
 | File | Starts |
 |---|---|
-| `description.launch.py [sim:=] [use_sim_time:=] [lidar:=] [joint_state_publisher:=true]` | `robot_state_publisher` from the URDF; `joint_state_publisher`, which merges `/vehicle/joint_states` |
+| `description.launch.py [sim:=] [use_sim_time:=] [lidar:=] [chase_camera:=] [joint_state_publisher:=true]` | `robot_state_publisher` from the URDF; `joint_state_publisher`, which merges `/vehicle/joint_states` |
 | `view.launch.py` (`pixi run view`) | the model in RViz, with joint sliders |
 
 ### Topics
