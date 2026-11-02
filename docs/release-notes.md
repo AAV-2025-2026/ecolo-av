@@ -207,7 +207,19 @@ change since):
 | Docs | 29 pages and 11 pictures |
 | Tools | 26 scripts and 34 `pixi run` tasks |
 
-## Coming next
+## Release 0.2: in progress
+
+**0.2 = sim-complete, car-ready.** A small release: everything merged and tested in
+Gazebo, the car-day runbook, and the first moves' safety gaps closed. The notes are
+written here once the merges land (TODO 77); until then:
+
+| What | Where |
+|---|---|
+| When 0.2 is done | [the car-ready checklist](car-day.md#ready-for-car-day-the-02-checklist) |
+| What's left | [TODO.md](../TODO.md), "Left for 0.2" |
+| What came in since 0.1 | [What's new](whats-new.md) (history, 22 Oct to 1 Nov) |
+
+## Coming next (from 0.1)
 
 - **16 October: the hardware audit** at the car, read-only first: backups, the
   inventory, the measurements.

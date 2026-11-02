@@ -1453,10 +1453,27 @@ Ben: "All the perception stack maybe, what part does what. When sitting at the c
   it wins in the trials and Ben swaps it.
 - **When:** a 0.3 trial (road to 0.2, review finding 7). Six open questions in the design.
 
+## 1 November, night: the road to 0.2, reviewed
+
+### "Are we doing too much, and in the right order?" Too much: a small 0.2, and car day in two.
+
+- **The review:** three reviewers (scope, design, "could a student run car day alone?")
+  read [the road to 0.2](../designs/2026-11-01_road-to-0.2.md) against the repo.
+- **Ben's answers:** split car day; a small 0.2; keep every idea for 0.3 and later.
+
+| What changed | Where |
+|---|---|
+| **Day A** destroys nothing (checked backups, Way A steering, the brake on stands, the Rust ESP32 and the joystick on stands, walking pace once signed); **Day B** upgrades, after a restore is proven | [Car day](../car-day.md#the-order) |
+| The people named, a shared password vault, a signature for each step you can't undo | [Car day](../car-day.md#the-people) |
+| One link version on the car: 2 all Day A; 3 for Way B later | [Car day](../car-day.md#one-link-version-on-the-car) |
+| `car_setup.sh`: a pending reboot, a wrong hostname, an upgrade too early are STOPs | [Car setup](../car-setup.md#when-it-stops) |
+| A "throttle cap", not a "speed cap": the ESP32 can't see speed; a joystick-alive check to build | TODO 74 |
+| The car-ready checklist: when 0.2 is done | [Car day](../car-day.md#ready-for-car-day-the-02-checklist) |
+
 ## Open threads
 
 - **The diffusion planner (2 Nov):** design written, for review; nothing built. Open: the crop, the teacher mix, the guard's limits (its six questions).
-
+- **Road to 0.2 (1 Nov, night):** five rows left (TODO, "Left for 0.2"): the car-ready checklist, TODO 74's gaps, the hardware lead's questions (H1, C1, `.211`, the router), the people named, the release notes.
 - **Car setup (1 Nov):** the runbook and `car_setup.sh` are written and tested in dry run; their first real run is on the car. Open: the joystick turned off with its receiver in, a firmware cap for the first moves (TODO 74); which computer is the Motor Pi (H1); a machine file for the localization Pi.
 - **Car day (1 Nov):** roll the car to measure the wheel diameter; check the front and rear track; then the lattice forward only (TODO 60-62).
 - **D3, the muxes (23 Oct):** built and tested in every profile; for the team: agree

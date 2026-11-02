@@ -194,7 +194,7 @@ the next concrete step.
 | S-2 | Written permission for the lot (November) | ⬜ | |
 | S-3 | Geofence: everything outside the test area blocked on the map | 🔧 | the lot's map (T7.4) |
 | S-4 | Simulated messages can never reach the car | 🧪 | two layers: stand-ins run `--local`; and (23 Oct) the real backends read only `/control/car/actuator_cmd`, which the output mux fills only while every source is REAL, else a latched stop. Tested: with Gazebo announcing SIM, `spine_bridge` sent no drive frame. Next: the same on the car |
-| S-5 | Speed capped at 1 m/s in the firmware and in ego | 🔧 | ego ✅; the firmware's cap with T3.6 |
+| S-5 | Speed capped at 1 m/s in ego; a **throttle cap** in the firmware (the ESP32 can't see the speed) | 🔧 | ego ✅; the firmware's throttle cap with T3.6 (TODO 74b) |
 
 ## The MPPI track (new)
 

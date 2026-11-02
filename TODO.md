@@ -7,22 +7,53 @@ Ben's messages, word for word: `docs/history/messages-*.md`.
 
 Ben, 1 Nov: "Lets maybe aim at this being 0.2 version ... I think we are trying to get to 0.2 so maybe we merge in all the code. Do some testing and then extend the whats new document to include everyhting?"
 
-0.2 = sim-complete, car-ready. 0.3 = it drove.
+**0.2 = sim-complete, car-ready. 0.3 = it drove.** After the review ([the road to 0.2](docs/designs/2026-11-01_road-to-0.2.md)), Ben, 1 Nov: split car day; a **small** 0.2; keep every idea for 0.3 and later.
+
+### Done in 0.2
+
+| # | What |
+|---|---|
+| 59, 62 | Reversing and the U-turn: the lattice is the default where the car may reverse; Hybrid-A* forward only |
+| 63 | The drive-test plan: maps, recording with the lidar, scoring the trials (tests.md 4e, 4f) |
+| 67, 70 | The steering calibration below the screen (link v3: limp, jog; raw counts; `SteerCal`), and the hardware panel's page with the lock-to-lock check that stops on resistance. Untested on the car |
+| 69 | Fewer pixi commands: 89 → 45, no aliases |
+| 72 | The car tests, written: [Know the car](docs/know-the-car.md), one page of order and stop rules |
+| 73 | The Lichtblick cockpit, built (screenshots wait for an unlocked Mac) |
+| 75 | `tools/car_setup.sh <role>` and [Car setup](docs/car-setup.md) (one computer); STOPs for a pending reboot, a wrong hostname, an upgrade too early. Untested on a car computer |
+| | The screens in Catppuccin: HUD, map, debug screen, hardware panel |
+| | [Car day](docs/car-day.md) split: **Day A** destroys nothing, **Day B** upgrades; the people, the vault, sign-offs, the brake on stands, the joystick-off test |
+
+### Left for 0.2 (five rows)
 
 | # | Task | Status |
 |---|---|---|
-| 68 | **Merge everything, test, push** (steer-cal, the debug screen's and panel's theme) | 🔧 1 Nov: steer-cal in drive-plan (full test: 1513, 0 failures); the restyle running |
-| 69 | **Fewer pixi commands** (88 → about 35, grouped: `hud --demo`, `clear <which>`, `pico`, `esp`, `get`), no aliases | 🔧 1 Nov, branch `pixi-tidy` |
-| 70 | **The hardware panel: the calibration page** (limp or jog; Mark left, centre, right; equal limits; Save) and a lock-to-lock check that stops on resistance | 🔧 1 Nov, branch `cal-page`: built and tested in `--demo` (the check passes, and stops on `--demo-bind 2800`) and against a node test; not yet on the car (needs the Rust ESP32 with the uplink, `steering_calibration: stands`). Open: wheel angles typed on the page (today the saved file gives the `steering_limits` command); a pixi task for the panel on the car's network (`hw-panel` is localhost-only) |
-| 71 | **The hardware panel: everything to test the hardware**: actuators off, measure, direct low-level control, type in measurements (wheel size) and check them, the joystick, forward or reverse, speed and distance | ⬜ |
-| 72 | **Car tests that learn the car**: 10 m straight (wheel size), speed step, brake from 1 m/s, coast-down, a circle (steering gain, centre), lock to lock; each fits `vehicle.yaml`, repeat until small; map the area at the same time (`record.sh --lidar`) | 🔧 1 Nov: written, `docs/know-the-car.md` (linked from tests.md): six tests, what each fits, when to stop. ⬜ the panel runs them (71); run on the car |
-| 73 | **The cockpit: one screen** (Gazebo or camera, Nav2's map for goals, the cubes, the algorithms running and a switch) | 🔧 the Lichtblick cockpit is built; ⬜ the algorithm switch; screenshots need 10 min at Ben's Mac |
-| 74 | **Joystick straight to the ESP32 for the first moves** (Pi → ESP32; heartbeat lost → brake, hold-to-drive, a speed cap, stands first) | 🔧 1 Nov: the path is `machine:=motor_pi_alone` (mux, ego, teleop, bridge all on the Motor Pi: the heartbeat made beside the ESP32), `docs/car-setup.md` step 8. Hold-to-drive, the stale-command brake, the 100 ms heartbeat brake (Rust only) and `max_speed` exist. ⬜ **still to build or check:** (a) the joystick turned off with its receiver still in: `joy_node` repeats the last state, so test on stands whether the receiver zeroes it; if not, a joystick-alive check (b) a speed or throttle cap in the firmware for the first moves (today only DAC 700 of 1023; no wheel speed on the ESP32): Ben and the hardware lead decide (c) the C++ has no timeout: stands only until the Rust is flashed (d) the joystick's button and axis numbers |
-| 75 | **Car day setup, so a student can run it**: a runbook and a per-machine script (back up, `do-release-upgrade` 22.04 → 24.04, our code, systemd services at boot, udev, fixed IPs, time sync; `--dry-run`). Pi OS → Ubuntu needs a new SD card; the Orin's JetPack 7.2 is a reflash (check 7.2 lists AGX Orin); then the ESP32; then the lab desktop and CARLA | 🔧 1 Nov: `docs/car-setup.md` and `tools/car_setup.sh <role>` (dry run unless `--apply` and the role typed; tested in dry run); `tools/systemd/aav-car.service`. ⬜ its first real run on the car; a machine file for the localization Pi (where are the IMU and GPS?) |
-| 76 | **Python that may be too slow**: measure on the Orin (`timing-test`); the cubes (`aav_voxels`, numpy) to Rust first if they miss their budget | ⬜ car day |
-| 77 | **0.2 release notes**: rewrite What's new: the short command list, the three screens, the algorithms explained (ICP, NDT, the EKFs, MPPI, RPP, the lattice; diffusion planned), the car-day runbook and the car tests; the PDF | ⬜ after 68, 69 |
-| 78 | **Designs first**: the diffusion planner, the talking model (explains, never drives) | 🔧 the diffusion planner: design written, `docs/designs/2026-11-02_diffusion-planner.md` (2 Nov; a 0.3 trial, to review); ⬜ the talking model |
-| 79 | **Brake and throttle**: after steering, the same measure-then-set for the brake actuator and the throttle | ⬜ car day |
+| 68 | **The car-ready checklist**, every box ticked ([car-day.md](docs/car-day.md#ready-for-car-day-the-02-checklist)): `pixi run test`, `car-day-check` 0 missing, `esp qemu-check`, the `car_setup.sh` dry runs, the merges | 🔧 1 Nov: 1513 tests, 0 failures, before the review's fixes |
+| 74 | **The first moves' gaps** (the joystick, on the Motor Pi alone, `machine:=motor_pi_alone`; [A9b](docs/car-day.md#a9b-the-joystick-on-stands)). (a) **build a joystick-alive check**: the joystick's messages stop changing, or the pad is gone → stop (`joy_node` repeats the last state while the receiver is in); (b) a **throttle cap** in the firmware for the first moves (the ESP32 can't see speed: today only DAC 700 of 1023), Ben and the hardware lead decide the number; (c) **the Rust firmware only** for the first moves (the C++ has no timeout); (d) the joystick's button and axis numbers. **The Kar-Tech stop is the main stop**, held by the e-stop person | 🔧 hold-to-drive, the stale-command brake, the 100 ms heartbeat brake (Rust) and `max_speed` exist. ⬜ (a) to build; (b), (d) on car day |
+| | **Questions to the hardware lead, before the day**: H1 (is CORTEX the Motor Pi?), C1 (CAM1 at .108 or .102?), `.211`'s job, who owns the router (fixed addresses) | ⬜ ([session 3](docs/car-day.md#session-3-questions-for-the-hardware-lead)) |
+| | **The people named**: hardware lead, e-stop person, safety driver, laptop person, approver, with phones; and the shared password vault (Q34) | ⬜ ([the people](docs/car-day.md#the-people)) |
+| 77 | **The 0.2 release notes**: a "Release 0.2" section in [release-notes.md](docs/release-notes.md) (the stub is there); `whats-new.md` stays as history | ⬜ after 68 |
+
+### 0.3 and later: every idea kept
+
+Ben, 1 Nov: "I do like the 23 ideas? lets keep them around like the diffusion path finding. I want that in."
+
+| # | Idea | When |
+|---|---|---|
+| | **Car day itself**: Day A, then the car tests and the map (0.3 = it drove) | after 0.2 |
+| | Day B: **the Pis to Ubuntu 24.04** (the Motor Pi after the Rust ESP32; LOCALIZATION after its machine file) | after a restore is proven |
+| | Day B: **the Orin's reflash** to JetPack 7.2 (once 7.2 is confirmed for AGX Orin), the lab desktop after it | after the Orin's full image |
+| 75 | A machine file for the localization Pi (where are the IMU and GPS?) | before its upgrade |
+| 78 | **The diffusion planner** (a model inside Nav2, TensorRT or Core ML), with the classic stack as its guard (simplex: what it checks, who switches, the fallback, the Orin's budget) | design written 2 Nov ([diffusion planner](docs/designs/2026-11-02_diffusion-planner.md)); a 0.3 trials now (docs/designs) |
+| 78 | **The talking model**: a vision-language model that explains, never drives | design first |
+| | **The Initial D HUD**: the arcade gauge in Carleton red and black | 🔧 branch `hud-initial-d` |
+| | **The little robot** (a tribute to WALL-E): the map's car, eyes peeking on the panel and the debug screen | ✅ 2 Nov; ⬜ the HUD's eyes, after the Initial D HUD |
+| | **Calm** theme colours from Ben's oirp-spss work | waits on Ben (campus or VPN) |
+| 73 | The cockpit's **algorithm switch**; then **merge the cockpit and the debug HUD** into one (the hardware panel stays apart: it drives) | 0.3 |
+| 71 | **The hardware panel's pages**: actuators off, measure, direct control, type in measurements, joystick, speed and distance; the car tests from the panel (72); the calibration page's open bits (70: wheel angles typed in; a pixi task for the panel on the car's network) | 0.3 |
+| 76 | **Python speed** on the Orin: measure (`timing-test`), the cubes to Rust first if they miss their budget | car day, then 0.3 |
+| 79 | **Brake and throttle setting**: measure, then set, like the steering | after the steering |
+| | "Two drive paths": the bridge refuses when a second mux or heartbeat appears | 0.3 |
+| | Way B on the car: link version 3 with the uplink (H9), the panel's calibration page | after the Rust with the uplink |
 
 ## Sunday 1 November: the ideas before the second PR
 

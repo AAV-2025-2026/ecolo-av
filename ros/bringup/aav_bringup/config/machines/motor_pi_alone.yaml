@@ -1,5 +1,5 @@
 # The first moves: the Motor Pi alone drives the car, a person on the joystick (TODO 74,
-# docs/car-setup.md, "The first moves"). For the days before the Orin runs our stack (its
+# docs/car-day.md, A9b). For the days before the Orin runs our stack (its
 # reflash), and to drive the car to the first test. Never with `car orin` running too:
 # two muxes and two egos on domain 42 would both drive.
 #

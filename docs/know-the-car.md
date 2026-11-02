@@ -1,81 +1,68 @@
-# Know the car: tests that learn it
+# Know the car: the order, and when to stop
 
-Written 1 November 2026. Ben, 1 Nov: "drive 10m straight then measure how far it actually
-went. Speed up and slow down and see the time and distance covered. If we do enough tests
-we should be able to figure out the driving characteristics of the car and get more
-accurate with every pass ... We can map the area while there."
+Written 1 November 2026. Ben, 1 Nov: "If we do enough tests we should be able to figure
+out the driving characteristics of the car and get more accurate with every pass ... We
+can map the area while there."
 
 > **The short version**
-> - Six tests. Each **measures** one thing, **fits** one number in `vehicle.yaml` (or `legacy.yaml`), and is **run again** until the error is small.
-> - Most already exist as [actuator tests](actuator-tests.md): this page puts them in order and says when to stop.
-> - **Record the lidar the whole time**: the same drives give the lot's map.
-> - First in Gazebo (`--sim`), then on stands, then the empty lot. A safety driver and the e-stop, always.
+> - One page: **the order**, and **when to stop**. How to run each test is on its own page (the links).
+> - Car day's step A11: only after [A10](car-day.md#a10-the-ground-at-walking-pace) is signed. Test 1 is on stands, earlier (A6, session 9).
+> - Each test fits one number. Run it again until **two runs in a row** are "good enough".
+> - **Record with the lidar the whole time**: the same drives make the lot's map.
 
 ## The loop
 
 ```text
-  run the test ──► measure (tape, stopwatch, the log) ──► fit one number
-       ▲                                                       │
-       └──── error still big? ◄── run again ◄── vehicle.yaml ◄─┘
+  run the test ──► measure ──► fit one number ──► vehicle.yaml ──► run again
+                                                                      │
+                          two runs in a row good enough? ── yes ──► next test
 ```
 
-Stop when **two runs in a row** are inside the "Good enough" column below.
-Write each pass in the table at the bottom: the number before, the measured, the number after.
+## The order
 
-## The six tests
+| # | Test | How to run it | Fits | Stop when (good enough) |
+|---|---|---|---|---|
+| 1 | Lock to lock, on stands | [3.0](tests.md#3b-steering-on-stands) by [Way A](car-day.md#a6-the-steering-actuators-ends-way-a), then 3.10 | `steering_limits`, `max_steering_angle` | equal limits each side; the hardware lead agrees |
+| 2 | Fixed-steering circle, both ways | [4.5](tests.md#4b-steering-on-the-ground) | `max_steering_angle`, `steer_offset` | the radius within 5 %; left and right within 5 % |
+| 3 | 10 m straight, by tape | [4.7, 4.20](tests.md#4e-record-the-lot-the-maps-and-the-scores) | `wheel_diameter` | within 1 % (10 cm in 10 m) |
+| 4 | Speed step, 0 to 1 m/s | [4.1](tests.md#4a-speed-up-coast-brake) | `throttle_lag`, `max_accel`, `full_throttle_speed` | settles within 10 % of the speed asked |
+| 5 | Brake from 1 m/s | [4.3](tests.md#4a-speed-up-coast-brake) | `max_brake`, `brake_lag` | the distance within 10 % of v² ÷ (2 × `max_brake`) |
+| 6 | Coast-down from 2 m/s | [4.2](tests.md#4a-speed-up-coast-brake) | `drag` | two runs within 10 %. ❌ not on today's ESP32 ([why](actuator-tests.md#what-the-car-can-measure-today)) |
+| 7 | Test 3 again | as 3 | `wheel_diameter` | a new `full_throttle_speed` can change it |
 
-| # | Test | Run | Measure | Fits | Good enough |
-|---|---|---|---|---|---|
-| 1 | **10 m straight**, by tape | `pixi run actuator-test straight` ([4.7](tests.md#4b-steering-on-the-ground)); or by hand on the joystick | the tape's distance against the wheels' (`/vehicle/odom`, in the log) | `vehicle.yaml` `wheel_diameter` (test [4.20](tests.md#4e-record-the-lot-the-maps-and-the-scores)) | within 1 % (10 cm in 10 m) |
-| 2 | **Speed step**, 0 to 1 m/s | `pixi run actuator-test speed-up` ([4.1](tests.md#4a-speed-up-coast-brake)) | the time to 1 m/s; the speed it settles at | `throttle_lag`, `max_accel`; on today's ESP32 also `legacy.yaml` `full_throttle_speed` | settles within 10 % of the speed asked |
-| 3 | **Brake from 1 m/s** | `pixi run actuator-test brake` ([4.3](tests.md#4a-speed-up-coast-brake)) | the stopping distance (tape), g (IMU) | `max_brake`, `brake_lag` | the distance within 10 % of v² ÷ (2 × `max_brake`) |
-| 4 | **Coast-down** from 2 m/s | `pixi run actuator-test coast` ([4.2](tests.md#4a-speed-up-coast-brake)) | how fast it slows | `drag` | two runs within 10 %. ❌ not on today's ESP32: a low command still pushes ([why](actuator-tests.md#what-the-car-can-measure-today)) |
-| 5 | **Fixed-steering circle**, both ways | `pixi run actuator-test circles` ([4.5](tests.md#4b-steering-on-the-ground)) | the circle's diameter (tape across, or GPS); yaw rate ÷ speed | the real wheel angle per command: `max_steering_angle`, `steer_offset` (the centre) | the radius within 5 %; left and right within 5 % of each other |
-| 6 | **Lock to lock**, on stands | test [3.0](tests.md#3b-steering-on-stands), then `pixi run actuator-test steer-sweep --stands` (3.10) | the steering actuator's ends and centre (counts), the angle at each end (protractor) | `max_steering_angle`; `steering_limits` | equal limits each side; the hardware lead reviews them |
+Why this order: steering first (every other test drives straight with it), then the
+wheels (every speed reads them), then the speed, the brake and the drag.
 
-How each number moves, test by test:
+How each fit works, and when it is refused: [Trusting the fits](actuator-tests.md#trusting-the-fits).
+What a change does to the car's model: `pixi run python3 tools/vehicle_model.py --set <key>=<value>`.
 
-| # | New number |
+## Stop the session when
+
+| Stop | Then |
 |---|---|
-| 1 | `wheel_diameter` × (tape ÷ wheels' distance) |
-| 2 | `full_throttle_speed` × (speed reached ÷ speed asked); `throttle_lag` from the fit |
-| 3 | `max_brake` from the fit; check it against the tape: v² ÷ (2 × distance) |
-| 5 | wheel angle = atan(`wheelbase` ÷ radius), one per command; the centre where left and right match |
-
-The fits themselves (the dead time, the lag, the refusals): [Trusting the fits](actuator-tests.md#trusting-the-fits).
-
-## In what order
-
-1. **6, then 5** first: steering is the one we can measure on stands, and every other test drives straight with it.
-2. **1** next: every speed and distance after it reads the wheels.
-3. **2, 3, 4**: the speed, the brake, the drag. They settle the "5 times" throttle disagreement ([the car's model](vehicle-model.md)).
-4. Then test 1 again: a new `full_throttle_speed` can change the speed it drove at.
-
-After each change: `pixi run python3 tools/vehicle_model.py --set <key>=<value>` shows what
-it does to the car's model; at home, `pixi run test`.
-
-## How good is it now?
-
-A scripted 10 m stop scores the whole car at once, each pass:
-`pixi run measure atob bags/<run> --taped <along> <across>` ([A to B](a-to-b.md)). The tape
-splits the GPS's error from the control's. Tests 5.1 and 5.2 in [Every test](tests.md#stage-5-the-whole-drive).
+| Anything turns the wrong way, or faster than asked | the Kar-Tech stop; write it down; no more ground today |
+| A fit is refused twice | write down why; go to the next test |
+| The disk on the Orin has under 5 GB | copy the bags off (session 10) |
+| A person says stop | stop. Ask why after |
 
 ## Map the lot at the same time
 
 | ☐ | Do |
 |---|---|
-| ☐ | The lot's corner in `navsat.yaml`'s `datum`, **the same every time** ([4e](tests.md#4e-record-the-lot-the-maps-and-the-scores)) |
-| ☐ | On the Orin, before the first test: `~/aav-jazzy/aav.sh tools/record.sh --lidar learn` (about 5 GB per 10 min: 20 GB free) |
-| ☐ | Drive between the tests too: 2 laps, a figure 8 (4.19) |
-| ☐ | Before leaving: `pixi run ndt-map build bags/<it> --poses /localization/odom/global` (4.21). Blurred? Record again while the car is there |
+| ☐ | The lot's corner in `navsat.yaml`'s `datum`, the same every time ([4e](tests.md#4e-record-the-lot-the-maps-and-the-scores)) |
+| ☐ | Before the first test: `~/aav-jazzy/aav.sh tools/record.sh --lidar learn` (5 GB per 10 min) |
+| ☐ | Between tests: 2 laps and a figure 8 (4.19) |
+| ☐ | Before leaving: the map (4.21). Blurred? Record again while the car is there |
+
+The whole car's score each pass: [A to B](a-to-b.md), tests 5.1 and 5.2 in [Every test](tests.md#stage-5-the-whole-drive).
 
 ## The record of each pass
 
 Print it. One line a pass.
 
-| Pass | Test | Number | Before | Measured | After | Inside "good enough"? |
+| Pass | Test | Number | Before | Measured | After | Good enough? |
 |---|---|---|---|---|---|---|
-| 1 | 1 | `wheel_diameter` | 0.36 | | | ☐ |
+| 1 | 3 | `wheel_diameter` | 0.36 | | | ☐ |
 | | | | | | | ☐ |
 | | | | | | | ☐ |
 | | | | | | | ☐ |

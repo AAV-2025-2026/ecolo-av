@@ -143,13 +143,15 @@ side, 1550 the other). Our Rust firmware copied 1950 / 400-3500 / 3100 counts a 
 
 **Gives:** the centre, equal limits each side of it, the counts a radian, and
 `max_steering_angle`. Test 3.0 in [tests.md](tests.md#3b-steering-on-stands): do it
-before 3.10.
+before 3.10. **3.10 then runs only inside the measured ends:** both ends outside today's
+software limits (400-3500), or the measured ends flashed in `calibration.rs` first
+([car day, A6](car-day.md#a6-the-steering-actuators-ends-way-a)).
 
 !!! warning "Before any sweep"
     - **The car on stands**, all four wheels off the ground, the e-stop in someone's hand.
     - **The steering actuator's current limit set low first** (its Jrk's settings, in
       Pololu's utility), so a wrong target pushes gently against the stop. The value is
-      the hardware lead's.
+      the hardware lead's: **______** (write it here and on the sheet).
     - **The steering actuator's own (Jrk) limits are the last line of defence.** They are
       the hardware lead's to set. Our software limits come first; they don't replace them.
     - Hands clear of the wheels and the linkage while the motor is on.
@@ -170,7 +172,7 @@ radians are worked out *from* this calibration.
 
 ### Two ways
 
-| | Way A: car day, today's C++ firmware | Way B: the Rust firmware and the hardware panel |
+| | Way A: car day, whatever firmware is on the ESP32 | Way B: later, the Rust firmware with the uplink and the hardware panel |
 |---|---|---|
 | Needs | a laptop with Pololu's free **Jrk G2 configuration utility**, a USB cable to the steering actuator's Jrk | the Rust ESP32 firmware with `uplink` (session 6), the uplink's wire (H9), the Jrk's feedback mode set to analog |
 | Reads | the utility's Status tab: feedback, scaled feedback, target | `/vehicle/steering_actuator/raw` (counts), in the panel |
@@ -185,7 +187,7 @@ radians are worked out *from* this calibration.
 | A2 | **Save its settings first, as a backup**: File, then Save settings file. Name it `steering-jrk-<date>.txt`; keep it with the car's files (not in git if it holds anything private) | the file's name |
 | A3 | Read its feedback mode (Feedback tab): it must be **Analog**. Not analog: there is no position to read; stop, tell the hardware lead | the mode |
 | A4 | With the hardware lead: the current limit low (Motor tab), applied | the old and new values |
-| A5 | The ESP32 sends a steering target all the time, so the motor won't stay off. With the hardware lead, stop it reaching the Jrk (the ESP32 off, or its I2C unplugged), then press **Stop motor** in the utility | how |
+| A5 | The ESP32 sends a steering target all the time, so the motor won't stay off. **Power everything off first.** Then, with the hardware lead, stop it reaching the Jrk: the ESP32 left off, or its I2C unplugged **with the power still off** (never with it on). Power the Jrk back, then press **Stop motor** in the utility | how |
 | A6 | Turn the wheels by hand, gently, to **full left** (the steering stops, not the tyre on the frame). Read **Scaled feedback** | left end |
 | A7 | Wheels **straight** (a straight edge on both front wheels, or a string line to the rear wheels). Read it | centre |
 | A8 | **Full right**. Read it | right end |
@@ -197,7 +199,10 @@ them a little differently.
 
 ### Way B: the hardware panel (Rust firmware)
 
-The Motor Pi's `legacy.yaml`, for this session only, with the hardware lead's say-so:
+**Not on car day.** Car day runs link version 2 throughout
+([one link version on the car](car-day.md#one-link-version-on-the-car)). Way B comes later,
+once the Rust firmware with the uplink is flashed and H9 says the wire is there. Then the
+Motor Pi's `legacy.yaml`, for this session only, with the hardware lead's say-so:
 
 ```yaml
 frame_version: 3

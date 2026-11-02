@@ -73,8 +73,8 @@ software stopped; speed capped (`max_speed:=0.3`).
 
 | # | Test | Measure | Passes when | Status |
 |---|---|---|---|---|
-| 3.0 | **The steering actuator's ends and centre**: before any sweep, its current limit low | left end, centre, right end in counts, and the wheel angle at each end (protractor). Way A: Pololu's utility on the C++ car; way B: the hardware panel, limp or jog ([the procedure and sheet](actuator-tests.md#find-the-steering-actuators-ends-and-centre)) | the sheet filled in; `steering_limits` gives equal limits each side; the hardware lead reviews them | ⬜ |
-| 3.10 | **Steering sweep**: full left, centre, full right, slowly | the wheel angle at each command (protractor or phone app on the wheel). `pixi run actuator-test steer-sweep --stands`: it asks for each angle | a table: command → real angle, each way | 🔧 |
+| 3.0 | **The steering actuator's ends and centre**: before any sweep, its current limit low | left end, centre, right end in counts, and the wheel angle at each end (protractor). Way A (car day): Pololu's utility, the power off before any I2C is unplugged; way B (later, link version 3): the hardware panel, limp or jog ([the procedure and sheet](actuator-tests.md#find-the-steering-actuators-ends-and-centre)) | the sheet filled in; `steering_limits` gives equal limits each side; the hardware lead reviews them | ⬜ |
+| 3.10 | **Steering sweep**: full left, centre, full right, slowly; **only inside the ends 3.0 measured** (or once they're flashed) | the wheel angle at each command (protractor or phone app on the wheel). `pixi run actuator-test steer-sweep --stands`: it asks for each angle | a table: command → real angle, each way | 🔧 |
 | 3.11 | **Steering speed**: centre to full lock | seconds, from a video (or `actuator-test steer-rate --stands`, once a steering sensor reports) | written in `vehicle.yaml` | 🔧 |
 | 3.12 | **Centre**: command straight | the wheels' angle; `actuator-test steer-centre --stands` | under 1°, or the offset written down | 🔧 |
 | 3.13 | Wheel speed on stands | `/vehicle/status` speed vs a phone tachometer app | within 10% | ⬜ |
