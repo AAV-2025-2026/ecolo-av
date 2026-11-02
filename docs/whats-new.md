@@ -1,5 +1,7 @@
 # What's new: 22 October to 1 November
 
+> **Frozen on 1 November, as history.** From 0.2 on, what's new goes in [the release notes](release-notes.md#release-02-in-progress).
+
 Everything the last few pull requests added (#13 to #19, and the branch after), by area;
 then the best version to take to the car, what's left for CARLA, and which Ubuntu each
 computer should run. Every feature, with who built it: [Features](features.md). How to
