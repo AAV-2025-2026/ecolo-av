@@ -248,6 +248,9 @@ All the other questions: [audit questions](audit-questions.md).
 **Who:** the laptop person. **How long:** 1-3 h; the backup runs while you do the rest.
 **Bring:** the stick, the backup drive, a cable to the car's switch.
 
+With the internet there and time to upgrade the computers too: [Car setup](car-setup.md)
+does each one in order (back up, upgrade, install, start at boot), with `car_setup.sh`.
+
 First, on the laptop: `cp ~/.config/aav/cyclonedds-car.xml ~/.config/aav/cyclonedds.xml`,
 dongle in, then `pixi run doctor` (it should find the car's network).
 
@@ -395,7 +398,7 @@ The backup holds the C++'s WiFi password: it's a secret. Never in git (`car-day/
 | 1 | On the Motor Pi: stop theirs, `sudo systemctl stop aav_serial_bridge` | `systemctl status aav_serial_bridge`: inactive | never two drive paths |
 | 2 | `vendor/cargo-tools/bin/espflash flash --chip esp32 --monitor car-day/esp32/spine-esp32-umod-v2.elf` | `spine-esp32-umod 0.1.0, link: Motor-Pi UART, version 2 frames (the Orin's heartbeat)` | roll back (6d) |
 | 3 | On the Motor Pi: `legacy.yaml` to version 2: in `~/aav-jazzy/aav/ros/can_bridge/aav_legacy/config/legacy.yaml`, `frame_version: 2`, then `~/aav-jazzy/aav.sh build` | | |
-| 4 | Start the Orin: `~/aav-jazzy/aav.sh ros2 launch aav_bringup car.launch.py machine:=orin max_speed:=0.3 gps:=false lidar:=false` | the output mux makes the heartbeat. Its `foxglove_bridge` can't open port 8765 (theirs holds it): harmless, see session 8 | |
+| 4 | Start the Orin: `~/aav-jazzy/aav.sh ros2 launch aav_bringup car.launch.py machine:=orin max_speed:=0.3 gps:=false lidar:=false stands:=true` | the output mux makes the heartbeat. Its `foxglove_bridge` can't open port 8765 (theirs holds it): harmless, see session 8 | |
 | 5 | Start the Motor Pi: `~/aav-jazzy/aav.sh car motor_pi` | the ESP32's log: `LINK frames=` rising, `bad=0` | `bad=` rising: the speed or the wire (H1) |
 
 ### 6c. The checks, wheels off the ground
@@ -510,7 +513,7 @@ The map panel needs the internet for its tiles: offline it shows the dots on a b
 | Where | Run |
 |---|---|
 | the Motor Pi | `~/aav-jazzy/aav.sh car motor_pi` |
-| the Orin | `~/aav-jazzy/aav.sh ros2 launch aav_bringup car.launch.py machine:=orin max_speed:=0.3 gps:=false lidar:=false` |
+| the Orin | `~/aav-jazzy/aav.sh ros2 launch aav_bringup car.launch.py machine:=orin max_speed:=0.3 gps:=false lidar:=false stands:=true` |
 | the laptop, each terminal | `export ROS_DOMAIN_ID=42`, then `pixi run keyboard`, and `pixi run hud` |
 | the Orin, a second terminal | `~/aav-jazzy/aav.sh tools/record.sh stands` (session 10) |
 

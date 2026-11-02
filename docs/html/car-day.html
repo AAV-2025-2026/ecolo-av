@@ -25,6 +25,7 @@
 <a href="whats-new.html">What&#x27;s new</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
+<a href="car-setup.html">Car setup</a>
 <a class="here" href="car-day.html">Car day</a>
 <a href="tests.html">Every test</a>
 <a href="measure-the-car.html">Measure the car</a>
@@ -735,6 +736,8 @@ table, a pen. The hardware lead decides these: write down what they say, don't a
 <section class="card"><h2 id="session-4-the-orin-and-the-motor-pi">Session 4: the Orin (and the Motor Pi)</h2>
 <p><strong>Who:</strong> the laptop person. <strong>How long:</strong> 1-3 h; the backup runs while you do the rest.
 <strong>Bring:</strong> the stick, the backup drive, a cable to the car's switch.</p>
+<p>With the internet there and time to upgrade the computers too: <a href="car-setup.html">Car setup</a>
+does each one in order (back up, upgrade, install, start at boot), with <code>car_setup.sh</code>.</p>
 <p>First, on the laptop: <code>cp ~/.config/aav/cyclonedds-car.xml ~/.config/aav/cyclonedds.xml</code>,
 dongle in, then <code>pixi run doctor</code> (it should find the car's network).</p>
 <h3 id="4a-look-then-back-up">4a. Look, then back up</h3>
@@ -1096,7 +1099,7 @@ repo.</p>
 </tr>
 <tr>
 <td>4</td>
-<td>Start the Orin: <code>~/aav-jazzy/aav.sh ros2 launch aav_bringup car.launch.py machine:=orin max_speed:=0.3 gps:=false lidar:=false</code></td>
+<td>Start the Orin: <code>~/aav-jazzy/aav.sh ros2 launch aav_bringup car.launch.py machine:=orin max_speed:=0.3 gps:=false lidar:=false stands:=true</code></td>
 <td>the output mux makes the heartbeat. Its <code>foxglove_bridge</code> can't open port 8765 (theirs holds it): harmless, see session 8</td>
 <td></td>
 </tr>
@@ -1440,7 +1443,7 @@ Their <code>foxglove-bridge</code> already holds port 8765 on the Orin, so ours 
 </tr>
 <tr>
 <td>the Orin</td>
-<td><code>~/aav-jazzy/aav.sh ros2 launch aav_bringup car.launch.py machine:=orin max_speed:=0.3 gps:=false lidar:=false</code></td>
+<td><code>~/aav-jazzy/aav.sh ros2 launch aav_bringup car.launch.py machine:=orin max_speed:=0.3 gps:=false lidar:=false stands:=true</code></td>
 </tr>
 <tr>
 <td>the laptop, each terminal</td>
@@ -1840,7 +1843,7 @@ reboots into recovery mode and is off for the whole copy. Not possible at the dr
 </tr>
 </tbody>
 </table></div></section>
-<nav class="prevnext"><a class="prev" href="audit-questions.html"><small>Previous</small>← Audit questions</a>
+<nav class="prevnext"><a class="prev" href="car-setup.html"><small>Previous</small>← Car setup</a>
 <a class="next" href="tests.html"><small>Next</small>Every test →</a></nav>
 </main>
 <footer>Source: <code>docs/car-day.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>

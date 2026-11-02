@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">34 min read · 14 sections</div></header>
+<div class="meta">35 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -25,6 +25,7 @@
 <a href="whats-new.html">What&#x27;s new</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
+<a href="car-setup.html">Car setup</a>
 <a href="car-day.html">Car day</a>
 <a href="tests.html">Every test</a>
 <a href="measure-the-car.html">Measure the car</a>
@@ -393,6 +394,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Ben</td>
 <td>2026-10-15</td>
 <td>sim</td>
+</tr>
+<tr>
+<td><a href="car-setup.html#step-8-the-first-moves-the-joystick">First moves on the Motor Pi alone</a> (<code>car.launch.py machine:=motor_pi_alone</code>)</td>
+<td>Ben, 1 Nov: "We do still need a way to move the vehicle to get to our first test": the joystick drives through mux, ego and the output mux all on the Pi, so the heartbeat is made beside the ESP32 and a dead Pi or wire brakes the car, with no Orin needed</td>
+<td>Ben</td>
+<td>2026-11-01</td>
+<td>built</td>
 </tr>
 <tr>
 <td>RC via ROS (<code>rc_driver</code>) and a three-position mode switch</td>
@@ -1087,6 +1095,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Ben</td>
 <td>2026-11-01</td>
 <td>sim</td>
+</tr>
+<tr>
+<td><a href="car-setup.html">Car setup</a>: a runbook and <code>tools/car_setup.sh &lt;role&gt;</code></td>
+<td>Ben, 1 Nov: "a car test that will allow people to do the test so I don't have to. Maybe even install everything like the update and upgrade": each computer backed up, upgraded, installed and started at boot by a student alone; a dry run unless the role is typed</td>
+<td>Ben</td>
+<td>2026-11-01</td>
+<td>built</td>
 </tr>
 <tr>
 <td><a href="a-to-b.html">A-to-B scorer</a> (<code>pixi run measure atob</code>)</td>

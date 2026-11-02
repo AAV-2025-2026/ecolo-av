@@ -33,8 +33,8 @@ DOCS = ROOT / 'docs'
 OUT = DOCS / 'html'
 STYLE = DOCS / 'style.css'
 WPM = 150          # an unhurried reading speed, so the times are a promise
-READ_FIRST = 21    # PAGES[:21] are the reading list
-LEARN_END = 36     # PAGES[21:36] are the learn pages; the rest are reference
+READ_FIRST = 22    # PAGES[:22] are the reading list
+LEARN_END = 37     # PAGES[22:37] are the learn pages; the rest are reference
 
 # (file in docs/, menu title, what it's for). A name in ROOT_PAGES is a page kept at the
 # repository's root instead, built the same way (none since 25 Oct: every page is in docs/).
@@ -56,6 +56,7 @@ PAGES = [
     ('whats-new.md', "What's new", 'The last few pull requests, by area, with pictures'),
     ('audit-friday.md', 'Audit, 16 Oct', 'The hardware audit, machine by machine'),
     ('audit-questions.md', 'Audit questions', 'What only the car can tell us'),
+    ('car-setup.md', 'Car setup', 'Every car computer: back up, upgrade, install, start at boot'),
     ('car-day.md', 'Car day', 'The day at the car, session by session; the preflight'),
     ('tests.md', 'Every test', 'Every test, in order: sim, bench, stands, lot, the drive'),
     ('measure-the-car.md', 'Measure the car', 'The sheet for whoever measures the car'),
