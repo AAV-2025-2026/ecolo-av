@@ -1137,3 +1137,76 @@ mod tests {
         assert_eq!(CALM, MOCHA);
     }
 }
+
+/// The little robot's colours (the easter egg, [`crate::robot`]), from the theme's own:
+/// an amber body (the WAIT colour), grey treads, neck and eye shells, dark glass, a
+/// white glint. Kept apart from [`Theme`]'s fields so a theme needs nothing new.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RobotColours {
+    pub tread: Rgba,
+    pub cleat: Rgba,
+    pub body: Rgba,
+    pub body_side: Rgba,
+    pub neck: Rgba,
+    pub eye: Rgba,
+    pub lens: Rgba,
+    pub glint: Rgba,
+    /// A thin edge round the map's robot, so it shows on any street colour.
+    pub edge: Rgba,
+}
+
+impl RobotColours {
+    /// The colour of one part.
+    pub fn of(&self, part: crate::robot::Part) -> Rgba {
+        use crate::robot::Part;
+        match part {
+            Part::Tread => self.tread,
+            Part::Cleat => self.cleat,
+            Part::Body => self.body,
+            Part::BodySide => self.body_side,
+            Part::Neck => self.neck,
+            Part::Eye => self.eye,
+            Part::Lens => self.lens,
+            Part::Glint => self.glint,
+        }
+    }
+}
+
+impl Theme {
+    /// The little robot's colours in this theme.
+    pub fn robot(&self) -> RobotColours {
+        RobotColours {
+            tread: self.idle_fill.mix(Rgba::BLACK, 45),
+            cleat: self.idle_fill,
+            body: self.wait_fill,
+            body_side: self.wait_fill.mix(Rgba::BLACK, 28),
+            neck: self.idle_fill.mix(Rgba::BLACK, 15),
+            eye: self.idle_fill.mix(Rgba::WHITE, 40),
+            lens: catppuccin::mocha::CRUST,
+            glint: Rgba::WHITE,
+            edge: catppuccin::mocha::CRUST.alpha(170),
+        }
+    }
+}
+
+#[cfg(test)]
+mod robot_tests {
+    use super::*;
+
+    #[test]
+    fn the_robot_shows_in_every_theme() {
+        for name in ThemeName::ALL {
+            let t = name.theme();
+            let r = t.robot();
+            // Its body stands out on the window and the map's land; its glass on its
+            // shells; the glint on the glass.
+            for back in [t.background, t.background_low, t.streets.land] {
+                let c = r.body.contrast(back);
+                assert!(c >= 3.0, "{name}: the robot's body is {c:.2} : 1");
+            }
+            assert!(r.lens.contrast(r.eye) >= 3.0, "{name}: lens on eye");
+            assert!(r.glint.contrast(r.lens) >= 3.0, "{name}: glint on lens");
+            assert!(r.body.difference(r.body_side) > 0.05, "{name}: shade");
+        }
+    }
+}

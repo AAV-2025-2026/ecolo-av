@@ -25,6 +25,7 @@ keeps. `map-core` shares its health, origin, watchdog and formatting code.
 | `format` | numbers as short text for the screen |
 | `screen` | which monitor a window opens on (`--monitor HDMI-1`) |
 | `theme` | every colour of the four screens (HUD, map, debug screen, hardware panel): `Theme`, `ThemeName` (`mocha`, `latte`, `calm`), `Rgba` with `contrast` (WCAG); Catppuccin's palettes (MIT) |
+| `robot` | the little robot, the screens' easter egg (a tribute to WALL-E, our own drawing): `top_view` (the map's car from above, 2.5D, `TILT`), `Odometer` (turns the treads), `peek` (two eyes over a bottom edge), `side_view` (driving across); `EasterEgg::update(now, Watch)` → `Show`: when it peeks, drives, hides. Its colours: `Theme::robot()` |
 
 ## Invariants
 
@@ -35,6 +36,8 @@ keeps. `map-core` shares its health, origin, watchdog and formatting code.
 - Every theme passes the contrast test: 4.5 : 1 for words, 3 : 1 for shapes (the e-stop).
 - SI units inside (m/s, rad, s); km/h only in text for the screen.
 - Times use `Instant` (a steady clock).
+- The little robot never shows while the car moves, an e-stop is on or a warning
+  shows, and hides on any input or change (`EasterEgg`; its tests).
 
 ## Side Effects
 

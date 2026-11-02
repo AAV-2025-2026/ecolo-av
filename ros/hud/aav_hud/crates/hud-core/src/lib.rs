@@ -9,6 +9,7 @@
 //! | [`health`] | when each topic was last heard, and OK / STALE / NEVER |
 //! | [`origin`] | `/system/source`: real, simulated, bench or replay, per topic |
 //! | [`picture`] | a camera picture turned into RGBA pixels for the screen |
+//! | [`robot`] | the little robot (the easter egg): its shapes from above, peeking and from the side; when it shows |
 //! | [`estop`] | the e-stop button: five `true`s, 0.1 s apart, never `false` |
 //! | [`heartbeat`] | `/hud/heartbeat` to the sensor watchdog: 10 Hz while the screen draws |
 //! | [`watchdog`] | the sensor watchdog's verdict, as a banner (the map window's too) |
@@ -27,6 +28,7 @@ pub mod health;
 pub mod heartbeat;
 pub mod origin;
 pub mod picture;
+pub mod robot;
 pub mod screen;
 pub mod state;
 pub mod theme;
