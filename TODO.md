@@ -21,7 +21,7 @@ Ben, 1 Nov: "Lets maybe aim at this being 0.2 version ... I think we are trying 
 | 75 | **Car day setup, so a student can run it**: a runbook and a per-machine script (back up, `do-release-upgrade` 22.04 → 24.04, our code, systemd services at boot, udev, fixed IPs, time sync; `--dry-run`). Pi OS → Ubuntu needs a new SD card; the Orin's JetPack 7.2 is a reflash (check 7.2 lists AGX Orin); then the ESP32; then the lab desktop and CARLA | 🔧 1 Nov: `docs/car-setup.md` and `tools/car_setup.sh <role>` (dry run unless `--apply` and the role typed; tested in dry run); `tools/systemd/aav-car.service`. ⬜ its first real run on the car; a machine file for the localization Pi (where are the IMU and GPS?) |
 | 76 | **Python that may be too slow**: measure on the Orin (`timing-test`); the cubes (`aav_voxels`, numpy) to Rust first if they miss their budget | ⬜ car day |
 | 77 | **0.2 release notes**: rewrite What's new: the short command list, the three screens, the algorithms explained (ICP, NDT, the EKFs, MPPI, RPP, the lattice; diffusion planned), the car-day runbook and the car tests; the PDF | ⬜ after 68, 69 |
-| 78 | **Designs first**: the diffusion planner, the talking model (explains, never drives) | ⬜ EGM in docs/designs |
+| 78 | **Designs first**: the diffusion planner, the talking model (explains, never drives) | 🔧 the diffusion planner: design written, `docs/designs/2026-11-02_diffusion-planner.md` (2 Nov; a 0.3 trial, to review); ⬜ the talking model |
 | 79 | **Brake and throttle**: after steering, the same measure-then-set for the brake actuator and the throttle | ⬜ car day |
 
 ## Sunday 1 November: the ideas before the second PR

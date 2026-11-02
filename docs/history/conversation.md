@@ -1437,7 +1437,25 @@ Ben: "All the perception stack maybe, what part does what. When sitting at the c
   `check`, `doctor`, `car-day-check`...) and the stand-ins that must stay on this computer
   (`carla-car`, `laptop-bench`).
 
+## 1 November: the diffusion planner
+
+### "Diffusion planners: This sounds interesting. Is this using a model to make this happen. Can we do it" (and: "I want that in")
+
+- **Yes, a model:** a small network turns random noise into a path in a few steps. It can
+  give several good paths at once (left or right of the building).
+- **Proposed** (design `docs/designs/2026-11-02_diffusion-planner.md`, 2 Nov): one more
+  planner, `planner:=diffusion`, beside the lattice. A Rust node answers Nav2's
+  `ComputePathToPose`; the model runs from one ONNX file on TensorRT (Orin) or Core ML
+  (Mac). It first learns by copying the lattice's and Hybrid-A*'s paths on random maps.
+- **The guard (simplex):** every sampled path is checked (collisions, the 3.59 m turns,
+  reverse rules, start and end). If none pass, or the model takes over 150 ms, the car
+  gets the lattice's path, asked for at the same time. The car refuses `diffusion` until
+  it wins in the trials and Ben swaps it.
+- **When:** a 0.3 trial (road to 0.2, review finding 7). Six open questions in the design.
+
 ## Open threads
+
+- **The diffusion planner (2 Nov):** design written, for review; nothing built. Open: the crop, the teacher mix, the guard's limits (its six questions).
 
 - **Car setup (1 Nov):** the runbook and `car_setup.sh` are written and tested in dry run; their first real run is on the car. Open: the joystick turned off with its receiver in, a firmware cap for the first moves (TODO 74); which computer is the Motor Pi (H1); a machine file for the localization Pi.
 - **Car day (1 Nov):** roll the car to measure the wheel diameter; check the front and rear track; then the lattice forward only (TODO 60-62).
