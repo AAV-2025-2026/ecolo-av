@@ -132,7 +132,7 @@ and `aav_rc`'s `rc_driver` beside the bridge.
 | `uart_relay.py` | no | `Relay`: what to write each tick; `programs_locked`: the no-timeout lock |
 | `speed_control.py` | no | `SpeedControl`: feed-forward from ego's speed profile plus PI on the wheel speed, out as throttle or brake; the smooth stop |
 | `uplink_reader.py` | no | `UplinkReader`, `status_fields`, `steering_state`, `brake_state`, `rc_fields`, `raw_fields`, `calibration_line` |
-| `steering_limits.py` | no | `compute`: the steering actuator's limits from its marked ends and centre; the `steering_limits` command |
+| `steering_limits.py` | no | `compute`: the steering actuator's limits from its marked ends and centre; the `steering_limits` command. The hardware panel has a Rust twin (panel-core); both test against `test/steering_limits_vectors.json` |
 
 ## Invariants
 

@@ -1,8 +1,10 @@
 """The steering actuator's limits from its marked ends and centre (steering_limits)."""
 
+import json
 import math
+from pathlib import Path
 
-from aav_legacy.steering_limits import compute, main, MeasurementError
+from aav_legacy.steering_limits import compute, main, MARGIN, MeasurementError
 import pytest
 
 
@@ -64,3 +66,40 @@ def test_the_command_line(capsys):
     assert "hardware lead's" in out
     assert main(['--left', '2000', '--centre', '2000', '--right', '2010']) == 1
     assert 'ERROR' in capsys.readouterr().out
+
+
+# --- The vectors shared with the hardware panel's Rust twin (panel-core steering_limits.rs) ---
+
+VECTORS = Path(__file__).resolve().parent / 'steering_limits_vectors.json'
+WARNING_KINDS = (('from the middle', 'centre_off'), ('lopsided', 'lopsided'),
+                 ('left end reads', 'clipped_left'), ('right end reads', 'clipped_right'),
+                 ('gains of the two sides', 'gains_differ'))
+ERROR_KINDS = (('counts are 0 to', 'out_of_range'), ("doesn't change", 'no_span'),
+               ('not between', 'centre_not_between'), ('positive degrees', 'angles'))
+
+
+def kind(text, kinds):
+    return next(k for key, k in kinds if key in text)
+
+
+def test_the_vectors_shared_with_the_panel():
+    doc = json.loads(VECTORS.read_text())
+    assert doc['margin'] == MARGIN
+    for case in doc['cases']:
+        expect = case['expect']
+        args = (case['left'], case['centre'], case['right'], case['left_deg'],
+                case['right_deg'])
+        if 'error' in expect:
+            with pytest.raises(MeasurementError) as e:
+                compute(*args)
+            assert kind(str(e.value), ERROR_KINDS) == expect['error'], case['name']
+            continue
+        r = compute(*args)
+        assert (r.lo, r.hi, r.half, r.sign) == (
+            expect['lo'], expect['hi'], expect['half'], expect['sign']), case['name']
+        for name in ('counts_per_rad', 'max_steering_angle'):
+            want = expect[name]
+            assert (getattr(r, name) is None) == (want is None), case['name']
+            if want is not None:
+                assert getattr(r, name) == pytest.approx(want), case['name']
+        assert [kind(w, WARNING_KINDS) for w in r.warnings] == expect['warnings'], case['name']

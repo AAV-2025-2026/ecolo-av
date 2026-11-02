@@ -7,7 +7,7 @@
 <!-- Generated from docs/actuator-tests.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Actuator tests: measure how the car moves</h1>
-<div class="meta">30 min read · 11 sections</div></header>
+<div class="meta">32 min read · 11 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -521,59 +521,83 @@ them a little differently.</p>
 <pre class="highlight"><code class="language-yaml">frame_version: 3
 uplink: true
 steering_calibration: stands     # back to none afterwards</code></pre>
-<p>The panel's calibration page is to come. Until then, from a laptop on the car's network:</p>
-<pre class="highlight"><code class="language-bash">ros2 topic echo /vehicle/steering_actuator/raw                 # position: counts
-ros2 topic echo /vehicle/steering_actuator/calibration          # what it does, and why not
-# limp (mode 1), sent at 10 Hz while it runs; Ctrl-C ends it within 0.5 s:
-ros2 topic pub -r 10 /drivers/buttons/steering_calibration aav_interfaces/msg/SteeringCalibration "{mode: 1}"
-# jog (mode 2) to a target, in counts:
-ros2 topic pub -r 10 /drivers/buttons/steering_calibration aav_interfaces/msg/SteeringCalibration "{mode: 2, target: 2000}"</code></pre>
+<p>Then, on the laptop (on the car's network, the car's <code>ROS_DOMAIN_ID</code>; <a href="mac.html">mac.md</a>),
+the hardware panel's <strong>STEERING CAL</strong> page (Tab):</p>
+<pre class="highlight"><code class="language-bash">pixi run tools/ros.sh ros2 launch aav_hud hw_panel.launch.py    # then Tab</code></pre>
+<p>Not <code>pixi run hw-panel</code>: it is localhost-only, so it never sees the car. The page:
+<a href="hud.html#the-steering-calibration-page">hud.md</a>.</p>
+<p><img alt="The steering calibration page (--demo)" src="../img/hw-panel-calibration.png" /></p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th>#</th>
-<th>Do</th>
+<th>Do (button, key)</th>
 <th>Expect</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>B1</td>
-<td>Nothing driving; the brake on</td>
-<td>the calibration line says <code>OFF</code></td>
+<td>Nothing driving; the brake on. Open the page</td>
+<td><strong>ALLOWED</strong>; the bridge's line says <code>OFF</code>; the position in counts</td>
 </tr>
 <tr>
 <td>B2</td>
-<td><strong>By hand:</strong> limp (mode 1)</td>
-<td><code>LIMP</code>; the motor off; the counts follow the wheels</td>
+<td><strong>By hand:</strong> GO LIMP (L)</td>
+<td>firmware <code>LIMP</code>; the motor off; the counts follow the wheels</td>
 </tr>
 <tr>
 <td>B3</td>
-<td>Turn to full left, straight, full right; read each</td>
-<td>three numbers on the sheet</td>
+<td>Full left: MARK LEFT (1). Straight: MARK CENTRE (2). Full right: MARK RIGHT (3)</td>
+<td>the three marks; the limits and any warnings under them</td>
 </tr>
 <tr>
 <td>B4</td>
-<td><strong>Buttons:</strong> jog (mode 2) in steps of 25 counts toward one end, a few seconds apart</td>
+<td><strong>Or with the motor:</strong> HOLD (H), then STEP LEFT / STEP RIGHT (Left, Right), 25 counts a press, a few seconds apart</td>
 <td>the wheels move slowly (300 counts a second at most)</td>
 </tr>
 <tr>
 <td>B5</td>
-<td>Stop a step before the steering binds or the motor strains; read the counts</td>
+<td>Stop a step before the steering binds or the motor strains; MARK that end</td>
 <td>the end</td>
 </tr>
 <tr>
 <td>B6</td>
-<td>The same toward the other end, and back to straight</td>
+<td>The same toward the other end, and back to straight, MARK CENTRE</td>
 <td></td>
 </tr>
 <tr>
 <td>B7</td>
-<td>Ctrl-C</td>
+<td>HOLD near the centre, then LOCK-TO-LOCK CHECK (K)</td>
+<td>centre to the left limit and back, to the right limit and back, at 100 counts a second; <strong>PASSED</strong>, or <strong>STOPPED</strong> and why, holding where the wheels are</td>
+</tr>
+<tr>
+<td>B8</td>
+<td>SAVE (W)</td>
+<td>the file's path on screen and in the log (below)</td>
+</tr>
+<tr>
+<td>B9</td>
+<td>END (O)</td>
 <td><code>RETURN</code>, then <code>OFF</code>: the wheels go back slowly to the steering asked for</td>
 </tr>
 </tbody>
 </table></div>
+<p><strong>The check stops</strong> (and holds) when the position falls 150 counts behind the target, stops
+moving for 0.6 s while the target moves, misses a leg's end, is lost, or the firmware stops
+jogging. A stop near an end: mark that end again, a little inside; then check again.</p>
+<p><strong>Where the result goes.</strong> SAVE writes
+<code>~/.local/share/aav/steering-calibration/steering-&lt;UTC time&gt;.txt</code>: the marks, the check's
+result, and the lines for <code>calibration.rs</code> and <code>vehicle.yaml</code>. The panel never writes
+either file: copy them by hand, as below, with the sheet. For <code>max_steering_angle</code>, add
+the wheel angles with the <code>steering_limits</code> command (the file has it, filled in).</p>
+<p>Without the panel, from any laptop on the car's network:</p>
+<pre class="highlight"><code class="language-bash">ros2 topic echo /vehicle/steering_actuator/raw                 # position: counts
+ros2 topic echo /vehicle/steering_actuator/calibration          # what it does, and why not
+# limp (mode 1), sent at 10 Hz while it runs; Ctrl-C ends it within 0.5 s:
+ros2 topic pub -r 10 /drivers/buttons/steering_calibration aav_interfaces/msg/SteeringCalibration "{mode: 1}"
+# jog (mode 2) to a target, in counts:
+ros2 topic pub -r 10 /drivers/buttons/steering_calibration aav_interfaces/msg/SteeringCalibration "{mode: 2, target: 2000}"</code></pre>
 <p><strong>Refused?</strong> The line says why: not braked, a speed asked for, an e-stop, the RC or a
 test driving, no position (the Jrk's feedback isn't analog), or the bridge's own rules
 (<code>steering_calibration</code> is <code>none</code>, no uplink, ego driving, the car moving).</p>
@@ -606,6 +630,10 @@ beyond them, use limp: the counts are read there all the same.</p>
 <tr>
 <td>the panel stops asking (0.5 s): leave</td>
 <td>the bridge</td>
+</tr>
+<tr>
+<td>the panel asks nothing with an e-stop, the car moving, or no position; its jog stays in 400-3500; its check stays inside the limits and stops on resistance</td>
+<td>the panel (panel-core <code>calibration</code>, <code>sweep</code>)</td>
 </tr>
 <tr>
 <td><code>steering_calibration: none</code> by default</td>

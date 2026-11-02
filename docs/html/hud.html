@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">53 min read · 7 sections</div></header>
+<div class="meta">57 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -1936,6 +1936,134 @@ pixi run hw-panel stands:=true         # on the car's stands (speed stays off un
 <p>Run it from the Orin's own screen or a wired laptop, not a Mac over WiFi. For checks,
 <code>hw_panel --self-test 0.3:8</code> presses Speed + to 0.3 m/s and holds GO for 8 s, through the
 same buttons and rules, and prints what was asked and seen.</p>
+<h3 id="the-steering-calibration-page">The steering calibration page</h3>
+<p>Tab (or the STEERING CAL tab) opens it: find the steering actuator's ends and centre,
+set equal limits, then check them lock to lock (Ben, 1 Nov). The procedure, and the
+bridge's settings it needs: <a href="actuator-tests.html#way-b-the-hardware-panel-rust-firmware">actuator-tests.md, way B</a>.</p>
+<p><img alt="The steering calibration page (--demo): marked, equal limits, the check passed" src="../img/hw-panel-calibration.png" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part of the page</th>
+<th>Shows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>top line</td>
+<td><strong>ALLOWED</strong>, or <strong>NOT ALLOWED</strong> and every reason: the e-stop, the car moving, the speed or the position not seen</td>
+</tr>
+<tr>
+<td>bridge</td>
+<td>the bridge's own line (<code>/vehicle/steering_actuator/calibration</code>): what it does, or REFUSED and why</td>
+</tr>
+<tr>
+<td>big number</td>
+<td>the position now, in counts (<code>/vehicle/steering_actuator/raw</code>); the firmware's state; what the page asks</td>
+</tr>
+<tr>
+<td>the bar</td>
+<td>0 to 4095, the steering's <strong>left on the left</strong>: the jog range, the limits (green), the marks L C R, the target (box), the position (arrow)</td>
+</tr>
+<tr>
+<td>MARKS AND LIMITS</td>
+<td>the three marks, the equal limits, the warnings, the lines to copy</td>
+</tr>
+<tr>
+<td>LOCK-TO-LOCK CHECK</td>
+<td>running: the leg, target and position; then PASSED, or STOPPED and why</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Button (key)</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GO LIMP (L)</td>
+<td>the steering actuator's motor off: turn the wheels by hand</td>
+</tr>
+<tr>
+<td>HOLD (H)</td>
+<td>jog to where the wheels are now: they stay there</td>
+</tr>
+<tr>
+<td>&lt; STEP LEFT, STEP RIGHT &gt; (Left, Right)</td>
+<td>jog 25 counts that way; never outside 400-3500 (the firmware's software limits)</td>
+</tr>
+<tr>
+<td>END (O)</td>
+<td>stop asking: the firmware moves the wheels back slowly</td>
+</tr>
+<tr>
+<td>MARK LEFT, MARK CENTRE, MARK RIGHT (1, 2, 3)</td>
+<td>the position now is that end, or the centre</td>
+</tr>
+<tr>
+<td>CLEAR MARKS</td>
+<td>forget the three marks</td>
+</tr>
+<tr>
+<td>SAVE (W)</td>
+<td>write the result to a file (below)</td>
+</tr>
+<tr>
+<td>LOCK-TO-LOCK CHECK (K)</td>
+<td>centre to the left limit, back, to the right limit, back, at 100 counts a second</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What it sends:</strong> <code>/drivers/buttons/steering_calibration</code> at 10 Hz, only while the window
+draws: limp, or jog to a target. END sends "off" for 0.5 s, then nothing. Not allowed, or
+the page left (Tab): it ends at once. GO never drives on this page.</p>
+<p><strong>The lock-to-lock check stops and holds</strong> (HOLD where the wheels are) at the first of:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Sign</th>
+<th>Default (<code>hw_panel.yaml</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>the position more than this behind the target</td>
+<td>150 counts (<code>sweep_max_error</code>)</td>
+</tr>
+<tr>
+<td>no movement while the target moves</td>
+<td>0.6 s (<code>sweep_stall</code>)</td>
+</tr>
+<tr>
+<td>a leg's end not reached</td>
+<td>within 20 counts in 2 s</td>
+</tr>
+<tr>
+<td>no position</td>
+<td>0.3 s</td>
+</tr>
+<tr>
+<td>the firmware not jogging: refused, holding, returning</td>
+<td>at once (refused), or after 0.5 s</td>
+</tr>
+</tbody>
+</table></div>
+<p>It only asks for targets between the limits, and won't start with the wheels outside them.</p>
+<p><strong>Save, and where the numbers go.</strong> SAVE writes a new file,
+<code>~/.local/share/aav/steering-calibration/steering-&lt;UTC time&gt;.txt</code> (or under
+<code>$XDG_DATA_HOME</code>), and prints the same to the log. It holds the marks, the check's
+result, and the lines for <code>calibration.rs</code> (<code>Steering</code>) and <code>vehicle.yaml</code>. <strong>It never
+writes <code>vehicle.yaml</code> or the firmware</strong>: a person copies the lines, in a pull request, with
+the sheet; the hardware lead reviews it. <code>max_steering_angle</code> and the gain need the wheel
+angles: the file has the <code>steering_limits</code> command to run with them.</p>
+<p><strong>Try it without a car:</strong> <code>hw_panel --demo --page calibration</code>. The demo's actuator has
+ends at 3420 and 610 and a centre at 1985 (it steers right). <code>--cal-self-test</code> drives the
+page itself (limp, mark, hold, check); <code>--demo-bind 2800</code> adds a stiff spot, which the
+check must find:</p>
+<p><img alt="The check stopped by a stiff spot at 2800 (--demo-bind 2800)" src="../img/hw-panel-calibration-stopped.png" /></p>
 <h3 id="how-its-built_3">How it's built</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -1947,15 +2075,15 @@ same buttons and rules, and prints what was asked and seen.</p>
 <tbody>
 <tr>
 <td><code>crates/panel-core</code></td>
-<td>the logic, no ROS, no raylib: <code>buttons</code>, <code>gate</code>, <code>rules</code> (safety.py's), <code>state</code> (every sensor's number), <code>config</code>, <code>vehicle</code>. <code>cargo test -p panel-core</code></td>
+<td>the logic, no ROS, no raylib: <code>buttons</code>, <code>gate</code>, <code>rules</code> (safety.py's), <code>state</code> (every sensor's number), <code>config</code>, <code>vehicle</code>; the calibration page's <code>calibration</code>, <code>steering_limits</code> (steering_limits.py's, on shared vectors) and <code>sweep</code> (the lock-to-lock check). <code>cargo test -p panel-core</code></td>
 </tr>
 <tr>
 <td><code>crates/panel-app</code></td>
-<td>the window (raylib) and the node (rclrs): the 10 ms timer sends the buttons' command (heartbeat-gated) and the e-stop burst</td>
+<td>the window (raylib) and the node (rclrs): the 10 ms timer sends the buttons' command and the calibration request (heartbeat-gated) and the e-stop burst</td>
 </tr>
 <tr>
 <td><code>config/hw_panel.yaml</code></td>
-<td>every topic name, the steps (0.1 m/s, 0.05 rad), the creep, the caps (1.0, 0.3 m/s)</td>
+<td>every topic name, the steps (0.1 m/s, 0.05 rad), the creep, the caps (1.0, 0.3 m/s); the calibration page's jog step and range, and the check's speed and stops</td>
 </tr>
 </tbody>
 </table></div>
