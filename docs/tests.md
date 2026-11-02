@@ -9,6 +9,7 @@ in the order to run them. Each one says what it proves, how to run it, and when 
 > - **Status:** ✅ exists and passes; 🔧 exists, not yet run on the car; ⬜ still to build.
 > - On the car, always: a safety driver, the e-stop in someone's hand, and a speed cap.
 > - **The first drive on the ground is recorded with the lidar** (4e): it gives the lot's maps and real scores for the trials.
+> - **To learn the car** (its wheel size, speed-up, braking, drag, steering), the stage 3 and 4 tests in order, run again until the error is small: [Know the car](know-the-car.md).
 
 ```text
  1 simulator  →  2 bench  →  3 car on stands  →  4 car, empty lot  →  5 the whole drive
@@ -83,6 +84,7 @@ software stopped; speed capped (`max_speed:=0.3`).
 **Before:** stage 3 passed; the timeout fix (3.9) in; a safety driver; walking pace first.
 The test script (`pixi run actuator-test <test>`, [docs](actuator-tests.md)) logs the IMU (g),
 the wheel speed, the pose and the GPS for every test.
+Which test fits which number, and when to stop repeating it: [Know the car](know-the-car.md).
 
 ### 4a. Speed up, coast, brake
 

@@ -33,8 +33,8 @@ DOCS = ROOT / 'docs'
 OUT = DOCS / 'html'
 STYLE = DOCS / 'style.css'
 WPM = 150          # an unhurried reading speed, so the times are a promise
-READ_FIRST = 22    # PAGES[:22] are the reading list
-LEARN_END = 37     # PAGES[22:37] are the learn pages; the rest are reference
+READ_FIRST = 23    # PAGES[:23] are the reading list
+LEARN_END = 38     # PAGES[23:38] are the learn pages; the rest are reference
 
 # (file in docs/, menu title, what it's for). A name in ROOT_PAGES is a page kept at the
 # repository's root instead, built the same way (none since 25 Oct: every page is in docs/).
@@ -59,6 +59,7 @@ PAGES = [
     ('car-setup.md', 'Car setup', 'Every car computer: back up, upgrade, install, start at boot'),
     ('car-day.md', 'Car day', 'The day at the car, session by session; the preflight'),
     ('tests.md', 'Every test', 'Every test, in order: sim, bench, stands, lot, the drive'),
+    ('know-the-car.md', 'Know the car', 'Six tests that learn the car, repeated until the error is small'),
     ('measure-the-car.md', 'Measure the car', 'The sheet for whoever measures the car'),
     ('decisions.md', 'Decisions', 'Decided, Tentative, Proposed, and Q1–Q34'),
     ('infrastructure.md', 'Infrastructure', 'The repo, Pixi, the contracts, profiles, computers'),

@@ -28,6 +28,7 @@
 <a href="car-setup.html">Car setup</a>
 <a href="car-day.html">Car day</a>
 <a class="here" href="tests.html">Every test</a>
+<a href="know-the-car.html">Know the car</a>
 <a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
@@ -107,6 +108,7 @@ in the order to run them. Each one says what it proves, how to run it, and when 
 <li><strong>Status:</strong> ✅ exists and passes; 🔧 exists, not yet run on the car; ⬜ still to build.</li>
 <li>On the car, always: a safety driver, the e-stop in someone's hand, and a speed cap.</li>
 <li><strong>The first drive on the ground is recorded with the lidar</strong> (4e): it gives the lot's maps and real scores for the trials.</li>
+<li><strong>To learn the car</strong> (its wheel size, speed-up, braking, drag, steering), the stage 3 and 4 tests in order, run again until the error is small: <a href="know-the-car.html">Know the car</a>.</li>
 </ul>
 </blockquote>
 <pre class="highlight"><code class="language-text"> 1 simulator  →  2 bench  →  3 car on stands  →  4 car, empty lot  →  5 the whole drive
@@ -399,7 +401,8 @@ software stopped; speed capped (<code>max_speed:=0.3</code>).</p>
 <section class="card"><h2 id="stage-4-the-car-in-an-empty-lot">Stage 4: the car in an empty lot</h2>
 <p><strong>Before:</strong> stage 3 passed; the timeout fix (3.9) in; a safety driver; walking pace first.
 The test script (<code>pixi run actuator-test &lt;test&gt;</code>, <a href="actuator-tests.html">docs</a>) logs the IMU (g),
-the wheel speed, the pose and the GPS for every test.</p>
+the wheel speed, the pose and the GPS for every test.
+Which test fits which number, and when to stop repeating it: <a href="know-the-car.html">Know the car</a>.</p>
 <h3 id="4a-speed-up-coast-brake">4a. Speed up, coast, brake</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -840,7 +843,7 @@ trials wait for 4.22.</p>
 </tbody>
 </table></div></section>
 <nav class="prevnext"><a class="prev" href="car-day.html"><small>Previous</small>← Car day</a>
-<a class="next" href="measure-the-car.html"><small>Next</small>Measure the car →</a></nav>
+<a class="next" href="know-the-car.html"><small>Next</small>Know the car →</a></nav>
 </main>
 <footer>Source: <code>docs/tests.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>
