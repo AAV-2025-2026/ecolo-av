@@ -476,23 +476,25 @@ pub fn side_view(ground: Xy, height: f64, rolled: f64, facing_right: bool) -> Ve
         );
         out.push(Piece::circle(Part::Lens, spoke, 0.3 * wheel_r * h));
     }
-    // The body: its side in shade, its front lit, a hatch line.
-    let (back, front, low, high) = (-0.34, 0.26, 0.27, 0.66);
+    // The body: its side lit, its front in shade, a hatch line.
+    let (back, front, low, high) = (-0.38, 0.3, 0.26, 0.7);
     let rect = |part, x0: f64, x1: f64, y0: f64, y1: f64| {
         Piece::polygon(part, vec![at(x0, y0), at(x1, y0), at(x1, y1), at(x0, y1)])
     };
-    out.push(rect(Part::BodySide, back, front, low, high));
-    out.push(rect(Part::Body, front - 0.12, front, low, high));
-    out.push(rect(Part::Neck, back, front, 0.47, 0.5));
-    // The neck, then the eye: a round shell, the glass looking ahead.
-    out.push(rect(Part::Neck, 0.1, 0.16, high, 0.86));
-    let eye_r = 0.13;
-    let eye = at(0.17, 1.0 - eye_r);
-    out.push(Piece::circle(Part::Eye, eye, eye_r * h));
-    let lens = at(0.17 + 0.05, 1.0 - eye_r);
-    out.push(Piece::circle(Part::Lens, lens, 0.62 * eye_r * h));
-    let glint = Xy::new(lens.x + dir * 0.04 * h, lens.y - 0.03 * h);
-    out.push(Piece::circle(Part::Glint, glint, 0.16 * eye_r * h));
+    out.push(rect(Part::Body, back, front - 0.1, low, high));
+    out.push(rect(Part::BodySide, front - 0.1, front, low, high));
+    out.push(rect(Part::Neck, back, front - 0.1, 0.5, 0.53));
+    // The neck, then the eyes: the far one a little behind and higher, then the near
+    // one; each a round shell, its glass looking ahead.
+    out.push(rect(Part::Neck, 0.08, 0.15, high, 0.84));
+    let eye_r = 0.155;
+    for (x, up) in [(0.1, 1.0 - eye_r + 0.0), (0.17, 1.0 - eye_r - 0.03)] {
+        out.push(Piece::circle(Part::Eye, at(x, up), eye_r * h));
+        let lens = at(x + 0.055, up);
+        out.push(Piece::circle(Part::Lens, lens, 0.62 * eye_r * h));
+        let glint = Xy::new(lens.x + dir * 0.04 * h, lens.y - 0.035 * h);
+        out.push(Piece::circle(Part::Glint, glint, 0.16 * eye_r * h));
+    }
     out
 }
 
