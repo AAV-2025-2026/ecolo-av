@@ -50,6 +50,10 @@ Open → Open ([Your Mac](mac.md#watch-without-ros-lichtblick)).
 Every driving detail on one screen, like Foxglove's nuScenes demo (Ben, 1 Nov). For
 Gazebo, the bench, a replayed bag, and the car (watch only).
 
+![The cockpit in Lichtblick, Gazebo's road world, driving to a goal 25 m ahead](img/cockpit.png)
+
+*1 Nov, in Lichtblick: `pixi run sim world:=road foxglove:=true voxels:=true`, a goal 25 m ahead.*
+
 ```text
 ┌──────────────┬────────────┬──────────────────┐
 │ front camera │ status     │ street map       │
@@ -108,7 +112,7 @@ On the car the topic doesn't exist.
 !!! tip "Load the cockpit at start-up"
     Lichtblick also reads every layout in `~/.lichtblick-suite/layouts/` when it starts:
     `cp tools/foxglove/cockpit.json ~/.lichtblick-suite/layouts/`, then
-    `open -a Lichtblick --args --defaultLayout=cockpit` (from its code: not yet seen on screen).
+    `open -a Lichtblick --args --defaultLayout=cockpit` loads the layout (seen 1 Nov). To connect, open this link: `open "lichtblick://open?ds=foxglove-websocket&ds.url=ws%3A%2F%2Flocalhost%3A8765"` (seen 1 Nov; it opens a second window, already connected).
 
 ## Where each bridge listens
 
