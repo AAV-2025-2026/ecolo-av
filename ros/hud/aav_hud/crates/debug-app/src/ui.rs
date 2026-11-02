@@ -56,6 +56,8 @@ use debug_core::{
     voxels,
 };
 use hud_app::paint::{self, ToColor};
+
+use crate::robot;
 use hud_core::{
     health::Health,
     theme::{Rgba, Theme, Tone},
@@ -69,6 +71,8 @@ use raylib::prelude::*;
 
 /// The panel's width, in window points.
 pub const PANEL_W: f32 = 460.0;
+/// The key legend's right side.
+const KEY_LEGEND_RIGHT: f32 = 510.0;
 
 /// At most this many lines of the health checks on the seeing screen.
 const HEALTH_LINES: usize = 4;
@@ -257,8 +261,14 @@ impl Ui {
         }
     }
 
-    /// Draws one frame.
-    pub fn draw(&mut self, d: &mut RaylibDrawHandle, state: &DebugState, f: &Frame<'_>) {
+    /// Draws one frame; returns where the little robot's eyes may peek (the bottom of
+    /// the 3D view, right of the key legend), if there is room.
+    pub fn draw(
+        &mut self,
+        d: &mut RaylibDrawHandle,
+        state: &DebugState,
+        f: &Frame<'_>,
+    ) -> Option<Rectangle> {
         let t = self.theme;
         d.clear_background(t.scene.back.rl());
         let (w, h) = (d.get_screen_width() as f32, d.get_screen_height() as f32);
@@ -267,15 +277,18 @@ impl Ui {
         self.gather(state.drawn_cubes(), size);
         self.world(d, state, f, view_w, h);
         self.legend(d, state, f, view_w);
-        if state.layers.keys {
+        let legend_right = if state.layers.keys {
             self.key_legend(d, state, f, h);
+            KEY_LEGEND_RIGHT
         } else {
             self.text(d, "H: keys", 16.0, h - 34.0, 18.0, t.dim);
-        }
+            16.0 + self.font.measure("H: keys", 18.0)
+        };
         match state.layers.layout {
             Layout::Panel => self.panel(d, state, f, view_w, w, h),
             Layout::Seeing => self.seeing(d, state, f, view_w, w, h),
         }
+        robot::corner(legend_right, view_w, h)
     }
 
     /// The seeing screen's right side: NDT's map from above with every localizer's car
@@ -889,7 +902,10 @@ impl Ui {
         let box_h = 30.0 + row * lines.len() as f32 + 6.0;
         let t = self.theme;
         let (x, top) = (16.0, h - box_h - 10.0);
-        self.glass(d, Rectangle::new(x - 6.0, top, 500.0, box_h));
+        self.glass(
+            d,
+            Rectangle::new(x - 6.0, top, KEY_LEGEND_RIGHT - (x - 6.0), box_h),
+        );
         self.text(
             d,
             "KEYS (H HIDES THEM)",

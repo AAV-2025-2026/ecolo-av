@@ -803,6 +803,7 @@ struct Params {
     _names: Vec<ReadOnlyParameter<Arc<str>>>,
     _numbers: Vec<ReadOnlyParameter<f64>>,
     _max_cubes: ReadOnlyParameter<i64>,
+    _easter_egg: ReadOnlyParameter<bool>,
 }
 
 impl Params {
@@ -859,11 +860,17 @@ impl Params {
             .read_only()?;
         config.max_cubes =
             u32::try_from(max_cubes.get()).context("max_cubes must be a positive whole number")?;
+        let easter_egg = node
+            .declare_parameter("easter_egg")
+            .default(config.easter_egg)
+            .read_only()?;
+        config.easter_egg = easter_egg.get();
         config.validate()?;
         let params = Self {
             _names: names,
             _numbers: numbers,
             _max_cubes: max_cubes,
+            _easter_egg: easter_egg,
         };
         Ok((params, config))
     }
