@@ -1,8 +1,9 @@
 # What's new: 22 October to 1 November
 
-Everything the last few pull requests added (#13 to #19, and the branch after), by area.
-The full list of every feature, with who built it: [Features](features.md). How to switch
-each trial on: [Switches](switches.md).
+Everything the last few pull requests added (#13 to #19, and the branch after), by area;
+then the best version to take to the car, what's left for CARLA, and which Ubuntu each
+computer should run. Every feature, with who built it: [Features](features.md). How to
+switch each trial on: [Switches](switches.md).
 
 > **The short version**
 > - **Screens:** a hardware panel with simple buttons, and a debug screen that shows what the car sees in 3D.
@@ -12,12 +13,9 @@ each trial on: [Switches](switches.md).
 > - **Talking to it:** a local Qwen model with our own harness, and MCP so Claude can drive the sim.
 > - Everything here has run in Gazebo; **none of it has driven the real car yet.**
 
-```text
- sensors ──► localization ──► perception ──► navigation ──► ego ──► the car
- (lidar,     (EKFs, NDT,      (RF-DETR,      (planners,              (spine,
-  GPS, IMU)   KISS-ICP)        lanes, cubes)  followers)              ESP32)
-        screens: hardware panel, debug screen · language: Qwen, MCP, Claude
-```
+![The stack: blue boxes are what the last few pull requests built](img/whats-new-stack.svg)
+
+*Blue: built in the last few pull requests. Grey: there before.*
 
 **Status:** *sim* = works in Gazebo; *built* = built and tested, not yet in a full run.
 
@@ -63,12 +61,7 @@ lidar map from above, and NDT's match. New on 1 Nov: **Nav2's cubes** in red (ke
 
 ## Localization: where am I?
 
-```text
- lidar point cloud ─┬─► NDT (on a saved map) ──────────► EKF global (map → odom)
-                    └─► KISS-ICP (how far it moved) ──► EKF local  (odom → base_link)
- GPS, GPS heading ─────────────────────────────────────► EKF global
- wheels, IMU ──────────────────────────────────────────► EKF local
-```
+![Localization: the point cloud feeds NDT and KISS-ICP, beside the two EKFs](img/whats-new-localization.svg)
 
 | Piece | What it does | Switch | Result in Gazebo | Status |
 |---|---|---|---|---|
@@ -79,6 +72,10 @@ lidar map from above, and NDT's match. New on 1 Nov: **Nav2's cubes** in red (ke
 | **KISS-ICP into EKF local** | its speed and turn rate into the EKF | `kiss_ekf:=true` | not a clear win yet: off by default | sim |
 | **AMCL** (stock) | a particle filter on a 2D map | `amcl:=true` | lost itself: the EKF wins | built |
 | **Health checks** (Betsi) | warns on gyro bias, a tilted IMU, bad GPS, wrong frames | `health:=true` | on the debug screen, in `pixi run check` | sim |
+
+![NDT keeps the global EKF to 1.6 cm, with or without the GPS](img/whats-new-ndt.png)
+
+![KISS-ICP drifts 8 times less than the wheels, in Gazebo](img/whats-new-odometry.png)
 
 ### NDT, in one picture
 
@@ -100,6 +97,8 @@ Each scan point pairs with its nearest map point; move to close the pairs; repea
 | A second detector on a Mac (Core ML) | a second opinion over WiFi | 21 ms a picture on a MacBook | sim |
 | **Lane finder** (classic OpenCV, no model) | finds the lane from the camera | 0.78 ms a picture | sim |
 | Radar clustering (Rust) | radar points into objects | the same answers as the C++, bit for bit | sim |
+
+![RF-DETR finds a stop sign twice as far away as YOLO](img/whats-new-detector.png)
 
 ![RF-DETR finds the stop sign on the bench camera](img/bench-stop-sign.png)
 
@@ -130,6 +129,8 @@ The lidar sends about 29,000 points ten times a second. Nav2 reads them one of t
 | Smac 2D | no | 2 of 4 (forward only) | trial |
 | NavFn, Theta* | no | not tried | trial |
 
+![The lattice drives the lot tour 29 s quicker than Hybrid-A*](img/whats-new-planners.png)
+
 The lattice strings together short moves our car can really make, worked out from
 `vehicle.yaml` (`pixi run lattice-primitives`):
 
@@ -137,19 +138,13 @@ The lattice strings together short moves our car can really make, worked out fro
 
 ### Path followers: who steers along it
 
-29 Oct, Gazebo's lot, forward only, 3 runs each:
-
-| Follower | Legs finished (of 12) | Note |
-|---|---|---|
-| Pure pursuit | **12** | ours, the simplest |
-| Stanley | **12** | ours |
-| MPC | **12** | ours, 6 ms worst |
-| RPP (Nav2) | 10 | |
-| **MPPI** (Nav2, the default) | 8 | lost the U-turn; reads the costmap, which the others don't |
-| LQR | 8 | swings wide at full lock |
-
 `tracker:=pure_pursuit` (or `stanley`, `lqr`, `mpc`) swaps them; in Gazebo, live, with
 keys 1-4 on the debug screen.
+
+![Legs finished by each path follower, forward only](img/whats-new-followers.png)
+
+MPPI finished fewest, but stays the default: it reads the costmap, so it steers round
+obstacles; the trackers only follow the line.
 
 ### Reversing and the U-turn
 
@@ -161,11 +156,7 @@ makes a three-point turn (16 of 16 legs with the lattice).
 
 ## Talking to the car
 
-```text
- you ──► talk (Qwen 3, on this computer) ──► drive server (MCP) ──► the car's actions
- Claude Code ─────────────────────────────► drive server (MCP)
- Claude Code ─────────────────────────────► read-only server (MCP): docs, contract, live graph
-```
+![Talking to the car: Qwen on the laptop, Claude through MCP](img/whats-new-language.svg)
 
 | Piece | What it does | Status |
 |---|---|---|
@@ -173,6 +164,61 @@ makes a three-point turn (16 of 16 legs with the lattice).
 | The harness (`aav_language`: `react.py`) | our own ReAct loop: reads Qwen's, Llama's, Gemma's and Mistral's tool formats | sim |
 | **MCP drive server** (`aav-drive`) | lets Claude (or any MCP app) drive: distance, turn, go to a GPS point, stop, e-stop; hard limits it won't break | sim |
 | **MCP read-only server** (`aav`) | lets Claude read the docs, the topic contract and the live ROS graph; never writes | built |
+
+## The best version: what goes on the car
+
+One pick per job: the car's defaults. The trials stay as switches; real data decides
+them next ([Every test](tests.md), 4e: record the lot, then score them on replay).
+
+| Job | The best version | Why | Next in line, and what it waits for |
+|---|---|---|---|
+| Where am I | the two EKFs, with the GPS | works anywhere, no map needed | **NDT into EKF global**: a lidar map of the lot (test 4.21) |
+| How far it moved | wheels + IMU | always there | **KISS-ICP into EKF local**: real wheels that slip (4.22) |
+| What's around | RF-DETR Nano | twice YOLO's range, Apache-2.0 | - |
+| Sees obstacles | the flat lidar scan | small, proven | **cubes**: a real, bumpy lot (4.22) |
+| Draws the route | State Lattice (Hybrid-A* forward only) | every leg, the quickest | - |
+| Steers along it | MPPI | reads the costmap | pure pursuit, if the trackers learn the costmap |
+| Reverses? | yes, 0.5 m/s, where the lidar sees behind | the U-turn needs it | wheels that tell direction (H5) |
+| Talks | Qwen on the laptop | no internet, asks yes first | Claude through MCP: the sim only |
+
+`test_car_launch.py` checks the car's defaults are exactly these.
+
+## CARLA: what's left to work with our graph
+
+CARLA runs on the lab's Ubuntu desktop. Our side (`aav_carla`, `pixi run carla-car`)
+publishes the same topics as Gazebo, so the rest of the graph can't tell them apart. It is
+tested against a pretend server only: **it has never met a real one.**
+
+| # | Left | Who | Size |
+|---|---|---|---|
+| 1 | **Which CARLA** is on the desktop: `CarlaUE4` = 0.9.x, `CarlaUnreal` = 0.10. Its Python client, the same version, in our environment ([CARLA](carla.md), step 2) | the lab | 30 min |
+| 2 | **The first real run:** `pixi run carla-car host:=127.0.0.1` with the server up; drive with the keyboard, then a Nav2 goal | the lab | 1 h |
+| 3 | **A `carla` profile in the graph check** (`pixi run check carla`): the contract doesn't list which topics must be live in CARLA yet | Claude, now | small |
+| 4 | **The new switches in `carla.launch.py`:** it passes reversing, but not `planner`, `tracker`, `voxels`, `kiss_icp`, `kiss_ekf` (it gets Nav2's defaults) | Claude, now | small |
+| 5 | **A `carla-check`**, like `sim-check`: the graph, a drive, the EKF against CARLA's truth | Claude, then the lab | 1 day |
+| 6 | **Signs nobody has seen:** the IMU's roll and pitch, the radar's speed sign, the GPS line-up | the lab, with 5 | 1 h |
+| 7 | **Carleton's streets:** only CARLA 0.9.16 builds roads from OpenStreetMap; 0.10 can't yet | the lab | 1 h |
+| 8 | **NDT in CARLA:** needs a lidar map of the CARLA town (`ndt-map` drives Gazebo only today) | Claude | half a day |
+
+Not on the list, on purpose: CARLA's own ROS 2 (`--ros2`) stalls on Jazzy, so our adapter
+talks to CARLA through its Python client instead ([CARLA](carla.md), "Other ways").
+
+## The computers: which Ubuntu
+
+**Can each one be upgraded? Yes**: Ubuntu 24.04 (Jazzy's own) runs on the Pi 4 and the
+Pi 5, and NVIDIA's JetPack 7.2 is Ubuntu 24.04 for the Orin. **But car day doesn't need
+it:** our car kit runs on today's Ubuntu 22.04 through Pixi (CI tests that on every
+push). Upgrading is the hardware lead's call (Q24).
+
+| Computer | Today | Should be | How | Note |
+|---|---|---|---|---|
+| **Orin** (JETSON, .140) | Ubuntu 22.04, JetPack 6 | JetPack 7.2 (Ubuntu 24.04) | SDK Manager on the lab's desktop, **after** its full image | the only one that needs the x86 desktop |
+| **Motor Pi** (CORTEX, .120), Pi 4 | Ubuntu 22.04 | Ubuntu 24.04 Server | a **new SD card** (Raspberry Pi Imager); turn the UART on | keep the old card: undo is a card swap |
+| **LOCALIZATION** (.113), Pi 4 | Ubuntu 22.04 | Ubuntu 24.04 Server | a new SD card | the IMU and GPS are USB: no change |
+| **aav-desktop** (.196), Pi 4, the dashboard | Ubuntu 22.04 | **Ubuntu 24.04 Desktop** | a new SD card | runs the HUD and the map window: it needs a desktop; check it has 4 GB or more |
+| `.211`, a Pi | Ubuntu 22.04 | ask the team first | | its job is unknown |
+| **CAM1-PI**, **CAM2-PI** (.108, .118), Pi 5 | Debian 13 (Pi OS) | **keep Pi OS** | - | no ROS on them; the Pi camera works best on Pi OS |
+| **The lab's desktop** (x86, NVIDIA) | Ubuntu, running CARLA | **keep as it is** | - | our stack runs there through Pixi on 22.04 or 24.04; don't upgrade under a working CARLA |
 
 ## Tools to find all this again
 
@@ -182,3 +228,4 @@ makes a three-point turn (16 of 16 legs with the lattice).
 | [Switches](switches.md) | every switch on one page |
 | [Trials](trials.md) | every result, and how it was measured |
 | `pixi run check <profile>` | the running graph against the contract, then the health line |
+| `pixi run python3 tools/whats_new_figures.py` | redraws this page's diagrams and charts |

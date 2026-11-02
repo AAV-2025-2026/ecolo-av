@@ -103,22 +103,34 @@
    "drive 10 m forward" into the drive server's tool calls?</li>
 </ol>
 <blockquote>
-<p><strong>The short version</strong>
-- <strong>Now: RF-DETR Nano is the car's detector</strong> (Ben, 23 Oct: "I thought we were skipping
+<p><strong>The short version</strong></p>
+<ul>
+<li>
+<p><strong>Now: RF-DETR Nano is the car's detector</strong> (Ben, 23 Oct: "I thought we were skipping
   yolo and using the other one"), the detector node's default, in TensorRT on the Orin.
-  YOLO stays as <code>detector:=yolo</code> (<a href="perception.html#models">Perception</a>).
-- <strong>Why RF-DETR Nano won (16 Oct).</strong> It saw Gazebo's stop sign from
+  YOLO stays as <code>detector:=yolo</code> (<a href="perception.html#models">Perception</a>).</p>
+</li>
+<li>
+<p><strong>Why RF-DETR Nano won (16 Oct).</strong> It saw Gazebo's stop sign from
   <strong>20 m</strong> (YOLO11n: 10 m) and found people in 4 of 5 photos (YOLO11n: 3), with no
   false finds. It's <strong>Apache-2.0</strong>, so the AGPL question goes away. On a Mac it is as
   fast as YOLO11n (16-17 ms vs 12-21 ms). Its cost: 12 times the weights (30 M), and
-  2.5 times slower on a CPU alone. Not tried on the Orin yet.
-- <strong>YOLO26 brings nothing here.</strong> YOLO26n scored the same as YOLO11n, picture for
-  picture, and has the same AGPL-3.0 licence.
-- <strong>Language: Gemma 4 E4B planned all 23 requests right</strong> (Qwen3-4B, our default: 21),
+  2.5 times slower on a CPU alone. Not tried on the Orin yet.</p>
+</li>
+<li>
+<p><strong>YOLO26 brings nothing here.</strong> YOLO26n scored the same as YOLO11n, picture for
+  picture, and has the same AGPL-3.0 licence.</p>
+</li>
+<li>
+<p><strong>Language: Gemma 4 E4B planned all 23 requests right</strong> (Qwen3-4B, our default: 21),
   at 0.5 s a step, in 5 GB, Apache-2.0. Ministral 3 3B (22, in 2.8 GB) is the small
-  runner-up. The default stays Qwen3-4B until the team agrees: 23 requests is a small test.
-- <strong>New: an OpenAI-compatible backend</strong> (<code>aav_language/llm_openai.py</code>), so the same agent
+  runner-up. The default stays Qwen3-4B until the team agrees: 23 requests is a small test.</p>
+</li>
+<li>
+<p><strong>New: an OpenAI-compatible backend</strong> (<code>aav_language/llm_openai.py</code>), so the same agent
   can use llama.cpp or TensorRT-LLM on the Orin. Tried through <code>mlx_lm.server</code>: 22 of 23.</p>
+</li>
+</ul>
 </blockquote></div>
 <section class="card"><h2 id="what-was-run-and-what-wasnt">What was run, and what wasn't</h2>
 <div class="table-wrap"><table>

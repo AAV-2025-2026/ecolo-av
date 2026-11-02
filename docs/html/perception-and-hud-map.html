@@ -109,12 +109,14 @@
 <li>Are there better open-source models, like NVIDIA's per-pixel ones?</li>
 </ol>
 <blockquote>
-<p><strong>The short version</strong>
-- <strong>Use stock YOLO for objects</strong> (answered 23 Oct: RF-DETR Nano by default; YOLO with <code>detector:=yolo</code>): one model, run as TensorRT on the Orin and Core ML on a Mac. <strong>Keep OpenCV for lane lines</strong> (already done: under 1 ms a frame).
-- <strong>The previous teams' trained model is lost</strong> (<code>best.pt</code> was on someone's laptop) and knew one label. Start from stock, and train our own later only if the stock one fails on our recordings.
-- <strong>Lidar: no model to start.</strong> Put its points straight into Nav2's costmap and collision_monitor. Clustering next. A downloaded 3D detector last, and only if needed.
-- <strong>Per-pixel, for where the road is: NVIDIA's CitySemSegFormer</strong> (a ready ONNX file), run with ONNX Runtime, not Isaac ROS: Isaac ROS isn't on Jazzy for the Orin yet (since then: Isaac ROS 4.6 supports the Orin on JetPack 7.2, <a href="perception.html#isaac-ros-nvidia">Perception</a>).
-- <strong>A map on the HUD: yes.</strong> The raylib HUD can draw offline map tiles with the car's GPS dot on top. (Answered: built 15-16 Oct as <a href="hud.html#the-map-window-big-screen">the map window</a>.)</p>
+<p><strong>The short version</strong></p>
+<ul>
+<li><strong>Use stock YOLO for objects</strong> (answered 23 Oct: RF-DETR Nano by default; YOLO with <code>detector:=yolo</code>): one model, run as TensorRT on the Orin and Core ML on a Mac. <strong>Keep OpenCV for lane lines</strong> (already done: under 1 ms a frame).</li>
+<li><strong>The previous teams' trained model is lost</strong> (<code>best.pt</code> was on someone's laptop) and knew one label. Start from stock, and train our own later only if the stock one fails on our recordings.</li>
+<li><strong>Lidar: no model to start.</strong> Put its points straight into Nav2's costmap and collision_monitor. Clustering next. A downloaded 3D detector last, and only if needed.</li>
+<li><strong>Per-pixel, for where the road is: NVIDIA's CitySemSegFormer</strong> (a ready ONNX file), run with ONNX Runtime, not Isaac ROS: Isaac ROS isn't on Jazzy for the Orin yet (since then: Isaac ROS 4.6 supports the Orin on JetPack 7.2, <a href="perception.html#isaac-ros-nvidia">Perception</a>).</li>
+<li><strong>A map on the HUD: yes.</strong> The raylib HUD can draw offline map tiles with the car's GPS dot on top. (Answered: built 15-16 Oct as <a href="hud.html#the-map-window-big-screen">the map window</a>.)</li>
+</ul>
 </blockquote></div>
 <section class="card"><h2 id="1-camera-perception-which-tool-for-which-job">1. Camera perception: which tool for which job</h2>
 <div class="table-wrap"><table>

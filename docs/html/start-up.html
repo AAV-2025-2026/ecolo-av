@@ -100,12 +100,14 @@
 and <a href="maps-and-position.html">Maps and position</a> first, or after: they go
 deeper on two parts of this page.</p>
 <blockquote>
-<p><strong>The short version</strong>
-- The car is <strong>layers</strong>. Each one only talks to the layer above and the one below.
-- Every layer can be tested on its own: the <strong>turtle</strong>, the <strong>bench</strong>, <strong>Gazebo</strong>, then the <strong>car</strong>.
-- At start-up, each computer runs <strong>one command</strong>. Its machine file says which parts run there. They find each other on the network by themselves.
-- Nothing moves until a <strong>driver</strong> asks, the <strong>mux</strong> allows it, and the <strong>backend</strong> is <strong>armed</strong>.
-- <strong>None of this has run on the real car yet.</strong> The start-up below is the design, tested in simulation and on the bench.</p>
+<p><strong>The short version</strong></p>
+<ul>
+<li>The car is <strong>layers</strong>. Each one only talks to the layer above and the one below.</li>
+<li>Every layer can be tested on its own: the <strong>turtle</strong>, the <strong>bench</strong>, <strong>Gazebo</strong>, then the <strong>car</strong>.</li>
+<li>At start-up, each computer runs <strong>one command</strong>. Its machine file says which parts run there. They find each other on the network by themselves.</li>
+<li>Nothing moves until a <strong>driver</strong> asks, the <strong>mux</strong> allows it, and the <strong>backend</strong> is <strong>armed</strong>.</li>
+<li><strong>None of this has run on the real car yet.</strong> The start-up below is the design, tested in simulation and on the bench.</li>
+</ul>
 </blockquote></div>
 <section class="card"><h2 id="1-the-layers-bottom-to-top">1. The layers, bottom to top</h2>
 <pre class="highlight"><code class="language-text"> 8  People      HUD screen, laptop (Foxglove, RViz), e-stop buttons

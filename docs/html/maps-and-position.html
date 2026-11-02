@@ -104,12 +104,14 @@
 <li>How do costmaps relate to all of it?</li>
 </ol>
 <blockquote>
-<p><strong>The short version</strong>
-- <strong>Local EKF:</strong> "how I've moved since I started". Smooth, but it slowly drifts.
-- <strong>Global EKF:</strong> the same, plus GPS. "Where I am on the earth". True, but it can jump a little.
-- The <strong>map frame</strong> is a flat grid in metres, pinned to one GPS point (the <strong>datum</strong>). That's how x/y and latitude/longitude meet.
-- <strong>OpenStreetMap is only for people and routes:</strong> the HUD's map window (streets, place search) and the street router (Valhalla). Nav2 never reads it.
-- <strong>Costmaps</strong> are grids of "how bad is it to drive here". The <strong>global</strong> one is big and coarse (for the whole route). The <strong>local</strong> one is small, fine and live (for what's in front of the car right now).</p>
+<p><strong>The short version</strong></p>
+<ul>
+<li><strong>Local EKF:</strong> "how I've moved since I started". Smooth, but it slowly drifts.</li>
+<li><strong>Global EKF:</strong> the same, plus GPS. "Where I am on the earth". True, but it can jump a little.</li>
+<li>The <strong>map frame</strong> is a flat grid in metres, pinned to one GPS point (the <strong>datum</strong>). That's how x/y and latitude/longitude meet.</li>
+<li><strong>OpenStreetMap is only for people and routes:</strong> the HUD's map window (streets, place search) and the street router (Valhalla). Nav2 never reads it.</li>
+<li><strong>Costmaps</strong> are grids of "how bad is it to drive here". The <strong>global</strong> one is big and coarse (for the whole route). The <strong>local</strong> one is small, fine and live (for what's in front of the car right now).</li>
+</ul>
 </blockquote></div>
 <section class="card"><h2 id="1-your-picture-corrected-a-little">1. Your picture, corrected a little</h2>
 <p>You said: <em>"local EKF gives odometry, then you put it on a map and mix it with GPS."</em></p>

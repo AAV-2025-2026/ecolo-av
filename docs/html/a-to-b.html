@@ -100,13 +100,15 @@
 A to point B, speeding up, holding a speed, slowing down and stopping. This is the KEFC
 request's "accelerate / hold / stop" demo, and the first step to GPS point-to-point.</p>
 <blockquote>
-<p><strong>The short version</strong>
-- There are <strong>three ways</strong>. All three exist now: the third, the point driver (<code>aav_drive_to_point</code>), was built on 15 Oct for the main goal. Until 26 Oct it was called <code>aav_goto</code> (<code>pixi run goto</code>, action <code>/goto</code>).
-- <strong><code>pixi run drive-to-point --lat .. --lon ..</code></strong> drives to B and stops there, slowing at <strong>half the measured braking</strong>.
-- A straight drive in an empty lot needs <strong>no costmap and no map</strong>: only "where am I" and "where is B".
-- The hard part isn't the driving. It's <strong>knowing where the car is and which way it faces</strong> at the start.
-- Test it on the turtle, then the bench, then Gazebo, then the car on stands, then the car.
-- <strong><code>pixi run atob-score</code></strong> scores a recorded run: speeding up, holding, the stop on B (<a href="#scoring-a-run">Scoring a run</a>).</p>
+<p><strong>The short version</strong></p>
+<ul>
+<li>There are <strong>three ways</strong>. All three exist now: the third, the point driver (<code>aav_drive_to_point</code>), was built on 15 Oct for the main goal. Until 26 Oct it was called <code>aav_goto</code> (<code>pixi run goto</code>, action <code>/goto</code>).</li>
+<li><strong><code>pixi run drive-to-point --lat .. --lon ..</code></strong> drives to B and stops there, slowing at <strong>half the measured braking</strong>.</li>
+<li>A straight drive in an empty lot needs <strong>no costmap and no map</strong>: only "where am I" and "where is B".</li>
+<li>The hard part isn't the driving. It's <strong>knowing where the car is and which way it faces</strong> at the start.</li>
+<li>Test it on the turtle, then the bench, then Gazebo, then the car on stands, then the car.</li>
+<li><strong><code>pixi run atob-score</code></strong> scores a recorded run: speeding up, holding, the stop on B (<a href="#scoring-a-run">Scoring a run</a>).</li>
+</ul>
 </blockquote></div>
 <section class="card"><h2 id="1-the-three-ways">1. The three ways</h2>
 <div class="table-wrap"><table>
