@@ -356,11 +356,12 @@ fn fix(m: &NavSatFix) -> Fix {
     })
 }
 
-/// The node's parameters: each topic's name, stale_after and the theme. Read once, at
+/// The node's parameters: each topic's name, stale_after, max_speed and the theme. Read once, at
 /// start-up.
 struct Params {
     _topics: Vec<ReadOnlyParameter<Arc<str>>>,
     _stale_after: ReadOnlyParameter<f64>,
+    _max_speed: ReadOnlyParameter<f64>,
     _theme: ReadOnlyParameter<Arc<str>>,
 }
 
@@ -382,6 +383,11 @@ impl Params {
             .default(config.stale_after)
             .read_only()?;
         config.stale_after = stale_after.get();
+        let max_speed = node
+            .declare_parameter("max_speed")
+            .default(config.max_speed)
+            .read_only()?;
+        config.max_speed = max_speed.get();
         let theme = node
             .declare_parameter::<Arc<str>>("theme")
             .default(config.theme.as_str().into())
@@ -391,6 +397,7 @@ impl Params {
         let params = Self {
             _topics: topics,
             _stale_after: stale_after,
+            _max_speed: max_speed,
             _theme: theme,
         };
         Ok((params, config))
