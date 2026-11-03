@@ -55,9 +55,9 @@ Ben, 1 Nov: "I do like the 23 ideas? lets keep them around like the diffusion pa
 | | Day B: **the Pis to Ubuntu 24.04** (the Motor Pi after the Rust ESP32; LOCALIZATION after its machine file) | after a restore is proven |
 | | Day B: **the Orin's reflash** to JetPack 7.2 (once 7.2 is confirmed for AGX Orin), the lab desktop after it | after the Orin's full image |
 | 75 | A machine file for the localization Pi (where are the IMU and GPS?) | before its upgrade |
-| 78 | **The diffusion planner** (a model inside Nav2, TensorRT or Core ML), with the classic stack as its guard (simplex: what it checks, who switches, the fallback, the Orin's budget) | design written 2 Nov ([diffusion planner](docs/designs/2026-11-02_diffusion-planner.md)); a 0.3 trials now (docs/designs) |
+| 78 | **The diffusion planner**: in 0.2 as a trial (TODO 83); for 0.3, more plans from the model (63 % → 90 %), the U-turn, the Orin (TensorRT) | 0.3 |
 | 78 | **The talking model**: a vision-language model that explains, never drives | design first |
-| | **The Initial D HUD**: the arcade gauge in Carleton red and black | 🔧 branch `hud-initial-d` |
+| | **The Initial D HUD**: the arcade gauge in Carleton red and black | ✅ in 0.2, on every screen (TODO 80, 81) |
 | | **The little robot** (a tribute to WALL-E): the map's car, eyes peeking on the panel and the debug screen | ✅ 2 Nov; ⬜ the HUD's eyes, after the Initial D HUD |
 | | **Calm** theme colours from Ben's oirp-spss work | waits on Ben (campus or VPN) |
 | 73 | The cockpit's **algorithm switch**; then **merge the cockpit and the debug HUD** into one (the hardware panel stays apart: it drives) | 0.3 |
