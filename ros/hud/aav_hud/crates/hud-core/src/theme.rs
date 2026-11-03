@@ -4,8 +4,8 @@
 //!
 //! | Theme | When | Where its colours come from |
 //! |---|---|---|
-//! | `initial_d` (the HUD's default) | the car, day or night: black, white and red | Carleton's red; a tribute to Initial D's arcade gauges |
-//! | `mocha` (the other screens' default) | night, and a dark cabin | Catppuccin Mocha |
+//! | `initial_d` (every screen's default, Ben, 2 Nov) | the car, day or night: black, white and red | Carleton's red; a tribute to Initial D's arcade gauges |
+//! | `mocha` | night, and a dark cabin | Catppuccin Mocha |
 //! | `latte` | daytime | Catppuccin Latte |
 //! | `calm` | not yet: a copy of `mocha` | Ben's Carleton theme, to come |
 //!
@@ -20,11 +20,12 @@
 //! they stand out on the 3D view and stay apart from each other ([`Rgba::difference`]).
 //!
 //! `config/hud.yaml`, `map.yaml`, `debug_hud.yaml` and `hw_panel.yaml` each choose one:
-//! `theme: mocha`.
+//! `theme: initial_d`.
 //!
 //! A theme also has a [`Style`]: `Glass` (soft see-through panels, the big speed number)
 //! or `Arcade` (`initial_d`: sharp black panels with thin white edges, the speed as an
-//! arcade gauge with 7-segment digits, the logo, a faint car behind).
+//! arcade gauge with 7-segment digits, the logo, a faint car behind). Every screen
+//! rounds its corners through [`Style::corner`], so the arcade style is sharp on all four.
 
 use std::{fmt, str::FromStr};
 
@@ -147,14 +148,15 @@ impl Rgba {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ThemeName {
-    /// Catppuccin Mocha: dark, for night and a dark cabin. The default.
-    #[default]
+    /// Catppuccin Mocha: dark, for night and a dark cabin.
     Mocha,
     /// Catppuccin Latte: light, for daytime.
     Latte,
     /// Ben's Carleton theme. For now a copy of Mocha (see [`CALM`]).
     Calm,
-    /// Black, white and Carleton's red, sharp: the arcade gauge. The HUD's default.
+    /// Black, white and Carleton's red, sharp: the arcade gauge. Every screen's default
+    /// (Ben, 2 Nov).
+    #[default]
     #[serde(rename = "initial_d")]
     InitialD,
 }
@@ -336,6 +338,22 @@ pub enum Style {
     /// Sharp: black panels with thin white edges and small corners, no glow; the HUD's
     /// speed as an arcade gauge, the logo, and a faint car in the background.
     Arcade(Arcade),
+}
+
+/// How much rounder the glass style's corners are than the arcade style's: 14 px
+/// corners in glass are 4 px in arcade.
+const ARCADE_CORNER: f32 = 4.0 / 14.0;
+
+impl Style {
+    /// A corner in this style, from the glass style's: a radius in pixels, or raylib's
+    /// roundness (0 to 1). The same in glass; under a third in arcade, so its panels,
+    /// pills and buttons are sharp.
+    pub fn corner(self, glass: f32) -> f32 {
+        match self {
+            Style::Glass => glass,
+            Style::Arcade(_) => glass * ARCADE_CORNER,
+        }
+    }
 }
 
 /// The arcade style's own colours: the gauge, its digital boxes, the car behind.
@@ -806,13 +824,18 @@ pub const CALM: Theme = MOCHA;
 pub const CARLETON_RED: Rgba = Rgba::hex(0xe91c24);
 
 /// `initial_d`: black, white and [`CARLETON_RED`], sharp: a tribute to Initial D's
-/// arcade gauges. The HUD's default.
+/// arcade gauges. Every screen's default (Ben, 2 Nov: "Initial D red and black").
 ///
 /// Every panel is black (see-through only to let the faint car behind show), so words
 /// read the same on all of them. Carleton's red on black is 4.7 : 1; red words are a
 /// little lighter, to keep 4.5 : 1 over the car's lines; the e-stop's fill a touch
-/// deeper, for its white words. The map's streets and the
-/// debug screen's localizers keep Mocha's colours, on black.
+/// deeper, for its white words.
+///
+/// The map: a night street map in greys, highways dark red, Carleton's campus a faint
+/// red; Nav2's plan white, the street route red. The debug screen: a grey ground grid,
+/// the cubes teal on black, Nav2's cubes Carleton's red. Only the localizers keep
+/// Mocha's colours (blue, green, orange, purple, yellow), so a picture means the same
+/// in every theme. Nothing else comes from Catppuccin.
 pub const INITIAL_D: Theme = {
     let black = Rgba::BLACK;
     let white = Rgba::WHITE;
@@ -820,6 +843,7 @@ pub const INITIAL_D: Theme = {
     let green = Rgba::hex(0x2fd36b);
     let amber = Rgba::hex(0xffc21a);
     let orange = Rgba::hex(0xff8a1f);
+    let teal = catppuccin::mocha::TEAL;
     Theme {
         background: black,
         background_low: black,
@@ -858,7 +882,9 @@ pub const INITIAL_D: Theme = {
         accent: white,
         accent_ink: black,
         plan_casing: black.alpha(210),
+        street_route: CARLETON_RED,
         goal: green,
+        picked: CARLETON_RED.mix(white, 30),
         confirm: orange,
         confirm_ink: black,
         car_body: black,
@@ -867,6 +893,36 @@ pub const INITIAL_D: Theme = {
         key: Rgba::hex(0x2a2a2a),
         key_command: Rgba::hex(0x1c1c1c),
         key_down: Rgba::hex(0x444444),
+        grid: GridColours {
+            free: Rgba::hex(0x242424),
+            occupied: Rgba::hex(0x9a9a9a),
+            unknown: Rgba::hex(0x080808),
+        },
+        grid_over_streets: GridColours {
+            free: white.alpha(22),
+            occupied: white.alpha(200),
+            unknown: black.alpha(0),
+        },
+        grid_line: white.alpha(14),
+        grid_line_over_streets: white.alpha(12),
+        streets: StreetColours {
+            land: Rgba::hex(0x0a0a0a),
+            green: Rgba::hex(0x0f1a12),
+            campus: CARLETON_RED.mix(Rgba::hex(0x0a0a0a), 95),
+            water: Rgba::hex(0x0b1620),
+            building: Rgba::hex(0x1c1c1c),
+            waterway: Rgba::hex(0x16293a),
+            casing: black,
+            label: grey,
+            label_halo: black.alpha(230),
+            path: Rgba::hex(0x2a2a2a),
+            rail: Rgba::hex(0x3a3a3a),
+            service: Rgba::hex(0x333333),
+            minor: Rgba::hex(0x444444),
+            medium: Rgba::hex(0x5a5a5a),
+            major: Rgba::hex(0x727272),
+            highway: CARLETON_RED.mix(black, 50),
+        },
 
         section: Rgba::hex(0x161616),
         idle_fill: Rgba::hex(0x8c8c8c),
@@ -876,7 +932,27 @@ pub const INITIAL_D: Theme = {
         button_off: Rgba::hex(0x1a1a1a),
         scene: SceneColours {
             back: black,
-            ..MOCHA.scene
+            grid: Rgba::hex(0x1a1a1a),
+            grid_major: Rgba::hex(0x303030),
+            localizers: MOCHA.scene.localizers,
+            plan: MOCHA.scene.plan,
+            trail: Rgba::hex(0x7a7a7a),
+            particle: MOCHA.scene.particle,
+            ndt_map: MOCHA.scene.ndt_map,
+            map_point: MOCHA.scene.map_point,
+            ndt_cell: MOCHA.scene.ndt_cell,
+            scan_on: green,
+            scan_off: CARLETON_RED,
+            nav2_cube: CARLETON_RED.alpha(235),
+            nav2_cube_stale: CARLETON_RED.mix(black, 40).alpha(190),
+            heights: [
+                Rgba::hex(0x2a2a2a),
+                teal.mix(black, 75),
+                teal.mix(black, 60),
+                teal.mix(black, 45),
+                teal.mix(black, 30),
+                teal.mix(black, 10),
+            ],
         },
         style: Style::Arcade(Arcade {
             tick: white,
@@ -889,7 +965,6 @@ pub const INITIAL_D: Theme = {
             segment_off: white.alpha(26),
             silhouette: white.alpha(70),
         }),
-        ..MOCHA
     }
 };
 
@@ -1126,6 +1201,93 @@ mod tests {
         ]
     }
 
+    /// Shapes that need only to show, not to be read: a band, a dimmed cube, a road.
+    const SHOWS: f64 = 1.15;
+
+    /// The rest of each screen's colours, beyond words and pills: the map's lines and
+    /// marks on its ground, the bars and buttons on the window, the 3D view's lines.
+    fn screen_problems(name: ThemeName) -> Vec<String> {
+        let t = name.theme();
+        let (s, g, scene) = (t.streets, t.grid, t.scene);
+        let mut out = Vec::new();
+        let mut want = |what: &str, fg: Rgba, back: Rgba, least: f64| {
+            out.extend(check(name, what, fg, back, least));
+        };
+        // The map window, with the streets and without (Nav2's map alone).
+        want(
+            "the street route on the land",
+            t.street_route,
+            s.land,
+            LARGE_RATIO,
+        );
+        want(
+            "a street's name on its halo",
+            s.label,
+            s.label_halo.over(s.land),
+            TEXT_RATIO,
+        );
+        for (what, road) in [("a minor road", s.minor), ("a highway", s.highway)] {
+            want(&format!("{what} on the land"), road, s.land, SHOWS);
+        }
+        for (what, back) in [("free", g.free), ("unknown", g.unknown)] {
+            want(
+                &format!("the plan on {what} cells"),
+                t.accent,
+                back,
+                LARGE_RATIO,
+            );
+            want(
+                &format!("the goal on {what} cells"),
+                t.goal,
+                back,
+                LARGE_RATIO,
+            );
+        }
+        want("a wall on free cells", g.occupied, g.free, LARGE_RATIO);
+        want("free cells on unknown", g.free, g.unknown, SHOWS);
+        // The HUD's bars, the panels' buttons, sections and edges, on the window.
+        let window = t.background;
+        for (what, fill) in [("green", t.good), ("amber", t.warn), ("red", t.bad)] {
+            want(
+                &format!("a {what} bar on its track"),
+                fill,
+                t.track,
+                LARGE_RATIO,
+            );
+        }
+        want("a button on the window", t.button, window, SHOWS);
+        want("a section's band on the window", t.section, window, 1.05);
+        // The 3D view's lines and dots.
+        let back = scene.back;
+        for (what, fg) in [
+            ("the trail", scene.trail),
+            ("AMCL's particles", scene.particle),
+            ("NDT's map from above", scene.map_point),
+            ("NDT's cells", scene.ndt_cell),
+        ] {
+            want(&format!("{what} on the 3D view"), fg, back, LARGE_RATIO);
+        }
+        want("the ground grid", scene.grid, back, 1.05);
+        want(
+            "the 5 m lines on the grid",
+            scene.grid_major,
+            scene.grid,
+            1.05,
+        );
+        want("NDT's map in 3D", scene.ndt_map, back, SHOWS);
+        want("Nav2's stale cubes", scene.nav2_cube_stale, back, 1.5);
+        out
+    }
+
+    /// Checked for `initial_d`, every screen's default. Mocha, Latte and calm don't pass
+    /// it yet: the plan and the goal on Mocha's light free cells (1.2 : 1), and a few of
+    /// Latte's (its trail, NDT's cells, its buttons).
+    #[test]
+    fn every_screens_lines_and_marks_show() {
+        let all = screen_problems(ThemeName::InitialD);
+        assert!(all.is_empty(), "{}", all.join("\n"));
+    }
+
     #[test]
     fn every_theme_reads() {
         let all: Vec<String> = ThemeName::ALL.into_iter().flat_map(problems).collect();
@@ -1274,7 +1436,7 @@ mod tests {
         }
         assert!("Mocha".parse::<ThemeName>().is_err());
         assert!("".parse::<ThemeName>().is_err());
-        assert_eq!(ThemeName::default(), ThemeName::Mocha);
+        assert_eq!(ThemeName::default(), ThemeName::InitialD);
     }
 
     #[test]
@@ -1336,6 +1498,80 @@ mod tests {
             assert_eq!(glass.style, Style::Glass);
         }
         assert_eq!("initial_d".parse::<ThemeName>(), Ok(ThemeName::InitialD));
+    }
+
+    #[test]
+    fn initial_d_has_no_catppuccin_but_the_localizers() {
+        // Its surfaces are plain greys, black to white: no Catppuccin blue-grey.
+        let t = &INITIAL_D;
+        let (s, g, scene) = (t.streets, t.grid, t.scene);
+        let surfaces = [
+            ("background", t.background),
+            ("panel", t.panel),
+            ("overlay", t.overlay),
+            ("overlay_strong", t.overlay_strong),
+            ("track", t.track),
+            ("glass edge", t.glass_edge),
+            ("section", t.section),
+            ("button", t.button),
+            ("button_down", t.button_down),
+            ("button_off", t.button_off),
+            ("key", t.key),
+            ("selected_row", t.selected_row),
+            ("idle_fill", t.idle_fill),
+            ("caption", t.caption),
+            ("dim", t.dim),
+            ("land", s.land),
+            ("building", s.building),
+            ("minor road", s.minor),
+            ("major road", s.major),
+            ("label", s.label),
+            ("free cells", g.free),
+            ("walls", g.occupied),
+            ("3D view", scene.back),
+            ("3D grid", scene.grid),
+            ("trail", scene.trail),
+        ];
+        for (what, c) in surfaces {
+            assert!(
+                c.r == c.g && c.g == c.b,
+                "initial_d: {what} isn't grey: {c:?}"
+            );
+        }
+        // The map's red marks and the cubes are Carleton's red.
+        for (what, c) in [
+            ("the street route", t.street_route),
+            ("Nav2's cubes", scene.nav2_cube.alpha(255)),
+            ("the scan off the map", scene.scan_off),
+        ] {
+            assert_eq!(c, CARLETON_RED, "initial_d: {what}");
+        }
+    }
+
+    #[test]
+    fn the_estop_stays_unmistakable_in_initial_d() {
+        // The e-stop's red is the screen's strongest red, plainly not amber or orange,
+        // and stands out from the map's red roads and route by its fill and white words.
+        let t = &INITIAL_D;
+        for other in [t.warn, t.wait_fill, t.not_real, t.confirm] {
+            let d = t.stop_fill.difference(other);
+            assert!(
+                d > 0.2,
+                "initial_d: the e-stop is only {d:.2} from {other:?}"
+            );
+        }
+        assert!(t.stop_fill.contrast(t.streets.highway) > 1.5);
+        assert!(t.stop_ink.contrast(t.stop_fill) >= TEXT_RATIO);
+    }
+
+    #[test]
+    fn arcade_corners_are_sharp() {
+        let Style::Arcade(_) = INITIAL_D.style else {
+            panic!("initial_d is the arcade style")
+        };
+        assert!((INITIAL_D.style.corner(14.0) - 4.0).abs() < 1e-6);
+        assert!((INITIAL_D.style.corner(0.4) - 0.4 * 4.0 / 14.0).abs() < 1e-6);
+        assert_eq!(MOCHA.style.corner(14.0), 14.0);
     }
 
     #[test]

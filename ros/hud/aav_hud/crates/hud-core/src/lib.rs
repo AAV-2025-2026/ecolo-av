@@ -20,7 +20,7 @@
 //! | [`segments`] | 7-segment digits: which segments light, each segment's shape |
 //! | [`silhouette`] | a mid-80s hatchback's side view as lines, faint behind the `initial_d` HUD |
 //! | [`screen`] | which monitor a window goes on (`--monitor HDMI-1`), for two screens |
-//! | [`theme`] | every colour the HUD and the map window draw with: Catppuccin Mocha, Latte, calm, and `initial_d` (black, white, Carleton's red; arcade) |
+//! | [`theme`] | every colour the four screens draw with: `initial_d` (black, white, Carleton's red; arcade; the default), Catppuccin Mocha and Latte, calm; `Style::corner` |
 
 pub mod config;
 pub mod estop;
