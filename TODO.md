@@ -3,6 +3,18 @@
 The current work list, newest first. Tick items off as they land; each tick = a commit.
 Ben's messages, word for word: `docs/history/messages-*.md`.
 
+## Monday 2 November: Ben's asks for 0.2
+
+Ben, 2 Nov: "I would like the hud changes in, same with for the map. Something nicer then catpucine. We also want diffused planning, and joystick control ... We want to develop a list of tests." Words: `docs/history/messages-2026-11-02.md`.
+
+| # | Task | Status |
+|---|---|---|
+| 80 | **The Initial D HUD in** (`hud-initial-d`) | ✅ 2 Nov: merged into `drive-plan` |
+| 81 | **Initial D red and black on every screen**: HUD, map window, debug screen, hardware panel (Ben: in place of Catppuccin) | 🔧 2 Nov |
+| 82 | **The joystick on the Motor Pi alone** (TODO 74a): the joystick-alive check, so a dead pad stops the car | 🔧 2 Nov |
+| 83 | **The diffusion planner in 0.2** (TODO 78; Ben, 2 Nov: "Put it in 0.2"), a trial beside the lattice, off by default, with the guard | 🔧 2 Nov |
+| 84 | **The list of tests**: `docs/tests.md` gets the new parts' tests (theme, joystick-alive, diffusion) | 🔧 2 Nov |
+
 ## Sunday 1 November, night: toward 0.2
 
 Ben, 1 Nov: "Lets maybe aim at this being 0.2 version ... I think we are trying to get to 0.2 so maybe we merge in all the code. Do some testing and then extend the whats new document to include everyhting?"
