@@ -67,7 +67,7 @@ def test_a_dry_run_prints_every_step_and_changes_nothing(home, role):
 @pytest.mark.parametrize('role', ROLES)
 def test_day_a_steps_dry_run_with_no_stop(home, role):
     done = run(home, role, *DAY_A_STEPS)
-    stops = re.findall(r'STOP\s+(\S+)', done.stdout)
+    stops = re.findall(r'^\s*STOP\s+(\S+)', done.stdout, re.M)
     # A Linux test machine has no Pi UART: check says so, rightly.
     if LINUX and role == 'motor_pi' and not Path('/dev/ttyAMA0').exists():
         assert stops == ['UART'], done.stdout
