@@ -16,13 +16,17 @@
 //! | [`gate`] | may the car move? GO / WAIT / STOP and the one main reason: the e-stop, the output mux, the watchdog |
 //! | [`state`] | everything above, as one value the screen draws |
 //! | [`format`] | numbers turned into short text for the screen |
+//! | [`gauge`] | the arcade speed gauge: its km/h scale from `max_speed`, ticks, redline blocks, the needle's swing, the gear box |
+//! | [`segments`] | 7-segment digits: which segments light, each segment's shape |
+//! | [`silhouette`] | a mid-80s hatchback's side view as lines, faint behind the `initial_d` HUD |
 //! | [`screen`] | which monitor a window goes on (`--monitor HDMI-1`), for two screens |
-//! | [`theme`] | every colour the HUD and the map window draw with: Catppuccin Mocha, Latte, calm |
+//! | [`theme`] | every colour the HUD and the map window draw with: Catppuccin Mocha, Latte, calm, and `initial_d` (black, white, Carleton's red; arcade) |
 
 pub mod config;
 pub mod estop;
 pub mod format;
 pub mod gate;
+pub mod gauge;
 pub mod gps;
 pub mod health;
 pub mod heartbeat;
@@ -30,6 +34,8 @@ pub mod origin;
 pub mod picture;
 pub mod robot;
 pub mod screen;
+pub mod segments;
+pub mod silhouette;
 pub mod state;
 pub mod theme;
 pub mod units;
