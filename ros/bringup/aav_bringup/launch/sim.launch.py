@@ -65,6 +65,10 @@ bench's argument names:
                       smac2d, navfn and theta_star don't, trials only. pixi run
                       measure controllers --planners scores them (docs/controllers.md).
                       lattice_headings:=32: the lattice's trial file, 32 headings
+                      planner:=diffusion: a model draws the path, a guard checks it,
+                      the lattice's path when it fails (aav_diffusion_planner, a trial:
+                      pixi install --locked -e learn, pixi run diffusion train first);
+                      diffusion_model:=<.onnx> another model
   tracker:=lqr        a trial path follower (aav_track: pure_pursuit, stanley, lqr or mpc)
                       in controller_server's place, on Nav2's same planner, smoother and
                       collision_monitor. Forward only: with reversing:=false (docs/trials.md)
@@ -253,6 +257,7 @@ def launch_setup(context):
                                reversing=str(flag['reversing']).lower(),
                                controller=controller, tracker=tracker, planner=planner,
                                lattice_headings=arg('lattice_headings'),
+                               diffusion_model=arg('diffusion_model'),
                                # A trial tracker may be swapped live here (the debug
                                # HUD's panel shows which): Gazebo only, never the car.
                                live_swap='true',
@@ -434,6 +439,11 @@ def generate_launch_description():
                               description=', '.join(vehicle.PLANNERS) + ": Nav2's planner. "
                                           "hybrid and lattice keep to the car's turning "
                                           'radius; the others are trials (docs/controllers.md)'),
+        DeclareLaunchArgument('diffusion_model', default_value='',
+                              description='with planner:=diffusion: the model (.onnx); '
+                                          'empty: models/diffusion/planner.onnx. A file '
+                                          "that is not there: every plan the lattice's "
+                                          '(the fallback test)'),
         DeclareLaunchArgument('lattice_headings',
                               default_value=str(vehicle.LATTICE_HEADINGS[0]),
                               description='with planner:=lattice: 16 headings (the default) '

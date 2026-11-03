@@ -61,6 +61,8 @@ PLANNERS = [
      ['planner:=navfn']),
     ('theta_star', 'Theta*: straight lines, ignores the turning circle (not tried)',
      ['planner:=theta_star']),
+    ('diffusion', 'a model draws it, a guard checks it, the lattice if it fails (a trial)',
+     ['planner:=diffusion']),
 ]
 
 # Where-am-I finders that run beside the EKF and are scored (they never steer yet); with
