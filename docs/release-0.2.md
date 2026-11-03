@@ -8,7 +8,8 @@ What's in release 0.2, by area, with pictures. It carries on from
 > - **Screens:** a hardware panel that can find the steering's ends; a cockpit with every driving detail on one screen; new colours everywhere; a little robot hiding in them.
 > - **Car day:** in two days. Day A destroys nothing; Day B upgrades, once the backups are proven.
 > - **Commands:** 89 → 45. One page lists them all.
-> - **Ideas kept for 0.3:** the diffusion planner (designed), the talking model, the Initial D HUD.
+> - **New on 2 Nov:** the diffusion planner as a trial (`planner:=diffusion`, off by default), Initial D on every screen, the joystick-alive check.
+> - **Ideas kept for 0.3:** the talking model.
 
 **Status words:** *sim* = works in Gazebo; *built* = built and tested, not in a full run;
 *planned* = a design, no code.
@@ -23,7 +24,7 @@ What's in release 0.2, by area, with pictures. It carries on from
 | Know the car | the tests that measure the car, in order, with when to stop | written |
 | Commands | 45, grouped | done |
 | Localization, perception, planning | as in What's new; the lattice is the default planner where the car may reverse | sim |
-| Diffusion planner | a design: a learned planner beside the lattice, with a safety check | planned |
+| Diffusion planner | a trial: a model draws the path, the lattice guards (`planner:=diffusion`, off) | sim |
 
 ### When is 0.2 done?
 
@@ -52,7 +53,7 @@ ticked. Where it stands on 2 November:
 | Know the car: the order of the tests, and when to stop | [Know the car](know-the-car.md) | written |
 | 89 commands down to 45 | [below](#the-commands) | done |
 | The little robot (a tribute to WALL-E) | [below](#the-little-robot) | built |
-| The diffusion planner's design | [below](#planned-the-diffusion-planner) | planned |
+| The diffusion planner | [below](#trial-the-diffusion-planner) | sim |
 | The road to 0.2, reviewed by three reviewers | [design](designs/2026-11-01_road-to-0.2.md) | done |
 
 ## The commands
@@ -290,20 +291,22 @@ A **planner** draws the path; a **path follower** steers along it.
 
 ![Legs finished, by path follower](img/whats-new-followers.png)
 
-### Planned: the diffusion planner
+### Trial: the diffusion planner
 
-A small model that turns random noise into a path in a few steps, and can offer several
-paths at once. Ben, 1 Nov: "I want that in." It's designed, for 0.3:
+A small model that turns random noise into a path in a few steps, and offers 16 paths at
+once. Ben, 2 Nov: "Put it in 0.2". It's in, as a trial, off by default; the car refuses it.
 
-| Question | Answer in the design |
+| Question | As built (2 Nov) |
 |---|---|
 | Where it plugs in | one more planner, `planner:=diffusion`, beside the lattice |
-| What keeps it safe | every path checked (collisions, the car's turns, reversing); if none pass, the lattice's path |
-| What it learns from | our own lattice and Hybrid-A* paths in Gazebo: about 100,000 |
-| What runs it | a Rust node; the model on TensorRT (Orin) or Core ML (Mac) |
-| How it's scored | the same trials as the lattice: 16 of 16 legs, 184 s |
+| What keeps it safe | every path checked (G1-G8: collisions, the car's turns, headings, time); if none pass or it's late, the lattice's path |
+| What it learned from | 45,092 lattice and Hybrid-A* paths on 791 maps; 3.9 M weights, 20 min on the Mac |
+| What runs it | a Python node; the model in ONNX Runtime (CPU, 75 ms) |
+| Gazebo, lot tour, 2 runs | 8 of 8 legs, 178-182 s (lattice 186-188 s); 63 % of plans from the model, 37 % the lattice's |
 
-The design: [Diffusion planner](designs/2026-11-02_diffusion-planner.md).
+Not a winner yet: the design asks for 90 % from the model. The U-turn is its weakest leg.
+Results: [trials](trials.md#diffusion-2-nov-a-model-draws-the-lattice-guards); the design:
+[Diffusion planner](designs/2026-11-02_diffusion-planner.md).
 
 ## Kept for 0.3 and later
 
@@ -312,7 +315,7 @@ Every idea is kept (Ben, 1 Nov: "I do like the 23 ideas? lets keep them around")
 | Idea | State |
 |---|---|
 | **Car day itself** (0.3 = it drove) | runbook ready |
-| The diffusion planner | designed |
+| The diffusion planner: 90 % of plans from the model, the U-turn, the Orin | trial in 0.2 |
 | The talking model: explains, never drives | idea |
 | **The Initial D HUD**: the arcade gauge in Carleton red and black, our own logo | in 0.2: on every screen (2 Nov) |
 | The little robot on the in-car HUD | after the Initial D HUD |

@@ -314,8 +314,12 @@ def check_tracker(tracker, reversing=False):
 # (ThetaStarPlanner) plan on the grid as if the car could turn on the spot: their paths may
 # have corners the car can't drive, and the follower must round them. Trials only: refused
 # on the real car (check_planner real=True).
-PLANNERS = ('hybrid', 'lattice', 'smac2d', 'navfn', 'theta_star')
+# diffusion (aav_diffusion_planner, a trial: docs/designs/2026-11-02_diffusion-planner.md):
+# a model draws the path and a guard checks it, with the lattice behind it in planner_server
+# as the fallback (TRIAL_PLANNERS: the planner each stands on). Sim and bench only.
+PLANNERS = ('hybrid', 'lattice', 'smac2d', 'navfn', 'theta_star', 'diffusion')
 CAR_PLANNERS = ('hybrid', 'lattice')
+TRIAL_PLANNERS = {'diffusion': 'lattice'}
 # The lattice is the default (Ben, 1 Nov): with reversing on, every leg of the lot tour,
 # 29 s quicker than Hybrid-A* (docs/trials.md, 30 Oct). Forward only it lost the U-turn
 # (29 Oct), so a car that may not reverse takes Hybrid-A* (FORWARD_ONLY_PLANNER).
@@ -323,7 +327,14 @@ DEFAULT_PLANNER = 'lattice'
 FORWARD_ONLY_PLANNER = 'hybrid'
 # Each planner's block in nav2.yaml's planner_server (GridBased is hybrid's own).
 PLANNER_BLOCKS = {'hybrid': 'GridBased', 'lattice': 'Lattice', 'smac2d': 'Smac2D',
-                  'navfn': 'NavFn', 'theta_star': 'ThetaStar'}
+                  'navfn': 'NavFn', 'theta_star': 'ThetaStar', 'diffusion': 'Lattice'}
+
+
+def server_planner(planner):
+    """Return the planner planner_server runs for planner:= (a trial's, the one behind it)."""
+    return TRIAL_PLANNERS.get(planner, planner)
+
+
 # The lattice's turning radius against plan_turning_radius: the file keeps 3 decimals.
 LATTICE_TOLERANCE = 0.005
 # The lattice primitives files (lattice_headings:=): 16 headings, the default, and 32, a
@@ -499,7 +510,7 @@ def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False
     """
     if controller not in CONTROLLERS:
         raise ValueError(f'controller:={controller}: pick one of {", ".join(CONTROLLERS)}')
-    planner = check_planner(planner)
+    planner = server_planner(check_planner(planner))
     if planner == 'lattice' and not lattice_file:
         raise ValueError('planner:=lattice needs its primitives file (lattice_file)')
     out = copy.deepcopy(nav2)

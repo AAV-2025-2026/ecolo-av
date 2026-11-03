@@ -108,7 +108,8 @@
 <li><strong>Screens:</strong> a hardware panel that can find the steering's ends; a cockpit with every driving detail on one screen; new colours everywhere; a little robot hiding in them.</li>
 <li><strong>Car day:</strong> in two days. Day A destroys nothing; Day B upgrades, once the backups are proven.</li>
 <li><strong>Commands:</strong> 89 → 45. One page lists them all.</li>
-<li><strong>Ideas kept for 0.3:</strong> the diffusion planner (designed), the talking model, the Initial D HUD.</li>
+<li><strong>New on 2 Nov:</strong> the diffusion planner as a trial (<code>planner:=diffusion</code>, off by default), Initial D on every screen, the joystick-alive check.</li>
+<li><strong>Ideas kept for 0.3:</strong> the talking model.</li>
 </ul>
 </blockquote>
 <p><strong>Status words:</strong> <em>sim</em> = works in Gazebo; <em>built</em> = built and tested, not in a full run;
@@ -155,8 +156,8 @@
 </tr>
 <tr>
 <td>Diffusion planner</td>
-<td>a design: a learned planner beside the lattice, with a safety check</td>
-<td>planned</td>
+<td>a trial: a model draws the path, the lattice guards (<code>planner:=diffusion</code>, off)</td>
+<td>sim</td>
 </tr>
 </tbody>
 </table></div>
@@ -253,9 +254,9 @@ ticked. Where it stands on 2 November:</p>
 <td>built</td>
 </tr>
 <tr>
-<td>The diffusion planner's design</td>
-<td><a href="#planned-the-diffusion-planner">below</a></td>
-<td>planned</td>
+<td>The diffusion planner</td>
+<td><a href="#trial-the-diffusion-planner">below</a></td>
+<td>sim</td>
 </tr>
 <tr>
 <td>The road to 0.2, reviewed by three reviewers</td>
@@ -795,14 +796,14 @@ car's short-term motion never jumps when a GPS fix lands (ROS's REP-105).</p>
 </table></div>
 <p><img alt="The lattice is the fastest round the lot" src="../img/whats-new-planners.png" /></p>
 <p><img alt="Legs finished, by path follower" src="../img/whats-new-followers.png" /></p>
-<h3 id="planned-the-diffusion-planner">Planned: the diffusion planner</h3>
-<p>A small model that turns random noise into a path in a few steps, and can offer several
-paths at once. Ben, 1 Nov: "I want that in." It's designed, for 0.3:</p>
+<h3 id="trial-the-diffusion-planner">Trial: the diffusion planner</h3>
+<p>A small model that turns random noise into a path in a few steps, and offers 16 paths at
+once. Ben, 2 Nov: "Put it in 0.2". It's in, as a trial, off by default; the car refuses it.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th>Question</th>
-<th>Answer in the design</th>
+<th>As built (2 Nov)</th>
 </tr>
 </thead>
 <tbody>
@@ -812,23 +813,25 @@ paths at once. Ben, 1 Nov: "I want that in." It's designed, for 0.3:</p>
 </tr>
 <tr>
 <td>What keeps it safe</td>
-<td>every path checked (collisions, the car's turns, reversing); if none pass, the lattice's path</td>
+<td>every path checked (G1-G8: collisions, the car's turns, headings, time); if none pass or it's late, the lattice's path</td>
 </tr>
 <tr>
-<td>What it learns from</td>
-<td>our own lattice and Hybrid-A* paths in Gazebo: about 100,000</td>
+<td>What it learned from</td>
+<td>45,092 lattice and Hybrid-A* paths on 791 maps; 3.9 M weights, 20 min on the Mac</td>
 </tr>
 <tr>
 <td>What runs it</td>
-<td>a Rust node; the model on TensorRT (Orin) or Core ML (Mac)</td>
+<td>a Python node; the model in ONNX Runtime (CPU, 75 ms)</td>
 </tr>
 <tr>
-<td>How it's scored</td>
-<td>the same trials as the lattice: 16 of 16 legs, 184 s</td>
+<td>Gazebo, lot tour, 2 runs</td>
+<td>8 of 8 legs, 178-182 s (lattice 186-188 s); 63 % of plans from the model, 37 % the lattice's</td>
 </tr>
 </tbody>
 </table></div>
-<p>The design: <a href="../designs/2026-11-02_diffusion-planner.md">Diffusion planner</a>.</p>
+<p>Not a winner yet: the design asks for 90 % from the model. The U-turn is its weakest leg.
+Results: <a href="trials.html#diffusion-2-nov-a-model-draws-the-lattice-guards">trials</a>; the design:
+<a href="../designs/2026-11-02_diffusion-planner.md">Diffusion planner</a>.</p>
 </section>
 <section class="card"><h2 id="kept-for-03-and-later">Kept for 0.3 and later</h2>
 <p>Every idea is kept (Ben, 1 Nov: "I do like the 23 ideas? lets keep them around").</p>
@@ -845,8 +848,8 @@ paths at once. Ben, 1 Nov: "I want that in." It's designed, for 0.3:</p>
 <td>runbook ready</td>
 </tr>
 <tr>
-<td>The diffusion planner</td>
-<td>designed</td>
+<td>The diffusion planner: 90 % of plans from the model, the U-turn, the Orin</td>
+<td>trial in 0.2</td>
 </tr>
 <tr>
 <td>The talking model: explains, never drives</td>

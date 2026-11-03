@@ -283,6 +283,26 @@ def test_a_tracker_takes_follow_path_with_nav2s_own_checks():
     assert 'track' not in manager['node_names']
 
 
+def test_diffusion_takes_compute_path_to_pose_with_the_lattice_behind_it():
+    assert 'diffusion_planner' not in nav_nodes()
+    assert ('compute_path_to_pose', 'compute_path_to_pose_lattice') not in remaps(
+        nav_nodes()['planner_server'])
+    nodes = nav_nodes(planner='diffusion', reversing='true')
+    # planner_server keeps the lattice, its action and its /plan out of the way.
+    assert ('compute_path_to_pose', 'compute_path_to_pose_lattice') in remaps(
+        nodes['planner_server'])
+    assert ('plan', '/drivers/nav/diffusion/lattice_plan') in remaps(nodes['planner_server'])
+    p = given(nodes['diffusion_planner'])
+    v = vehicle.load()['vehicle']
+    assert p['reversing'] is True
+    assert p['min_radius'] == pytest.approx(0.95 * vehicle.min_turning_radius(v))
+    assert p['goal_xy'] == 1.0 and p['goal_yaw'] == 0.75
+    assert p['model'] == '' and p['provider'] == 'CPUExecutionProvider'
+    # The outline, padded as the global costmap pads it (0.05 m).
+    front = yaml.safe_load(p['footprint'])[0]
+    assert front[0] == pytest.approx(vehicle.footprint_points(v)[0][0] + 0.05, abs=1e-3)
+
+
 def test_bad_trackers_and_reversing_trackers_are_refused():
     with pytest.raises(ValueError, match='pick one of'):
         nav_nodes(tracker='mppi')
@@ -351,7 +371,9 @@ PLUGINS = {'hybrid': 'nav2_smac_planner::SmacPlannerHybrid',
            'lattice': 'nav2_smac_planner::SmacPlannerLattice',
            'smac2d': 'nav2_smac_planner::SmacPlanner2D',
            'navfn': 'nav2_navfn_planner::NavfnPlanner',
-           'theta_star': 'nav2_theta_star_planner::ThetaStarPlanner'}
+           'theta_star': 'nav2_theta_star_planner::ThetaStarPlanner',
+           # The trial stands on the lattice: planner_server runs it, as the fallback.
+           'diffusion': 'nav2_smac_planner::SmacPlannerLattice'}
 
 
 def planner_settings(**args):

@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">38 min read · 14 sections</div></header>
+<div class="meta">39 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -487,6 +487,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>To see whether another of Nav2's planners plans better or faster than Hybrid-A<em> on the same routes, scored by <code>measure controllers --planners</code> (<code>--reversing</code> for the car's own setting, <code>lattice32</code> for the 32-heading file), before any replaces the default. The lattice won (30 Oct, reversing: every leg, 29 s quicker a tour) and is the default since 1 Nov; the car, forward only until H5, keeps Hybrid-A</em>. Only hybrid and lattice keep to the turning radius, so the car refuses the other three</td>
 <td>Ben</td>
 <td>2026-10-29</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="trials.html#diffusion-2-nov-a-model-draws-the-lattice-guards">Diffusion planner</a> (<code>planner:=diffusion</code>, <code>aav_diffusion_planner</code>; <code>pixi run diffusion data</code>, <code>train</code>)</td>
+<td>Ben, 1-2 Nov: "Is this using a model to make this happen. Can we do it", then "I want that in" (in 0.2). A small flow-matching model, trained on the lattice's and Hybrid-A*'s paths, draws 16 routes; a guard (G1-G8: collisions, turns, heading, reversing, length) checks them, and the lattice's route is the fallback when none passes or the model is late (simplex). Off by default; the car refuses it. Gazebo, 2 Nov: every leg, 63 % of routes from the model</td>
+<td>Ben</td>
+<td>2026-11-02</td>
 <td>sim</td>
 </tr>
 <tr>

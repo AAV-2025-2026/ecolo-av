@@ -92,6 +92,8 @@ so add `--local`: `pixi run tools/ros.sh --local python3 tools/<script>.py`.
 | `software_gl.sh` | Mesa's software OpenGL, for Gazebo with no GPU | - (put in front) |
 | `fake_vlp16.py` | pretends to be the VLP-16 lidar: its UDP packets | - |
 | `controller_compare.py` | Regulated Pure Pursuit against MPPI, and the trial trackers, planners, AMCL, NDT and KISS-ICP (`--trackers`, `--planners`, `--runs`, `--amcl`, `--ndt`, `--ndt-ekf`, `--gps-off`, `--voxels`, `--kiss-icp`), same routes | `measure controllers` |
+| `diffusion.sh` | the diffusion planner trial's family: `data`, `train`, `score` (`models/diffusion/`) | `diffusion <data, train, score>` |
+| `diffusion_data.py` | the teachers' paths (the lattice, Hybrid-A*) on random maps: map_server and planner_server only, no Gazebo | `diffusion data` |
 | `lattice_primitives.py` | the State Lattice planner's primitives for our car, by Nav2's generator (`--check`: still right for `vehicle.yaml`?) | - (needs `pixi run get vendor`) |
 | `heading_check.py` | the global EKF's heading against Gazebo's truth | - (ros.sh --local) |
 | `ndt_map.py` | NDT's map of the test lot: drive the mapping route, or build from a bag (its maths without ROS) | `ndt-map` |
@@ -172,7 +174,7 @@ Each lands outside git, checksum pinned where the script says.
   `tools/ros.sh --local`; so do `hw-panel` and the Gazebo measurements, inside `screen.sh`
   and `measure.sh`. `test.sh` checks the list; give any new stand-in task the same.
 - **A family's script lists its choices** when run with no word or a wrong one, and
-  exits 2 (`clear.sh`, `get.sh`, `measure.sh`, `pico.sh`, `screen.sh`, `esp32.sh`).
+  exits 2 (`clear.sh`, `diffusion.sh`, `get.sh`, `measure.sh`, `pico.sh`, `screen.sh`, `esp32.sh`).
 - `actuator_test.sh`, `drive_to_point.sh`: only `--sim` stays local. On the car they ask you to
   type a word first. `actuator_test` caps its own speed (1 m/s; 0.3 m/s on `--stands`);
   `drive_to_point.sh` has no cap of its own and relies on ego's `max_speed` (1 m/s by default).

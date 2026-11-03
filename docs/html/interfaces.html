@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">79 min read · 4 sections</div></header>
+<div class="meta">81 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -1102,10 +1102,18 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/plan</code></td>
 <td><code>nav_msgs/msg/Path</code></td>
-<td><code>planner_server</code></td>
+<td><code>planner_server</code>, <code>diffusion_planner</code></td>
 <td><code>map</code>, <code>debug_hud</code></td>
 <td>-</td>
-<td>The planned path, for RViz/Foxglove, and the map window (map, aav_hud) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives. Which planner makes it is navigation.launch.py planner:= (docs/controllers.md, Planners) - hybrid (SmacPlannerHybrid, the default) or lattice (SmacPlannerLattice, our own primitives) keep to the car's turning radius; smac2d, navfn and theta_star, trials in sim and bench only, don't. Always the plugin GridBased, so the behaviour trees never change.</td>
+<td>The planned path, for RViz/Foxglove, and the map window (map, aav_hud) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives. Which planner makes it is navigation.launch.py planner:= (docs/controllers.md, Planners) - hybrid (SmacPlannerHybrid, the default) or lattice (SmacPlannerLattice, our own primitives) keep to the car's turning radius; smac2d, navfn and theta_star, trials in sim and bench only, don't. Always the plugin GridBased, so the behaviour trees never change. With planner:=diffusion (aav_diffusion_planner, a trial) diffusion_planner publishes it - the path it returned, the model's or the lattice's - and planner_server's own goes to /drivers/nav/diffusion/lattice_plan.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/diffusion/lattice_plan</code></td>
+<td><code>nav_msgs/msg/Path</code></td>
+<td><code>planner_server</code></td>
+<td>-</td>
+<td>-</td>
+<td>Only with planner:=diffusion - planner_server's own /plan, renamed - the lattice's path for each plan, the fallback, whether or not the car got it.</td>
 </tr>
 <tr>
 <td><code>/cmd_vel_nav</code></td>
@@ -1114,6 +1122,14 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>velocity_smoother</code></td>
 <td>-</td>
 <td>Nav2's own name, inside Nav2 - the path follower's command, before the velocity smoother, collision_monitor and /drivers/nav/cmd_vel. controller_server publishes it (tracker:=none, the default), or aav_track's track node with a trial tracker on (tracker:=pure_pursuit</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/diffusion/status</code></td>
+<td><code>diagnostic_msgs/msg/DiagnosticStatus</code></td>
+<td><code>diffusion_planner</code></td>
+<td><code>controller_compare</code></td>
+<td>-</td>
+<td>Only with planner:=diffusion (aav_diffusion_planner, a trial) - one a plan. name diffusion_planner; level OK (the model's path), WARN (the lattice's - the fallback) or ERROR (neither); message the source and why (no model answer, every sample failed the guard, late). values source, why, model_ms, model_and_guard_ms (against budget_ms, 150), total_ms, samples, samples_passed, lattice_ms, refused_G1..G8 (samples failing each check, this plan) and refused_G*_total, plans, from_model, share_from_model (since the node started), and with the model's path length_m, cusps, lattice_length_m, gap_to_lattice_m.</td>
 </tr>
 <tr>
 <td><code>/drivers/nav/track/status</code></td>
@@ -1319,7 +1335,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/compute_path_to_pose</code></td>
 <td><code>nav2_msgs/action/ComputePathToPose</code></td>
 <td><code>planner_server</code></td>
-<td>Nav2's own - one path from the car to a pose, planner_id GridBased (whichever planner:= runs). bt_navigator calls it every second while it drives; controller_compare (tools/controller_compare.py --planners) calls it once before each leg, to score the planner alone - its planning_time, the path's length and tightest turn. Planning only, nothing moves.</td>
+<td>Nav2's own - one path from the car to a pose, planner_id GridBased (whichever planner:= runs). With planner:=diffusion diffusion_planner serves it instead, and planner_server's own is renamed /compute_path_to_pose_lattice, which diffusion_planner calls for each plan (the fallback). bt_navigator calls it every second while it drives; controller_compare (tools/controller_compare.py --planners) calls it once before each leg, to score the planner alone - its planning_time, the path's length and tightest turn. Planning only, nothing moves.</td>
 </tr>
 <tr>
 <td><code>/navigate_to_pose</code></td>

@@ -71,6 +71,7 @@ car-day-build = { cmd = "tools/car_day_build.sh", description = "Before car day:
 
 # Downloads, and the firmware (docs/rust-firmware.md). flash writes a board: bench only,
 # wheels off the ground.
+diffusion = { cmd = "tools/diffusion.sh", description = "The diffusion planner trial's data and model: pixi run diffusion data (the lattice's paths on random maps, no Gazebo), train (the model, its guard score, models/diffusion/planner.onnx; needs pixi install --locked -e learn), score" }
 get = { cmd = "tools/get.sh", description = "Download what git doesn't keep: pixi run get vendor (ROS source, 560 MB), models, mediamtx, places, street-map, carla-osm, routes, or all" }
 pico = { cmd = "tools/pico.sh", description = "Our Rust Pico 2 boards: pixi run pico <spine|wheel|sentinel> <tools|build|flash>. tools: probe-rs (once); build: the .uf2 to drag on; flash: through a debug probe, then its logs" }
 esp = { cmd = "tools/esp32.sh", description = "The Rust firmware for today's ESP32 control board: pixi run esp tools (Espressif's Rust, once), build, flash (on the USB cable, bench only), qemu-tools (QEMU, once), qemu-check (it brakes when the heartbeat stops; docs/esp32-bench.md)" }
@@ -243,6 +244,23 @@ numpy = ">=2,<3"
 [feature.kiss.pypi-dependencies]
 kiss-icp = "==1.3.0"
 
+# The diffusion planner's training and its model (aav_diffusion_planner, a trial:
+# docs/designs/2026-11-02_diffusion-planner.md): PyTorch (BSD-3) to train, ONNX (Apache-2.0)
+# to export, ONNX Runtime (MIT) to run the model. Its own small environment, no ROS, like
+# kiss: the default one isn't re-solved. The planner node runs .pixi/envs/learn/bin/python
+# as a child program (the model worker) through a pipe: pixi install --locked -e learn.
+[feature.learn]
+platforms = ["linux-64", "linux-aarch64", "mac"]
+
+[feature.learn.dependencies]
+python = ">=3.12,<3.13"
+numpy = ">=2,<3"
+pytorch = ">=2.13,<3"
+onnx = ">=1.23,<2"
+onnxscript = ">=0.7,<1"
+onnxruntime = ">=1.31,<2"
+pyyaml = ">=6.0.3,<7"
+
 # GStreamer, for the camera stream's decoder on a Mac or a Linux PC (aav_camera_stream,
 # decoders.py): rtspsrc (-good), h264parse and, on a Mac, vtdec, VideoToolbox's hardware
 # decoder (-bad), avdec_h264 (gst-libav). Its own small environment, no ROS, so adding it
@@ -298,6 +316,7 @@ llm = { features = ["llm", "mcp"] }
 firmware = { features = ["firmware"], no-default-feature = true }
 routes = { features = ["routes"], no-default-feature = true }
 kiss = { features = ["kiss"], no-default-feature = true }
+learn = { features = ["learn"], no-default-feature = true }
 gst = { features = ["gst"], no-default-feature = true }
 calib = { features = ["calib"], no-default-feature = true }
 
