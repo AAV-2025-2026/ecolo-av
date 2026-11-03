@@ -2,8 +2,10 @@
 
 * **Author:** Ben (the ask), written up 2 Nov 2026
 * **Date:** 2026-11-02
-* **Status:** Proposed: design only, nothing built. A trial for 0.3 or later (road to 0.2,
-  review finding 7). TODO 78
+* **Status:** Built as a trial in 0.2 (Ben, 2 Nov: "diffusion in 0.2"), off by default,
+  sim and bench only: `planner:=diffusion`, package `aav_diffusion_planner`. Steps 1-3
+  done and scored in Gazebo; step 4 (the Orin) and 5 (better than the teacher) open.
+  What changed from this design, and why: [As built](#as-built-2-nov). TODO 78
 
 Ben, 1 Nov: "Diffusion planners: This sounds interesting. Is this using a model to make
 this happen. Can we do it", then "lets keep them around like the diffusion path finding.
@@ -323,6 +325,52 @@ the default (the lattice) untouched.
    Orin's flashing host)?
 6. **Guard limits** G7 (cusps, metres backwards) and the 150 ms stop: the numbers to start
    with?
+
+## As built (2 Nov)
+
+| Part | Where | Status |
+|---|---|---|
+| The data | `tools/diffusion_data.py`, `pixi run diffusion data` | 45,092 paths on 791 maps, about 30 min on 6 workers |
+| The model, training, ONNX | `ros/drivers/aav_diffusion_planner/training/`, `pixi run diffusion train` | 3.9 M weights, 30 epochs in 19.5 min (MPS) |
+| The guard | `aav_diffusion_planner/guard.py` (no ROS, `test/test_guard.py`) | G1-G8, `decide()` |
+| The node | `aav_diffusion_planner/planner_node.py` | `planner:=diffusion`; the car refuses it |
+| The score | `docs/trials.md`, Diffusion, 2 Nov | 4 of 4 legs; 68 % of plans from the model |
+
+### Where it differs from the design, and why
+
+| Design said | Built | Why |
+|---|---|---|
+| A Rust node (rclrs, `ort`) | **Python** node (rclpy); the model in a child program, the learn environment's ONNX Runtime, as `kiss_icp` does | the model runs in the same ONNX Runtime either way. rclrs 0.8's action server and client are untried in this repo; `ort` downloads its library when it builds, which the car kit's offline build can't. The guard in NumPy: 19 ms for 16 paths. Step 0's Rust spike is still open |
+| `/planning/diffusion/status` | `/drivers/nav/diffusion/status` | `planning` isn't one of our areas (`docs/naming.md`); Nav2 is a driver, as `/drivers/nav/track/status` |
+| G4: no lethal **or inscribed** cell under the outline | lethal or unknown under the outline (padded as the costmap pads it) | Smac's own rule for a car-shaped footprint. With inscribed cells too, the lattice's own paths failed |
+| G5: every turn ≥ 3.59 m (the plan radius) | ≥ 0.95 × full lock (2.73 m), on a circle through points 1 m either side | the teachers' own smoothed paths measure 2.8-3.2 m at their tightest. 3.59 m refused most of them |
+| G1: points 0.1-0.6 m apart | no step over 3 × the mean step; checks run on the path made dense (0.25 m) | 64 points over a 50 m leg are 0.8 m apart |
+| G6: the model's own headings | each heading from the travel (`window.smooth`) | the model's points wobble and its headings disagree with them: 0.9 % of samples passed; smoothing x, y over 5 points and taking headings from the travel, 36 % |
+| A sample failing any check is checked on | one failing G1 or G8 isn't checked further | a long, wild sample took 0.8 s to check |
+| A reverse "cusp" is any change of gear | a run of one gear under 0.5 m is noise | the teachers' paths end with such wobbles |
+| Teachers: lattice, Hybrid-A* (Q4) | both: 70 % lattice, 30 % Hybrid-A*, half reversing | only the paths the guard accepts are used |
+
+### Open questions, answered for now
+
+| # | Answer (2 Nov) |
+|---|---|
+| 1 The crop | one window round start and goal (min 32 m a side, 8 m margin), turned to the car's heading |
+| 2 The lattice as an input | no: fallback only |
+| 3 `ComputePathThroughPoses` | stays with planner_server's lattice |
+| 4 The teacher mix | both, filtered by the guard |
+| 5 Where training runs | Ben's Mac (M4 Max, MPS): 19.5 min |
+| 6 G7 and the stop | 4 cusps, 15 m backwards, 150 ms, as written |
+
+### Found on the way
+
+- **The forward-only lattice backs up.** With `allow_reverse_expansion: false`, 800 of its
+  1,871 paths in a sample of the data (43 %) failed the guard, most of them for reversing
+  (G7): they begin with 2-4 m backwards. Of all 45,092 teacher paths, the guard refused
+  29 %. The car's forward-only default is Hybrid-A*, so the car doesn't meet it; worth a
+  look before the lattice is ever used forward only.
+- **Late plans.** In Gazebo the model and guard took 130 ms on average, against a 150 ms
+  stop: 18 of 135 plans were late (the lattice's). 5 Euler steps: 44 ms a plan, but 60 %
+  of plans with a passing sample against 75 %.
 
 ## Related
 

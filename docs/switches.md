@@ -28,10 +28,11 @@ twice, the last one wins.
 | `planner:=smac2d` | A* on the grid: **ignores the turning circle** | 29 Oct, forward only: 2 of 4 |
 | `planner:=navfn` | NavFn, the classic: ignores the turning circle | not tried |
 | `planner:=theta_star` | Theta*: straight lines: ignores the turning circle | not tried |
+| `planner:=diffusion` (a trial) | **a model draws the route**, a guard checks it, the lattice's route if it fails. Needs `pixi install --locked -e learn` and `pixi run diffusion train` | 2 Nov, reversing, 2 runs: every leg, 178-182 s; 63 % of routes from the model |
 
 The lattice is the default since 1 Nov (Ben), on the car too, now that it may reverse.
 Forward only (`reversing:=false`, or no lidar), the car takes `hybrid`: the lattice lost
-the U-turn. The real car takes only `hybrid` or `lattice`. More: [Controllers, Planners](controllers.md), [the runs](trials.md#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32).
+the U-turn. The real car takes only `hybrid` or `lattice` (it refuses `diffusion` too). More: [Controllers, Planners](controllers.md), [the runs](trials.md#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32).
 
 ## Who steers along the path
 

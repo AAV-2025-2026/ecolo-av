@@ -7,7 +7,7 @@
 <!-- Generated from docs/trials.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Trials: new path followers and localizers beside the main ones</h1>
-<div class="meta">45 min read · 15 sections</div></header>
+<div class="meta">50 min read · 16 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -98,7 +98,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#what-is-on-trial">What is on trial</a><a href="#where-a-tracker-sits">Where a tracker sits</a><a href="#fair-rules">Fair rules</a><a href="#run-it">Run it</a><a href="#results">Results</a><a href="#ndt-into-the-global-ekf-30-oct">NDT into the global EKF (30 Oct)</a><a href="#kiss-icp-into-the-local-ekf-1-nov">KISS-ICP into the local EKF (1 Nov)</a><a href="#scoring-a-localizer-fairly">Scoring a localizer fairly</a><a href="#scoring-an-odometry-fairly-kiss-icp-ekf_local">Scoring an odometry fairly (KISS-ICP, ekf_local)</a><a href="#before-a-winner-goes-on-the-car">Before a winner goes on the car</a><a href="#results-29-october">Results, 29 October</a><a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results, 29 October (afternoon): LQR rebuilt, and mpc_full</a><a href="#planners-29-oct-hybrid-lattice-and-smac2d">Planners, 29 Oct: hybrid, lattice and smac2d</a><a href="#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32">Planners, 30 Oct: reversing on, hybrid, lattice and lattice32</a><a href="#voxels-30-oct-the-lidar-as-cubes">Voxels, 30 Oct: the lidar as cubes</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#what-is-on-trial">What is on trial</a><a href="#where-a-tracker-sits">Where a tracker sits</a><a href="#fair-rules">Fair rules</a><a href="#run-it">Run it</a><a href="#results">Results</a><a href="#ndt-into-the-global-ekf-30-oct">NDT into the global EKF (30 Oct)</a><a href="#kiss-icp-into-the-local-ekf-1-nov">KISS-ICP into the local EKF (1 Nov)</a><a href="#scoring-a-localizer-fairly">Scoring a localizer fairly</a><a href="#scoring-an-odometry-fairly-kiss-icp-ekf_local">Scoring an odometry fairly (KISS-ICP, ekf_local)</a><a href="#before-a-winner-goes-on-the-car">Before a winner goes on the car</a><a href="#results-29-october">Results, 29 October</a><a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results, 29 October (afternoon): LQR rebuilt, and mpc_full</a><a href="#planners-29-oct-hybrid-lattice-and-smac2d">Planners, 29 Oct: hybrid, lattice and smac2d</a><a href="#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32">Planners, 30 Oct: reversing on, hybrid, lattice and lattice32</a><a href="#diffusion-2-nov-a-model-draws-the-lattice-guards">Diffusion, 2 Nov: a model draws, the lattice guards</a><a href="#voxels-30-oct-the-lidar-as-cubes">Voxels, 30 Oct: the lidar as cubes</a></nav>
 <div class="lead"><p>Ben, 29 Oct: "We want to make other nodes or plugins that we can test and then replace
 the main ones if they work." Each trial runs <strong>beside</strong> today's default, chosen at launch,
 and is <strong>scored on the same routes</strong>. It becomes the default only once it wins.</p>
@@ -119,6 +119,7 @@ and is <strong>scored on the same routes</strong>. It becomes the default only o
 <li><strong>Voxels</strong> (<code>voxels:=true</code>, 30 Oct): Nav2 reads the lidar as 0.25 m cubes. It stopped 0.44 m before the post (the scan 0.36 m), drove the lot tour 4 of 4, 6 ms a cloud. <a href="#voxels-30-oct-the-lidar-as-cubes">Results</a>.</li>
 <li><strong>KISS-ICP</strong> (<code>aav_kiss_icp</code>, stock, MIT): lidar odometry, scored against <code>ekf_local</code>, never in an EKF yet. <code>kiss_icp:=true</code>. 30 Oct, one run: <strong>0.04 m per 100 m</strong> over the lot tour, against ekf_local's 0.33; about 1 ms a scan; once the ground was cut out. <a href="#30-oct-kiss-icp-beside-ekf_local-one-run-mppi-the-lot-tour">Results</a>. Design: <code>docs/designs/2026-10-30_kiss-icp.md</code>.</li>
 <li><strong>KISS-ICP into the local EKF</strong> (<code>kiss_ekf:=true</code>), 1 Nov: its twist beside the wheels and IMU. Gazebo, 5 runs: <strong>no clear win yet</strong> (ekf_local 0.30-1.27 m per 100 m with it, 0.44-1.91 without; the spread is the Mac's load). Its covariance is now measured. <a href="#kiss-icp-into-the-local-ekf-1-nov">Results</a>.</li>
+<li><strong>The diffusion planner</strong> (<code>planner:=diffusion</code>, <code>aav_diffusion_planner</code>), 2 Nov: a model draws 16 paths, a guard checks them, the lattice's path if none passes or it's late. Gazebo, 2 runs: <strong>every leg</strong>, 178 and 182 s a tour (the lattice 186 and 188 s); <strong>63 % of plans from the model</strong>, 37 % the lattice's (17 % late, 20 % no sample passed). <a href="#diffusion-2-nov-a-model-draws-the-lattice-guards">Results</a>.</li>
 <li>The design: <code>docs/designs/2026-10-29_trials.md</code>.</li>
 </ul>
 </blockquote></div>
@@ -196,6 +197,11 @@ and is <strong>scored on the same routes</strong>. It becomes the default only o
 <td>The lidar as 0.25 m cubes over the fitted road (<code>aav_voxels</code>)</td>
 <td>the flat scan (<code>lidar_scan</code>)</td>
 <td><code>voxels:=true</code></td>
+</tr>
+<tr>
+<td>A diffusion model draws the path, a guard checks it, the lattice behind it (<code>aav_diffusion_planner</code>)</td>
+<td>the lattice</td>
+<td><code>planner:=diffusion</code> (after <code>pixi install --locked -e learn</code>, <code>pixi run diffusion data</code>, <code>pixi run diffusion train</code>)</td>
 </tr>
 </tbody>
 </table></div>
@@ -1480,6 +1486,212 @@ Results in <code>~/aav-runs/2026-10-30/lattice-rerun*/</code> on Ben's Mac (not 
   every point of the plan (one each); the other runs kept one point in four.</li>
 </ul>
 </section>
+<section class="card"><h2 id="diffusion-2-nov-a-model-draws-the-lattice-guards">Diffusion, 2 Nov: a model draws, the lattice guards</h2>
+<p>The design: <code>docs/designs/2026-11-02_diffusion-planner.md</code> (its "As built" says what
+changed). A small flow-matching model (3.9 M weights) copies the lattice and Hybrid-A*;
+for each plan it draws 16 paths in 10 steps, the guard (G1-G8) checks each, and the
+cheapest that passes within 150 ms is the plan. Else the lattice's, asked at the same time.
+Branch <code>diffusion-build</code>.</p>
+<pre class="highlight"><code class="language-bash">pixi install --locked -e learn
+pixi run diffusion data       # 45,092 paths on 791 maps, about 30 min (6 workers)
+pixi run diffusion train      # 30 epochs, 19.5 min on the M4 Max (MPS)
+AAV_SIM_DOMAIN=215 pixi run measure controllers --planners lattice diffusion diffusion_nomodel \
+    --reversing --tours lot</code></pre>
+<p>Results in <code>log/controller-compare/20261102-213622/</code> and <code>.../20261102-215334/</code> (not in
+git). One run each, twice; MPPI follows, reversing on, 1 m/s.</p>
+<h3 id="offline-the-held-back-maps-300-plans-16-samples-each">Offline: the held-back maps (300 plans, 16 samples each)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">10 steps (the node's)</th>
+<th style="text-align: right;">5 steps</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Samples that pass every check</td>
+<td style="text-align: right;"><strong>34.5 %</strong></td>
+<td style="text-align: right;">23.9 %</td>
+</tr>
+<tr>
+<td>Plans with at least one that passes</td>
+<td style="text-align: right;"><strong>75 %</strong></td>
+<td style="text-align: right;">60 %</td>
+</tr>
+<tr>
+<td>The model's time a plan (Mac CPU, ONNX Runtime)</td>
+<td style="text-align: right;">75 ms</td>
+<td style="text-align: right;">44 ms</td>
+</tr>
+<tr>
+<td>Refusals (a sample may fail several): G5 turns, G4 collisions, G6 heading, G8 length</td>
+<td style="text-align: right;">2,220, 1,340, 899, 58</td>
+<td style="text-align: right;">3,016, 1,334, 924, 52</td>
+</tr>
+<tr>
+<td>A passing path's length against the teacher's</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+</tr>
+</tbody>
+</table></div>
+<p>The design's target was 80 % of samples. Without <code>window.smooth</code> (its points evened, its
+headings from the travel), 0.9 %.</p>
+<h3 id="the-whole-tour-gazebo">The whole tour (Gazebo)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">lattice</th>
+<th style="text-align: right;">diffusion</th>
+<th style="text-align: right;">diffusion, no model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Legs finished</td>
+<td style="text-align: right;">4/4, 4/4</td>
+<td style="text-align: right;"><strong>4/4, 4/4</strong></td>
+<td style="text-align: right;">4/4</td>
+</tr>
+<tr>
+<td>Time, all legs</td>
+<td style="text-align: right;">186 s, 188 s</td>
+<td style="text-align: right;"><strong>178 s, 182 s</strong></td>
+<td style="text-align: right;">187 s</td>
+</tr>
+<tr>
+<td>Driven in reverse</td>
+<td style="text-align: right;">9.5, 9.2 m</td>
+<td style="text-align: right;">8.2, 10.5 m</td>
+<td style="text-align: right;">9.6 m</td>
+</tr>
+<tr>
+<td>Planning time, mean / worst (the planner alone, once a leg)</td>
+<td style="text-align: right;">11 / 38, 9 / 29 ms</td>
+<td style="text-align: right;">133 / 171, 140 / 161 ms</td>
+<td style="text-align: right;">14 / 42 ms</td>
+</tr>
+<tr>
+<td>Plan tighter than full lock</td>
+<td style="text-align: right;">0 m</td>
+<td style="text-align: right;">0 m</td>
+<td style="text-align: right;">0 m</td>
+</tr>
+<tr>
+<td>Off the path, mean</td>
+<td style="text-align: right;">0.15, 0.16 m</td>
+<td style="text-align: right;">0.14, 0.13 m</td>
+<td style="text-align: right;">0.13 m</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-guard-plan-by-plan-both-runs">The guard, plan by plan (both runs)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">Run 1</th>
+<th style="text-align: right;">Run 2</th>
+<th style="text-align: right;">Both</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plans</td>
+<td style="text-align: right;">135</td>
+<td style="text-align: right;">132</td>
+<td style="text-align: right;">267</td>
+</tr>
+<tr>
+<td><strong>From the model</strong></td>
+<td style="text-align: right;">92 (68 %)</td>
+<td style="text-align: right;">75 (57 %)</td>
+<td style="text-align: right;"><strong>167 (63 %)</strong></td>
+</tr>
+<tr>
+<td>The lattice's: late (model and guard over 150 ms)</td>
+<td style="text-align: right;">18</td>
+<td style="text-align: right;">28</td>
+<td style="text-align: right;">46 (17 %)</td>
+</tr>
+<tr>
+<td>The lattice's: no sample passed</td>
+<td style="text-align: right;">25</td>
+<td style="text-align: right;">29</td>
+<td style="text-align: right;">54 (20 %)</td>
+</tr>
+<tr>
+<td>Samples that passed</td>
+<td style="text-align: right;">1,269 of 1,984 (64 %)</td>
+<td style="text-align: right;">1,168 of 1,984 (59 %)</td>
+<td style="text-align: right;">61 %</td>
+</tr>
+<tr>
+<td>Refused by G5 (turns) / G6 (heading) / G4 (collisions) / G8 (length)</td>
+<td style="text-align: right;">630 / 220 / 61 / 2</td>
+<td style="text-align: right;">722 / 329 / 56 / 8</td>
+<td style="text-align: right;"></td>
+</tr>
+<tr>
+<td>Model and guard, mean</td>
+<td style="text-align: right;">126-133 ms</td>
+<td style="text-align: right;">134-145 ms</td>
+<td style="text-align: right;"></td>
+</tr>
+</tbody>
+</table></div>
+<p>With no model (<code>diffusion_nomodel</code>): 156 of 156 plans the lattice's, every leg, 187 s.</p>
+<h3 id="leg-by-leg-plans-from-the-model">Leg by leg: plans from the model</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Leg</th>
+<th style="text-align: right;">Run 1</th>
+<th style="text-align: right;">Run 2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a left turn</td>
+<td style="text-align: right;">12 of 18</td>
+<td style="text-align: right;">12 of 17</td>
+</tr>
+<tr>
+<td>round the building</td>
+<td style="text-align: right;">25 of 34</td>
+<td style="text-align: right;">20 of 33</td>
+</tr>
+<tr>
+<td><strong>turn back</strong> (the U-turn, reversing)</td>
+<td style="text-align: right;"><strong>18 of 39</strong></td>
+<td style="text-align: right;"><strong>13 of 40</strong></td>
+</tr>
+<tr>
+<td>home</td>
+<td style="text-align: right;">37 of 44</td>
+<td style="text-align: right;">30 of 42</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="what-it-shows_4">What it shows</h3>
+<ul>
+<li><strong>It works, and the guard does its job.</strong> Every leg in both runs; never a path tighter
+  than full lock; the stack below it (MPPI, collision_monitor) unchanged. Where the model
+  had nothing good, the car got the lattice's path and never noticed.</li>
+<li><strong>It is not a winner yet.</strong> 63 % of plans from the model, against the design's 90 %.
+  The <strong>U-turn</strong> is its weak leg (under half): G5 and G6, turns and headings round the
+  reversing cusp. And it is <strong>slow on a Mac beside Gazebo</strong>: 130-145 ms of a 150 ms stop,
+  so 17 % of plans were late.</li>
+<li><strong>178-182 s against 186-188 s</strong> is 4-8 s quicker, but two runs each name no winner, and
+  the turn back leg, where the model drew least, gave most of it. It copies the lattice:
+  at best it equals it (the design's honest note).</li>
+<li><strong>Next</strong> (design steps 4-5): train on the reversing cusps (more U-turn-shaped data),
+  guidance away from obstacles, fewer steps on the Orin's GPU (TensorRT), then re-rank by
+  how fast MPPI drove them.</li>
+</ul>
+</section>
 <section class="card"><h2 id="voxels-30-oct-the-lidar-as-cubes">Voxels, 30 Oct: the lidar as cubes</h2>
 <p><code>voxels:=true</code> (<code>aav_voxels</code>, <a href="../designs/2026-10-30_voxels.md">design</a>): Nav2's costmap
 and stop zone read <strong>0.25 m cubes</strong> over the fitted road instead of the flat scan.
@@ -1599,7 +1811,7 @@ most), <strong>1,067-1,378</strong> on the lot tour (walls, the building, parked
 </tbody>
 </table></div>
 <p>Runs: <code>/tmp/voxbench/runs/</code> on Ben's Mac (not in git).</p>
-<h3 id="what-it-shows_4">What it shows</h3>
+<h3 id="what-it-shows_5">What it shows</h3>
 <ul>
 <li><strong>Cubes stop the car as well as the scan</strong>: 0.44 m from the post against 0.36 m.</li>
 <li><strong>They cost more</strong>, 6 ms a cloud against well under 1 ms, but that is 6 % of the

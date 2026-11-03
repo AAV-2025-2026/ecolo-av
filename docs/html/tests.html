@@ -7,7 +7,7 @@
 <!-- Generated from docs/tests.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Every test we&#x27;ve talked about</h1>
-<div class="meta">19 min read · 8 sections</div></header>
+<div class="meta">20 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -232,6 +232,20 @@ in the order to run them. Each one says what it proves, how to run it, and when 
 <td><code>pixi run sim-check --ghost</code> (<a href="ghost-obstacles.html">docs</a>)</td>
 <td>a ghost 15 m ahead (nothing in Gazebo): stops 0-2 m before it (the stop zone or the controller), the local costmap marks it; drives on once it's off</td>
 <td>✅ 16 Oct: 0.21 m before it, the stop zone fired (one run, radar and lidar on too)</td>
+</tr>
+<tr>
+<td>1.16</td>
+<td><strong>The diffusion planner's lot tour</strong></td>
+<td><code>pixi run measure controllers --planners lattice diffusion --reversing --tours lot</code> (<a href="trials.html#diffusion-2-nov-a-model-draws-the-lattice-guards">trials</a>)</td>
+<td>every leg, as the lattice; no plan tighter than full lock; the share of plans from the model (<code>/drivers/nav/diffusion/status</code>)</td>
+<td>✅ 2 Nov, 2 runs: 8 of 8 legs, 63 % from the model</td>
+</tr>
+<tr>
+<td>1.17</td>
+<td><strong>The diffusion planner's guard falls back</strong></td>
+<td><code>pixi run measure controllers --planners diffusion_nomodel --reversing --tours lot</code> (no model file); the guard's checks: <code>tools/test.sh</code> (<code>aav_diffusion_planner/test</code>)</td>
+<td>every plan the lattice's, every leg; each check G1-G8 refuses its bad path in the unit tests</td>
+<td>✅ 2 Nov: 156 of 156 plans the lattice's, 4 of 4 legs</td>
 </tr>
 </tbody>
 </table></div>

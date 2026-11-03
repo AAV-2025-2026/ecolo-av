@@ -19,6 +19,7 @@ and is **scored on the same routes**. It becomes the default only once it wins.
 > - **Voxels** (`voxels:=true`, 30 Oct): Nav2 reads the lidar as 0.25 m cubes. It stopped 0.44 m before the post (the scan 0.36 m), drove the lot tour 4 of 4, 6 ms a cloud. [Results](#voxels-30-oct-the-lidar-as-cubes).
 > - **KISS-ICP** (`aav_kiss_icp`, stock, MIT): lidar odometry, scored against `ekf_local`, never in an EKF yet. `kiss_icp:=true`. 30 Oct, one run: **0.04 m per 100 m** over the lot tour, against ekf_local's 0.33; about 1 ms a scan; once the ground was cut out. [Results](#30-oct-kiss-icp-beside-ekf_local-one-run-mppi-the-lot-tour). Design: `docs/designs/2026-10-30_kiss-icp.md`.
 > - **KISS-ICP into the local EKF** (`kiss_ekf:=true`), 1 Nov: its twist beside the wheels and IMU. Gazebo, 5 runs: **no clear win yet** (ekf_local 0.30-1.27 m per 100 m with it, 0.44-1.91 without; the spread is the Mac's load). Its covariance is now measured. [Results](#kiss-icp-into-the-local-ekf-1-nov).
+> - **The diffusion planner** (`planner:=diffusion`, `aav_diffusion_planner`), 2 Nov: a model draws 16 paths, a guard checks them, the lattice's path if none passes or it's late. Gazebo, 2 runs: **every leg**, 178 and 182 s a tour (the lattice 186 and 188 s); **63 % of plans from the model**, 37 % the lattice's (17 % late, 20 % no sample passed). [Results](#diffusion-2-nov-a-model-draws-the-lattice-guards).
 > - The design: `docs/designs/2026-10-29_trials.md`.
 
 ## What is on trial
@@ -38,6 +39,7 @@ and is **scored on the same routes**. It becomes the default only once it wins.
 | State Lattice planner, our primitives | Hybrid-A* | `planner:=lattice` (`lattice_headings:=32`: the 32-heading file) |
 | Smac 2D, NavFn, Theta* planners (ignore the turning circle: sim and bench only) | Hybrid-A* | `planner:=smac2d`, `navfn`, `theta_star` |
 | The lidar as 0.25 m cubes over the fitted road (`aav_voxels`) | the flat scan (`lidar_scan`) | `voxels:=true` |
+| A diffusion model draws the path, a guard checks it, the lattice behind it (`aav_diffusion_planner`) | the lattice | `planner:=diffusion` (after `pixi install --locked -e learn`, `pixi run diffusion data`, `pixi run diffusion train`) |
 
 ## Where a tracker sits
 
@@ -631,6 +633,88 @@ Each planner's runs: hybrid 4, lattice 4, lattice32 3 (one more was spoiled, bel
   lock. The scoring now cuts the plan at each cusp (a turn of more than 120°) and
   measures the turns between them. The tightest-turn row comes from the runs that kept
   every point of the plan (one each); the other runs kept one point in four.
+
+## Diffusion, 2 Nov: a model draws, the lattice guards
+
+The design: `docs/designs/2026-11-02_diffusion-planner.md` (its "As built" says what
+changed). A small flow-matching model (3.9 M weights) copies the lattice and Hybrid-A*;
+for each plan it draws 16 paths in 10 steps, the guard (G1-G8) checks each, and the
+cheapest that passes within 150 ms is the plan. Else the lattice's, asked at the same time.
+Branch `diffusion-build`.
+
+```bash
+pixi install --locked -e learn
+pixi run diffusion data       # 45,092 paths on 791 maps, about 30 min (6 workers)
+pixi run diffusion train      # 30 epochs, 19.5 min on the M4 Max (MPS)
+AAV_SIM_DOMAIN=215 pixi run measure controllers --planners lattice diffusion diffusion_nomodel \
+    --reversing --tours lot
+```
+
+Results in `log/controller-compare/20261102-213622/` and `.../20261102-215334/` (not in
+git). One run each, twice; MPPI follows, reversing on, 1 m/s.
+
+### Offline: the held-back maps (300 plans, 16 samples each)
+
+| | 10 steps (the node's) | 5 steps |
+|---|---:|---:|
+| Samples that pass every check | **34.5 %** | 23.9 % |
+| Plans with at least one that passes | **75 %** | 60 % |
+| The model's time a plan (Mac CPU, ONNX Runtime) | 75 ms | 44 ms |
+| Refusals (a sample may fail several): G5 turns, G4 collisions, G6 heading, G8 length | 2,220, 1,340, 899, 58 | 3,016, 1,334, 924, 52 |
+| A passing path's length against the teacher's | 1.00 | 1.00 |
+
+The design's target was 80 % of samples. Without `window.smooth` (its points evened, its
+headings from the travel), 0.9 %.
+
+### The whole tour (Gazebo)
+
+| | lattice | diffusion | diffusion, no model |
+|---|---:|---:|---:|
+| Legs finished | 4/4, 4/4 | **4/4, 4/4** | 4/4 |
+| Time, all legs | 186 s, 188 s | **178 s, 182 s** | 187 s |
+| Driven in reverse | 9.5, 9.2 m | 8.2, 10.5 m | 9.6 m |
+| Planning time, mean / worst (the planner alone, once a leg) | 11 / 38, 9 / 29 ms | 133 / 171, 140 / 161 ms | 14 / 42 ms |
+| Plan tighter than full lock | 0 m | 0 m | 0 m |
+| Off the path, mean | 0.15, 0.16 m | 0.14, 0.13 m | 0.13 m |
+
+### The guard, plan by plan (both runs)
+
+| | Run 1 | Run 2 | Both |
+|---|---:|---:|---:|
+| Plans | 135 | 132 | 267 |
+| **From the model** | 92 (68 %) | 75 (57 %) | **167 (63 %)** |
+| The lattice's: late (model and guard over 150 ms) | 18 | 28 | 46 (17 %) |
+| The lattice's: no sample passed | 25 | 29 | 54 (20 %) |
+| Samples that passed | 1,269 of 1,984 (64 %) | 1,168 of 1,984 (59 %) | 61 % |
+| Refused by G5 (turns) / G6 (heading) / G4 (collisions) / G8 (length) | 630 / 220 / 61 / 2 | 722 / 329 / 56 / 8 | |
+| Model and guard, mean | 126-133 ms | 134-145 ms | |
+
+With no model (`diffusion_nomodel`): 156 of 156 plans the lattice's, every leg, 187 s.
+
+### Leg by leg: plans from the model
+
+| Leg | Run 1 | Run 2 |
+|---|---:|---:|
+| a left turn | 12 of 18 | 12 of 17 |
+| round the building | 25 of 34 | 20 of 33 |
+| **turn back** (the U-turn, reversing) | **18 of 39** | **13 of 40** |
+| home | 37 of 44 | 30 of 42 |
+
+### What it shows
+
+- **It works, and the guard does its job.** Every leg in both runs; never a path tighter
+  than full lock; the stack below it (MPPI, collision_monitor) unchanged. Where the model
+  had nothing good, the car got the lattice's path and never noticed.
+- **It is not a winner yet.** 63 % of plans from the model, against the design's 90 %.
+  The **U-turn** is its weak leg (under half): G5 and G6, turns and headings round the
+  reversing cusp. And it is **slow on a Mac beside Gazebo**: 130-145 ms of a 150 ms stop,
+  so 17 % of plans were late.
+- **178-182 s against 186-188 s** is 4-8 s quicker, but two runs each name no winner, and
+  the turn back leg, where the model drew least, gave most of it. It copies the lattice:
+  at best it equals it (the design's honest note).
+- **Next** (design steps 4-5): train on the reversing cusps (more U-turn-shaped data),
+  guidance away from obstacles, fewer steps on the Orin's GPU (TensorRT), then re-rank by
+  how fast MPPI drove them.
 
 ## Voxels, 30 Oct: the lidar as cubes
 
