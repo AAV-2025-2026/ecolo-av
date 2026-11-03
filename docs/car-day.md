@@ -669,10 +669,15 @@ heartbeat is made beside the ESP32, so the ESP32 brakes when the Pi, the bridge 
 wire stops. No Orin needed.
 
 ```text
-joystick (USB, on the Pi) ─► teleop ─► twist_mux ─► ego ─► output mux ─► legacy bridge ─► ESP32
-   hold-to-drive              0.5 s     0.3 s       the heartbeat         0.3 s          brakes 100 ms
-                              timeout   timeout     counter               stale→brake    after it stops
+joystick (USB, on the Pi) ─► joy_alive ─► teleop ─► twist_mux ─► ego ─► output mux ─► legacy bridge ─► ESP32
+                             silent 0.5 s  hold-to-   0.5 s       0.3 s   the heartbeat   0.3 s           brakes 100 ms
+                             frozen 2 s    drive      timeout     timeout counter         stale→brake     after it stops
 ```
+
+**The joystick-alive check** (`joy_alive`, TODO 74a) stops the joystick when it goes
+silent for 0.5 s (receiver unplugged) or its values freeze for 2 s while driving (a dead
+pad repeated by its receiver). It latches: release the trigger, press again.
+`/drivers/joy/alive` says `OK`, `WAITING`, `SILENT` or `FROZEN`, and why.
 
 **The Rust firmware only** (A8 passed): the C++ has no timeout.
 
@@ -681,9 +686,12 @@ joystick (USB, on the Pi) ─► teleop ─► twist_mux ─► ego ─► outpu
 | 1 | Stands; the Kar-Tech stop in the e-stop person's hand. The Rust on the ESP32, `frame_version: 2` | |
 | 2 | Theirs stopped: `aav_serial_bridge` inactive. The Orin **not** running `car orin` (two muxes would both drive) | |
 | 3 | On the Motor Pi: `~/aav-jazzy/aav.sh ros2 launch aav_bringup car.launch.py machine:=motor_pi_alone max_speed:=0.3` | |
-| 4 | The buttons and sticks: `~/aav-jazzy/aav.sh ros2 topic echo /drivers/joy/joy` (deadman: button 0; e-stop: button 2) | the numbers match; write down any that don't (TODO 74d) |
+| 4 | The buttons and sticks: `~/aav-jazzy/aav.sh ros2 topic echo /drivers/joy/joy` (deadman: button 0; throttle: axis 1; e-stop: button 2) | the numbers match; write down any that don't (TODO 74d), and change `teleop_twist_joy.yaml` and `joy_alive.yaml` together |
+| 4b | A second terminal: `~/aav-jazzy/aav.sh ros2 topic echo /drivers/joy/alive` | `WAITING`, then `OK - idle` once the trigger was released |
 | 5 | Session 9's tests 3.1-3.9 with the joystick | as there |
-| 6 | **The joystick-off test:** hold the trigger, a little throttle, then **turn the joystick off** (its receiver still in) | the wheels stop within 1 s. They keep going: **e-stop**, and no ground with the joystick until the joystick-alive check is built (TODO 74a) |
+| 6 | **The joystick-off test:** hold the trigger, a little throttle, then **turn the joystick off** (its receiver still in) | the wheels stop within 3 s; `alive` says `SILENT` or `FROZEN` ([tests 3.J1-3.J3](tests.md#3a-joy-the-joystick-on-stands)). They keep going: **e-stop**, and no ground with the joystick |
+| 6b | **Unplug the receiver** while driving, plug it in with the trigger held | stops within 1 s (`SILENT`); stays stopped until the trigger is released and pressed |
+| 7 | **Hold the stick still** 10 s, then pinned fully forward 10 s | write down when `FROZEN` comes. Pinned trips it after 2 s (release, press again). A still hand that trips it often: raise `frozen_after`; a pad whose receiver goes silent when off: `frozen_after: 0.0` is allowed |
 
 ### What keeps it safe
 
@@ -691,7 +699,7 @@ joystick (USB, on the Pi) ─► teleop ─► twist_mux ─► ego ─► outpu
 |---|---|---|
 | Hold-to-drive: let go of the trigger, it stops | ✅ teleop_twist_joy, one zero on release | ✅ |
 | The joystick's USB receiver unplugged | ✅ no commands: twist_mux 0.5 s, ego 0.3 s, the bridge brakes | ✅ |
-| **The joystick turned off or out of range, its receiver still in** | ❓ `joy_node` repeats the last state 20 times a second. **Step 6 tests it**; the joystick-alive check (TODO 74a) is to build | ❓ |
+| **The joystick turned off or out of range, its receiver still in** | ✅ on the bench: `joy_node` repeats the last state 20 times a second, so `joy_alive` stops it when the values freeze for 2 s while driving (`FROZEN`) or stop coming for 0.5 s (`SILENT`). **Step 6 tests the real pad** | ✅ the same (it's in ROS) |
 | The Pi, the bridge or the serial wire stops | ✅ brakes 100 ms after the heartbeat stops (QEMU: 111-120 ms) | ❌ the last throttle stays: only the e-stop |
 | The network drops | ✅ nothing on the network: all on the Pi | ✅ |
 | A speed cap | ✅ ego's `max_speed:=0.3`, on the Pi | ✅ the same |
@@ -703,7 +711,7 @@ joystick (USB, on the Pi) ─► teleop ─► twist_mux ─► ego ─► outpu
 The 2025-26 path ("like before": `joy_to_ackermann` → `aav_serial_bridge` → the C++) has
 the deadman but **no timeout anywhere**: we don't use it.
 
-**Stop point:** 1-6 pass, or why not written down.
+**Stop point:** 1-7 pass, or why not written down.
 
 ## A10 · The ground, at walking pace
 

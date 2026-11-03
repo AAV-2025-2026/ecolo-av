@@ -36,7 +36,7 @@ ticked. Where it stands on 2 November:
 | The kit ready (`car-day-check`) | ⬜ 11 missing: downloads and the ESP32 tools ([below](#the-checks-run-for-this-page)) |
 | The ESP32's emulator check (`esp qemu-check`) | ⬜ the ESP32 tools not installed on this Mac yet |
 | `car_setup.sh`'s dry run, every role | ✅ only the two planned refusals |
-| The first-move gaps (TODO 74) | ⬜ the joystick-alive check, the throttle cap |
+| The first-move gaps (TODO 74) | 🔧 the joystick-alive check built, passed on the bench (2 Nov), its car test in A9b; ⬜ the throttle cap |
 | The people named | ⬜ Ben and the team |
 | The hardware lead's answers (H1, C1, `.211`, the router) | ⬜ the hardware lead |
 
@@ -327,7 +327,7 @@ The list: [TODO](../TODO.md), "0.3 and later".
 |---|---|
 | **Solid** | every test green; every profile runs in Gazebo; the screens seen live against it |
 | **Untested** | anything on the real car: the steering page, `car_setup.sh --apply`, the boot service, the joystick path |
-| **Open** | the joystick-alive check, the throttle cap, the people, the hardware lead's answers |
+| **Open** | the joystick-alive check on the real pad (A9b), the throttle cap, the people, the hardware lead's answers |
 
 ## The checks run for this page
 

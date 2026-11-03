@@ -7,7 +7,7 @@
 <!-- Generated from docs/car-day.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Car day: the runbook</h1>
-<div class="meta">64 min read · 30 sections</div></header>
+<div class="meta">66 min read · 30 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -1872,9 +1872,13 @@ we allow the joystick to have direct control like before? ... if the connection 
 stop?" <strong>Yes, through our stack, all on the Motor Pi</strong> (<code>machine:=motor_pi_alone</code>): the
 heartbeat is made beside the ESP32, so the ESP32 brakes when the Pi, the bridge or the
 wire stops. No Orin needed.</p>
-<pre class="highlight"><code class="language-text">joystick (USB, on the Pi) ─► teleop ─► twist_mux ─► ego ─► output mux ─► legacy bridge ─► ESP32
-   hold-to-drive              0.5 s     0.3 s       the heartbeat         0.3 s          brakes 100 ms
-                              timeout   timeout     counter               stale→brake    after it stops</code></pre>
+<pre class="highlight"><code class="language-text">joystick (USB, on the Pi) ─► joy_alive ─► teleop ─► twist_mux ─► ego ─► output mux ─► legacy bridge ─► ESP32
+                             silent 0.5 s  hold-to-   0.5 s       0.3 s   the heartbeat   0.3 s           brakes 100 ms
+                             frozen 2 s    drive      timeout     timeout counter         stale→brake     after it stops</code></pre>
+<p><strong>The joystick-alive check</strong> (<code>joy_alive</code>, TODO 74a) stops the joystick when it goes
+silent for 0.5 s (receiver unplugged) or its values freeze for 2 s while driving (a dead
+pad repeated by its receiver). It latches: release the trigger, press again.
+<code>/drivers/joy/alive</code> says <code>OK</code>, <code>WAITING</code>, <code>SILENT</code> or <code>FROZEN</code>, and why.</p>
 <p><strong>The Rust firmware only</strong> (A8 passed): the C++ has no timeout.</p>
 <div class="table-wrap"><table>
 <thead>
@@ -1902,8 +1906,13 @@ wire stops. No Orin needed.</p>
 </tr>
 <tr>
 <td>4</td>
-<td>The buttons and sticks: <code>~/aav-jazzy/aav.sh ros2 topic echo /drivers/joy/joy</code> (deadman: button 0; e-stop: button 2)</td>
-<td>the numbers match; write down any that don't (TODO 74d)</td>
+<td>The buttons and sticks: <code>~/aav-jazzy/aav.sh ros2 topic echo /drivers/joy/joy</code> (deadman: button 0; throttle: axis 1; e-stop: button 2)</td>
+<td>the numbers match; write down any that don't (TODO 74d), and change <code>teleop_twist_joy.yaml</code> and <code>joy_alive.yaml</code> together</td>
+</tr>
+<tr>
+<td>4b</td>
+<td>A second terminal: <code>~/aav-jazzy/aav.sh ros2 topic echo /drivers/joy/alive</code></td>
+<td><code>WAITING</code>, then <code>OK - idle</code> once the trigger was released</td>
 </tr>
 <tr>
 <td>5</td>
@@ -1913,7 +1922,17 @@ wire stops. No Orin needed.</p>
 <tr>
 <td>6</td>
 <td><strong>The joystick-off test:</strong> hold the trigger, a little throttle, then <strong>turn the joystick off</strong> (its receiver still in)</td>
-<td>the wheels stop within 1 s. They keep going: <strong>e-stop</strong>, and no ground with the joystick until the joystick-alive check is built (TODO 74a)</td>
+<td>the wheels stop within 3 s; <code>alive</code> says <code>SILENT</code> or <code>FROZEN</code> (<a href="tests.html#3a-joy-the-joystick-on-stands">tests 3.J1-3.J3</a>). They keep going: <strong>e-stop</strong>, and no ground with the joystick</td>
+</tr>
+<tr>
+<td>6b</td>
+<td><strong>Unplug the receiver</strong> while driving, plug it in with the trigger held</td>
+<td>stops within 1 s (<code>SILENT</code>); stays stopped until the trigger is released and pressed</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Hold the stick still</strong> 10 s, then pinned fully forward 10 s</td>
+<td>write down when <code>FROZEN</code> comes. Pinned trips it after 2 s (release, press again). A still hand that trips it often: raise <code>frozen_after</code>; a pad whose receiver goes silent when off: <code>frozen_after: 0.0</code> is allowed</td>
 </tr>
 </tbody>
 </table></div>
@@ -1939,8 +1958,8 @@ wire stops. No Orin needed.</p>
 </tr>
 <tr>
 <td><strong>The joystick turned off or out of range, its receiver still in</strong></td>
-<td>❓ <code>joy_node</code> repeats the last state 20 times a second. <strong>Step 6 tests it</strong>; the joystick-alive check (TODO 74a) is to build</td>
-<td>❓</td>
+<td>✅ on the bench: <code>joy_node</code> repeats the last state 20 times a second, so <code>joy_alive</code> stops it when the values freeze for 2 s while driving (<code>FROZEN</code>) or stop coming for 0.5 s (<code>SILENT</code>). <strong>Step 6 tests the real pad</strong></td>
+<td>✅ the same (it's in ROS)</td>
 </tr>
 <tr>
 <td>The Pi, the bridge or the serial wire stops</td>
@@ -1981,7 +2000,7 @@ wire stops. No Orin needed.</p>
 </table></div>
 <p>The 2025-26 path ("like before": <code>joy_to_ackermann</code> → <code>aav_serial_bridge</code> → the C++) has
 the deadman but <strong>no timeout anywhere</strong>: we don't use it.</p>
-<p><strong>Stop point:</strong> 1-6 pass, or why not written down.</p>
+<p><strong>Stop point:</strong> 1-7 pass, or why not written down.</p>
 </section>
 <section class="card"><h2 id="a10-the-ground-at-walking-pace">A10 · The ground, at walking pace</h2>
 <p><strong>Who:</strong> all five people. The car comes off the stands only when every box is ticked.</p>

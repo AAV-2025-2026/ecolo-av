@@ -7,7 +7,7 @@
 <!-- Generated from docs/tests.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Every test we&#x27;ve talked about</h1>
-<div class="meta">19 min read · 8 sections</div></header>
+<div class="meta">21 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -251,9 +251,9 @@ in the order to run them. Each one says what it proves, how to run it, and when 
 <tbody>
 <tr>
 <td>2.1</td>
-<td>The whole car graph, e-stops included</td>
+<td>The whole car graph, e-stops and the joystick-alive check included</td>
 <td><code>pixi run bench-check</code></td>
-<td>7 of 7</td>
+<td>11 of 11</td>
 <td>✅</td>
 </tr>
 <tr>
@@ -346,6 +346,39 @@ software stopped; speed capped (<code>max_speed:=0.3</code>).</p>
 <td>⚠️ <strong>Unplug the Motor-Pi's serial cable while driving</strong></td>
 <td>the car brakes within 200 ms</td>
 <td>⬜ fails with today's C++ ESP32 (team-todo.md B2). The Rust ESP32 firmware brakes 111-120 ms after the last frame in QEMU; not yet flashed</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="3a-joy-the-joystick-on-stands">3a-joy. The joystick on stands</h3>
+<p>Car day's <a href="car-day.html#a9b-the-joystick-on-stands">A9b</a> (TODO 74a). The joystick-alive check (<code>joy_alive</code>) reports on <code>/drivers/joy/alive</code>. Each test: hold the
+trigger, a little throttle, wheels turning, then:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Test</th>
+<th>Expect</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3.J1</td>
+<td><strong>Unplug the receiver</strong></td>
+<td>the wheels stop within 1 s; <code>/drivers/joy/alive</code> says <code>SILENT</code>. Plugged in again with the trigger held: still stopped, until it is released and pressed</td>
+<td>🔧 bench ✅</td>
+</tr>
+<tr>
+<td>3.J2</td>
+<td><strong>Turn the pad off</strong> (receiver still in)</td>
+<td>the wheels stop within 3 s: <code>SILENT</code> if the receiver drops out or goes quiet, <code>FROZEN</code> if it repeats the last values. <strong>Neither:</strong> the receiver goes neutral (the wheels stop, the trigger reads 0): write it down</td>
+<td>🔧</td>
+</tr>
+<tr>
+<td>3.J3</td>
+<td><strong>Hold the stick still</strong>, 10 s, then pinned fully forward, 10 s</td>
+<td>write down when <code>FROZEN</code> comes. Expected: a still hand rarely trips it (it jitters); pinned at the edge trips it after 2 s, and release-and-press drives again. Too often: raise <code>frozen_after</code> (<code>aav_teleop</code> <code>joy_alive.yaml</code>)</td>
+<td>🔧</td>
 </tr>
 </tbody>
 </table></div>

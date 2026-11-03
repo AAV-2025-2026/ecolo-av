@@ -45,7 +45,7 @@ The car's software path with stand-ins for the hardware, and the real CAN frames
 
 | # | Test | Run | Passes when | Status |
 |---|---|---|---|---|
-| 2.1 | The whole car graph, e-stops included | `pixi run bench-check` | 7 of 7 | ✅ |
+| 2.1 | The whole car graph, e-stops and the joystick-alive check included | `pixi run bench-check` | 11 of 11 | ✅ |
 | 2.2 | The test suite | `pixi run test` | all green | ✅ |
 | 2.3 | **Replay a real drive** through our EKFs | `ros2 bag play` a recording from the car | the EKFs' path matches the GPS track | ⬜ needs a recording from stage 3 or 4 |
 
@@ -68,6 +68,17 @@ software stopped; speed capped (`max_speed:=0.3`).
 | 3.7 | Ctrl-C the Motor-Pi bridge | it sends a last stop frame | 🔧 |
 | 3.8 | The Kar-Tech e-stop | everything stops | 🔧 |
 | 3.9 | ⚠️ **Unplug the Motor-Pi's serial cable while driving** | the car brakes within 200 ms | ⬜ fails with today's C++ ESP32 (team-todo.md B2). The Rust ESP32 firmware brakes 111-120 ms after the last frame in QEMU; not yet flashed |
+
+### 3a-joy. The joystick on stands {#3a-joy-the-joystick-on-stands}
+
+Car day's [A9b](car-day.md#a9b-the-joystick-on-stands) (TODO 74a). The joystick-alive check (`joy_alive`) reports on `/drivers/joy/alive`. Each test: hold the
+trigger, a little throttle, wheels turning, then:
+
+| # | Test | Expect | Status |
+|---|---|---|---|
+| 3.J1 | **Unplug the receiver** | the wheels stop within 1 s; `/drivers/joy/alive` says `SILENT`. Plugged in again with the trigger held: still stopped, until it is released and pressed | 🔧 bench ✅ |
+| 3.J2 | **Turn the pad off** (receiver still in) | the wheels stop within 3 s: `SILENT` if the receiver drops out or goes quiet, `FROZEN` if it repeats the last values. **Neither:** the receiver goes neutral (the wheels stop, the trigger reads 0): write it down | 🔧 |
+| 3.J3 | **Hold the stick still**, 10 s, then pinned fully forward, 10 s | write down when `FROZEN` comes. Expected: a still hand rarely trips it (it jitters); pinned at the edge trips it after 2 s, and release-and-press drives again. Too often: raise `frozen_after` (`aav_teleop` `joy_alive.yaml`) | 🔧 |
 
 ### 3b. Steering, on stands
 
