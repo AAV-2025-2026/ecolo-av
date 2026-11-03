@@ -36,7 +36,8 @@ IMG = ROOT / 'docs' / 'img'
 HUD_LOGO = ROOT / 'ros' / 'hud' / 'aav_hud' / 'assets' / 'hud-logo.png'
 
 # google/fonts on 1 Nov 2026: the files below, and each family's licence.
-GOOGLE_FONTS = 'https://raw.githubusercontent.com/google/fonts/6c1dbe27dcf7d817d4b62cec033ba77fa8e2a5ec'
+GOOGLE_FONTS = ('https://raw.githubusercontent.com/google/fonts/'
+                '6c1dbe27dcf7d817d4b62cec033ba77fa8e2a5ec')
 FONT_FILES = {
     'DelaGothicOne-Regular.ttf': 'ofl/delagothicone/DelaGothicOne-Regular.ttf',
     'DelaGothicOne-OFL.txt': 'ofl/delagothicone/OFL.txt',
