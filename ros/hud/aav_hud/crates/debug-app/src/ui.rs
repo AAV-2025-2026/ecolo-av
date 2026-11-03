@@ -311,13 +311,13 @@ impl Ui {
         let label_w = self.font.measure(f.label, 20.0);
         let tag = Rectangle::new(right - label_w - 20.0, y + 2.0, label_w + 20.0, 30.0);
         let off = t.pill(Tone::Off);
-        d.draw_rectangle_rounded(tag, 0.3, 6, off.fill.rl());
+        d.draw_rectangle_rounded(tag, t.style.corner(0.3), 6, off.fill.rl());
         self.text(d, f.label, tag.x + 10.0, y + 6.0, 20.0, off.ink);
         y += 44.0;
         if let Some(banner) = state.origins.banner() {
             let r = Rectangle::new(x0 + 10.0, y, w - x0 - 20.0, 32.0);
             let p = t.pill(Tone::NotReal);
-            d.draw_rectangle_rounded(r, 0.25, 6, p.fill.rl());
+            d.draw_rectangle_rounded(r, t.style.corner(0.25), 6, p.fill.rl());
             self.text(d, &banner, x + 4.0, y + 6.0, 19.0, p.ink);
             y += 40.0;
         }
@@ -491,7 +491,7 @@ impl Ui {
         let ww = self.font.measure(word, size);
         let width = if r.width > 0.0 { r.width } else { ww + 20.0 };
         let r = Rectangle::new(r.x, r.y, width, r.height);
-        d.draw_rectangle_rounded(r, 0.4, 6, p.fill.rl());
+        d.draw_rectangle_rounded(r, self.theme.style.corner(0.4), 6, p.fill.rl());
         let ty = r.y + (r.height - size) / 2.0 - 1.0;
         self.text(d, word, r.x + (width - ww) / 2.0, ty, size, p.ink);
         r.x + width
@@ -520,7 +520,14 @@ impl Ui {
 
     /// A legend's frosted glass over the 3D view.
     fn glass(&self, d: &mut RaylibDrawHandle, r: Rectangle) {
-        paint::glass(d, r, 10.0, self.theme.overlay, self.theme, 1.0);
+        paint::glass(
+            d,
+            r,
+            self.theme.style.corner(10.0),
+            self.theme.overlay,
+            self.theme,
+            1.0,
+        );
     }
 
     /// NDT's map's points from above, fitted to the box, and each localizer's car.
@@ -828,7 +835,7 @@ impl Ui {
             let colour = localizer_colour(t, who);
             let seen = state.pose_in_odom(who).is_some();
             let swatch = Rectangle::new(x + 6.0, y + 3.0, 20.0, 20.0);
-            d.draw_rectangle_rounded(swatch, 0.3, 4, colour.rl());
+            d.draw_rectangle_rounded(swatch, t.style.corner(0.3), 4, colour.rl());
             let words = if !seen {
                 format!("{}  -", who.label())
             } else if who == Localizer::Local {
@@ -863,7 +870,7 @@ impl Ui {
             let by = y + row as f32 * 26.0;
             d.draw_rectangle_rounded(
                 Rectangle::new(bx, by + 3.0, 16.0, 16.0),
-                0.2,
+                t.style.corner(0.2),
                 4,
                 band_colour(t, band).rl(),
             );
@@ -945,13 +952,13 @@ impl Ui {
         let label_w = self.font.measure(f.label, 22.0);
         let tag = Rectangle::new(right - label_w - 20.0, y + 4.0, label_w + 20.0, 32.0);
         let off = t.pill(Tone::Off);
-        d.draw_rectangle_rounded(tag, 0.3, 6, off.fill.rl());
+        d.draw_rectangle_rounded(tag, t.style.corner(0.3), 6, off.fill.rl());
         self.text(d, f.label, tag.x + 10.0, y + 8.0, 22.0, off.ink);
         y += 48.0;
         if let Some(banner) = state.origins.banner() {
             let r = Rectangle::new(x0 + 10.0, y, w - x0 - 20.0, 34.0);
             let p = t.pill(Tone::NotReal);
-            d.draw_rectangle_rounded(r, 0.25, 6, p.fill.rl());
+            d.draw_rectangle_rounded(r, t.style.corner(0.25), 6, p.fill.rl());
             self.text(d, &banner, x + 4.0, y + 6.0, 20.0, p.ink);
             y += 44.0;
         }

@@ -445,7 +445,7 @@ mod tests {
         assert_eq!((c.speed_step, c.steer_step), (0.1, 0.05));
         assert_eq!((c.sim_cap, c.stands_cap), (1.0, 0.3));
         assert_eq!(c.topic(Topic::Buttons), "/drivers/buttons/cmd_vel");
-        assert_eq!(c.theme, ThemeName::Mocha);
+        assert_eq!(c.theme, ThemeName::InitialD);
         assert!(c.easter_egg);
         assert_eq!(c.easter_egg_settings().idle_after, Duration::from_secs(60));
         let cal = c.calibration();
@@ -455,10 +455,10 @@ mod tests {
 
     #[test]
     fn the_theme_can_change() {
-        let day = BUILT_IN_YAML.replace("theme: mocha", "theme: latte");
+        let day = BUILT_IN_YAML.replace("theme: initial_d", "theme: latte");
         let c = PanelConfig::from_yaml(&day).expect("latte is a theme");
         assert_eq!(c.theme, ThemeName::Latte);
-        let bad = BUILT_IN_YAML.replace("theme: mocha", "theme: purple");
+        let bad = BUILT_IN_YAML.replace("theme: initial_d", "theme: purple");
         assert!(matches!(
             PanelConfig::from_yaml(&bad),
             Err(ConfigError::Yaml(_))

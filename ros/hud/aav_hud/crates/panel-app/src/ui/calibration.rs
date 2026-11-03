@@ -227,7 +227,7 @@ impl Ui {
         };
         d.draw_rectangle_rounded(
             Rectangle::new(x0, BAR_Y, width, BAR_H),
-            0.4,
+            t.style.corner(0.4),
             6,
             t.track.rl(),
         );

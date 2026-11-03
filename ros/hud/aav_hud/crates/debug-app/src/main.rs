@@ -40,7 +40,7 @@
 //! Parameters  the topics above; odom_frame, base_frame, map_frame; stale_after (s),
 //!             cube_size (m), max_cubes, pose_window (s), ground_height (m),
 //!             keep_cubes_for (s), ndt_map (a PCD file, key M), ndt_map_cell (m),
-//!             voxels_cube_size (m), health_stale_after (s), theme (mocha, latte, calm),
+//!             voxels_cube_size (m), health_stale_after (s), theme (initial_d, mocha, latte, calm),
 //!             easter_egg (the little robot's eyes, true), easter_egg_after (s)
 //! Reads       ndt_map at start-up, if it is there (else the panel says how to make it)
 //!

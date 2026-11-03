@@ -467,17 +467,17 @@ mod tests {
         assert!(c.ndt_map.ends_with(".pcd"));
         assert_eq!(c.voxel_settings().size, Metres(0.25));
         assert!(c.health_stale_after() > c.stale_after());
-        assert_eq!(c.theme, ThemeName::Mocha);
+        assert_eq!(c.theme, ThemeName::InitialD);
         assert!(c.easter_egg);
         assert_eq!(c.easter_egg_settings().idle_after, Duration::from_secs(60));
     }
 
     #[test]
     fn the_theme_can_change() {
-        let day = BUILT_IN_YAML.replace("theme: mocha", "theme: latte");
+        let day = BUILT_IN_YAML.replace("theme: initial_d", "theme: latte");
         let c = DebugConfig::from_yaml(&day).expect("latte is a theme");
         assert_eq!(c.theme, ThemeName::Latte);
-        let bad = BUILT_IN_YAML.replace("theme: mocha", "theme: purple");
+        let bad = BUILT_IN_YAML.replace("theme: initial_d", "theme: purple");
         assert!(matches!(
             DebugConfig::from_yaml(&bad),
             Err(ConfigError::Yaml(_))

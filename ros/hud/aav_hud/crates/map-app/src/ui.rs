@@ -544,7 +544,7 @@ fn watchdog_banner(
         (vp.width as f32 - 2.0 * margin).max(1.0),
         h,
     );
-    paint::rounded(p.d, r, 12.0 * p.u, colour);
+    paint::rounded(p.d, r, p.t.style.corner(12.0 * p.u), colour);
     p.fitted(
         r.x + 12.0 * p.u,
         r.y + 9.0 * p.u,
@@ -725,7 +725,7 @@ fn draw_search(
     let t = p.t;
     p.frosted(f, 14.0 * u, t.overlay_strong);
     if typing {
-        paint::rounded_edge(p.d, f, 14.0 * u, 3.0 * u, t.accent);
+        paint::rounded_edge(p.d, f, p.t.style.corner(14.0 * u), 3.0 * u, t.accent);
     }
     let tx = f.x + 18.0 * u;
     let ty = f.y + 11.0 * u;
@@ -774,7 +774,7 @@ fn draw_results(
     let inner = under.width - 36.0 * u;
     for (i, (place, row)) in finder.results().iter().zip(&boxes.rows).enumerate() {
         if i == finder.selected() {
-            paint::rounded(p.d, *row, 10.0 * u, p.t.selected_row);
+            paint::rounded(p.d, *row, p.t.style.corner(10.0 * u), p.t.selected_row);
         }
         let x = row.x + 18.0 * u;
         let far = search
@@ -835,7 +835,7 @@ fn draw_keyboard(p: &mut Painter<impl RaylibDraw>, kb: &Keyboard, held: Option<K
             c if c.is_command() => (t.key_command, t.text),
             _ => (t.key, t.text),
         };
-        paint::rounded(p.d, r, 10.0 * u, back);
+        paint::rounded(p.d, r, p.t.style.corner(10.0 * u), back);
         let label = cap.label();
         let size = if label.chars().count() > 1 {
             letter * 0.7
@@ -884,11 +884,11 @@ fn draw_picked(
             } else {
                 (t.go_fill, t.go_ink, "DRIVE HERE  (Enter)")
             };
-            paint::rounded(p.d, b, 12.0 * u, colour);
+            paint::rounded(p.d, b, p.t.style.corner(12.0 * u), colour);
             p.centred(b.x + b.width / 2.0, b.y + 13.0 * u, 23.0, words, ink);
         }
         (Some(Err(why)), Some(b)) => {
-            paint::rounded_edge(p.d, b, 12.0 * u, 2.0 * u, t.warn);
+            paint::rounded_edge(p.d, b, p.t.style.corner(12.0 * u), 2.0 * u, t.warn);
             p.fitted(
                 b.x + 16.0 * u,
                 b.y + 14.0 * u,
@@ -901,7 +901,7 @@ fn draw_picked(
         _ => {}
     }
     if let Some(c) = boxes.cancel {
-        paint::rounded_edge(p.d, c, 12.0 * u, 2.0 * u, t.caption);
+        paint::rounded_edge(p.d, c, p.t.style.corner(12.0 * u), 2.0 * u, t.caption);
         p.centred(
             c.x + c.width / 2.0,
             c.y + 14.0 * u,
@@ -1331,6 +1331,7 @@ impl<D: RaylibDraw> Painter<'_, D> {
     /// Glass over the map: the map blurred behind it (when the blur is on), then the
     /// see-through `tint`, a soft edge and a shine.
     fn frosted(&mut self, r: Rectangle, radius: f32, tint: Rgba) {
+        let radius = self.t.style.corner(radius);
         if let Some(f) = self.frost.as_deref_mut() {
             f.behind(self.d, r, radius);
         }
@@ -1341,7 +1342,8 @@ impl<D: RaylibDraw> Painter<'_, D> {
     fn card(&mut self, x: f32, y: f32, w: f32, h: f32, caption: &str) {
         let r = Rectangle::new(x, y, w, h);
         let u = self.u;
-        paint::glass(self.d, r, 14.0 * u, self.t.panel, self.t, u.max(1.0));
+        let radius = self.t.style.corner(14.0 * u);
+        paint::glass(self.d, r, radius, self.t.panel, self.t, u.max(1.0));
         let caption_colour = self.t.caption;
         self.text(x + 16.0 * u, y + 10.0 * u, 16.0, caption, caption_colour);
     }

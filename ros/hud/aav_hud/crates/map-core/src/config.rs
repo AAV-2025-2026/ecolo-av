@@ -203,7 +203,7 @@ mod tests {
         assert!(c.plan_stale_after() > c.stale_after());
         assert!(c.plan_kept_for() > c.plan_stale_after());
         assert!(c.final_approach > c.arrive_within);
-        assert_eq!(c.theme, ThemeName::Mocha);
+        assert_eq!(c.theme, ThemeName::InitialD);
         assert!(c.blur);
         assert_eq!(c.car_marker, CarMarker::Outline);
         // Every name is absolute (docs/conventions.md), and none is empty.
@@ -234,7 +234,7 @@ mod tests {
                 ..
             })
         ));
-        let bad = BUILT_IN_YAML.replace("theme: mocha", "theme: purple");
+        let bad = BUILT_IN_YAML.replace("theme: initial_d", "theme: purple");
         assert!(matches!(
             MapConfig::from_yaml(&bad),
             Err(ConfigError::Yaml(_))
@@ -244,7 +244,7 @@ mod tests {
     #[test]
     fn the_look_can_change() {
         let day = BUILT_IN_YAML
-            .replace("theme: mocha", "theme: latte")
+            .replace("theme: initial_d", "theme: latte")
             .replace("blur: true", "blur: false");
         let c = MapConfig::from_yaml(&day).expect("latte, no blur");
         assert_eq!(c.theme, ThemeName::Latte);
