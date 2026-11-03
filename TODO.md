@@ -11,7 +11,7 @@ Ben, 2 Nov: "I would like the hud changes in, same with for the map. Something n
 |---|---|---|
 | 80 | **The Initial D HUD in** (`hud-initial-d`) | ✅ 2 Nov: merged into `drive-plan` |
 | 81 | **Initial D red and black on every screen**: HUD, map window, debug screen, hardware panel (Ben: in place of Catppuccin) | 🔧 2 Nov |
-| 82 | **The joystick on the Motor Pi alone** (TODO 74a): the joystick-alive check, so a dead pad stops the car | 🔧 2 Nov |
+| 82 | **The joystick on the Motor Pi alone** (TODO 74a): the joystick-alive check, so a dead pad stops the car | ✅ 2 Nov, `joy-alive`: `joy_alive` between `joy_node` and `teleop_twist_joy`; SILENT (0.5 s), FROZEN (2 s, deadman held, stick bit-identical), latched until the deadman is released; `/drivers/joy/alive`. bench-check 11 of 11. ⬜ car day: the real pad (A9b 6, 6b, 7; tests 3.J1-3.J3), tune `frozen_after`; (b) the throttle cap, (d) the button and axis numbers |
 | 83 | **The diffusion planner in 0.2** (TODO 78; Ben, 2 Nov: "Put it in 0.2"), a trial beside the lattice, off by default, with the guard | 🔧 2 Nov |
 | 84 | **The list of tests**: `docs/tests.md` gets the new parts' tests (theme, joystick-alive, diffusion) | 🔧 2 Nov |
 
