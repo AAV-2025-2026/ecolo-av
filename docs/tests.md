@@ -38,6 +38,8 @@ Nothing real moves. Run these on any laptop.
 | 1.13 | **The spine in the loop** | `pixi run sim-check --spine` | in Gazebo with `spine:=true`: the normal checks pass; ego's commands stopped → the spine brakes fully within 0.28 s and latches; `/safety/estop` and the hardware e-stop → brake within 0.15 s, latched until armed again; disarmed → no motion | ✅ 15 Oct: full brake 195-209 ms, e-stops 1-12 ms |
 | 1.14 | **Drive to a GPS point, smooth stop** | `pixi run sim-check --drive-to-point` ([A to B](a-to-b.md)) | every stop within 2 m of B by Gazebo's truth, no overshoot, braking about half `max_brake`; a cancel, the e-stop and a GPS fault stop it | ✅ 15 Oct: all within 0.4 m |
 | 1.15 | **Ghost obstacles: a pretend person only Nav2 sees** | `pixi run sim-check --ghost` ([docs](ghost-obstacles.md)) | a ghost 15 m ahead (nothing in Gazebo): stops 0-2 m before it (the stop zone or the controller), the local costmap marks it; drives on once it's off | ✅ 16 Oct: 0.21 m before it, the stop zone fired (one run, radar and lidar on too) |
+| 1.16 | **Every screen in Initial D**, with pretend data | `pixi run hud --demo`, `map --demo`, `debug-hud --demo`, `hw-panel --demo` ([Themes](hud.md#themes-the-screens-colours)) | each opens black and red with thin white edges and sharp corners, no Catppuccin blue-grey; the e-stop red with white words; GO green, WAIT amber; the localizers keep their colours | ✅ 2 Nov: all four, screenshots on Ben's Mac |
+| 1.17 | The theme's contrast test | `cargo test -p hud-core theme` (in `tools/test.sh`) | every word 4.5 : 1, every shape and mark 3 : 1 on each screen's backgrounds; Initial D has no Catppuccin colour but the localizers' | ✅ 2 Nov |
 
 ## Stage 2: the bench
 
@@ -204,6 +206,8 @@ trials wait for 4.22.
 | F.4 | Multicast between the car's machines, wired and WiFi | `ros2 multicast send` / `receive` | 🔧 |
 | F.5 | Clocks within a second | `date` on each | 🔧 |
 | F.6 | The camera freeze: the 10-minute watch | `history/friday-todo-2026-10-16.md` part 5 | 🔧 |
+| F.7 | **Every screen opens in Initial D on the car's monitors** (HUD, map, debug screen, hardware panel) | `tools/car_screen.sh` at boot, or `pixi run hud` / `map` / `debug-hud` / `hw-panel`: black, white and red, no Catppuccin | 🔧 |
+| F.8 | **The screens read in daylight and at night** | on the car, in sun and after dark: every word, the speed, GO / WAIT / STOP and the E-STOP read from the driver's seat; if not, `theme: latte` for day ([Themes](hud.md#themes-the-screens-colours)) | ⬜ |
 
 ## What the tests give back
 

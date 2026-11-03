@@ -83,9 +83,9 @@ const FONT_LOAD_SIZE: i32 = 128;
 /// The arcade style's logo, built in: made by tools/make_logo.py (docs/hud.md, Themes).
 const LOGO_PNG: &[u8] = include_bytes!("../../../assets/hud-logo.png");
 
-/// Panels' corners in each style, in canvas units: soft glass, sharp arcade.
+/// Panels' corners in the glass style, in canvas units; the arcade style's are sharper
+/// (`Style::corner`).
 const GLASS_RADIUS: f32 = 14.0;
-const ARCADE_RADIUS: f32 = 4.0;
 
 /// Where each part of the screen is, on the canvas.
 mod area {
@@ -270,10 +270,7 @@ impl Ui {
             italic: &self.italic,
             scale,
             t,
-            radius: match t.style {
-                Style::Glass => GLASS_RADIUS,
-                Style::Arcade(_) => ARCADE_RADIUS,
-            },
+            radius: t.style.corner(GLASS_RADIUS),
         };
         if let Style::Arcade(look) = t.style {
             car_behind(&mut c, &look);

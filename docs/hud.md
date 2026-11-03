@@ -29,7 +29,7 @@ a second program. Each opens full screen on its own monitor at boot:
 
 `ros/hud/aav_hud`: one window, which is also the ROS node `hud`.
 
-![The driving screen, with pretend data (--demo)](img/hud-raylib.png)
+![The driving screen in Initial D, with pretend data (--demo)](img/hud-initial-d.png)
 
 | Panel | Shows |
 |---|---|
@@ -479,59 +479,92 @@ inside the test lot. On the car, the datum is the real test site.
 
 ## Themes: the screens' colours
 
-All four screens share one set of colours, a **theme** (1 Nov): the HUD, the map
-window, the debug screen and the hardware panel. Ben found the
-old look "kind of ugly": too many bright primary colours. Now the colours are soft, and
-the panels are **frosted glass**.
+All four screens share one set of colours, a **theme**: the HUD, the map window, the
+debug screen and the hardware panel.
 
-| | Before | After (Mocha) |
-|---|---|---|
-| HUD | ![Before](img/hud-before-theme.png) | ![Mocha](img/hud-raylib.png) |
-| Map | ![Before](img/map-before-theme.png) | ![Mocha](img/map-streets-demo.png) |
-| Debug screen | ![Before](img/debug-hud-before-theme.png) | ![Mocha](img/debug-hud-seeing.png) |
-| Hardware panel | ![Before](img/hw-panel-before-theme.png) | ![Mocha](img/hw-panel-demo.png) |
+| Date | What changed |
+|---|---|
+| 1 Nov | Ben found the old look "kind of ugly": too many bright primary colours. Soft Catppuccin colours, **frosted glass** panels |
+| 2 Nov | "Something nicer than Catppuccin": Ben chose **Initial D red and black**, on every screen. Now the default |
+
+| | Before | Mocha (1 Nov) | **Initial D (2 Nov, the default)** |
+|---|---|---|---|
+| HUD | ![Before](img/hud-before-theme.png) | ![Mocha](img/hud-raylib.png) | ![Initial D](img/hud-initial-d.png) |
+| Map | ![Before](img/map-before-theme.png) | ![Mocha](img/map-streets-demo.png) | ![Initial D](img/map-initial-d.png) |
+| Debug screen | ![Before](img/debug-hud-before-theme.png) | ![Mocha](img/debug-hud-seeing.png) | ![Initial D](img/debug-hud-initial-d.png) |
+| Hardware panel | ![Before](img/hw-panel-before-theme.png) | ![Mocha](img/hw-panel-demo.png) | ![Initial D](img/hw-panel-initial-d.png) |
 
 ### The themes
 
 | Theme | When | Picture |
 |---|---|---|
-| `mocha` (default) | night, and glare in the cabin: dark | the "After" pictures above |
+| `initial_d` (**default**, every screen) | the car, day or night: black, white and Carleton's red | the "Initial D" pictures above |
+| `mocha` | night, and glare in the cabin: dark and soft | the "Mocha" pictures above |
 | `latte` | daytime: light | ![Latte HUD](img/hud-latte.png) ![Latte map](img/map-latte.png) ![Latte debug screen](img/debug-hud-latte.png) ![Latte hardware panel](img/hw-panel-latte.png) |
 | `calm` | Ben's own theme, from his Carleton web work | **not yet**: a copy of Mocha until Ben gives its colours |
 
 Mocha and Latte are [Catppuccin](https://catppuccin.com)'s palettes (MIT licence), with
 its official colour values.
 
+### Initial D: what each screen looks like
+
+A tribute to the arcade gauges of Initial D, in Carleton's red (RGB 233, 28, 36, from
+Carleton's logo guide). Sharp, not glass: black panels, thin white edges, small corners,
+no glow.
+
+| Screen | In `initial_d` |
+|---|---|
+| HUD | the speed as an arcade gauge (white ticks, a red needle, red redline blocks), 7-segment digits, our logo, a faint car in lines behind |
+| Map | a night street map in greys; highways dark red; Carleton's campus a faint red; Nav2's plan **white**, the street route **red**; black boxes with white edges |
+| Debug screen | black 3D view, grey ground grid, the lidar's cubes teal, Nav2's cubes red wireframes; black side panel with a white edge |
+| Hardware panel | white words on black, dark grey buttons with white edges, square pills |
+
+Only the localizers keep Catppuccin's colours (blue, green, orange, purple, yellow), so
+a picture means the same in every theme. Corners come from `Style::corner`: soft in the
+glass themes, under a third as round in Initial D.
+
+The pictures (2 Nov, Ben's Mac, pretend data): `pixi run hud --demo --screenshot FILE`;
+`pixi run map --demo --zoom 2.5 --screenshot FILE`; `pixi run debug-hud --demo
+--screenshot FILE --after 8`; `pixi run hw-panel --demo --screenshot FILE --after 12`.
+
 ### Switch theme
 
 | Where | How |
 |---|---|
-| The car (ROS) | `theme: latte` in `config/hud.yaml`, `map.yaml`, `debug_hud.yaml` or `hw_panel.yaml` (each screen has its own), or `--ros-args -p theme:=latte` |
-| A demo | `--config FILE`, a copy of the yaml with `theme: latte` |
+| The car (ROS) | `theme: mocha` (or `latte`) in `config/hud.yaml`, `map.yaml`, `debug_hud.yaml` or `hw_panel.yaml` (each screen has its own), or `--ros-args -p theme:=mocha` |
+| A demo | `--config FILE`, a copy of the yaml with `theme: mocha` |
 | Blur off (map) | `blur: false` in `config/map.yaml`, or `-p blur:=false` |
 
 ### Status colours keep their meaning
 
 GO green, WAIT amber, STOP and the e-stop red, in every theme. The e-stop is a deep red
-(Catppuccin Latte's red) with white words and a white ring, in both themes: Mocha's own
-red is a soft pink, and an e-stop must shout.
+with white words and a white ring: Carleton's red in Initial D, Catppuccin Latte's red
+in Mocha and Latte (Mocha's own red is a soft pink, and an e-stop must shout).
 
 A unit test (`hud_core::theme`) checks every pair against WCAG: **4.5 : 1** for words,
 **3 : 1** for big words and shapes. It checks words on the glass over the window and
 over every street colour.
 
-| Pair | Mocha | Latte |
-|---|---|---|
-| Text on a panel | 9.4 | 7.7 |
-| Green / amber / red words on a panel | 9.2 / 10.8 / 5.9 | 6.5 / 6.1 / 5.2 |
-| GO's words on green | 12.6 | 6.8 |
-| E-STOP's white words on red | 5.4 | 5.4 |
-| The e-stop button on the window | 3.0 | 4.8 |
+| Pair | Initial D | Mocha | Latte |
+|---|---|---|---|
+| Text on a panel | 21 | 9.4 | 7.7 |
+| Green / amber / red words on a panel | 10.7 / 13.0 / 5.7 | 9.2 / 10.8 / 5.9 | 6.5 / 6.1 / 5.2 |
+| GO's words on green | 10.7 | 12.6 | 6.8 |
+| E-STOP's white words on red | 5.2 | 5.4 | 5.4 |
+| The e-stop button on the window | 4.0 | 3.0 | 4.8 |
+
+For Initial D the tests also check every line and mark on each screen (2 Nov): the plan,
+the goal and the street route on the map's ground, walls on free cells, the bars on
+their tracks, the 3D view's lines; that its surfaces are plain greys with no Catppuccin
+left; and that the e-stop's red stays far from amber, orange and the red roads.
 
 Latte's own green, yellow and peach are too light for words on white, so the theme
 darkens them (the test caught it).
 
 ### Frosted glass
+
+In Initial D the boxes are near-solid black with a white edge and no shine: the same
+code, with the arcade style's colours and corners.
 
 | Screen | Glass |
 |---|---|
@@ -570,7 +603,7 @@ by night:
 | NDT, its map | purple |
 | Nav2's plan | yellow |
 | Nav2's cubes | red wireframes |
-| The lidar's cubes | Catppuccin teal, standing out more the higher they are |
+| The lidar's cubes | Catppuccin teal, standing out more the higher they are (in Initial D, the first band grey) |
 
 Tests (`hud_core::theme`) check that these marks stand out on the 3D view, stay apart
 from each other and from the cubes (a colour distance, OKLab), and keep their hue.

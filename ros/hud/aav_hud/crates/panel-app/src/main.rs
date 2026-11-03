@@ -32,7 +32,7 @@
 //!                                                                  limp or jog, 10 Hz while it asks and
 //!                                                                  the window draws; then MODE_OFF 0.5 s
 //! Parameters  the topics above; stale_after (s), speed_step (m/s), steer_step (rad),
-//!             creep (m/s), sim_cap (m/s), stands_cap (m/s), theme (mocha, latte, calm);
+//!             creep (m/s), sim_cap (m/s), stands_cap (m/s), theme (initial_d, mocha, latte, calm);
 //!             the calibration page's jog_step, jog_min, jog_max, sweep_max_error (counts),
 //!             sweep_rate (counts/s), sweep_stall (s); easter_egg (the little robot, true),
 //!             easter_egg_after (s)

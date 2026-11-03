@@ -18,7 +18,7 @@ What's in release 0.2, by area, with pictures. It carries on from
 | Area | What 0.2 has | Status |
 |---|---|---|
 | Steering | find the steering actuator's ends and centre: limp or jog, mark, equal limits, a lock-to-lock check that stops on resistance | built |
-| Screens | hardware panel (2 pages), cockpit, debug screen, HUD, map; Catppuccin colours; the little robot | sim |
+| Screens | hardware panel (2 pages), cockpit, debug screen, HUD, map; Initial D red and black on every screen (Catppuccin's still a yaml line away); the little robot | sim |
 | Car day | Day A and Day B, the people, sign-offs, a setup script with STOPs | written; dry-run only |
 | Know the car | the tests that measure the car, in order, with when to stop | written |
 | Commands | 45, grouped | done |
@@ -116,23 +116,27 @@ localization health checks. Live against Gazebo, in the new colours:
 
 ![The debug screen, live against Gazebo](img/debug-hud-seeing-gazebo.png)
 
-### The HUD and the map: new colours
+### The screens: new colours
 
-Ben, 1 Nov: "kind of ugly", too many primary colours. Now every screen shares one theme,
-chosen in its yaml (`theme:`):
+Ben, 1 Nov: "kind of ugly", too many primary colours. Then, 2 Nov: "something nicer
+than Catppuccin": **Initial D red and black, on every screen**. Every screen shares one
+theme, chosen in its yaml (`theme:`):
 
 | Theme | For |
 |---|---|
-| `mocha` (the default) | dark: night, and the car's screens |
+| `initial_d` (the default) | the car, day or night: black, white, Carleton's red; sharp |
+| `mocha` | dark and soft: night |
 | `latte` | light: daytime |
 | `calm` | Ben's colours from his Carleton work: **waits on Ben** |
 
-| Dark (Mocha) | Light (Latte) |
+| Initial D | Light (Latte) |
 |---|---|
-| ![The HUD in Mocha](img/hud-raylib.png) | ![The HUD in Latte](img/hud-latte.png) |
-| ![The map in Mocha](img/map-raylib.png) | ![The map in Latte](img/map-latte.png) |
+| ![The HUD in Initial D](img/hud-initial-d.png) | ![The HUD in Latte](img/hud-latte.png) |
+| ![The map in Initial D](img/map-initial-d.png) | ![The map in Latte](img/map-latte.png) |
+| ![The hardware panel in Initial D](img/hw-panel-initial-d.png) | ![The hardware panel in Latte](img/hw-panel-latte.png) |
 
-Catppuccin's palettes, MIT licence. More: [Screens](hud.md#themes-the-screens-colours).
+Mocha and Latte are Catppuccin's palettes, MIT licence. More:
+[Screens](hud.md#themes-the-screens-colours).
 
 ### The little robot
 
@@ -310,7 +314,7 @@ Every idea is kept (Ben, 1 Nov: "I do like the 23 ideas? lets keep them around")
 | **Car day itself** (0.3 = it drove) | runbook ready |
 | The diffusion planner | designed |
 | The talking model: explains, never drives | idea |
-| **The Initial D HUD**: the arcade gauge in Carleton red and black, our own logo | being built |
+| **The Initial D HUD**: the arcade gauge in Carleton red and black, our own logo | in 0.2: on every screen (2 Nov) |
 | The little robot on the in-car HUD | after the Initial D HUD |
 | Calm colours | waits on Ben |
 | The cockpit's algorithm switch; one screen from the cockpit and the debug screen | idea |

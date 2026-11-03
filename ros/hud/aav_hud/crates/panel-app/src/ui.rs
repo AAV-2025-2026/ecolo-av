@@ -324,7 +324,7 @@ impl Ui {
             let ww = self.font.measure(word, 20.0);
             d.draw_rectangle_rounded(
                 Rectangle::new(tx, 22.0, ww + 20.0, 30.0),
-                0.3,
+                t.style.corner(0.3),
                 6,
                 p.fill.rl(),
             );
@@ -477,7 +477,7 @@ impl Ui {
             let (word, tone) = health_word(health);
             let p = t.pill(tone);
             let pill = Rectangle::new(MARGIN + 110.0, y + 1.0, 80.0, 22.0);
-            d.draw_rectangle_rounded(pill, 0.4, 6, p.fill.rl());
+            d.draw_rectangle_rounded(pill, t.style.corner(0.4), 6, p.fill.rl());
             let ww = self.font.measure(word, 15.0);
             let tx = pill.x + (pill.width - ww) / 2.0;
             self.text(d, word, tx, y + 4.0, 15.0, p.ink);
@@ -562,9 +562,9 @@ impl Ui {
             (_, true, true) => (t.button_down, t.text),
             (_, true, false) => (t.button, t.text),
         };
-        d.draw_rectangle_rounded(r, 0.18, 8, fill.rl());
+        d.draw_rectangle_rounded(r, t.style.corner(0.18), 8, fill.rl());
         if enabled && !down && b != Button::Estop {
-            d.draw_rectangle_rounded_lines_ex(r, 0.18, 8, 1.0, t.glass_edge.rl());
+            d.draw_rectangle_rounded_lines_ex(r, t.style.corner(0.18), 8, 1.0, t.glass_edge.rl());
         }
         let size = match b {
             Button::Estop => 34.0,
