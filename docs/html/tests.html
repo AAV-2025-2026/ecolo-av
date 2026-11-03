@@ -7,7 +7,7 @@
 <!-- Generated from docs/tests.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Every test we&#x27;ve talked about</h1>
-<div class="meta">19 min read · 8 sections</div></header>
+<div class="meta">21 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -232,6 +232,20 @@ in the order to run them. Each one says what it proves, how to run it, and when 
 <td><code>pixi run sim-check --ghost</code> (<a href="ghost-obstacles.html">docs</a>)</td>
 <td>a ghost 15 m ahead (nothing in Gazebo): stops 0-2 m before it (the stop zone or the controller), the local costmap marks it; drives on once it's off</td>
 <td>✅ 16 Oct: 0.21 m before it, the stop zone fired (one run, radar and lidar on too)</td>
+</tr>
+<tr>
+<td>1.16</td>
+<td><strong>Every screen in Initial D</strong>, with pretend data</td>
+<td><code>pixi run hud --demo</code>, <code>map --demo</code>, <code>debug-hud --demo</code>, <code>hw-panel --demo</code> (<a href="hud.html#themes-the-screens-colours">Themes</a>)</td>
+<td>each opens black and red with thin white edges and sharp corners, no Catppuccin blue-grey; the e-stop red with white words; GO green, WAIT amber; the localizers keep their colours</td>
+<td>✅ 2 Nov: all four, screenshots on Ben's Mac</td>
+</tr>
+<tr>
+<td>1.17</td>
+<td>The theme's contrast test</td>
+<td><code>cargo test -p hud-core theme</code> (in <code>tools/test.sh</code>)</td>
+<td>every word 4.5 : 1, every shape and mark 3 : 1 on each screen's backgrounds; Initial D has no Catppuccin colour but the localizers'</td>
+<td>✅ 2 Nov</td>
 </tr>
 </tbody>
 </table></div>
@@ -810,6 +824,18 @@ trials wait for 4.22.</p>
 <td>The camera freeze: the 10-minute watch</td>
 <td><code>history/friday-todo-2026-10-16.md</code> part 5</td>
 <td>🔧</td>
+</tr>
+<tr>
+<td>F.7</td>
+<td><strong>Every screen opens in Initial D on the car's monitors</strong> (HUD, map, debug screen, hardware panel)</td>
+<td><code>tools/car_screen.sh</code> at boot, or <code>pixi run hud</code> / <code>map</code> / <code>debug-hud</code> / <code>hw-panel</code>: black, white and red, no Catppuccin</td>
+<td>🔧</td>
+</tr>
+<tr>
+<td>F.8</td>
+<td><strong>The screens read in daylight and at night</strong></td>
+<td>on the car, in sun and after dark: every word, the speed, GO / WAIT / STOP and the E-STOP read from the driver's seat; if not, <code>theme: latte</code> for day (<a href="hud.html#themes-the-screens-colours">Themes</a>)</td>
+<td>⬜</td>
 </tr>
 </tbody>
 </table></div>

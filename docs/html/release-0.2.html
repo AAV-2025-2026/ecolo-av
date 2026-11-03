@@ -7,7 +7,7 @@
 <!-- Generated from docs/release-0.2.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>AAV 0.2: sim-complete, car-ready</h1>
-<div class="meta">17 min read · 10 sections</div></header>
+<div class="meta">18 min read · 10 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -130,7 +130,7 @@
 </tr>
 <tr>
 <td>Screens</td>
-<td>hardware panel (2 pages), cockpit, debug screen, HUD, map; Catppuccin colours; the little robot</td>
+<td>hardware panel (2 pages), cockpit, debug screen, HUD, map; Initial D red and black on every screen (Catppuccin's still a yaml line away); the little robot</td>
 <td>sim</td>
 </tr>
 <tr>
@@ -389,9 +389,10 @@ the switches. Its first screenshot, Gazebo's road world, driving to a goal 25 m 
 <p>The lidar's cubes in 3D, where each localizer puts the car, Nav2's own cubes and the
 localization health checks. Live against Gazebo, in the new colours:</p>
 <p><img alt="The debug screen, live against Gazebo" src="../img/debug-hud-seeing-gazebo.png" /></p>
-<h3 id="the-hud-and-the-map-new-colours">The HUD and the map: new colours</h3>
-<p>Ben, 1 Nov: "kind of ugly", too many primary colours. Now every screen shares one theme,
-chosen in its yaml (<code>theme:</code>):</p>
+<h3 id="the-screens-new-colours">The screens: new colours</h3>
+<p>Ben, 1 Nov: "kind of ugly", too many primary colours. Then, 2 Nov: "something nicer
+than Catppuccin": <strong>Initial D red and black, on every screen</strong>. Every screen shares one
+theme, chosen in its yaml (<code>theme:</code>):</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -401,8 +402,12 @@ chosen in its yaml (<code>theme:</code>):</p>
 </thead>
 <tbody>
 <tr>
-<td><code>mocha</code> (the default)</td>
-<td>dark: night, and the car's screens</td>
+<td><code>initial_d</code> (the default)</td>
+<td>the car, day or night: black, white, Carleton's red; sharp</td>
+</tr>
+<tr>
+<td><code>mocha</code></td>
+<td>dark and soft: night</td>
 </tr>
 <tr>
 <td><code>latte</code></td>
@@ -417,22 +422,27 @@ chosen in its yaml (<code>theme:</code>):</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
-<th>Dark (Mocha)</th>
+<th>Initial D</th>
 <th>Light (Latte)</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><img alt="The HUD in Mocha" src="../img/hud-raylib.png" /></td>
+<td><img alt="The HUD in Initial D" src="../img/hud-initial-d.png" /></td>
 <td><img alt="The HUD in Latte" src="../img/hud-latte.png" /></td>
 </tr>
 <tr>
-<td><img alt="The map in Mocha" src="../img/map-raylib.png" /></td>
+<td><img alt="The map in Initial D" src="../img/map-initial-d.png" /></td>
 <td><img alt="The map in Latte" src="../img/map-latte.png" /></td>
+</tr>
+<tr>
+<td><img alt="The hardware panel in Initial D" src="../img/hw-panel-initial-d.png" /></td>
+<td><img alt="The hardware panel in Latte" src="../img/hw-panel-latte.png" /></td>
 </tr>
 </tbody>
 </table></div>
-<p>Catppuccin's palettes, MIT licence. More: <a href="hud.html#themes-the-screens-colours">Screens</a>.</p>
+<p>Mocha and Latte are Catppuccin's palettes, MIT licence. More:
+<a href="hud.html#themes-the-screens-colours">Screens</a>.</p>
 <h3 id="the-little-robot">The little robot</h3>
 <p>A tribute to WALL-E, drawn by us: a boxy robot on treads, with two big round eyes.</p>
 <div class="table-wrap"><table>
@@ -844,7 +854,7 @@ paths at once. Ben, 1 Nov: "I want that in." It's designed, for 0.3:</p>
 </tr>
 <tr>
 <td><strong>The Initial D HUD</strong>: the arcade gauge in Carleton red and black, our own logo</td>
-<td>being built</td>
+<td>in 0.2: on every screen (2 Nov)</td>
 </tr>
 <tr>
 <td>The little robot on the in-car HUD</td>

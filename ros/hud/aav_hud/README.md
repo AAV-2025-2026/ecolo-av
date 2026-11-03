@@ -28,13 +28,16 @@ the name.
 A Cargo workspace that colcon builds through `CMakeLists.txt`. More in docs/hud.md and
 docs/car-screens.md.
 
-**Colours (1 Nov):** all four screens share one theme (`hud_core::theme`), each chosen
-by `theme:` in its own yaml: `mocha` (dark, the default), `latte` (light, daytime) or
-`calm` (a placeholder copy of Mocha until Ben gives his colours). Mocha and Latte are [Catppuccin](https://catppuccin.com)'s palettes,
-MIT licence. Panels are frosted glass (`hud_app::paint`); the map blurs what's behind
-its boxes (`map-app/src/frost.rs`, `blur`); the debug screen's legends are glass too.
-The localizers keep their colours in every theme (local blue, global green, AMCL orange,
-NDT purple). docs/hud.md, "Themes".
+**Colours (1 Nov; Initial D 2 Nov):** all four screens share one theme
+(`hud_core::theme`), each chosen by `theme:` in its own yaml: `initial_d` (black, white
+and Carleton's red, sharp: **the default on every screen**, Ben, 2 Nov), `mocha` (dark),
+`latte` (light, daytime) or `calm` (a placeholder copy of Mocha until Ben gives his
+colours). Mocha and Latte are [Catppuccin](https://catppuccin.com)'s palettes, MIT
+licence. In the glass themes panels are frosted glass (`hud_app::paint`); the map blurs
+what's behind its boxes (`map-app/src/frost.rs`, `blur`); the debug screen's legends
+are glass too. Initial D draws the same boxes black with thin white edges and sharp
+corners (`Style::corner`). The localizers keep their colours in every theme (local
+blue, global green, AMCL orange, NDT purple). docs/hud.md, "Themes".
 
 ## Interface
 
@@ -66,7 +69,7 @@ NDT purple). docs/hud.md, "Themes".
 | pub | `estop_topic`: `/safety/estop` (only `true`) | std_msgs/Bool |
 | pub | `heartbeat_topic`: `/hud/heartbeat` (10 Hz while it draws) | std_msgs/UInt64 |
 
-Parameters `stale_after` (1.0 s): a quieter topic shows STALE; `theme` (`mocha`, `latte`, `calm`).
+Parameters `stale_after` (1.0 s): a quieter topic shows STALE; `theme` (`initial_d`, `mocha`, `latte`, `calm`).
 
 ### Node `map` (topic names from `config/map.yaml`)
 
@@ -82,7 +85,7 @@ Parameters `stale_after` (1.0 s): a quieter topic shows STALE; `theme` (`mocha`,
 Other parameters: `stale_after` (1.0 s), `plan_stale_after` (3.0 s; `plan_kept_for`, 25 s, within
 `final_approach`, 8 m, of the plan's end: Nav2 keeps its path there), `arrive_within`
 (1.0 m), `street_map` (`maps/streets/ottawa.pmtiles`), `places` (`maps/places/ottawa.db`),
-`theme` (`mocha`), `blur` (true: the map blurred behind the glass), `car_marker`
+`theme` (`initial_d`), `blur` (true: the map blurred behind the glass), `car_marker`
 (`outline`; `robot`: the car as the little robot, the easter egg).
 
 ### Node `debug_hud` (topic names from `config/debug_hud.yaml`)
@@ -109,7 +112,7 @@ Other parameters: `odom_frame`, `base_frame`, `map_frame`; `stale_after` (1.0 s)
 `cube_size` (0.2 m), `max_cubes` (20,000), `pose_window` (1.0 s), `ground_height` (0.25 m),
 `keep_cubes_for` (2.0 s: key K's cubes fade over it), `ndt_map` (`maps/ndt/test_lot.pcd`,
 relative to where it starts; key M), `ndt_map_cell` (1.0 m), `voxels_cube_size` (0.25 m),
-`health_stale_after` (3.0 s: the health checks come once a second), `theme` (`mocha`),
+`health_stale_after` (3.0 s: the health checks come once a second), `theme` (`initial_d`),
 `easter_egg` (true: the little robot's eyes peek when all is quiet) and `easter_egg_after` (60 s).
 
 ### Node `hw_panel` (topic names from `config/hw_panel.yaml`)
@@ -129,7 +132,7 @@ relative to where it starts; key M), `ndt_map_cell` (1.0 m), `voxels_cube_size` 
 | pub | `steering_calibration_topic`: `/drivers/buttons/steering_calibration` (the calibration page's limp or jog, 10 Hz while it asks and the window draws; END: MODE_OFF 0.5 s) | aav_interfaces/SteeringCalibration |
 
 Other parameters: `stale_after` (1.0 s), `speed_step` (0.1 m/s), `steer_step` (0.05 rad),
-`creep` (0.1 m/s, CENTRE), `sim_cap` (1.0 m/s), `stands_cap` (0.3 m/s), `theme` (`mocha`);
+`creep` (0.1 m/s, CENTRE), `sim_cap` (1.0 m/s), `stands_cap` (0.3 m/s), `theme` (`initial_d`);
 the calibration page's `jog_step` (25 counts), `jog_min`, `jog_max` (400, 3500),
 `sweep_rate` (100 counts/s), `sweep_max_error` (150 counts), `sweep_stall` (0.6 s);
 `easter_egg` (true: the little robot peeks when all is quiet, and drives across at
