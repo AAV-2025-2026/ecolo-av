@@ -27,8 +27,18 @@ topics:
   /drivers/joy/joy:
     type: sensor_msgs/msg/Joy
     pub: [joy_node]
-    sub: [teleop_twist_joy_node, joy_teleop]
-    note: Joystick axes and buttons, 20 Hz while held. joy_node, teleop_twist_joy_node and joy_teleop run in the namespace /drivers/joy (aav_teleop teleop.launch.py), so their relative topics land here.
+    sub: [joy_alive, joy_teleop]
+    note: Joystick axes and buttons, 20 Hz while the USB receiver is in - joy_node repeats the last state (autorepeat_rate), so a pad turned off with its receiver still in may repeat a held trigger and stick (TODO 74a). joy_node, joy_alive, teleop_twist_joy_node and joy_teleop run in the namespace /drivers/joy (aav_teleop teleop.launch.py), so their relative topics land here. bench_check.py publishes it itself to play a live, frozen and silent pad (teleop.launch.py joy_device:=false).
+  /drivers/joy/joy_checked:
+    type: sensor_msgs/msg/Joy
+    pub: [joy_alive]
+    sub: [teleop_twist_joy_node]
+    note: The joystick, only while it is really there and moving (aav_safety joy_alive, joy_alive.py) - each /drivers/joy/joy message as it came, or while stopped a released copy (every axis and button 0), so teleop_twist_joy sends one zero and nothing more; once more the moment silence trips it. It stops on SILENT (no Joy for 0.5 s - the receiver unplugged, joy_node dead) and FROZEN (the deadman held and the throttle axis off centre, every axis and button bit-identical for 2 s - a dead pad's receiver repeating itself; a stick pinned at its edge trips it too). Both latch until the deadman is seen released; at start-up nothing passes until it has been released once (WAITING). aav_teleop config/joy_alive.yaml.
+  /drivers/joy/alive:
+    type: std_msgs/msg/String
+    pub: [joy_alive]
+    sub: []
+    note: One line for people, 10 Hz - OK, WAITING, SILENT or FROZEN, a dash, and why, such as "FROZEN - the same values for over 2 s while driving - a dead pad? Release the deadman to drive again". bench_check.py reads it (the frozen-pad check).
   /drivers/joy/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [teleop_twist_joy_node]

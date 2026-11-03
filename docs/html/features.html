@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">37 min read · 14 sections</div></header>
+<div class="meta">38 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -403,6 +403,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Ben</td>
 <td>2026-11-01</td>
 <td>built</td>
+</tr>
+<tr>
+<td><a href="car-day.html#a9b-the-joystick-on-stands">The joystick-alive check</a> (<code>aav_safety</code> <code>joy_alive</code>, TODO 74a)</td>
+<td>Ben, 2 Nov: "joystick control so we can move the car talking directly from the pi to the esp32". <code>joy_node</code> repeats the last state while the receiver is in, so a pad turned off or out of range could keep driving: now a silent joystick (0.5 s) or one whose values freeze while driving (2 s) stops the car until the trigger is released</td>
+<td>Ben</td>
+<td>2026-11-02</td>
+<td>sim</td>
 </tr>
 <tr>
 <td>RC via ROS (<code>rc_driver</code>) and a three-position mode switch</td>

@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">78 min read · 4 sections</div></header>
+<div class="meta">79 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -119,9 +119,25 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/drivers/joy/joy</code></td>
 <td><code>sensor_msgs/msg/Joy</code></td>
 <td><code>joy_node</code></td>
-<td><code>teleop_twist_joy_node</code>, <code>joy_teleop</code></td>
+<td><code>joy_alive</code>, <code>joy_teleop</code></td>
 <td>-</td>
-<td>Joystick axes and buttons, 20 Hz while held. joy_node, teleop_twist_joy_node and joy_teleop run in the namespace /drivers/joy (aav_teleop teleop.launch.py), so their relative topics land here.</td>
+<td>Joystick axes and buttons, 20 Hz while the USB receiver is in - joy_node repeats the last state (autorepeat_rate), so a pad turned off with its receiver still in may repeat a held trigger and stick (TODO 74a). joy_node, joy_alive, teleop_twist_joy_node and joy_teleop run in the namespace /drivers/joy (aav_teleop teleop.launch.py), so their relative topics land here. bench_check.py publishes it itself to play a live, frozen and silent pad (teleop.launch.py joy_device:=false).</td>
+</tr>
+<tr>
+<td><code>/drivers/joy/joy_checked</code></td>
+<td><code>sensor_msgs/msg/Joy</code></td>
+<td><code>joy_alive</code></td>
+<td><code>teleop_twist_joy_node</code></td>
+<td>-</td>
+<td>The joystick, only while it is really there and moving (aav_safety joy_alive, joy_alive.py) - each /drivers/joy/joy message as it came, or while stopped a released copy (every axis and button 0), so teleop_twist_joy sends one zero and nothing more; once more the moment silence trips it. It stops on SILENT (no Joy for 0.5 s - the receiver unplugged, joy_node dead) and FROZEN (the deadman held and the throttle axis off centre, every axis and button bit-identical for 2 s - a dead pad's receiver repeating itself; a stick pinned at its edge trips it too). Both latch until the deadman is seen released; at start-up nothing passes until it has been released once (WAITING). aav_teleop config/joy_alive.yaml.</td>
+</tr>
+<tr>
+<td><code>/drivers/joy/alive</code></td>
+<td><code>std_msgs/msg/String</code></td>
+<td><code>joy_alive</code></td>
+<td>-</td>
+<td>-</td>
+<td>One line for people, 10 Hz - OK, WAITING, SILENT or FROZEN, a dash, and why, such as "FROZEN - the same values for over 2 s while driving - a dead pad? Release the deadman to drive again". bench_check.py reads it (the frozen-pad check).</td>
 </tr>
 <tr>
 <td><code>/drivers/joy/cmd_vel</code></td>
