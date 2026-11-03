@@ -225,7 +225,7 @@ def stop_nodes(procs):
     for p in procs:
         try:
             os.killpg(p.pid, signal.SIGINT)
-        except ProcessLookupError:
+        except (ProcessLookupError, PermissionError):   # gone already
             pass
     for p in procs:
         try:
@@ -326,7 +326,7 @@ def main():
     parser.add_argument('--pairs', type=int, default=60, help='start-goal pairs a map')
     parser.add_argument('--workers', type=int, default=4)
     parser.add_argument('--domain', type=int, default=200,
-                        help='the first worker\'s ROS domain (each next one +1; at most 232)')
+                        help="the first worker's ROS domain (each next one +1; at most 232)")
     parser.add_argument('--seed', type=int, default=1)
     parser.add_argument('--out', default=OUT)
     parser.add_argument('--shard', type=int, default=None, help=argparse.SUPPRESS)
@@ -338,6 +338,7 @@ def main():
         work(args, args.shard, args.workers)
         return
     t0 = time.monotonic()
+
     def start(i):
         return subprocess.Popen([sys.executable, __file__, *sys.argv[1:], '--shard', str(i)],
                                 start_new_session=True)

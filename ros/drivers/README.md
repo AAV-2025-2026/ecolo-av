@@ -17,6 +17,7 @@ to ego. A person always outranks the computer.
 | [aav_drive_to_point](./aav_drive_to_point/README.md) | `/drive_to_point`: drive to one GPS or map point and stop | `/drivers/point/cmd_vel` | 25 |
 | [aav_navigation](./aav_navigation/README.md) | Nav2 (Smac Lattice planner, Hybrid-A* forward only; MPPI), behaviour trees, maps | `/drivers/nav/cmd_vel` | 20 |
 | [aav_track](./aav_track/README.md) | trial path followers (pure pursuit, Stanley, LQR, MPC, MPC with speed) in controller_server's place: `tracker:=` (`docs/trials.md`) | `cmd_vel_nav`, inside Nav2's slot | (20) |
+| [aav_diffusion_planner](./aav_diffusion_planner/README.md) | a trial planner: a model draws the path, a guard checks it, the lattice's path if it fails: `planner:=diffusion` (`docs/trials.md`) | `/plan`, inside Nav2's slot | (20) |
 | [aav_routes](./aav_routes/README.md) | street routes (Valhalla or OSRM) as Nav2 GPS waypoints | `/drivers/nav/route/*` | — |
 | [aav_language](./aav_language/README.md) | plain-English driving: MCP drive tools and a local-model agent | uses the actions above | — |
 
