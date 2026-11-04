@@ -9,7 +9,7 @@ Ben, 3 Nov: "Tomorrow is meeting day and we want to have 0.2 fully polished and 
 
 | # | Task | Status |
 |---|---|---|
-| 85 | **The 0.2 guide**: every feature, what it does, how to run it, tips, how solid; the state machine; the two EKFs; which parts are Python | 🔧 3 Nov |
+| 85 | **The 0.2 guide**: every feature, what it does, how to run it, tips, how solid; the state machine; the two EKFs; which parts are Python | ✅ 3 Nov, `guide-0.2`: `docs/release-0.2.md` is now "The 0.2 guide" (same file and PDF): Your first hour, the defaults, every feature as What / How to run / Tips / How solid, the state machine's diagram and its gap, the two EKFs (they meet only in TF), the Python table. ⬜ its defaults table after TODO 88; its cockpit block after TODO 87 |
 | 86 | **Everything tested in the simulator** (Ben: "I would like to see diffusion tested in simulation. Acutally everything"): sim-check, bench-check, every switch launched once, diffusion against the lattice 3 runs each | 🔧 3 Nov |
 | 87 | **The cockpit as the one driving screen**: the localization views and the running algorithms; screenshots from live Gazebo | 🔧 3 Nov |
 | 88 | **The best defaults**: one table, default where and why; sim winners switched only with their numbers | 🔧 3 Nov |
