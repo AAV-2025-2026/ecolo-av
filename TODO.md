@@ -3,6 +3,21 @@
 The current work list, newest first. Tick items off as they land; each tick = a commit.
 Ben's messages, word for word: `docs/history/messages-*.md`.
 
+## Tuesday 3 November: 0.2 polished for the meeting (4 Nov), then the car
+
+Ben, 3 Nov: "Tomorrow is meeting day and we want to have 0.2 fully polished and documented ready to go." The plan: [the brief](docs/designs/2026-11-03_release-0.2-brief.md), "Recommendations for today". Words: `docs/history/messages-2026-11-03.md`.
+
+| # | Task | Status |
+|---|---|---|
+| 85 | **The 0.2 guide**: every feature, what it does, how to run it, tips, how solid; the state machine; the two EKFs; which parts are Python | 🔧 3 Nov |
+| 86 | **Everything tested in the simulator** (Ben: "I would like to see diffusion tested in simulation. Acutally everything"): sim-check, bench-check, every switch launched once, diffusion against the lattice 3 runs each | 🔧 3 Nov |
+| 87 | **The cockpit as the one driving screen**: the localization views and the running algorithms; screenshots from live Gazebo | 🔧 3 Nov |
+| 88 | **The best defaults**: one table, default where and why; sim winners switched only with their numbers | 🔧 3 Nov |
+| 89 | **The ESP32 in QEMU** on Ben's Mac (`esp tools`, `esp qemu-check`): the heartbeat brake proven before A8 | 🔧 3 Nov |
+| 90 | **One screen per concept** (Ben, 3 Nov: "the gazeboo with nav2 selection with cubes and stuff all as a single screen and then hardware as a seperate screen. Just the stuff we control"): **Drive** (Gazebo or the camera, Nav2 and its choices, the cubes, localization, the algorithms) and **Hardware** (only what we control: the actuators, the sensors, calibration). The debug screen's parts move into Drive; the HUD and the map stay in the car | 0.3: today's step is 87 |
+| 91 | **PR #21**: close #20, open #21 from the fork's `main`, after the full tests | ⬜ last |
+| 92 | **Ben, tonight**: the people named; the hardware lead's OK for A8 and H1; the restore test's spare SD card | ⬜ Ben |
+
 ## Monday 2 November: Ben's asks for 0.2
 
 Ben, 2 Nov: "I would like the hud changes in, same with for the map. Something nicer then catpucine. We also want diffused planning, and joystick control ... We want to develop a list of tests." Words: `docs/history/messages-2026-11-02.md`.
