@@ -23,25 +23,26 @@ Nothing real moves. Run these on any laptop.
 
 | # | Test | Run | Passes when | Status |
 |---|---|---|---|---|
-| 1.1 | The whole car graph in Gazebo | `pixi run sim-check` | all checks PASS: sensors, a 6.5 m drive, the EKF within 0.5 m of the truth | ✅ |
+| 1.1 | The whole car graph in Gazebo | `pixi run sim-check` | all checks PASS: sensors, a 6.5 m drive, the EKF within 0.5 m of the truth | ✅ 3 Nov: 9 of 9 (the EKF 0.15 m off); also 9 of 9 with each speed loop and `--voxels`, 10 of 10 `--kiss-ekf`, 7 of 7 `--no-lidar` |
 | 1.2 | All three cameras send pictures | part of 1.1 | front left 10 Hz; front right and rear 5 Hz or more, each in its own frame | ✅ 15 Oct |
 | 1.3 | The roof lidar | `pixi run sim-check` (on by default) | 1800 × 16 rays at 10 Hz in `lidar_link` | ✅ |
-| 1.4 | Stop for an obstacle | `pixi run sim-check --obstacle` | stops 0-2 m before the box; drives on when it's gone | ✅ at 272 kg; ⚠️ at 181 kg, unconfirmed (the Mac was overloaded) |
-| 1.5 | Lane keeping | `pixi run sim-check --lane` | back to the lane's centre within 5 cm | ✅ 15 Oct |
+| 1.4 | Stop for an obstacle | `pixi run sim-check --obstacle` | stops 0-2 m before the box; drives on when it's gone | ✅ at 272 kg; ⚠️ at 181 kg, unconfirmed (the Mac was overloaded); ✅ 3 Nov: 0.23 m before it |
+| 1.5 | Lane keeping | `pixi run sim-check --lane` | back to the lane's centre within 5 cm | ✅ 15 Oct; 3 Nov: within 5 cm after 5.4 s (its contract check fixed: it asked for stop_hold, which needs Nav2) |
 | 1.6 | The HUD, with pretend data | `pixi run hud --demo` | the window opens with speed, camera, GPS, e-stop | ✅ Ben, 15 Oct |
 | 1.7 | The HUD with the turtle | `pixi run turtle`, `pixi run hud`, `pixi run keyboard --local` | speed and steering move as you drive | ✅ Ben, 15 Oct |
 | 1.8 | Plain-English driving | `pixi run -e llm talk`: "drive 10 m forward" | drives 10 m (±0.2 m) after you type yes | ✅ Gazebo |
 | 1.9 | **"SIMULATED" on the HUD** | run Gazebo, look at the HUD | an orange SIMULATED banner; REAL / SIM tag per sensor | ✅ built 15 Oct (its logic tested); not yet seen on a screen |
 | 1.10 | **The actuator tests (stage 3-4), in Gazebo first** | `pixi run actuator-test <test> --sim` ([docs](actuator-tests.md)) | the script runs end to end and reports g and angles | ✅ 15 Oct: all 9 tests; they give back `vehicle.yaml`'s numbers |
-| 1.11 | **The lidar alone stops the car** | `pixi run sim-check --lidar-obstacle` (and `--plan-around`: Nav2 drives round a box it sees) | radar off: stops 0-2 m before a person-sized post, which shows in the local costmap; drives on when it's gone | ✅ 15 Oct: 0.16-0.55 m before it |
-| 1.12 | **Sensor failures on purpose** | `pixi run sim-check --faults` (`--no-watchdog`: what happens without the watchdog) | each of 13 faults (GPS lost, NaN, jump; IMU stopped, frozen, NaN; wheels stopped, frozen, NaN; camera frozen; radar stopped; the watchdog hung, killed) stops the car within 6 s (frozen wheels: 10 s from when they go wrong), and says why; normal driving never trips the wheels' cross check | ✅ 15 Oct: all 13; 24 Oct, with the HUD's heartbeat: all 25 checks, 3 runs of 3 |
-| 1.13 | **The spine in the loop** | `pixi run sim-check --spine` | in Gazebo with `spine:=true`: the normal checks pass; ego's commands stopped → the spine brakes fully within 0.28 s and latches; `/safety/estop` and the hardware e-stop → brake within 0.15 s, latched until armed again; disarmed → no motion | ✅ 15 Oct: full brake 195-209 ms, e-stops 1-12 ms |
-| 1.14 | **Drive to a GPS point, smooth stop** | `pixi run sim-check --drive-to-point` ([A to B](a-to-b.md)) | every stop within 2 m of B by Gazebo's truth, no overshoot, braking about half `max_brake`; a cancel, the e-stop and a GPS fault stop it | ✅ 15 Oct: all within 0.4 m |
-| 1.15 | **Ghost obstacles: a pretend person only Nav2 sees** | `pixi run sim-check --ghost` ([docs](ghost-obstacles.md)) | a ghost 15 m ahead (nothing in Gazebo): stops 0-2 m before it (the stop zone or the controller), the local costmap marks it; drives on once it's off | ✅ 16 Oct: 0.21 m before it, the stop zone fired (one run, radar and lidar on too) |
+| 1.11 | **The lidar alone stops the car** | `pixi run sim-check --lidar-obstacle` (and `--plan-around`: Nav2 drives round a box it sees) | radar off: stops 0-2 m before a person-sized post, which shows in the local costmap; drives on when it's gone | ✅ 15 Oct: 0.16-0.55 m before it; 3 Nov: 0.16 m. ❌ with `--voxels`: 1 of 3 runs drove 1.30 m into the post (2 of 3 stopped 0.25 and 0.29 m before it) |
+| 1.12 | **Sensor failures on purpose** | `pixi run sim-check --faults` (`--no-watchdog`: what happens without the watchdog) | each of 13 faults (GPS lost, NaN, jump; IMU stopped, frozen, NaN; wheels stopped, frozen, NaN; camera frozen; radar stopped; the watchdog hung, killed) stops the car within 6 s (frozen wheels: 10 s from when they go wrong), and says why; normal driving never trips the wheels' cross check | ✅ 15 Oct: all 13; 24 Oct, with the HUD's heartbeat: all 25 checks, 3 runs of 3; 3 Nov: all 25 (14 faults) |
+| 1.13 | **The spine in the loop** | `pixi run sim-check --spine` | in Gazebo with `spine:=true`: the normal checks pass; ego's commands stopped → the spine brakes fully within 0.28 s and latches; `/safety/estop` and the hardware e-stop → brake within 0.15 s, latched until armed again; disarmed → no motion | ✅ 15 Oct: full brake 195-209 ms, e-stops 1-12 ms; 3 Nov: all PASS, full brake 202-205 ms, e-stops 2 ms |
+| 1.14 | **Drive to a GPS point, smooth stop** | `pixi run sim-check --drive-to-point` ([A to B](a-to-b.md)) | every stop within 2 m of B by Gazebo's truth, no overshoot, braking about half `max_brake`; a cancel, the e-stop and a GPS fault stop it | ✅ 15 Oct: all within 0.4 m. ⚠️ 3 Nov, 2 runs: every stop within 0.46 m of B by the truth, but 1 of 9 drives each run ended 0.61 m past B by its own EKF (the limit 0.5 m): GPS noise, or the GPS's new position, to look at |
+| 1.15 | **Ghost obstacles: a pretend person only Nav2 sees** | `pixi run sim-check --ghost` ([docs](ghost-obstacles.md)) | a ghost 15 m ahead (nothing in Gazebo): stops 0-2 m before it (the stop zone or the controller), the local costmap marks it; drives on once it's off | ✅ 16 Oct: 0.21 m before it, the stop zone fired (one run, radar and lidar on too); 3 Nov: 0.51 m before it |
 | 1.16 | **Every screen in Initial D**, with pretend data | `pixi run hud --demo`, `map --demo`, `debug-hud --demo`, `hw-panel --demo` ([Themes](hud.md#themes-the-screens-colours)) | each opens black and red with thin white edges and sharp corners, no Catppuccin blue-grey; the e-stop red with white words; GO green, WAIT amber; the localizers keep their colours | ✅ 2 Nov: all four, screenshots on Ben's Mac |
 | 1.17 | The theme's contrast test | `cargo test -p hud-core theme` (in `tools/test.sh`) | every word 4.5 : 1, every shape and mark 3 : 1 on each screen's backgrounds; Initial D has no Catppuccin colour but the localizers' | ✅ 2 Nov |
-| 1.18 | **The diffusion planner's lot tour** | `pixi run measure controllers --planners lattice diffusion --reversing --tours lot` ([trials](trials.md#diffusion-2-nov-a-model-draws-the-lattice-guards)) | every leg, as the lattice; no plan tighter than full lock; the share of plans from the model (`/drivers/nav/diffusion/status`) | ✅ 2 Nov, 2 runs: 8 of 8 legs, 63 % from the model |
-| 1.19 | **The diffusion planner's guard falls back** | `pixi run measure controllers --planners diffusion_nomodel --reversing --tours lot` (no model file); the guard's checks: `tools/test.sh` (`aav_diffusion_planner/test`) | every plan the lattice's, every leg; each check G1-G8 refuses its bad path in the unit tests | ✅ 2 Nov: 156 of 156 plans the lattice's, 4 of 4 legs |
+| 1.18 | **The diffusion planner's lot tour** | `pixi run measure controllers --planners lattice diffusion --reversing --tours lot` ([trials](trials.md#diffusion-2-nov-a-model-draws-the-lattice-guards)) | every leg, as the lattice; no plan tighter than full lock; the share of plans from the model (`/drivers/nav/diffusion/status`) | ✅ 2 Nov, 2 runs: 8 of 8 legs, 63 % from the model; 3 Nov, 3 runs: 12 of 12 legs, 73 % from the model, never tighter than full lock |
+| 1.19 | **The diffusion planner's guard falls back** | `pixi run measure controllers --planners diffusion_nomodel --reversing --tours lot` (no model file); the guard's checks: `tools/test.sh` (`aav_diffusion_planner/test`) | every plan the lattice's, every leg; each check G1-G8 refuses its bad path in the unit tests | ✅ 2 Nov: 156 of 156 plans the lattice's, 4 of 4 legs; 3 Nov (one leg): 25 of 25 |
+| 1.20 | **Every switch starts and drives a leg** | `pixi run measure controllers --tours lot --legs 1` with each switch ([switches](switches.md), [the runs](trials.md#3-nov-everything-for-02)) | each planner, follower, localizer and `voxels` starts, and the car finishes the first leg | ✅ 3 Nov: 23 of 23 (lattice32 and smac2d on a second try: the first, on a busy Mac, stalled) |
 
 ## Stage 2: the bench
 
@@ -49,7 +50,7 @@ The car's software path with stand-ins for the hardware, and the real CAN frames
 
 | # | Test | Run | Passes when | Status |
 |---|---|---|---|---|
-| 2.1 | The whole car graph, e-stops and the joystick-alive check included | `pixi run bench-check` | 11 of 11 | ✅ |
+| 2.1 | The whole car graph, e-stops and the joystick-alive check included | `pixi run bench-check` | 11 of 11 | ✅ 3 Nov: 11 of 11 |
 | 2.2 | The test suite | `pixi run test` | all green | ✅ |
 | 2.3 | **Replay a real drive** through our EKFs | `ros2 bag play` a recording from the car | the EKFs' path matches the GPS track | ⬜ needs a recording from stage 3 or 4 |
 
@@ -168,7 +169,7 @@ where that goes wrong.
 | # | Test | How | Passes when | Status |
 |---|---|---|---|---|
 | 4.23 | **Reverse straight** | the keyboard, 5 m back at 0.3 m/s, then `actuator-test straight` reversed | the local EKF goes **back** 5 m (±0.3 m); the GPS agrees | 🔧 |
-| 4.24 | **Stop for something behind** | a cone 3 m behind, Nav2 told to back up past it | stops before it: collision_monitor's box behind the bumper (Gazebo: 0.75 m short, `sim-check --rear-obstacle`) | 🔧 |
+| 4.24 | **Stop for something behind** | a cone 3 m behind, Nav2 told to back up past it | stops before it: collision_monitor's box behind the bumper (Gazebo: 0.75 m short, `sim-check --rear-obstacle`; 3 Nov: 0.78 m) | 🔧 |
 | 4.25 | **Rolling back** (the known flaw) | on a gentle slope, drive forward, stop, let it roll back by hand on the brake | written down: how far the EKF thinks it went **forward**, and whether the watchdog noticed (it compares speeds, not directions: maybe not). Too far: wait for H5 before reversing on slopes | 🔧 |
 | 4.26 | **The U-turn** | Nav2, a goal behind the car in a 14 m lane of cones (Gazebo's "turn back" leg) | a three-point turn: forward, back about 9 m, forward; no cone touched | 🔧 in Gazebo, 16 of 16 legs with the lattice (30 Oct) |
 

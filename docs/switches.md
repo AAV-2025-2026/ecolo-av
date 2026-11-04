@@ -26,9 +26,9 @@ twice, the last one wins.
 | `planner:=hybrid` (forward only) | Hybrid-A*: only routes a car can drive | 30 Oct, reversing: every leg, 213 s a tour |
 | `planner:=lattice lattice_headings:=32` | the lattice with 32 headings, not 16 | 30 Oct, reversing: every leg, 197 s; slower plans. No better |
 | `planner:=smac2d` | A* on the grid: **ignores the turning circle** | 29 Oct, forward only: 2 of 4 |
-| `planner:=navfn` | NavFn, the classic: ignores the turning circle | not tried |
-| `planner:=theta_star` | Theta*: straight lines: ignores the turning circle | not tried |
-| `planner:=diffusion` (a trial) | **a model draws the route**, a guard checks it, the lattice's route if it fails. Needs `pixi install --locked -e learn` and `pixi run diffusion train` | 2 Nov, reversing, 2 runs: every leg, 178-182 s; 63 % of routes from the model |
+| `planner:=navfn` | NavFn, the classic: ignores the turning circle | 3 Nov, one leg: finished (its tightest turn 128 m) |
+| `planner:=theta_star` | Theta*: straight lines: ignores the turning circle | 3 Nov, one leg: finished |
+| `planner:=diffusion` (a trial) | **a model draws the route**, a guard checks it, the lattice's route if it fails. Needs `pixi install --locked -e learn` and `pixi run diffusion train` | 3 Nov, reversing, 3 runs: every leg, 177-270 s (the lattice 183-184); **73 %** of routes from the model ([trials](trials.md#3-nov-everything-for-02)) |
 
 The lattice is the default since 1 Nov (Ben), on the car too, now that it may reverse.
 Forward only (`reversing:=false`, or no lidar), the car takes `hybrid`: the lattice lost
@@ -92,5 +92,31 @@ KISS-ICP needs its own environment once: `pixi install --locked -e kiss`.
 **Tried, 29 Oct 23:05:** the menu's pick (demo --debug, `mpc`, NDT, LQI) in Gazebo on Ben's
 Mac: the track node ran MPC, NDT tracked (2 ms a match), AMCL stayed off, the speed loop
 said LQI, and a Nav2 goal 15 m ahead ended SUCCEEDED.
+
+## The defaults: what runs if you say nothing
+
+Checked 3 Nov ([the runs](trials.md#3-nov-everything-for-02)): every switch below starts
+and drives a leg in Gazebo. Nothing was switched on release day.
+
+| System | Sim (Gazebo) | Bench | Car | Why this default | On trial beside it |
+|---|---|---|---|---|---|
+| Who draws the route | `lattice` | `lattice` | `lattice` (`hybrid` if it can't reverse) | every leg reversing, the fastest: 183 s a tour (3 Nov, 3 runs) | `hybrid`, `lattice32`, `smac2d`, `navfn`, `theta_star`, `diffusion` (73 % from the model, still a trial) |
+| Who steers | MPPI | MPPI | MPPI | it reads the costmap, so it steers round what the lidar sees; it reverses | RPP; our pure pursuit, Stanley, LQR, MPC, `mpc_full` (forward only) |
+| May it reverse? | yes | yes | yes, unless nothing watches behind | the U-turn needs it | `reversing:=false` |
+| What Nav2 sees | the flat lidar scan | the radar only (no lidar) | the flat scan | stops 0.16 m before the post, every time | `voxels:=true`: 16 s slower a tour, and 1 of 3 post runs drove through it |
+| Where am I (map) | the global EKF: wheels, IMU, GPS | the same | the same | needs nothing but the sensors | `ndt_ekf:=true`: **17 → 1.8 cm**, every leg, but needs a saved map; `amcl:=true`, `ndt:=true` (scored only) |
+| How far it moved | `ekf_local`: wheels, IMU | the same | the same | | `kiss_icp:=true` (scored), `kiss_ekf:=true` (no clear win) |
+| Speed loop | `default` (PI) | `default` | `default` (no switch on the car) | today's PI loop; `sim-check` 9 of 9 with each of the three | `lqi`, `smooth` (sim and bench) |
+| Geofence, sensor watchdog | on | on | on | they hold Nav2 when the pose or a sensor goes bad | `geofence:=false` (sim only) |
+
+**Why the winners stay off:**
+
+- **NDT into the EKF** wins clearly in the lot, but needs `maps/ndt/test_lot.pcd`, which
+  isn't in git: a new laptop and the road world have none. A default that changes with the
+  files on each computer would surprise people. Pick it: `pixi run pick`, `ndt_ekf`.
+- **On the car**, NDT needs a recorded map of the real lot first; until then, today's
+  defaults.
+- **Voxels** isn't better on the tour, and the post run that drove through must be
+  understood first.
 
 Every switch with its own words: `ros2 launch aav_bringup sim.launch.py --show-args`.

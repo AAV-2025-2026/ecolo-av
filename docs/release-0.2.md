@@ -113,13 +113,18 @@ What runs when you give no switch. Every switch: [Switches](switches.md).
 | CAN bridge | | Rust (`aav_spine_bridge`) | `bridges.py`: `DEFAULT` | `bridge:=python` |
 | Screens' colours | Initial D | Initial D | each screen's yaml: `theme:` | `mocha`, `latte` |
 
-<!-- defaults: filled after the 3 Nov sim tests -->
+**Why these** (Gazebo's lot tour, reversing on, 3 runs each, 3 Nov; [trials](trials.md)):
 
-**Why these:** the lattice was the quickest round the lot with reversing (30 Oct);
-Hybrid-A* keeps the U-turn when the car may only go forward. MPPI finished the most legs
-of Nav2's two. NDT into the EKF (17 → 1.6 cm) and the cubes (stopped 0.44 m before a
-post) won in Gazebo, but stay off: NDT needs a map of the real lot first, and neither has
-run on the car.
+| Candidate | Legs | Tour time | Global EKF off | Default? |
+|---|---|---|---|---|
+| today's defaults | 12 of 12 | **183.4 ± 0.7 s** | 0.174 m | yes |
+| NDT into the EKF (`ndt_ekf:=true`) | 12 of 12 | 193.8 ± 18.1 s | **0.018 m** | not yet: it needs the lot's NDT map (`maps/ndt/test_lot.pcd`), which isn't in git, so a new laptop or the road world can't start it. Next: the default of the test-lot demos, which already need that map; on the car after the lot is recorded |
+| the cubes (`voxels:=true`) | 12 of 12 | 199.9 ± 14.1 s | 0.175 m | **no**: slower, and once in 3 runs the car drove 1.30 m into a post (`sim-check --lidar-obstacle --voxels`); to find out why |
+| diffusion (`planner:=diffusion`) | 12 of 12 | 208.5 ± 53.4 s (177, 179 and one 270) | - | no: 73 % of plans from the model (the goal 90 %) |
+
+The lattice is the quickest round the lot with reversing; Hybrid-A* keeps the U-turn when
+the car may only go forward. MPPI finished the most legs of Nav2's two. Every one of the
+23 switches started and finished a leg (3 Nov).
 
 ## The screens
 

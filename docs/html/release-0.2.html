@@ -7,7 +7,7 @@
 <!-- Generated from docs/release-0.2.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>AAV 0.2: the guide</h1>
-<div class="meta">43 min read · 21 sections</div></header>
+<div class="meta">44 min read · 21 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -472,13 +472,51 @@ ticked. Where it stood on 2 November:</p>
 </tr>
 </tbody>
 </table></div>
-<!-- defaults: filled after the 3 Nov sim tests -->
-
-<p><strong>Why these:</strong> the lattice was the quickest round the lot with reversing (30 Oct);
-Hybrid-A* keeps the U-turn when the car may only go forward. MPPI finished the most legs
-of Nav2's two. NDT into the EKF (17 → 1.6 cm) and the cubes (stopped 0.44 m before a
-post) won in Gazebo, but stay off: NDT needs a map of the real lot first, and neither has
-run on the car.</p>
+<p><strong>Why these</strong> (Gazebo's lot tour, reversing on, 3 runs each, 3 Nov; <a href="trials.html">trials</a>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Candidate</th>
+<th>Legs</th>
+<th>Tour time</th>
+<th>Global EKF off</th>
+<th>Default?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>today's defaults</td>
+<td>12 of 12</td>
+<td><strong>183.4 ± 0.7 s</strong></td>
+<td>0.174 m</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>NDT into the EKF (<code>ndt_ekf:=true</code>)</td>
+<td>12 of 12</td>
+<td>193.8 ± 18.1 s</td>
+<td><strong>0.018 m</strong></td>
+<td>not yet: it needs the lot's NDT map (<code>maps/ndt/test_lot.pcd</code>), which isn't in git, so a new laptop or the road world can't start it. Next: the default of the test-lot demos, which already need that map; on the car after the lot is recorded</td>
+</tr>
+<tr>
+<td>the cubes (<code>voxels:=true</code>)</td>
+<td>12 of 12</td>
+<td>199.9 ± 14.1 s</td>
+<td>0.175 m</td>
+<td><strong>no</strong>: slower, and once in 3 runs the car drove 1.30 m into a post (<code>sim-check --lidar-obstacle --voxels</code>); to find out why</td>
+</tr>
+<tr>
+<td>diffusion (<code>planner:=diffusion</code>)</td>
+<td>12 of 12</td>
+<td>208.5 ± 53.4 s (177, 179 and one 270)</td>
+<td>-</td>
+<td>no: 73 % of plans from the model (the goal 90 %)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The lattice is the quickest round the lot with reversing; Hybrid-A* keeps the U-turn when
+the car may only go forward. MPPI finished the most legs of Nav2's two. Every one of the
+23 switches started and finished a leg (3 Nov).</p>
 </section>
 <section class="card"><h2 id="the-screens">The screens</h2>
 <div class="table-wrap"><table>
