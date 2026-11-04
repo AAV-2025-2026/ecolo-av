@@ -93,15 +93,15 @@ New to the team? Run these in order, on a Mac or on Linux. The setup before step
 When every box on [the 0.2 checklist](car-day.md#ready-for-car-day-the-02-checklist) is
 ticked. Where it stood on 2 November:
 
-<!-- 3 Nov checks: the lead fills -->
+Where it stands on 3 November:
 
 | Check | State |
 |---|---|
-| Every test green (`pixi run test`) | ✅ 1516 tests, 0 failures (2 Nov) |
-| The kit ready (`car-day-check`) | ⬜ 11 missing: downloads and the ESP32 tools ([below](#the-checks-run-for-this-page)) |
-| The ESP32's emulator check (`esp qemu-check`) | ⬜ the ESP32 tools not installed on this Mac yet |
-| `car_setup.sh`'s dry run, every role | ✅ only the two planned refusals |
-| The first-move gaps (TODO 74) | 🔧 the joystick-alive check built, passed on the bench (2 Nov), its car test in A9b; ⬜ the throttle cap |
+| Every test green (`pixi run test`) | ✅ 1575 tests, 0 failures (3 Nov); GitHub's CI green on #21 (Linux, ARM, the car kit on 24.04 and 22.04) |
+| The kit ready (`car-day-check`) | ✅ 18 OK; 1 missing until #21 merges (GitHub hasn't the commits yet); 6 to tick by hand |
+| The ESP32's emulator check (`esp qemu-check`) | ✅ PASS (3 Nov): brakes 112-119 ms after the heartbeat stops, 6 of 6 |
+| `car_setup.sh`'s dry run, every role | ✅ only the two planned refusals (3 Nov) |
+| The first-move gaps (TODO 74) | ✅ the joystick-alive check (bench 11 of 11), its car test in A9b; ⬜ the throttle cap's number |
 | The people named | ⬜ Ben and the team |
 | The hardware lead's answers (H1, C1, `.211`, the router) | ⬜ the hardware lead |
 
@@ -836,13 +836,17 @@ The list: [TODO](../TODO.md), "0.3 and later".
 
 Run on Ben's Mac, 2 November:
 
-<!-- 3 Nov checks: the lead fills -->
+Run on Ben's Mac, 3 November:
 
 | Check | Result | What's left |
 |---|---|---|
-| `pixi run test` | ✅ 1516 tests, 0 failures | nothing |
+| `pixi run test` | ✅ 1575 tests, 0 failures, 4 skipped; lint clean | nothing |
+| GitHub's CI on #21 | ✅ Linux, ARM, the car kit on Ubuntu 24.04 and 22.04 | the Mac and Gazebo jobs run at night |
+| `pixi run sim-check`, `bench-check` | ✅ 9 of 9, 11 of 11 | nothing |
+| Every switch, one leg of the lot tour | ✅ 23 of 23 | ([trials](trials.md)) |
+| `pixi run measure timing` (Gazebo, 5 min parked, 5 driving, Cyclone) | ✅ 0 messages over 0.5 s late; the watchdog 0 STALE, 0 locks; worst gaps IMU 0.12-0.17 s, GPS 0.39-0.44 s; simulated time 0.97-0.98x. A busy Mac (load 17-18): 23 short stalls (0.1-0.3 s) parked, 3 driving | the real number: the Orin, car day (TODO 76) |
 | `bash tools/car_setup.sh <role>`, all six roles (dry run) | ✅ no STOP except the two planned refusals (`motor_pi` and `localization` won't upgrade yet) | nothing |
-| `pixi run car-day-check` | ⬜ 7 OK, **11 missing**, 7 to tick by hand | mostly downloads not yet on this Mac: `get models`, `get mediamtx`, `esp tools`, `esp build`, `esp qemu-tools`, `esp qemu-check`, `car-day-build` (the C++ way back), `docs` (the PDF) |
-| `pixi run esp qemu-check` | ⬜ skipped: the ESP32's Rust and QEMU aren't installed here | `pixi run esp tools`, then `esp qemu-tools`, then run it again |
-
-The ESP32 tools install Espressif's Rust on the laptop, so they wait for Ben's OK.
+| `pixi run car-day-build` | ✅ the Rust ESP32 (v1, v2, v2 with the uplink), the C++ way back, the QEMU check: PASS | nothing |
+| `pixi run car-kit` | ✅ 2.7 GB, today's code | copy it to a stick, or `scp` it at the car |
+| `pixi run car-day-check` | ✅ 18 OK, 1 missing (GitHub hasn't #21 yet), 6 to tick by hand | merge #21; the stick, Cyclone's card at the car, the printed sheet, the kit bag, the hardware lead |
+| `pixi run esp qemu-check` | ✅ PASS: 6 of 6 heartbeat cycles, 112-119 ms; RC modes 6 of 6 | nothing |

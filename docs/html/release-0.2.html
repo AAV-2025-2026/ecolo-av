@@ -7,7 +7,7 @@
 <!-- Generated from docs/release-0.2.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>AAV 0.2: the guide</h1>
-<div class="meta">52 min read · 22 sections</div></header>
+<div class="meta">53 min read · 22 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -358,8 +358,7 @@ on from <a href="whats-new.html">What's new</a> (22 October to 1 November), whic
 <h3 id="when-is-02-done">When is 0.2 done?</h3>
 <p>When every box on <a href="car-day.html#ready-for-car-day-the-02-checklist">the 0.2 checklist</a> is
 ticked. Where it stood on 2 November:</p>
-<!-- 3 Nov checks: the lead fills -->
-
+<p>Where it stands on 3 November:</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -370,23 +369,23 @@ ticked. Where it stood on 2 November:</p>
 <tbody>
 <tr>
 <td>Every test green (<code>pixi run test</code>)</td>
-<td>✅ 1516 tests, 0 failures (2 Nov)</td>
+<td>✅ 1575 tests, 0 failures (3 Nov); GitHub's CI green on #21 (Linux, ARM, the car kit on 24.04 and 22.04)</td>
 </tr>
 <tr>
 <td>The kit ready (<code>car-day-check</code>)</td>
-<td>⬜ 11 missing: downloads and the ESP32 tools (<a href="#the-checks-run-for-this-page">below</a>)</td>
+<td>✅ 18 OK; 1 missing until #21 merges (GitHub hasn't the commits yet); 6 to tick by hand</td>
 </tr>
 <tr>
 <td>The ESP32's emulator check (<code>esp qemu-check</code>)</td>
-<td>⬜ the ESP32 tools not installed on this Mac yet</td>
+<td>✅ PASS (3 Nov): brakes 112-119 ms after the heartbeat stops, 6 of 6</td>
 </tr>
 <tr>
 <td><code>car_setup.sh</code>'s dry run, every role</td>
-<td>✅ only the two planned refusals</td>
+<td>✅ only the two planned refusals (3 Nov)</td>
 </tr>
 <tr>
 <td>The first-move gaps (TODO 74)</td>
-<td>🔧 the joystick-alive check built, passed on the bench (2 Nov), its car test in A9b; ⬜ the throttle cap</td>
+<td>✅ the joystick-alive check (bench 11 of 11), its car test in A9b; ⬜ the throttle cap's number</td>
 </tr>
 <tr>
 <td>The people named</td>
@@ -2333,8 +2332,7 @@ planner (too close to its 150 ms) and the cubes (if the Orin is slow).</p>
 </section>
 <section class="card"><h2 id="the-checks-run-for-this-page">The checks run for this page</h2>
 <p>Run on Ben's Mac, 2 November:</p>
-<!-- 3 Nov checks: the lead fills -->
-
+<p>Run on Ben's Mac, 3 November:</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -2346,8 +2344,28 @@ planner (too close to its 150 ms) and the cubes (if the Orin is slow).</p>
 <tbody>
 <tr>
 <td><code>pixi run test</code></td>
-<td>✅ 1516 tests, 0 failures</td>
+<td>✅ 1575 tests, 0 failures, 4 skipped; lint clean</td>
 <td>nothing</td>
+</tr>
+<tr>
+<td>GitHub's CI on #21</td>
+<td>✅ Linux, ARM, the car kit on Ubuntu 24.04 and 22.04</td>
+<td>the Mac and Gazebo jobs run at night</td>
+</tr>
+<tr>
+<td><code>pixi run sim-check</code>, <code>bench-check</code></td>
+<td>✅ 9 of 9, 11 of 11</td>
+<td>nothing</td>
+</tr>
+<tr>
+<td>Every switch, one leg of the lot tour</td>
+<td>✅ 23 of 23</td>
+<td>(<a href="trials.html">trials</a>)</td>
+</tr>
+<tr>
+<td><code>pixi run measure timing</code> (Gazebo, 5 min parked, 5 driving, Cyclone)</td>
+<td>✅ 0 messages over 0.5 s late; the watchdog 0 STALE, 0 locks; worst gaps IMU 0.12-0.17 s, GPS 0.39-0.44 s; simulated time 0.97-0.98x. A busy Mac (load 17-18): 23 short stalls (0.1-0.3 s) parked, 3 driving</td>
+<td>the real number: the Orin, car day (TODO 76)</td>
 </tr>
 <tr>
 <td><code>bash tools/car_setup.sh &lt;role&gt;</code>, all six roles (dry run)</td>
@@ -2355,18 +2373,27 @@ planner (too close to its 150 ms) and the cubes (if the Orin is slow).</p>
 <td>nothing</td>
 </tr>
 <tr>
+<td><code>pixi run car-day-build</code></td>
+<td>✅ the Rust ESP32 (v1, v2, v2 with the uplink), the C++ way back, the QEMU check: PASS</td>
+<td>nothing</td>
+</tr>
+<tr>
+<td><code>pixi run car-kit</code></td>
+<td>✅ 2.7 GB, today's code</td>
+<td>copy it to a stick, or <code>scp</code> it at the car</td>
+</tr>
+<tr>
 <td><code>pixi run car-day-check</code></td>
-<td>⬜ 7 OK, <strong>11 missing</strong>, 7 to tick by hand</td>
-<td>mostly downloads not yet on this Mac: <code>get models</code>, <code>get mediamtx</code>, <code>esp tools</code>, <code>esp build</code>, <code>esp qemu-tools</code>, <code>esp qemu-check</code>, <code>car-day-build</code> (the C++ way back), <code>docs</code> (the PDF)</td>
+<td>✅ 18 OK, 1 missing (GitHub hasn't #21 yet), 6 to tick by hand</td>
+<td>merge #21; the stick, Cyclone's card at the car, the printed sheet, the kit bag, the hardware lead</td>
 </tr>
 <tr>
 <td><code>pixi run esp qemu-check</code></td>
-<td>⬜ skipped: the ESP32's Rust and QEMU aren't installed here</td>
-<td><code>pixi run esp tools</code>, then <code>esp qemu-tools</code>, then run it again</td>
+<td>✅ PASS: 6 of 6 heartbeat cycles, 112-119 ms; RC modes 6 of 6</td>
+<td>nothing</td>
 </tr>
 </tbody>
-</table></div>
-<p>The ESP32 tools install Espressif's Rust on the laptop, so they wait for Ben's OK.</p></section>
+</table></div></section>
 <nav class="prevnext"><a class="prev" href="features.html"><small>Previous</small>← Features</a>
 <a class="next" href="whats-new.html"><small>Next</small>What&#x27;s new →</a></nav>
 </main>
