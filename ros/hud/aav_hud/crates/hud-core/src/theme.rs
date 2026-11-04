@@ -377,6 +377,16 @@ pub struct Arcade {
     pub silhouette: Rgba,
 }
 
+impl Arcade {
+    /// The car's lines where words sit straight on the window, with no panel over the
+    /// car (the hardware panel): as faint as the car under a panel of `glass`, so the
+    /// words read as well as they do on a panel.
+    pub fn silhouette_under(self, glass: Rgba) -> Rgba {
+        let seen = u16::from(self.silhouette.a) * u16::from(255 - glass.a) / 255;
+        self.silhouette.alpha(u8::try_from(seen).unwrap_or(u8::MAX))
+    }
+}
+
 /// Every colour the four screens use.
 ///
 /// The pairs that must read (text on its panel, ink on its fill) are checked in the
@@ -1464,6 +1474,18 @@ mod tests {
             let under = t.panel.over(open);
             want("dim words over the car", t.dim, under, TEXT_RATIO);
             want("red words over the car", t.bad, under, TEXT_RATIO);
+            // Words straight on the car (the hardware panel): as on a panel.
+            let bare = g.silhouette_under(t.panel).over(t.background);
+            want("dim words on the bare car", t.dim, bare, TEXT_RATIO);
+            want("red words on the bare car", t.bad, bare, TEXT_RATIO);
+            if bare.difference(under) > 0.02 {
+                problems.push(format!(
+                    "{name}: the bare car isn't as faint as under glass"
+                ));
+            }
+            if bare.contrast(t.background) < 1.05 {
+                problems.push(format!("{name}: the bare car doesn't show"));
+            }
             // An unlit segment shows, faintly: well under a lit one.
             let off = g.segment_off.over(readout).contrast(readout);
             if !(1.1..2.0).contains(&off) {

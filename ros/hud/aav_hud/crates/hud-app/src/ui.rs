@@ -49,7 +49,7 @@ use hud_core::{
     origin::Origin,
     picture::Picture,
     segments::{self, Digit, Segment},
-    silhouette,
+    silhouette::Placement,
     state::{Alarm, EstopReport, HudState},
     theme::{Arcade, Rgba, Style, Theme},
     vehicle::VehicleStatus,
@@ -272,9 +272,7 @@ impl Ui {
             t,
             radius: t.style.corner(GLASS_RADIUS),
         };
-        if let Style::Arcade(look) = t.style {
-            car_behind(&mut c, &look);
-        }
+        car_behind(&mut c);
         strip(&mut c, state, &vehicle, now, source);
         match t.style {
             Style::Glass => speed(&mut c, &vehicle),
@@ -811,30 +809,18 @@ fn digital_box(c: &mut Canvas, a: area::Area, text: &str, look: &Arcade, lit: Rg
 }
 
 /// The arcade style's faint car, in lines across the window behind the panels.
-fn car_behind(c: &mut Canvas, look: &Arcade) {
+fn car_behind(c: &mut Canvas) {
     // Low on the right, behind TOPICS and GPS, where the panels hold fewest words.
     const LEFT: f32 = 600.0;
     const LENGTH: f32 = 660.0;
     const GROUND: f32 = 704.0;
-    let place = |(x, y): (f32, f32)| (LEFT + x * LENGTH, GROUND - y * LENGTH);
-    let car = silhouette::hatchback();
-    for line in &car.lines {
-        for pair in line.windows(2) {
-            c.line(place(pair[0]), place(pair[1]), 2.0, look.silhouette);
-        }
-    }
-    let full_turn = (0.0, std::f32::consts::TAU);
-    for wheel in car.wheels {
-        let centre = place(wheel.centre);
-        let r = wheel.radius * LENGTH;
-        c.ring(centre, (r - 1.0, r + 1.0), full_turn, look.silhouette);
-        c.ring(
-            centre,
-            (0.55 * r - 1.0, 0.55 * r + 1.0),
-            full_turn,
-            look.silhouette,
-        );
-    }
+    let s = c.scale;
+    let place = Placement {
+        left: s.x0 + LEFT * s.k,
+        ground: s.y0 + GROUND * s.k,
+        length: LENGTH * s.k,
+    };
+    paint::faint_car(c.d, c.t, place, 2.0 * s.k, paint::Under::Panels);
 }
 
 /// May the car move? The whole panel in the light's colour, its icon, the word, the one

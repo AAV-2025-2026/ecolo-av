@@ -18,7 +18,7 @@
 //! | [`format`] | numbers turned into short text for the screen |
 //! | [`gauge`] | the arcade speed gauge: its km/h scale from `max_speed`, ticks, redline blocks, the needle's swing, the gear box |
 //! | [`segments`] | 7-segment digits: which segments light, each segment's shape |
-//! | [`silhouette`] | a mid-80s hatchback's side view as lines, faint behind the `initial_d` HUD |
+//! | [`silhouette`] | a mid-80s hatchback's side view as lines, faint behind every `initial_d` screen; where it goes on a screen ([`silhouette::Placement`]) |
 //! | [`screen`] | which monitor a window goes on (`--monitor HDMI-1`), for two screens |
 //! | [`theme`] | every colour the four screens draw with: `initial_d` (black, white, Carleton's red; arcade; the default), Catppuccin Mocha and Latte, calm; `Style::corner` |
 

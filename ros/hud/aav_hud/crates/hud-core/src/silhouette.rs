@@ -4,7 +4,9 @@
 //!
 //! Our own drawing: the proportions of the type, made up from round numbers, not traced
 //! from any picture. Units: the car is 1 long; x from the tail (0) to the nose (1); y up
-//! from the ground (0). The screen flips y and scales it.
+//! from the ground (0). The screen flips y and scales it: a [`Placement`].
+//!
+//! All four screens draw it with one function, `hud_app::paint::faint_car`.
 
 use std::f32::consts::PI;
 
@@ -25,6 +27,36 @@ pub struct Silhouette {
     /// door's cut and the crease along the side.
     pub lines: Vec<Vec<Point>>,
     pub wheels: [Wheel; 2],
+}
+
+/// The car's height, from the ground to the roof, as a part of its length.
+pub const HEIGHT: f32 = 0.345;
+
+/// Where the car goes on a screen, in pixels (y down): where its tail meets the ground,
+/// and how long it is.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Placement {
+    pub left: f32,
+    pub ground: f32,
+    pub length: f32,
+}
+
+impl Placement {
+    /// As long as it fits in the box (`x`, `y`, `width`, `height`), standing on the
+    /// box's bottom, at its right end.
+    pub fn bottom_right(x: f32, y: f32, width: f32, height: f32) -> Self {
+        let length = width.min(height / HEIGHT).max(0.0);
+        Self {
+            left: x + width - length,
+            ground: y + height,
+            length,
+        }
+    }
+
+    /// A point of the drawing on the screen.
+    pub fn at(self, (x, y): Point) -> Point {
+        (self.left + x * self.length, self.ground - y * self.length)
+    }
 }
 
 /// The wheels' size, and where they sit.
@@ -55,16 +87,16 @@ fn arch(axle: f32) -> impl Iterator<Item = Point> {
 pub fn hatchback() -> Silhouette {
     // Round the top, from the tail's bottom to the nose's bottom.
     let top = [
-        (0.02, 0.10),  // the rear bumper's bottom
-        (0.01, 0.17),  // the tail
-        (0.03, 0.215), // the hatch's end
-        (0.10, 0.228), // a small lip
-        (0.31, 0.335), // the hatch rises to the roof
-        (0.55, 0.345), // a flat roof
-        (0.69, 0.248), // the windscreen down to the cowl
-        (0.97, 0.205), // a long bonnet, falling a little
-        (0.995, 0.17), // the nose
-        (0.99, 0.10),  // the front bumper's bottom
+        (0.02, 0.10),   // the rear bumper's bottom
+        (0.01, 0.17),   // the tail
+        (0.03, 0.215),  // the hatch's end
+        (0.10, 0.228),  // a small lip
+        (0.31, 0.335),  // the hatch rises to the roof
+        (0.55, HEIGHT), // a flat roof
+        (0.69, 0.248),  // the windscreen down to the cowl
+        (0.97, 0.205),  // a long bonnet, falling a little
+        (0.995, 0.17),  // the nose
+        (0.99, 0.10),   // the front bumper's bottom
     ];
     // Back along the bottom: over the front wheel, the sill, over the rear wheel.
     let mut body: Vec<Point> = top.to_vec();
@@ -113,6 +145,32 @@ mod tests {
             .map(|p| p.1)
             .fold(0.0_f32, f32::max);
         assert!(tallest < 1.0 / 2.8);
+    }
+
+    #[test]
+    fn the_roof_is_its_height() {
+        let tallest = hatchback()
+            .lines
+            .iter()
+            .flatten()
+            .map(|p| p.1)
+            .fold(0.0_f32, f32::max);
+        assert_eq!(tallest, HEIGHT);
+    }
+
+    #[test]
+    fn a_placement_fits_its_box() {
+        // A wide box: the car is as tall as the box, at its right end.
+        let wide = Placement::bottom_right(100.0, 50.0, 800.0, 69.0);
+        assert!((wide.length - 200.0).abs() < 1e-3);
+        assert_eq!(wide.at((1.0, 0.0)), (900.0, 119.0));
+        let (_, roof) = wide.at((0.5, HEIGHT));
+        assert!((roof - 50.0).abs() < 1e-3);
+        // A tall box: the car is as long as the box is wide.
+        let tall = Placement::bottom_right(0.0, 0.0, 300.0, 600.0);
+        assert_eq!((tall.left, tall.ground, tall.length), (0.0, 600.0, 300.0));
+        // No room: no car.
+        assert_eq!(Placement::bottom_right(0.0, 0.0, -5.0, 10.0).length, 0.0);
     }
 
     #[test]
