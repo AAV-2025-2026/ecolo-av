@@ -299,7 +299,6 @@ on every screen. Change it with `theme:` in the screen's yaml.
 | `initial_d` (the default) | the car, day or night: black, white, Carleton's red |
 | `mocha` | dark and soft: night |
 | `latte` | light: daytime |
-| `calm` | Ben's colours from his Carleton work: **waits on Ben** |
 
 | Initial D | Light (Latte) |
 |---|---|
@@ -815,7 +814,6 @@ Every idea is kept (Ben, 1 Nov: "I do like the 23 ideas? lets keep them around")
 | The diffusion planner: 90 % of plans from the model, the U-turn, the guard in Rust, the Orin | trial in 0.2 |
 | The talking model: explains, never drives | idea |
 | The little robot on the in-car HUD | idea |
-| Calm colours | waits on Ben |
 | The cockpit's algorithm switch; one screen from the cockpit and the debug screen | in 0.2: the cockpit shows which algorithms run (3 Nov); the switch and the debug screen's views for 0.3 |
 | More hardware panel pages: measurements, joystick, the car tests | idea |
 | Python speed on the Orin (the cubes to Rust if too slow) | measure on car day |

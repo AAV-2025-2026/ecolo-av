@@ -16,4 +16,4 @@ hud:
     heartbeat_topic: /hud/heartbeat                       # std_msgs/msg/UInt64: published, 10 Hz while the screen draws (frames drawn)
     stale_after: 1.0                                      # s: a topic this quiet shows STALE
     max_speed: 1.0                                        # m/s: ego's forward cap (aav_ego config/ego.yaml); the gauge's redline starts here. hud.launch.py copies ego.yaml's
-    theme: initial_d                                      # the colours: initial_d (black, white, Carleton red; the arcade gauge), mocha (dark, night), latte (light, day), calm (Ben's, to come)
+    theme: initial_d                                      # the colours: initial_d (black, white, Carleton red; the arcade gauge), mocha (dark, night), latte (light, day)

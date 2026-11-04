@@ -501,10 +501,10 @@ debug screen and the hardware panel.
 | `initial_d` (**default**, every screen) | the car, day or night: black, white and Carleton's red | the "Initial D" pictures above |
 | `mocha` | night, and glare in the cabin: dark and soft | the "Mocha" pictures above |
 | `latte` | daytime: light | ![Latte HUD](img/hud-latte.png) ![Latte map](img/map-latte.png) ![Latte debug screen](img/debug-hud-latte.png) ![Latte hardware panel](img/hw-panel-latte.png) |
-| `calm` | Ben's own theme, from his Carleton web work | **not yet**: a copy of Mocha until Ben gives its colours |
 
 Mocha and Latte are [Catppuccin](https://catppuccin.com)'s palettes (MIT licence), with
-its official colour values.
+its official colour values. The code still accepts `calm`, an old name for a copy of
+Mocha: no Calm theme is coming (Ben, 3 Nov).
 
 ### Initial D: what each screen looks like
 

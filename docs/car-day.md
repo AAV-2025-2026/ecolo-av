@@ -100,7 +100,7 @@ Autonomy (Nav2 goals on the ground) comes after A11, on another day: [Every test
 
 ## Ready for car day (the 0.2 checklist)
 
-0.2 is "car-ready" when every box here is ticked. [Release 0.2](release-notes.md#release-02-in-progress) links here.
+0.2 is "car-ready" when every box here is ticked. [Release 0.2](release-notes.md#whats-left) links here.
 
 | ☐ | Check | How |
 |---|---|---|

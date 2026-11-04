@@ -31,8 +31,8 @@ docs/car-screens.md.
 **Colours (1 Nov; Initial D 2 Nov):** all four screens share one theme
 (`hud_core::theme`), each chosen by `theme:` in its own yaml: `initial_d` (black, white
 and Carleton's red, sharp: **the default on every screen**, Ben, 2 Nov), `mocha` (dark),
-`latte` (light, daytime) or `calm` (a placeholder copy of Mocha until Ben gives his
-colours). Mocha and Latte are [Catppuccin](https://catppuccin.com)'s palettes, MIT
+`latte` (light, daytime). `calm` still loads, as a copy of Mocha: no Calm theme is
+coming (Ben, 3 Nov). Mocha and Latte are [Catppuccin](https://catppuccin.com)'s palettes, MIT
 licence. In the glass themes panels are frosted glass (`hud_app::paint`); the map blurs
 what's behind its boxes (`map-app/src/frost.rs`, `blur`); the debug screen's legends
 are glass too. Initial D draws the same boxes black with thin white edges and sharp
