@@ -18,6 +18,16 @@ Both start by themselves at login, and come back 5 s after a crash.
 
 Both are in `ros/hud/aav_hud` ([HUD](hud.md)).
 
+## The screens outside the car
+
+The HUD and the map stay in the car. Two more screens are for the lab or a laptop, one
+per job (Ben, 3 Nov: "Just the stuff we control"):
+
+| Screen | For | Where it's going |
+|---|---|---|
+| **Drive**: the [cockpit](foxglove.md#cockpit) (Lichtblick) | Gazebo's view, Nav2's goal, the cubes, the localizers, which algorithms run | 0.3: absorbs the debug screen |
+| **Hardware**: the [hardware panel](hud.md#the-hardware-panel) | every sensor, simple buttons, the steering's ends | stays separate |
+
 ## How it starts
 
 ```text

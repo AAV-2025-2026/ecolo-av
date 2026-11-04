@@ -52,6 +52,9 @@ def test_every_panel_in_the_layout_has_its_settings(name):
     def leaves(node):
         if isinstance(node, str):
             yield node
+            # A Tab panel holds a layout per tab: its panels are panels of the screen too.
+            for tab in layout['configById'].get(node, {}).get('tabs', []):
+                yield from leaves(tab['layout'])
         else:
             yield from leaves(node['first'])
             yield from leaves(node['second'])
@@ -100,14 +103,32 @@ def test_the_cockpit_swaps_the_tracker_through_its_parameter_service():
 
 def test_the_launch_switches_script_reads_a_topic_every_run_has():
     layout = LAYOUTS['cockpit']
-    assert layout_check.script_inputs(layout) == {'/diagnostics'}
-    (script,) = layout['userNodes'].values()
+    script = layout['userNodes']['launch-switches']
+    assert layout_check.script_inputs({'userNodes': {'s': script}}) == {'/diagnostics'}
     for switch in ('planner', 'ndt', 'ndt_ekf', 'kiss_icp', 'kiss_ekf', 'voxels', 'amcl'):
         assert f'"{switch}:="' in script['sourceCode']
     assert 'pixi run pick' in script['sourceCode']
     # The Table shows the script's output: the app's own topic, never the bridge's.
     assert layout['configById']['Table!switches']['topicPath'].startswith(
         layout_check.SCRIPT_PREFIX)
+
+
+def test_the_cockpit_shows_which_algorithms_run():
+    config = LAYOUTS['cockpit']['configById']['Table!algorithms']
+    assert config['topicPath'] == '/system/algorithms.values'
+    assert TOPICS['/system/algorithms']['type'] == 'diagnostic_msgs/msg/DiagnosticStatus'
+
+
+def test_the_cockpit_shows_every_localizer():
+    layout = LAYOUTS['cockpit']
+    shown = layout_check.shown_topics(layout)
+    assert {'/localization/odom/local', '/localization/odom/global', '/localization/ndt/pose',
+            '/localization/ndt/status', '/localization/kiss_icp/odom',
+            '/localization/kiss_icp/status', '/localization/amcl/pose', '/map'} <= shown
+    # The 3D panel draws no Odometry: the EKFs' arrows and NDT's scan come from scripts.
+    topics = layout['configById']['3D!cockpit']['topics']
+    for script in ('ekf_poses', 'ndt_scan'):
+        assert f'{layout_check.SCRIPT_PREFIX}{script}' in topics
 
 
 def test_the_chase_cameras_raw_picture_stays_off_the_wifi():

@@ -46,7 +46,7 @@ ticked. Where it stands on 2 November:
 | What | Where | Status |
 |---|---|---|
 | The steering calibration, from the firmware to the screen | [below](#steering-find-the-ends-and-the-centre) | built |
-| The cockpit's first screenshot, live from Gazebo | [below](#the-cockpit) | sim |
+| The cockpit's first screenshot, live from Gazebo | [below](#the-cockpit-the-drive-screen) | sim |
 | Debug screen and hardware panel in the new colours | [below](#the-debug-screen) | sim |
 | Car day in two days, the people, sign-offs | [below](#car-day-in-two-days) | written |
 | `car_setup.sh`: set up one computer | [Car setup](car-setup.md) | dry-run only |
@@ -87,7 +87,7 @@ Every command, with what it does: README's "Every command". The rare ones run as
 | Screen | Where | For |
 |---|---|---|
 | **Hardware panel** | a laptop, wired | the hardware at the lowest level: buttons, sensors, the steering's ends |
-| **Cockpit** (Lichtblick) | the lab or a laptop | every driving detail on one screen |
+| **Cockpit** (Lichtblick): the Drive screen | the lab or a laptop | every driving detail on one screen, and which algorithms run |
 | **Debug screen** | the lab or a laptop | what the car sees, in 3D |
 | **HUD** and **map** | in the car | speed, state, the route |
 
@@ -100,15 +100,30 @@ Every sensor from its own node, and very simple buttons. The car moves only whil
 
 Its second page, **STEERING CAL**, is [below](#steering-find-the-ends-and-the-centre).
 
-### The cockpit
+### The cockpit: the Drive screen
 
-Every driving detail on one screen, like Foxglove's nuScenes demo: both cameras, the
-status lights, the street map, the 3D view with the plan, speed and steering plots, and
-the switches. Its first screenshot, Gazebo's road world, driving to a goal 25 m ahead:
+Every driving detail on one screen (Ben, 3 Nov: "the gazeboo with nav2 selection with
+cubes and stuff all as a single screen"): both cameras, the status lights, the street
+map, the 3D view with the cubes, the plan and **each localizer**, the speed and steering
+plots, and a new **Algorithms** table: which planner, path follower and localizers this
+run uses. Live in Gazebo's test lot, 3 Nov:
 
-![The cockpit in Lichtblick](img/cockpit.png)
+![The cockpit in Lichtblick: the Algorithms table, the localizers, the cubes](img/cockpit-drive.jpg)
+
+| Panel | New on 3 Nov |
+|---|---|
+| Algorithms | planner, path follower, obstacles, the EKFs' inputs, NDT, KISS-ICP, AMCL (`/system/algorithms`) |
+| 3D | `/map`; the EKFs' poses, NDT's and AMCL's; NDT's scan |
+| Speed plot | KISS-ICP's speed and the local EKF's beside the wheels' |
+| Tabs | Localizers (NDT, KISS-ICP lights) · Swap tracker · Launch switches |
 
 Open it, already connected: [Foxglove](foxglove.md#cockpit).
+
+| Screen | 0.2 | 0.3 |
+|---|---|---|
+| **Drive** (the cockpit) | driving, Nav2, cubes, localizers, algorithms | absorbs the debug screen |
+| **Hardware** (the panel) | sensors, buttons, steering's ends | stays separate |
+| **HUD** and **map** | in the car | stay in the car |
 
 ### The debug screen
 
@@ -320,7 +335,7 @@ Every idea is kept (Ben, 1 Nov: "I do like the 23 ideas? lets keep them around")
 | **The Initial D HUD**: the arcade gauge in Carleton red and black, our own logo | in 0.2: on every screen (2 Nov) |
 | The little robot on the in-car HUD | after the Initial D HUD |
 | Calm colours | waits on Ben |
-| The cockpit's algorithm switch; one screen from the cockpit and the debug screen | idea |
+| The cockpit's algorithm switch; one screen from the cockpit and the debug screen | in 0.2: the cockpit shows which algorithms run (3 Nov); the switch and the debug screen's views for 0.3 |
 | More hardware panel pages: measurements, joystick, the car tests | idea |
 | Python speed on the Orin (the cubes to Rust if too slow) | measure on car day |
 | Brake and throttle: measure, then set | after the steering |

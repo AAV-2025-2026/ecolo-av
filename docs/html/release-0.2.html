@@ -7,7 +7,7 @@
 <!-- Generated from docs/release-0.2.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>AAV 0.2: sim-complete, car-ready</h1>
-<div class="meta">18 min read · 10 sections</div></header>
+<div class="meta">20 min read · 10 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -220,7 +220,7 @@ ticked. Where it stands on 2 November:</p>
 </tr>
 <tr>
 <td>The cockpit's first screenshot, live from Gazebo</td>
-<td><a href="#the-cockpit">below</a></td>
+<td><a href="#the-cockpit-the-drive-screen">below</a></td>
 <td>sim</td>
 </tr>
 <tr>
@@ -359,9 +359,9 @@ ticked. Where it stands on 2 November:</p>
 <td>the hardware at the lowest level: buttons, sensors, the steering's ends</td>
 </tr>
 <tr>
-<td><strong>Cockpit</strong> (Lichtblick)</td>
+<td><strong>Cockpit</strong> (Lichtblick): the Drive screen</td>
 <td>the lab or a laptop</td>
-<td>every driving detail on one screen</td>
+<td>every driving detail on one screen, and which algorithms run</td>
 </tr>
 <tr>
 <td><strong>Debug screen</strong></td>
@@ -380,12 +380,66 @@ ticked. Where it stands on 2 November:</p>
 <strong>hold</strong> Space. Live against Gazebo:</p>
 <p><img alt="The hardware panel, live against Gazebo" src="../img/hw-panel-gazebo.png" /></p>
 <p>Its second page, <strong>STEERING CAL</strong>, is <a href="#steering-find-the-ends-and-the-centre">below</a>.</p>
-<h3 id="the-cockpit">The cockpit</h3>
-<p>Every driving detail on one screen, like Foxglove's nuScenes demo: both cameras, the
-status lights, the street map, the 3D view with the plan, speed and steering plots, and
-the switches. Its first screenshot, Gazebo's road world, driving to a goal 25 m ahead:</p>
-<p><img alt="The cockpit in Lichtblick" src="../img/cockpit.png" /></p>
+<h3 id="the-cockpit-the-drive-screen">The cockpit: the Drive screen</h3>
+<p>Every driving detail on one screen (Ben, 3 Nov: "the gazeboo with nav2 selection with
+cubes and stuff all as a single screen"): both cameras, the status lights, the street
+map, the 3D view with the cubes, the plan and <strong>each localizer</strong>, the speed and steering
+plots, and a new <strong>Algorithms</strong> table: which planner, path follower and localizers this
+run uses. Live in Gazebo's test lot, 3 Nov:</p>
+<p><img alt="The cockpit in Lichtblick: the Algorithms table, the localizers, the cubes" src="../img/cockpit-drive.jpg" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Panel</th>
+<th>New on 3 Nov</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Algorithms</td>
+<td>planner, path follower, obstacles, the EKFs' inputs, NDT, KISS-ICP, AMCL (<code>/system/algorithms</code>)</td>
+</tr>
+<tr>
+<td>3D</td>
+<td><code>/map</code>; the EKFs' poses, NDT's and AMCL's; NDT's scan</td>
+</tr>
+<tr>
+<td>Speed plot</td>
+<td>KISS-ICP's speed and the local EKF's beside the wheels'</td>
+</tr>
+<tr>
+<td>Tabs</td>
+<td>Localizers (NDT, KISS-ICP lights) · Swap tracker · Launch switches</td>
+</tr>
+</tbody>
+</table></div>
 <p>Open it, already connected: <a href="foxglove.html#cockpit">Foxglove</a>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Screen</th>
+<th>0.2</th>
+<th>0.3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Drive</strong> (the cockpit)</td>
+<td>driving, Nav2, cubes, localizers, algorithms</td>
+<td>absorbs the debug screen</td>
+</tr>
+<tr>
+<td><strong>Hardware</strong> (the panel)</td>
+<td>sensors, buttons, steering's ends</td>
+<td>stays separate</td>
+</tr>
+<tr>
+<td><strong>HUD</strong> and <strong>map</strong></td>
+<td>in the car</td>
+<td>stay in the car</td>
+</tr>
+</tbody>
+</table></div>
 <h3 id="the-debug-screen">The debug screen</h3>
 <p>The lidar's cubes in 3D, where each localizer puts the car, Nav2's own cubes and the
 localization health checks. Live against Gazebo, in the new colours:</p>
@@ -869,7 +923,7 @@ Results: <a href="trials.html#diffusion-2-nov-a-model-draws-the-lattice-guards">
 </tr>
 <tr>
 <td>The cockpit's algorithm switch; one screen from the cockpit and the debug screen</td>
-<td>idea</td>
+<td>in 0.2: the cockpit shows which algorithms run (3 Nov); the switch and the debug screen's views for 0.3</td>
 </tr>
 <tr>
 <td>More hardware panel pages: measurements, joystick, the car tests</td>

@@ -39,7 +39,7 @@ Open → Open ([Your Mac](mac.md#watch-without-ros-lichtblick)).
 | **Driving** | `tools/foxglove/driving.json` | 3D view following the car: its model, the lidar's scan, the local costmap, Nav2's plan and goal, the radar and its clusters, the camera's obstacles, the stop zone. The camera preview. Speed and steering, measured against commanded. E-stop, the sensor watchdog, the output gate |
 | **Sensors health** | `tools/foxglove/sensors-health.json` | every `/diagnostics` status: the watchdog's per sensor with its **rate (Hz) and longest gap**; EKFs, twist_mux, the camera streams. Whether every sensor comes from the right source. A timeline of stops and e-stops |
 | **Map** | `tools/foxglove/map.json` | the car on a street map: the EKF's position (blue) and the raw GPS (orange); fix or no fix; the street route's status |
-| **Cockpit** | `tools/foxglove/cockpit.json` | everything on one screen ([below](#cockpit)) |
+| **Cockpit** (the Drive screen) | `tools/foxglove/cockpit.json` | everything for driving on one screen, and which algorithms run ([below](#cockpit)) |
 
 !!! note "The map needs the internet"
     The map panel loads OpenStreetMap's tiles from the web. At the car with no internet,
@@ -47,12 +47,15 @@ Open → Open ([Your Mac](mac.md#watch-without-ros-lichtblick)).
 
 ## Cockpit
 
-Every driving detail on one screen, like Foxglove's nuScenes demo (Ben, 1 Nov). For
+**The Drive screen** (Ben, 3 Nov: "the gazeboo with nav2 selection with cubes and stuff
+all as a single screen and then hardware as a seperate screen. Just the stuff we
+control."). Every driving detail on one screen, like Foxglove's nuScenes demo. For
 Gazebo, the bench, a replayed bag, and the car (watch only).
 
-![The cockpit in Lichtblick, Gazebo's road world, driving to a goal 25 m ahead](img/cockpit.png)
+![The cockpit in Lichtblick, live in Gazebo's test lot: the Algorithms table, the localizers, the cubes](img/cockpit-drive.jpg)
 
-*1 Nov, in Lichtblick: `pixi run sim world:=road foxglove:=true voxels:=true`, a goal 25 m ahead.*
+*3 Nov, in Lichtblick, live: `pixi run sim world:=test_lot foxglove:=true voxels:=true
+ndt:=true kiss_icp:=true amcl:=true`, driving to a goal 18 m ahead.*
 
 ```text
 ┌──────────────┬────────────┬──────────────────┐
@@ -60,10 +63,11 @@ Gazebo, the bench, a replayed bag, and the car (watch only).
 ├──────────────┤ (5 panels) │ (GPS and EKF)    │
 │ chase camera │            │                  │
 ├──────────────┴────────────┼──────────────────┤
-│                           │ speed plot       │
-│  3D: the car, lidar,      │ steering plot    │
-│  cubes, costmap, plan     │ tracker switch   │
-│                           │ launch switches  │
+│                           │ ALGORITHMS table │
+│  3D: the car, lidar,      │ speed plot       │
+│  cubes, costmap, /map,    │ steering plot    │
+│  plan, each localizer     │ tabs: Localizers │
+│                           │ · Tracker · Switches │
 └───────────────────────────┴──────────────────┘
 ```
 
@@ -73,10 +77,28 @@ Gazebo, the bench, a replayed bag, and the car (watch only).
 | Chase camera | Gazebo's picture from behind the car (sim only) | `/vehicle/gazebo/chase_camera/compressed` |
 | Status | e-stop, sensor watchdog, localization health (word and text), output gate, `/diagnostics` warnings | `/vehicle/status`, `/safety/...`, `/localization/health`, `/diagnostics` |
 | Map | the EKF (blue) and the raw GPS (orange) | `/localization/gps/fix`, `/sensors/gps/fix` |
-| 3D | the car, lidar scan, voxel cubes, local costmap, plan, goal, radar, stop zone | as in Driving, plus `/perception/voxels/cubes` |
-| Plots | speed and steering: asked against measured | `/control/cmd_vel`, `/vehicle/odom`, `/vehicle/steering` |
-| Tracker | swaps the path follower live | calls `/track/set_parameters` |
-| Launch switches | `planner:=`, `ndt:=`, `voxels:=`...: each needs a restart (`pixi run pick`) | the layout's own script |
+| 3D | the car, lidar scan, voxel cubes, local costmap, Nav2's `/map`, plan, goal, radar, stop zone | as in Driving, plus `/perception/voxels/cubes`, `/map` |
+| 3D: localizers | each one's pose: local EKF blue, global EKF green (arrows over the roof), NDT purple, AMCL orange (with their covariance); NDT's scan (purple dots: the scan where NDT puts the car) | `/localization/odom/local`, `.../global`, `/localization/ndt/pose`, `/localization/amcl/pose` |
+| **Algorithms** | which planner, path follower, obstacles, EKF inputs, NDT, KISS-ICP and AMCL this run uses | `/system/algorithms` ([aav_run_info](../ros/bringup/aav_run_info/README.md)) |
+| Speed plot | the wheels, the local EKF and KISS-ICP (the lidar's own speed) against the asked speed | `/vehicle/odom`, `/localization/odom/local`, `/localization/kiss_icp/odom`, `/control/cmd_vel` |
+| Steering plot | asked against measured | `/vehicle/steering` |
+| Tab **Localizers** | NDT and KISS-ICP: green OK, amber WARN, red LOST, grey off; NDT's state in words | `/localization/ndt/status`, `/localization/kiss_icp/status` |
+| Tab **Swap tracker** | swaps the path follower live (sim) | calls `/track/set_parameters` |
+| Tab **Launch switches** | `planner:=`, `ndt:=`, `voxels:=`...: each needs a restart (`pixi run pick`) | the layout's own script |
+
+!!! note "Two arrows come from scripts"
+    Lichtblick's 3D panel draws no `nav_msgs/Odometry`. Two small scripts inside the
+    layout turn the EKFs' poses into arrows, and place the scan at NDT's pose.
+    NDT's own map (a PCD file) and KISS-ICP's cloud have **no topic**: only the debug
+    screen shows them, as it reads the file itself.
+
+### Where this is heading
+
+| Screen | 0.2 (now) | 0.3 |
+|---|---|---|
+| **Drive** (this cockpit) | Gazebo's view, Nav2's goal, the cubes, the localizers, which algorithms run | absorbs the debug screen: NDT's map and match, the kept cubes |
+| **Hardware** (the [hardware panel](hud.md#the-hardware-panel)) | every sensor, simple buttons, the steering's ends | stays separate: the lowest level, wired |
+| **HUD** and **map** | in the car | stay in the car ([The car's screens](car-screens.md)) |
 
 ### Send a goal (sim, bench)
 
@@ -113,6 +135,9 @@ On the car the topic doesn't exist.
     Lichtblick also reads every layout in `~/.lichtblick-suite/layouts/` when it starts:
     `cp tools/foxglove/cockpit.json ~/.lichtblick-suite/layouts/`, then
     `open -a Lichtblick --args --defaultLayout=cockpit` loads the layout (seen 1 Nov). To connect, open this link: `open "lichtblick://open?ds=foxglove-websocket&ds.url=ws%3A%2F%2Flocalhost%3A8765"` (seen 1 Nov; it opens a second window, already connected).
+    A layout the app already has keeps its old copy (seen 3 Nov): after a change, use
+    **Layouts → Import from file**, or copy it under a new name (`drive-cockpit.json`,
+    `--defaultLayout=drive-cockpit`).
 
 ## Where each bridge listens
 
@@ -161,4 +186,5 @@ pixi run python3 tools/layout_check.py ws://192.168.1.140:8765 --data   # the ca
 | A watch-only bridge (the car's settings) | publishing refused: "Server does not support clientPublish" |
 | The layouts in the Lichtblick app | the setting names were checked against Lichtblick 1.29's own code; not yet opened in the app by a person |
 | The cockpit, 1 Nov, road world, `foxglove:=true tracker:=pure_pursuit voxels:=true` | `python3 tools/layout_check.py`: every topic served but the GPS route and the scan (`voxels:=true` replaces it) and `/localization/gps/fix` (early); `/track/set_parameters` advertised; the chase camera 10 Hz, 200 kB/s. Opened in Lichtblick, but the Mac was locked: **no screenshot**, and the tracker panel and the switch list are **untested in the app** |
+| The Drive cockpit, 3 Nov, test lot, `voxels:=true ndt:=true kiss_icp:=true amcl:=true` | `python3 tools/layout_check.py`: every topic served (only the street route, the ghost and the tracker service off, as asked); `/system/algorithms` right for the run. Seen live in Lichtblick: the Algorithms table, the KISS-ICP speed against the wheels', NDT TRACKING. The screen locked a minute later: the EKF arrows and NDT's scan (two scripts, fixed after the first try showed neither) are **untested in the app** |
 | The car | **untested** |
