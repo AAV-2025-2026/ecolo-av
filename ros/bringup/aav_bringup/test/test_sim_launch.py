@@ -109,8 +109,22 @@ def test_the_defaults_start_what_pixi_run_sim_always_has():
     # The empty world renders no camera, radar or lidar: the watchdog watches the rest.
     assert sent['watchdog.launch.py']['inputs'] == 'odom,imu,gps,local,global'
     assert nav['map'].endswith(os.path.join('maps', 'empty.yaml'))
-    assert names(actions) == {'imu_filter_madgwick', 'rviz2'}
+    assert names(actions) == {'imu_filter_madgwick', 'run_info', 'rviz2'}
     assert arguments(node(actions, 'rviz2'))[1].endswith('drive.rviz')
+
+
+def test_run_info_says_which_algorithms_the_run_uses():
+    # The cockpit's Algorithms table (aav_run_info): the launch's own choices, resolved.
+    info = parameters(node(started(SIM), 'run_info'))
+    assert (info['profile'], info['planner'], info['controller'], info['tracker']) == (
+        'sim world:=empty', 'lattice', 'mppi', 'none')
+    assert not any(info[k] for k in ('voxels', 'ndt', 'kiss_icp', 'amcl', 'lidar'))
+    info = parameters(node(started(SIM, world='road', voxels='true', tracker='lqr',
+                                   reversing='false', kiss_ekf='true'), 'run_info'))
+    assert (info['profile'], info['tracker'], info['voxels'], info['lidar']) == (
+        'sim world:=road', 'lqr', True, True)
+    # kiss_ekf:=true runs KISS-ICP too, and says so.
+    assert info['kiss_icp'] and info['kiss_ekf']
 
 
 def test_every_node_runs_on_simulated_time():

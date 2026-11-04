@@ -559,6 +559,13 @@ def launch_setup(context):
                                camera_obstacles=on('camera_obstacles'),
                                camera_guard=rear_camera,
                                reversing=reversing))
+        # What this run uses, in words, for the cockpit's Algorithms table (aav_run_info).
+        # The car has no trial localizers and no trial trackers: Nav2's own follower.
+        actions.append(Node(package='aav_run_info', executable='run_info', name='run_info',
+                            parameters=[{'profile': f'car {machine}', 'planner': planner,
+                                         'controller': vehicle.DEFAULT_CONTROLLER,
+                                         'lidar': on('lidar'), 'radar': on('radar'),
+                                         'voxels': bool(flag('voxels') and on('lidar'))}]))
     # Exactly one backend: legacy_uart_bridge with actuators:=uart, the CAN spine with can.
     uart, encoder = on('legacy_uart'), on('legacy_encoder')
     if on('spine'):
