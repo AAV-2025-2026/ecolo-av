@@ -20,15 +20,19 @@
 //! lock-to-lock check).
 //!
 //! Every colour comes from the theme (`hud_core::theme`, `theme:` in
-//! config/hw_panel.yaml), as the HUD's: the pills, the buttons, the E-STOP's red.
+//! config/hw_panel.yaml), as the HUD's: the pills, the buttons, the E-STOP's red. In
+//! the arcade style (`initial_d`) the HUD's faint car stands bottom right, right of the
+//! sensors' words, as faint as under a panel since words sit straight on the window
+//! (`hud_app::paint::faint_car`).
 
 mod calibration;
 
 use std::time::Instant;
 
-use hud_app::paint::ToColor;
+use hud_app::paint::{self, ToColor};
 use hud_core::{
     health::Health,
+    silhouette::Placement,
     theme::{Rgba, Theme, Tone},
 };
 use panel_core::{
@@ -49,6 +53,9 @@ const FONT_FILES: [&str; 4] = [
 ];
 const FONT_LOAD_SIZE: i32 = 96;
 const MARGIN: f32 = 24.0;
+/// Where the faint car's box starts, as a part of the window's width: right of the
+/// sensors' longest line.
+const CAR_FROM: f32 = 0.6;
 
 /// A page of the panel.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -302,6 +309,11 @@ impl Ui {
             t.background.rl(),
             t.background_low.rl(),
         );
+        // The arcade style's faint car: bottom right, right of the sensors' words,
+        // above the keys line.
+        let left = w * CAR_FROM;
+        let place = Placement::bottom_right(left, 0.0, w - MARGIN - left, h - 40.0);
+        paint::faint_car(d, t, place, 2.0, paint::Under::Words);
         let buttons = layout(w, f.page);
         let speed_on = matches!(f.gate, Gate::On { .. });
 

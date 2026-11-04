@@ -515,9 +515,26 @@ no glow.
 | Screen | In `initial_d` |
 |---|---|
 | HUD | the speed as an arcade gauge (white ticks, a red needle, red redline blocks), 7-segment digits, our logo, a faint car in lines behind |
-| Map | a night street map in greys; highways dark red; Carleton's campus a faint red; Nav2's plan **white**, the street route **red**; black boxes with white edges |
-| Debug screen | black 3D view, grey ground grid, the lidar's cubes teal, Nav2's cubes red wireframes; black side panel with a white edge |
-| Hardware panel | white words on black, dark grey buttons with white edges, square pills |
+| Map | a night street map in greys; highways dark red; Carleton's campus a faint red; Nav2's plan **white**, the street route **red**; black boxes with white edges; the faint car at the foot of the right panel |
+| Debug screen | black 3D view, grey ground grid, the lidar's cubes teal, Nav2's cubes red wireframes; black side panel with a white edge; the faint car at its foot |
+| Hardware panel | white words on black, dark grey buttons with white edges, square pills; the faint car bottom right |
+
+### The faint car
+
+A mid-80s hatchback in thin lines (`hud_core::silhouette`), behind every Initial D
+screen (Ben, 3 Nov: "there was an outline of the car in the background before. I
+liked that"). The other themes don't draw it.
+
+| Screen | Where it stands | What goes over it |
+|---|---|---|
+| HUD | low right, behind TOPICS and GPS | the panels |
+| Map | the foot of the right column | the TOPICS and KEYS cards |
+| Debug screen | the foot of the right side | the side's glass |
+| Hardware panel | bottom right, right of the sensors' words | nothing: drawn as faint as under a panel |
+
+One function draws it on all four: `hud_app::paint::faint_car`. The theme tests check
+that dim and red words still read on it (4.5 : 1), and that it still shows. The little
+robot is drawn after it, so it always goes in front.
 
 Only the localizers keep Catppuccin's colours (blue, green, orange, purple, yellow), so
 a picture means the same in every theme. Corners come from `Style::corner`: soft in the

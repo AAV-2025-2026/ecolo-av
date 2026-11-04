@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">64 min read · 8 sections</div></header>
+<div class="meta">65 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -1360,18 +1360,56 @@ no glow.</p>
 </tr>
 <tr>
 <td>Map</td>
-<td>a night street map in greys; highways dark red; Carleton's campus a faint red; Nav2's plan <strong>white</strong>, the street route <strong>red</strong>; black boxes with white edges</td>
+<td>a night street map in greys; highways dark red; Carleton's campus a faint red; Nav2's plan <strong>white</strong>, the street route <strong>red</strong>; black boxes with white edges; the faint car at the foot of the right panel</td>
 </tr>
 <tr>
 <td>Debug screen</td>
-<td>black 3D view, grey ground grid, the lidar's cubes teal, Nav2's cubes red wireframes; black side panel with a white edge</td>
+<td>black 3D view, grey ground grid, the lidar's cubes teal, Nav2's cubes red wireframes; black side panel with a white edge; the faint car at its foot</td>
 </tr>
 <tr>
 <td>Hardware panel</td>
-<td>white words on black, dark grey buttons with white edges, square pills</td>
+<td>white words on black, dark grey buttons with white edges, square pills; the faint car bottom right</td>
 </tr>
 </tbody>
 </table></div>
+<h3 id="the-faint-car">The faint car</h3>
+<p>A mid-80s hatchback in thin lines (<code>hud_core::silhouette</code>), behind every Initial D
+screen (Ben, 3 Nov: "there was an outline of the car in the background before. I
+liked that"). The other themes don't draw it.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Screen</th>
+<th>Where it stands</th>
+<th>What goes over it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>HUD</td>
+<td>low right, behind TOPICS and GPS</td>
+<td>the panels</td>
+</tr>
+<tr>
+<td>Map</td>
+<td>the foot of the right column</td>
+<td>the TOPICS and KEYS cards</td>
+</tr>
+<tr>
+<td>Debug screen</td>
+<td>the foot of the right side</td>
+<td>the side's glass</td>
+</tr>
+<tr>
+<td>Hardware panel</td>
+<td>bottom right, right of the sensors' words</td>
+<td>nothing: drawn as faint as under a panel</td>
+</tr>
+</tbody>
+</table></div>
+<p>One function draws it on all four: <code>hud_app::paint::faint_car</code>. The theme tests check
+that dim and red words still read on it (4.5 : 1), and that it still shows. The little
+robot is drawn after it, so it always goes in front.</p>
 <p>Only the localizers keep Catppuccin's colours (blue, green, orange, purple, yellow), so
 a picture means the same in every theme. Corners come from <code>Style::corner</code>: soft in the
 glass themes, under a third as round in Initial D.</p>

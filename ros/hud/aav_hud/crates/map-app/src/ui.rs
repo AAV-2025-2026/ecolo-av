@@ -26,7 +26,8 @@
 //!
 //! The boxes over the map are frosted glass: see-through, with the map blurred behind
 //! them when `blur` is on (frost.rs). The panel on the right is glass over the window's
-//! soft background.
+//! soft background; in the arcade style (`initial_d`) the HUD's faint car stands at the
+//! foot of that background, behind the panel's cards (hud_app::paint::faint_car).
 
 use std::{sync::Arc, time::Instant};
 
@@ -35,6 +36,7 @@ use hud_core::{
     format,
     health::Health,
     robot::{Form, Odometer, Xy, TILT},
+    silhouette::Placement,
     theme::{GridColours, Rgba, Theme},
     watchdog::Alarm,
 };
@@ -309,6 +311,7 @@ impl Ui {
         let vp = layout.map;
         let (w, h) = (d.get_screen_width(), d.get_screen_height());
         paint::backdrop(d, w, h, t);
+        faint_car(d, &layout, t);
         // Everything on the map stays on the map.
         let (sx, sy, sw, sh) = (vp.x as i32, vp.y as i32, vp.width as i32, vp.height as i32);
         {
@@ -1097,6 +1100,15 @@ fn scale_bar(p: &mut Painter<impl RaylibDraw>, view: &View, vp: &Viewport) {
 }
 
 /// The panel: the trip, the distance and time left, the speed, the topics, the keys.
+/// The arcade style's faint car, across the foot of the panel's column, behind its
+/// cards: TOPICS and the keys, where the words are smallest and the cards hide it most.
+fn faint_car(d: &mut impl RaylibDraw, layout: &Layout, t: &Theme) {
+    let r = layout.panel;
+    let m = 12.0 * layout.u;
+    let place = Placement::bottom_right(r.x + m, r.y, r.width - 2.0 * m, r.height - m);
+    paint::faint_car(d, t, place, 2.0 * layout.u, paint::Under::Panels);
+}
+
 fn panel(
     p: &mut Painter<impl RaylibDraw>,
     layout: &Layout,

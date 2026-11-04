@@ -40,7 +40,9 @@
 //!
 //! Every colour comes from the theme (`hud_core::theme`, `theme:` in
 //! config/debug_hud.yaml): the localizers', the cubes' height ramp, the panel's. The
-//! legends over the 3D view are frosted glass (`hud_app::paint`).
+//! legends over the 3D view are frosted glass (`hud_app::paint`). In the arcade style
+//! (`initial_d`) the HUD's faint car stands at the foot of the right side, under its
+//! glass (`hud_app::paint::faint_car`).
 
 use std::time::Instant;
 
@@ -60,6 +62,7 @@ use hud_app::paint::{self, ToColor};
 use crate::robot;
 use hud_core::{
     health::Health,
+    silhouette::Placement,
     theme::{Rgba, Theme, Tone},
     vehicle::VehicleStatus,
 };
@@ -497,7 +500,8 @@ impl Ui {
         r.x + width
     }
 
-    /// The right side's ground: the window's soft gradient under a panel of glass.
+    /// The right side's ground: the window's soft gradient (and the faint car) under a
+    /// panel of glass.
     fn side(&self, d: &mut RaylibDrawHandle, x0: f32, w: f32, h: f32) {
         let t = self.theme;
         let r = Rectangle::new(x0, 0.0, w - x0, h);
@@ -509,6 +513,9 @@ impl Ui {
             t.background.rl(),
             t.background_low.rl(),
         );
+        // The arcade style's faint car, at the foot of the side, under its glass.
+        let place = Placement::bottom_right(x0 + 18.0, 0.0, r.width - 36.0, h - 10.0);
+        paint::faint_car(d, t, place, 2.0, paint::Under::Panels);
         d.draw_rectangle_rec(r, t.panel.rl());
         d.draw_line_ex(
             Vector2::new(x0, 0.0),
