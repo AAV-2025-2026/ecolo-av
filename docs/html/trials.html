@@ -7,7 +7,7 @@
 <!-- Generated from docs/trials.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Trials: new path followers and localizers beside the main ones</h1>
-<div class="meta">50 min read · 16 sections</div></header>
+<div class="meta">63 min read · 17 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -98,7 +98,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#what-is-on-trial">What is on trial</a><a href="#where-a-tracker-sits">Where a tracker sits</a><a href="#fair-rules">Fair rules</a><a href="#run-it">Run it</a><a href="#results">Results</a><a href="#ndt-into-the-global-ekf-30-oct">NDT into the global EKF (30 Oct)</a><a href="#kiss-icp-into-the-local-ekf-1-nov">KISS-ICP into the local EKF (1 Nov)</a><a href="#scoring-a-localizer-fairly">Scoring a localizer fairly</a><a href="#scoring-an-odometry-fairly-kiss-icp-ekf_local">Scoring an odometry fairly (KISS-ICP, ekf_local)</a><a href="#before-a-winner-goes-on-the-car">Before a winner goes on the car</a><a href="#results-29-october">Results, 29 October</a><a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results, 29 October (afternoon): LQR rebuilt, and mpc_full</a><a href="#planners-29-oct-hybrid-lattice-and-smac2d">Planners, 29 Oct: hybrid, lattice and smac2d</a><a href="#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32">Planners, 30 Oct: reversing on, hybrid, lattice and lattice32</a><a href="#diffusion-2-nov-a-model-draws-the-lattice-guards">Diffusion, 2 Nov: a model draws, the lattice guards</a><a href="#voxels-30-oct-the-lidar-as-cubes">Voxels, 30 Oct: the lidar as cubes</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#what-is-on-trial">What is on trial</a><a href="#where-a-tracker-sits">Where a tracker sits</a><a href="#fair-rules">Fair rules</a><a href="#run-it">Run it</a><a href="#results">Results</a><a href="#ndt-into-the-global-ekf-30-oct">NDT into the global EKF (30 Oct)</a><a href="#kiss-icp-into-the-local-ekf-1-nov">KISS-ICP into the local EKF (1 Nov)</a><a href="#scoring-a-localizer-fairly">Scoring a localizer fairly</a><a href="#scoring-an-odometry-fairly-kiss-icp-ekf_local">Scoring an odometry fairly (KISS-ICP, ekf_local)</a><a href="#before-a-winner-goes-on-the-car">Before a winner goes on the car</a><a href="#results-29-october">Results, 29 October</a><a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results, 29 October (afternoon): LQR rebuilt, and mpc_full</a><a href="#planners-29-oct-hybrid-lattice-and-smac2d">Planners, 29 Oct: hybrid, lattice and smac2d</a><a href="#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32">Planners, 30 Oct: reversing on, hybrid, lattice and lattice32</a><a href="#diffusion-2-nov-a-model-draws-the-lattice-guards">Diffusion, 2 Nov: a model draws, the lattice guards</a><a href="#voxels-30-oct-the-lidar-as-cubes">Voxels, 30 Oct: the lidar as cubes</a><a href="#3-nov-everything-for-02">3 Nov: everything, for 0.2</a></nav>
 <div class="lead"><p>Ben, 29 Oct: "We want to make other nodes or plugins that we can test and then replace
 the main ones if they work." Each trial runs <strong>beside</strong> today's default, chosen at launch,
 and is <strong>scored on the same routes</strong>. It becomes the default only once it wins.</p>
@@ -120,6 +120,7 @@ and is <strong>scored on the same routes</strong>. It becomes the default only o
 <li><strong>KISS-ICP</strong> (<code>aav_kiss_icp</code>, stock, MIT): lidar odometry, scored against <code>ekf_local</code>, never in an EKF yet. <code>kiss_icp:=true</code>. 30 Oct, one run: <strong>0.04 m per 100 m</strong> over the lot tour, against ekf_local's 0.33; about 1 ms a scan; once the ground was cut out. <a href="#30-oct-kiss-icp-beside-ekf_local-one-run-mppi-the-lot-tour">Results</a>. Design: <code>docs/designs/2026-10-30_kiss-icp.md</code>.</li>
 <li><strong>KISS-ICP into the local EKF</strong> (<code>kiss_ekf:=true</code>), 1 Nov: its twist beside the wheels and IMU. Gazebo, 5 runs: <strong>no clear win yet</strong> (ekf_local 0.30-1.27 m per 100 m with it, 0.44-1.91 without; the spread is the Mac's load). Its covariance is now measured. <a href="#kiss-icp-into-the-local-ekf-1-nov">Results</a>.</li>
 <li><strong>The diffusion planner</strong> (<code>planner:=diffusion</code>, <code>aav_diffusion_planner</code>), 2 Nov: a model draws 16 paths, a guard checks them, the lattice's path if none passes or it's late. Gazebo, 2 runs: <strong>every leg</strong>, 178 and 182 s a tour (the lattice 186 and 188 s); <strong>63 % of plans from the model</strong>, 37 % the lattice's (17 % late, 20 % no sample passed). <a href="#diffusion-2-nov-a-model-draws-the-lattice-guards">Results</a>.</li>
+<li><strong>3 Nov, everything for 0.2</strong> (Gazebo, 3 runs each): every switch drives a leg; diffusion every leg, <strong>73 %</strong> of plans from the model; NDT into the EKF <strong>17 → 1.8 cm</strong>, every leg; voxels slower, and once drove through the post. <strong>No default changed.</strong> <a href="#3-nov-everything-for-02">Results</a>.</li>
 <li>The design: <code>docs/designs/2026-10-29_trials.md</code>.</li>
 </ul>
 </blockquote></div>
@@ -1823,6 +1824,615 @@ most), <strong>1,067-1,378</strong> on the lot tour (walls, the building, parked
   (<code>--rear-obstacle</code>), <code>--plan-around</code>, and the car itself.</li>
 <li><strong>Next</strong>: Nav2's 3D <code>VoxelLayer</code> on the same cubes, which would keep a low box near
   the car marked (the 2D layer clears it, as the scan does).</li>
+</ul>
+</section>
+<section class="card"><h2 id="3-nov-everything-for-02">3 Nov: everything, for 0.2</h2>
+<p>Ben, 3 Nov: "I would like to see diffusion tested in simulation. Actually everything."
+Gazebo on Ben's Mac (M4 Max, 16 cores), headless, one Gazebo at a time. The load beside
+each result is <code>uptime</code>'s 1-minute load at its start (other helpers were building).
+Runs: <code>log/sim-all/</code> in the <code>sim-all</code> worktree (not in git).</p>
+<blockquote>
+<p><strong>The short version</strong></p>
+<ul>
+<li><code>sim-check</code> <strong>9 of 9</strong>, <code>bench-check</code> <strong>11 of 11</strong>.</li>
+<li><strong>Every switch starts and drives a leg</strong>: 23 of 23 on the lot (two needed a second try, on a busy Mac), 7 more in <code>sim-check</code>.</li>
+<li>
+<p><strong>Diffusion against the lattice</strong>, 3 runs each: every leg (12 of 12, and 12 of 12);
+  <strong>73 % of plans from the model</strong> (2 Nov: 63 %); the U-turn 52 s against 56 s.
+  One slow home leg (149 s) makes its tour time spread wide. Still a trial.</p>
+</li>
+<li>
+<p><strong>NDT into the global EKF</strong>: the EKF <strong>17 cm → 1.8 cm</strong> off, the car <strong>0.13 → 0.05 m</strong>
+  off its path (2 of 3 runs), every leg. A clear win, but it stays off: it needs a map file.</p>
+</li>
+<li>
+<p><strong>Voxels</strong>: every leg, but <strong>16 s slower</strong> a tour, and <strong>1 of 3 post runs drove
+  through the post</strong>. Not a winner; a bug to find first.</p>
+</li>
+<li>
+<p><code>sim-check</code>'s other runs (obstacle, rear, plan-around, ghost, lane, spine, faults) all pass;
+  <code>--lane</code> only after a fix to the check itself. <code>--drive-to-point</code>: 1 of 9 drives ended
+  0.61 m past B by its own EKF (limit 0.5), 0.29-0.44 m by the truth.</p>
+</li>
+<li>
+<p><strong>No default changed.</strong> <a href="#the-defaults-what-to-do">Why</a>.</p>
+</li>
+</ul>
+</blockquote>
+<h3 id="every-switch-one-leg">Every switch, one leg</h3>
+<p>The first leg of the lot tour (a left turn, 22 m): <code>measure controllers --tours lot --legs 1</code>,
+with the switch. MPPI unless the switch is a follower; reversing on unless forward only.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Switch</th>
+<th>Started?</th>
+<th>Leg finished?</th>
+<th>Time, off the path</th>
+<th>Load</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>planner:=lattice</code> (default)</td>
+<td>✅</td>
+<td>✅</td>
+<td>26 s, 0.17 m</td>
+<td>6-24</td>
+<td></td>
+</tr>
+<tr>
+<td><code>planner:=hybrid</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>29 s, 0.09 m</td>
+<td>6-24</td>
+<td>reversing on</td>
+</tr>
+<tr>
+<td><code>planner:=hybrid reversing:=false</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>29 s, 0.14 m</td>
+<td>24</td>
+<td>the car's forward-only pick</td>
+</tr>
+<tr>
+<td><code>planner:=lattice lattice_headings:=32</code></td>
+<td>✅</td>
+<td>✅ (2nd try)</td>
+<td>26 s, 0.11 m</td>
+<td>10</td>
+<td>1st try, load 24: the sensor watchdog stopped Nav2 (odom and IMU stale 0.9 s)</td>
+</tr>
+<tr>
+<td><code>planner:=smac2d</code></td>
+<td>✅ (2nd try)</td>
+<td>✅</td>
+<td>27 s, 0.10 m</td>
+<td>14</td>
+<td>1st try, load 24: never came up (no <code>map</code> frame: navsat_transform got no fix)</td>
+</tr>
+<tr>
+<td><code>planner:=navfn</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>28 s, 0.16 m</td>
+<td>6-24</td>
+<td>first time in Gazebo; its tightest turn 128 m (it ignores the turning circle)</td>
+</tr>
+<tr>
+<td><code>planner:=theta_star</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>29 s, 0.18 m</td>
+<td>6-24</td>
+<td>first time in Gazebo; tightest turn 5.1 m</td>
+</tr>
+<tr>
+<td><code>planner:=diffusion</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>30 s, 0.08 m</td>
+<td>6-24</td>
+<td>6 of 28 plans from the model: the Mac was busy (model and guard 180 ms)</td>
+</tr>
+<tr>
+<td><code>planner:=diffusion</code>, no model file</td>
+<td>✅</td>
+<td>✅</td>
+<td>27 s, 0.26 m</td>
+<td>6-24</td>
+<td>25 of 25 plans the lattice's: the guard's fallback works</td>
+</tr>
+<tr>
+<td><code>controller:=mppi</code> (default)</td>
+<td>✅</td>
+<td>✅</td>
+<td>26 s, 0.17 m</td>
+<td>6-24</td>
+<td></td>
+</tr>
+<tr>
+<td><code>controller:=rpp</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>26 s, 0.09 m</td>
+<td>21</td>
+<td></td>
+</tr>
+<tr>
+<td><code>tracker:=pure_pursuit</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>25 s, 0.14 m</td>
+<td>17-27</td>
+<td>forward only, as all trackers</td>
+</tr>
+<tr>
+<td><code>tracker:=stanley</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>24 s, 0.13 m</td>
+<td>17-27</td>
+<td></td>
+</tr>
+<tr>
+<td><code>tracker:=lqr</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>23 s, 0.11 m</td>
+<td>17-27</td>
+<td></td>
+</tr>
+<tr>
+<td><code>tracker:=mpc</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>23 s, 0.11 m</td>
+<td>17-27</td>
+<td></td>
+</tr>
+<tr>
+<td><code>tracker:=mpc_full</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>25 s, 0.18 m</td>
+<td>17-27</td>
+<td></td>
+</tr>
+<tr>
+<td><code>amcl:=true</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>27 s, 0.17 m</td>
+<td>27</td>
+<td>AMCL 0.09 m off (worst 0.14)</td>
+</tr>
+<tr>
+<td><code>ndt:=true</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>27 s, 0.10 m</td>
+<td>25</td>
+<td>NDT 1.1 cm off (worst 2 cm)</td>
+</tr>
+<tr>
+<td><code>ndt_ekf:=true</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>26 s, 0.03 m</td>
+<td>16</td>
+<td>the EKF 3 cm off at worst</td>
+</tr>
+<tr>
+<td><code>kiss_icp:=true</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>27 s, 0.14 m</td>
+<td>11</td>
+<td>KISS-ICP 0.13 m per 100 m, ekf_local 0.30</td>
+</tr>
+<tr>
+<td><code>kiss_ekf:=true</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>28 s, 0.16 m</td>
+<td>10</td>
+<td>KISS-ICP 0.30, ekf_local 1.22 m per 100 m (one short leg: no ranking)</td>
+</tr>
+<tr>
+<td><code>voxels:=true</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>26 s, 0.17 m</td>
+<td>10</td>
+<td>6.2 ms a cloud, 669 cubes</td>
+</tr>
+<tr>
+<td><code>sim_speed:=3</code></td>
+<td>✅</td>
+<td>✅</td>
+<td>28 s, 0.14 m</td>
+<td>13</td>
+<td>the left turn never gets fast</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>sim-check</code> with a switch (the road world: start-up, contract, sensors, a 6.5 m drive, the EKF):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Switch</th>
+<th>Checks passed</th>
+<th>Notes</th>
+<th>Load</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>(none)</td>
+<td>9 of 9</td>
+<td>the EKF 0.15 m off</td>
+<td>28</td>
+</tr>
+<tr>
+<td><code>speed_loop:=lqi</code></td>
+<td>9 of 9</td>
+<td>drove 5.82 m of 6.5</td>
+<td>15</td>
+</tr>
+<tr>
+<td><code>speed_loop:=smooth</code></td>
+<td>9 of 9</td>
+<td>drove 5.93 m</td>
+<td>11</td>
+</tr>
+<tr>
+<td><code>lidar:=false</code></td>
+<td>7 of 7</td>
+<td></td>
+<td>11</td>
+</tr>
+<tr>
+<td><code>voxels:=true</code></td>
+<td>9 of 9</td>
+<td>6.1 ms a cloud, 6 cubes</td>
+<td>9</td>
+</tr>
+<tr>
+<td><code>kiss_ekf:=true</code></td>
+<td>10 of 10</td>
+<td>KISS-ICP 10 Hz, ekf_local 30 Hz</td>
+<td>9</td>
+</tr>
+<tr>
+<td><code>--lidar-obstacle</code> (the flat scan)</td>
+<td>12 of 12</td>
+<td>stopped <strong>0.16 m</strong> before the post</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>--lidar-obstacle --voxels</code></td>
+<td>12 of 13, then 13 of 13 twice</td>
+<td><strong>run 1: drove 1.30 m into the post</strong> (the stop zone fired, too late); runs 2-3: stopped 0.25 and 0.29 m before it</td>
+<td>9</td>
+</tr>
+<tr>
+<td><code>--obstacle</code> (the radar's box)</td>
+<td>all PASS</td>
+<td>stopped 0.23 m before it</td>
+<td>6</td>
+</tr>
+<tr>
+<td><code>--rear-obstacle</code> (backing up)</td>
+<td>all PASS</td>
+<td>stopped 0.78 m before the post behind</td>
+<td>7</td>
+</tr>
+<tr>
+<td><code>--plan-around</code></td>
+<td>all PASS</td>
+<td>round the box, 2.70 m clear</td>
+<td>5</td>
+</tr>
+<tr>
+<td><code>--ghost</code></td>
+<td>all PASS</td>
+<td>stood still 0.51 m before it</td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>--lane</code></td>
+<td>1 FAIL, then all PASS</td>
+<td>the FAIL was the check's own (it asked for stop_hold, which needs Nav2): fixed</td>
+<td>8</td>
+</tr>
+<tr>
+<td><code>--spine</code></td>
+<td>all PASS</td>
+<td>full brake 202-205 ms after the commands stop; e-stops 2 ms</td>
+<td>9</td>
+</tr>
+<tr>
+<td><code>--faults</code></td>
+<td>25 of 25</td>
+<td>each of the 14 faults stopped the car in 1.4-7.9 s</td>
+<td>4</td>
+</tr>
+<tr>
+<td><code>--drive-to-point</code></td>
+<td>16 of 17, twice</td>
+<td>every stop within 0.46 m of B by the truth; 1 drive a run ended 0.61 m past B by its EKF (the limit 0.5)</td>
+<td>4-14</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="diffusion-against-the-lattice-3-runs-each">Diffusion against the lattice (3 runs each)</h3>
+<p>The whole lot tour, reversing on, MPPI, <code>--planners lattice</code> and <code>--planners diffusion</code>,
+taken in turns (lattice, diffusion, NDT-EKF, voxels; three rounds) so the Mac's load
+falls on each alike. Load 7-12 throughout.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">lattice (today's default)</th>
+<th style="text-align: right;">diffusion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Legs finished</td>
+<td style="text-align: right;">12 of 12</td>
+<td style="text-align: right;"><strong>12 of 12</strong></td>
+</tr>
+<tr>
+<td>Tour time, each run (s)</td>
+<td style="text-align: right;">184, 183, 184</td>
+<td style="text-align: right;">270, 177, 179</td>
+</tr>
+<tr>
+<td>Tour time, mean ± spread (s)</td>
+<td style="text-align: right;"><strong>183.4 ± 0.7</strong></td>
+<td style="text-align: right;">208.5 ± 53.4</td>
+</tr>
+<tr>
+<td>Without the one bad leg (median)</td>
+<td style="text-align: right;">184</td>
+<td style="text-align: right;"><strong>179</strong></td>
+</tr>
+<tr>
+<td>Plan tighter than full lock</td>
+<td style="text-align: right;">0 m</td>
+<td style="text-align: right;">0 m</td>
+</tr>
+<tr>
+<td>Planning time, mean (the planner alone)</td>
+<td style="text-align: right;">9-12 ms</td>
+<td style="text-align: right;">126-129 ms</td>
+</tr>
+<tr>
+<td>The EKF off, mean</td>
+<td style="text-align: right;">0.17 m</td>
+<td style="text-align: right;">0.17 m</td>
+</tr>
+</tbody>
+</table></div>
+<p>The lattice's first run is left out: Gazebo's clock froze for up to 7 s on its first leg
+(the controller's loop "inf Hz", every sensor stale at once), so no leg could finish.
+A fourth lattice run took its place.</p>
+<p><strong>The guard, plan by plan:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">Run 1</th>
+<th style="text-align: right;">Run 2</th>
+<th style="text-align: right;">Run 3</th>
+<th style="text-align: right;">All</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plans</td>
+<td style="text-align: right;">149</td>
+<td style="text-align: right;">134</td>
+<td style="text-align: right;">135</td>
+<td style="text-align: right;">418</td>
+</tr>
+<tr>
+<td><strong>From the model</strong></td>
+<td style="text-align: right;">95 (64 %)</td>
+<td style="text-align: right;">105 (78 %)</td>
+<td style="text-align: right;">105 (78 %)</td>
+<td style="text-align: right;"><strong>305 (73 %)</strong></td>
+</tr>
+<tr>
+<td>The lattice's: <strong>late</strong> (over 150 ms)</td>
+<td style="text-align: right;">20</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">35 (8 %)</td>
+</tr>
+<tr>
+<td>The lattice's: <strong>refused</strong> (no sample passed)</td>
+<td style="text-align: right;">31</td>
+<td style="text-align: right;">23</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">73 (17 %)</td>
+</tr>
+<tr>
+<td>The lattice's: no model answer</td>
+<td style="text-align: right;">3</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">5 (1 %)</td>
+</tr>
+<tr>
+<td>Model and guard, mean / worst (ms)</td>
+<td style="text-align: right;">126 / 186</td>
+<td style="text-align: right;">119 / 163</td>
+<td style="text-align: right;">119 / 173</td>
+<td style="text-align: right;">121</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The U-turn ("turn back", reversing):</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">lattice</th>
+<th style="text-align: right;">diffusion</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Finished</td>
+<td style="text-align: right;">3 of 3</td>
+<td style="text-align: right;">3 of 3</td>
+</tr>
+<tr>
+<td>Time (s)</td>
+<td style="text-align: right;">57, 55, 57</td>
+<td style="text-align: right;"><strong>52, 51, 52</strong></td>
+</tr>
+<tr>
+<td>Driven (m)</td>
+<td style="text-align: right;">29.0-30.7</td>
+<td style="text-align: right;">25.5-26.6</td>
+</tr>
+<tr>
+<td>Driven in reverse (m)</td>
+<td style="text-align: right;">8.5-9.0</td>
+<td style="text-align: right;">8.2-8.7</td>
+</tr>
+<tr>
+<td>Plans from the model</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">23 of 40, 18 of 41, 23 of 41 (<strong>52 %</strong>)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What it shows:</strong></p>
+<ul>
+<li><strong>It works, and better than on 2 Nov</strong>: 73 % of plans from the model (63 % then), and
+  fewer late (8 % against 17 %), on a less busy Mac.</li>
+<li><strong>The U-turn is still its weak leg</strong>: half its plans there are the lattice's, refused
+  for turns (G5) and headings (G6). Yet that leg is 5 s quicker: a shorter path (26 m
+  against 30 m).</li>
+<li><strong>One bad home leg</strong> (run 1: 149 s, 18 m in reverse, 9 route changes) is why the mean
+  is slow and wide. Runs 2 and 3: 177 and 179 s, against the lattice's 183-184 s.</li>
+<li><strong>Not a winner</strong>: below the design's 90 %, and 10 times slower to plan. It stays a trial.</li>
+</ul>
+<h3 id="the-defaults-evidence-ndt-into-the-ekf-and-voxels-3-runs-each">The defaults' evidence: NDT into the EKF, and voxels (3 runs each)</h3>
+<p>The same rounds as above, the same tour. Off = from Gazebo's truth. The EKF's mean is
+worked out the same way for every run (<code>drive_metrics.localizer_row</code>, the whole leg).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">today's default (lattice, MPPI, the scan, the EKFs)</th>
+<th style="text-align: right;"><code>ndt_ekf:=true</code></th>
+<th style="text-align: right;"><code>voxels:=true</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Legs finished</td>
+<td style="text-align: right;">12 of 12</td>
+<td style="text-align: right;"><strong>12 of 12</strong></td>
+<td style="text-align: right;"><strong>12 of 12</strong></td>
+</tr>
+<tr>
+<td>Tour time, each run (s)</td>
+<td style="text-align: right;">184, 183, 184</td>
+<td style="text-align: right;">214, 185, 181</td>
+<td style="text-align: right;">216, 193, 191</td>
+</tr>
+<tr>
+<td>Tour time, mean ± spread (s)</td>
+<td style="text-align: right;"><strong>183.4 ± 0.7</strong></td>
+<td style="text-align: right;">193.8 ± 18.1</td>
+<td style="text-align: right;">199.9 ± 14.1</td>
+</tr>
+<tr>
+<td>The global EKF off, mean (m)</td>
+<td style="text-align: right;">0.176, 0.170, 0.177</td>
+<td style="text-align: right;"><strong>0.016, 0.015, 0.024</strong></td>
+<td style="text-align: right;">0.177, 0.165, 0.182</td>
+</tr>
+<tr>
+<td>The global EKF off, worst (m)</td>
+<td style="text-align: right;">0.48-0.60</td>
+<td style="text-align: right;"><strong>0.13-0.27</strong></td>
+<td style="text-align: right;">0.52-0.56</td>
+</tr>
+<tr>
+<td>The car off Nav2's path, mean (m)</td>
+<td style="text-align: right;">0.12-0.14</td>
+<td style="text-align: right;"><strong>0.05-0.17</strong> (0.05 in runs 2-3)</td>
+<td style="text-align: right;">0.15-0.21</td>
+</tr>
+<tr>
+<td>Stops by collision_monitor (the U-turn)</td>
+<td style="text-align: right;">1-2 a tour</td>
+<td style="text-align: right;">1 a tour</td>
+<td style="text-align: right;">1-2 a tour</td>
+</tr>
+<tr>
+<td>Its own cost</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">NDT on the Mac</td>
+<td style="text-align: right;">6.2 ms a cloud, 670-970 cubes</td>
+</tr>
+</tbody>
+</table></div>
+<p>The first round's home leg was slow for all three trials (86 s for NDT-EKF and voxels,
+149 s for diffusion, 56 s usually): MPPI backed and turned at the goal. In rounds 2-3,
+NDT-EKF matched the default's time (185 and 181 s); voxels stayed slower (193 and 191 s:
+the home leg 61-65 s).</p>
+<h3 id="the-defaults-what-to-do">The defaults: what to do</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Trial</th>
+<th>The numbers</th>
+<th>Switch the sim default?</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ndt_ekf:=true</code></td>
+<td>the EKF 10 times closer; the car 2-3 times closer to its path; every leg; time the same (rounds 2-3)</td>
+<td><strong>No, not as a plain default</strong></td>
+<td>it needs <code>maps/ndt/test_lot.pcd</code>, which isn't in git: a new laptop has none, and <code>sim.launch.py</code> stops without it. The road world (<code>sim-check</code>) has no map at all. A default that depends on a file outside git would act differently on each computer</td>
+</tr>
+<tr>
+<td><code>voxels:=true</code></td>
+<td>every leg, but 16 s slower a tour; the post test passed 2 of 3</td>
+<td><strong>No</strong></td>
+<td>not better on the tour, and one run drove through the post: that must be understood before it steers anything</td>
+</tr>
+<tr>
+<td><code>planner:=diffusion</code></td>
+<td>73 % from the model; 10 times slower to plan</td>
+<td><strong>No</strong></td>
+<td>still a trial (Ben, 3 Nov brief: no more model work today)</td>
+</tr>
+</tbody>
+</table></div>
+<p>So the sim keeps today's defaults. To drive with NDT in the EKF, pick it:
+<code>pixi run pick</code> (where am I: <code>ndt_ekf</code>), or <code>pixi run sim world:=test_lot ndt_ekf:=true</code>.
+<strong>The car keeps today's defaults</strong> too: NDT needs a recorded map of the real lot first.</p>
+<p><strong>Next</strong> (each its own trial):</p>
+<ul>
+<li><code>ndt_ekf</code> as the default of the <strong>test-lot demos</strong> (<code>pixi run demo</code>, <code>pick</code>), which
+  already need the map, with a plain message when it's missing.</li>
+<li>Find why the cubes let the car through the post once (<code>sim-check --lidar-obstacle
+  --voxels</code>, run 1 of 3: <code>log/sim-all/check-lidar-obstacle-voxels.log</code>).</li>
 </ul></section>
 <nav class="prevnext"><a class="prev" href="switches.html"><small>Previous</small>← Switches</a>
 <a class="next" href="a-to-b.html"><small>Next</small>A to B →</a></nav>

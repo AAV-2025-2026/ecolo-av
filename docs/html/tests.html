@@ -7,7 +7,7 @@
 <!-- Generated from docs/tests.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Every test we&#x27;ve talked about</h1>
-<div class="meta">23 min read · 8 sections</div></header>
+<div class="meta">24 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -133,7 +133,7 @@ in the order to run them. Each one says what it proves, how to run it, and when 
 <td>The whole car graph in Gazebo</td>
 <td><code>pixi run sim-check</code></td>
 <td>all checks PASS: sensors, a 6.5 m drive, the EKF within 0.5 m of the truth</td>
-<td>✅</td>
+<td>✅ 3 Nov: 9 of 9 (the EKF 0.15 m off); also 9 of 9 with each speed loop and <code>--voxels</code>, 10 of 10 <code>--kiss-ekf</code>, 7 of 7 <code>--no-lidar</code></td>
 </tr>
 <tr>
 <td>1.2</td>
@@ -154,14 +154,14 @@ in the order to run them. Each one says what it proves, how to run it, and when 
 <td>Stop for an obstacle</td>
 <td><code>pixi run sim-check --obstacle</code></td>
 <td>stops 0-2 m before the box; drives on when it's gone</td>
-<td>✅ at 272 kg; ⚠️ at 181 kg, unconfirmed (the Mac was overloaded)</td>
+<td>✅ at 272 kg; ⚠️ at 181 kg, unconfirmed (the Mac was overloaded); ✅ 3 Nov: 0.23 m before it</td>
 </tr>
 <tr>
 <td>1.5</td>
 <td>Lane keeping</td>
 <td><code>pixi run sim-check --lane</code></td>
 <td>back to the lane's centre within 5 cm</td>
-<td>✅ 15 Oct</td>
+<td>✅ 15 Oct; 3 Nov: within 5 cm after 5.4 s (its contract check fixed: it asked for stop_hold, which needs Nav2)</td>
 </tr>
 <tr>
 <td>1.6</td>
@@ -203,35 +203,35 @@ in the order to run them. Each one says what it proves, how to run it, and when 
 <td><strong>The lidar alone stops the car</strong></td>
 <td><code>pixi run sim-check --lidar-obstacle</code> (and <code>--plan-around</code>: Nav2 drives round a box it sees)</td>
 <td>radar off: stops 0-2 m before a person-sized post, which shows in the local costmap; drives on when it's gone</td>
-<td>✅ 15 Oct: 0.16-0.55 m before it</td>
+<td>✅ 15 Oct: 0.16-0.55 m before it; 3 Nov: 0.16 m. ❌ with <code>--voxels</code>: 1 of 3 runs drove 1.30 m into the post (2 of 3 stopped 0.25 and 0.29 m before it)</td>
 </tr>
 <tr>
 <td>1.12</td>
 <td><strong>Sensor failures on purpose</strong></td>
 <td><code>pixi run sim-check --faults</code> (<code>--no-watchdog</code>: what happens without the watchdog)</td>
 <td>each of 13 faults (GPS lost, NaN, jump; IMU stopped, frozen, NaN; wheels stopped, frozen, NaN; camera frozen; radar stopped; the watchdog hung, killed) stops the car within 6 s (frozen wheels: 10 s from when they go wrong), and says why; normal driving never trips the wheels' cross check</td>
-<td>✅ 15 Oct: all 13; 24 Oct, with the HUD's heartbeat: all 25 checks, 3 runs of 3</td>
+<td>✅ 15 Oct: all 13; 24 Oct, with the HUD's heartbeat: all 25 checks, 3 runs of 3; 3 Nov: all 25 (14 faults)</td>
 </tr>
 <tr>
 <td>1.13</td>
 <td><strong>The spine in the loop</strong></td>
 <td><code>pixi run sim-check --spine</code></td>
 <td>in Gazebo with <code>spine:=true</code>: the normal checks pass; ego's commands stopped → the spine brakes fully within 0.28 s and latches; <code>/safety/estop</code> and the hardware e-stop → brake within 0.15 s, latched until armed again; disarmed → no motion</td>
-<td>✅ 15 Oct: full brake 195-209 ms, e-stops 1-12 ms</td>
+<td>✅ 15 Oct: full brake 195-209 ms, e-stops 1-12 ms; 3 Nov: all PASS, full brake 202-205 ms, e-stops 2 ms</td>
 </tr>
 <tr>
 <td>1.14</td>
 <td><strong>Drive to a GPS point, smooth stop</strong></td>
 <td><code>pixi run sim-check --drive-to-point</code> (<a href="a-to-b.html">A to B</a>)</td>
 <td>every stop within 2 m of B by Gazebo's truth, no overshoot, braking about half <code>max_brake</code>; a cancel, the e-stop and a GPS fault stop it</td>
-<td>✅ 15 Oct: all within 0.4 m</td>
+<td>✅ 15 Oct: all within 0.4 m. ⚠️ 3 Nov, 2 runs: every stop within 0.46 m of B by the truth, but 1 of 9 drives each run ended 0.61 m past B by its own EKF (the limit 0.5 m): GPS noise, or the GPS's new position, to look at</td>
 </tr>
 <tr>
 <td>1.15</td>
 <td><strong>Ghost obstacles: a pretend person only Nav2 sees</strong></td>
 <td><code>pixi run sim-check --ghost</code> (<a href="ghost-obstacles.html">docs</a>)</td>
 <td>a ghost 15 m ahead (nothing in Gazebo): stops 0-2 m before it (the stop zone or the controller), the local costmap marks it; drives on once it's off</td>
-<td>✅ 16 Oct: 0.21 m before it, the stop zone fired (one run, radar and lidar on too)</td>
+<td>✅ 16 Oct: 0.21 m before it, the stop zone fired (one run, radar and lidar on too); 3 Nov: 0.51 m before it</td>
 </tr>
 <tr>
 <td>1.16</td>
@@ -252,14 +252,21 @@ in the order to run them. Each one says what it proves, how to run it, and when 
 <td><strong>The diffusion planner's lot tour</strong></td>
 <td><code>pixi run measure controllers --planners lattice diffusion --reversing --tours lot</code> (<a href="trials.html#diffusion-2-nov-a-model-draws-the-lattice-guards">trials</a>)</td>
 <td>every leg, as the lattice; no plan tighter than full lock; the share of plans from the model (<code>/drivers/nav/diffusion/status</code>)</td>
-<td>✅ 2 Nov, 2 runs: 8 of 8 legs, 63 % from the model</td>
+<td>✅ 2 Nov, 2 runs: 8 of 8 legs, 63 % from the model; 3 Nov, 3 runs: 12 of 12 legs, 73 % from the model, never tighter than full lock</td>
 </tr>
 <tr>
 <td>1.19</td>
 <td><strong>The diffusion planner's guard falls back</strong></td>
 <td><code>pixi run measure controllers --planners diffusion_nomodel --reversing --tours lot</code> (no model file); the guard's checks: <code>tools/test.sh</code> (<code>aav_diffusion_planner/test</code>)</td>
 <td>every plan the lattice's, every leg; each check G1-G8 refuses its bad path in the unit tests</td>
-<td>✅ 2 Nov: 156 of 156 plans the lattice's, 4 of 4 legs</td>
+<td>✅ 2 Nov: 156 of 156 plans the lattice's, 4 of 4 legs; 3 Nov (one leg): 25 of 25</td>
+</tr>
+<tr>
+<td>1.20</td>
+<td><strong>Every switch starts and drives a leg</strong></td>
+<td><code>pixi run measure controllers --tours lot --legs 1</code> with each switch (<a href="switches.html">switches</a>, <a href="trials.html#3-nov-everything-for-02">the runs</a>)</td>
+<td>each planner, follower, localizer and <code>voxels</code> starts, and the car finishes the first leg</td>
+<td>✅ 3 Nov: 23 of 23 (lattice32 and smac2d on a second try: the first, on a busy Mac, stalled)</td>
 </tr>
 </tbody>
 </table></div>
@@ -282,7 +289,7 @@ in the order to run them. Each one says what it proves, how to run it, and when 
 <td>The whole car graph, e-stops and the joystick-alive check included</td>
 <td><code>pixi run bench-check</code></td>
 <td>11 of 11</td>
-<td>✅</td>
+<td>✅ 3 Nov: 11 of 11</td>
 </tr>
 <tr>
 <td>2.2</td>
@@ -714,7 +721,7 @@ where that goes wrong.</p>
 <td>4.24</td>
 <td><strong>Stop for something behind</strong></td>
 <td>a cone 3 m behind, Nav2 told to back up past it</td>
-<td>stops before it: collision_monitor's box behind the bumper (Gazebo: 0.75 m short, <code>sim-check --rear-obstacle</code>)</td>
+<td>stops before it: collision_monitor's box behind the bumper (Gazebo: 0.75 m short, <code>sim-check --rear-obstacle</code>; 3 Nov: 0.78 m)</td>
 <td>🔧</td>
 </tr>
 <tr>
