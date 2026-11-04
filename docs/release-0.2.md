@@ -113,7 +113,7 @@ run uses. Live in Gazebo's test lot, 3 Nov:
 | Panel | New on 3 Nov |
 |---|---|
 | Algorithms | planner, path follower, obstacles, the EKFs' inputs, NDT, KISS-ICP, AMCL (`/system/algorithms`) |
-| 3D | `/map`; the EKFs' poses, NDT's and AMCL's; NDT's scan |
+| 3D | `/map`; NDT's and AMCL's poses; the EKFs' arrows and NDT's scan (scripts: not showing yet) |
 | Speed plot | KISS-ICP's speed and the local EKF's beside the wheels' |
 | Tabs | Localizers (NDT, KISS-ICP lights) · Swap tracker · Launch switches |
 

@@ -298,9 +298,11 @@ ndt:=true kiss_icp:=true amcl:=true</code>, driving to a goal 18 m ahead.</em></
 </tbody>
 </table></div>
 <div class="admonition note">
-<p class="admonition-title">Two arrows come from scripts</p>
+<p class="admonition-title">Two layers come from scripts: not yet working</p>
 <p>Lichtblick's 3D panel draws no <code>nav_msgs/Odometry</code>. Two small scripts inside the
-layout turn the EKFs' poses into arrows, and place the scan at NDT's pose.
+layout turn the EKFs' poses into arrows, and place the scan at NDT's pose. On 3 Nov
+neither showed in the app yet (<a href="#tested">Tested</a>): NDT's and AMCL's own poses draw
+without them.
 NDT's own map (a PCD file) and KISS-ICP's cloud have <strong>no topic</strong>: only the debug
 screen shows them, as it reads the file itself.</p>
 </div>
@@ -515,8 +517,8 @@ pixi run python3 tools/layout_check.py ws://192.168.1.140:8765 --data   # the ca
 <td><code>python3 tools/layout_check.py</code>: every topic served but the GPS route and the scan (<code>voxels:=true</code> replaces it) and <code>/localization/gps/fix</code> (early); <code>/track/set_parameters</code> advertised; the chase camera 10 Hz, 200 kB/s. Opened in Lichtblick, but the Mac was locked: <strong>no screenshot</strong>, and the tracker panel and the switch list are <strong>untested in the app</strong></td>
 </tr>
 <tr>
-<td>The Drive cockpit, 3 Nov, test lot, <code>voxels:=true ndt:=true kiss_icp:=true amcl:=true</code></td>
-<td><code>python3 tools/layout_check.py</code>: every topic served (only the street route, the ghost and the tracker service off, as asked); <code>/system/algorithms</code> right for the run. Seen live in Lichtblick: the Algorithms table, the KISS-ICP speed against the wheels', NDT TRACKING. The screen locked a minute later: the EKF arrows and NDT's scan (two scripts, fixed after the first try showed neither) are <strong>untested in the app</strong></td>
+<td>The Drive cockpit, 3 Nov, test lot, <code>voxels:=true ndt:=true kiss_icp:=true amcl:=true</code> (two runs)</td>
+<td><code>python3 tools/layout_check.py</code>: every topic served (only the street route, the ghost and the tracker service off, as asked); <code>/system/algorithms</code> right for the run. Seen live in Lichtblick: the Algorithms table, KISS-ICP's speed against the wheels', the lights <strong>NDT: OK</strong> and <strong>KISS-ICP: OK</strong>, NDT TRACKING. <strong>Not seen</strong>: the EKFs' arrows and NDT's scan (the two layout scripts; Lichtblick shows 6 alerts, not yet read: a person needs to open Alerts), and the frame labels still show (<code>transforms.showLabel</code> ignored)</td>
 </tr>
 <tr>
 <td>The car</td>

@@ -86,9 +86,11 @@ ndt:=true kiss_icp:=true amcl:=true`, driving to a goal 18 m ahead.*
 | Tab **Swap tracker** | swaps the path follower live (sim) | calls `/track/set_parameters` |
 | Tab **Launch switches** | `planner:=`, `ndt:=`, `voxels:=`...: each needs a restart (`pixi run pick`) | the layout's own script |
 
-!!! note "Two arrows come from scripts"
+!!! note "Two layers come from scripts: not yet working"
     Lichtblick's 3D panel draws no `nav_msgs/Odometry`. Two small scripts inside the
-    layout turn the EKFs' poses into arrows, and place the scan at NDT's pose.
+    layout turn the EKFs' poses into arrows, and place the scan at NDT's pose. On 3 Nov
+    neither showed in the app yet ([Tested](#tested)): NDT's and AMCL's own poses draw
+    without them.
     NDT's own map (a PCD file) and KISS-ICP's cloud have **no topic**: only the debug
     screen shows them, as it reads the file itself.
 
@@ -186,5 +188,5 @@ pixi run python3 tools/layout_check.py ws://192.168.1.140:8765 --data   # the ca
 | A watch-only bridge (the car's settings) | publishing refused: "Server does not support clientPublish" |
 | The layouts in the Lichtblick app | the setting names were checked against Lichtblick 1.29's own code; not yet opened in the app by a person |
 | The cockpit, 1 Nov, road world, `foxglove:=true tracker:=pure_pursuit voxels:=true` | `python3 tools/layout_check.py`: every topic served but the GPS route and the scan (`voxels:=true` replaces it) and `/localization/gps/fix` (early); `/track/set_parameters` advertised; the chase camera 10 Hz, 200 kB/s. Opened in Lichtblick, but the Mac was locked: **no screenshot**, and the tracker panel and the switch list are **untested in the app** |
-| The Drive cockpit, 3 Nov, test lot, `voxels:=true ndt:=true kiss_icp:=true amcl:=true` | `python3 tools/layout_check.py`: every topic served (only the street route, the ghost and the tracker service off, as asked); `/system/algorithms` right for the run. Seen live in Lichtblick: the Algorithms table, the KISS-ICP speed against the wheels', NDT TRACKING. The screen locked a minute later: the EKF arrows and NDT's scan (two scripts, fixed after the first try showed neither) are **untested in the app** |
+| The Drive cockpit, 3 Nov, test lot, `voxels:=true ndt:=true kiss_icp:=true amcl:=true` (two runs) | `python3 tools/layout_check.py`: every topic served (only the street route, the ghost and the tracker service off, as asked); `/system/algorithms` right for the run. Seen live in Lichtblick: the Algorithms table, KISS-ICP's speed against the wheels', the lights **NDT: OK** and **KISS-ICP: OK**, NDT TRACKING. **Not seen**: the EKFs' arrows and NDT's scan (the two layout scripts; Lichtblick shows 6 alerts, not yet read: a person needs to open Alerts), and the frame labels still show (`transforms.showLabel` ignored) |
 | The car | **untested** |
