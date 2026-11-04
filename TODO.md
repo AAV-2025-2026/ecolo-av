@@ -19,6 +19,8 @@ Ben, 3 Nov: "Tomorrow is meeting day and we want to have 0.2 fully polished and 
 | 95 | **NDT-EKF the default of the test-lot demos** (`demo`, `pick`), which already need its map | ⬜ 0.3 |
 | 89 | **The ESP32 in QEMU** on Ben's Mac (`esp tools`, `esp qemu-check`): the heartbeat brake proven before A8 | ✅ 3 Nov: **PASS** at load 17. 6 of 6 cycles (silence, frozen, bad CRC): full brake and DAC 0 in 112-119 ms, latched until a stop; uplink 50 frames a second, 0 lost; RC via ROS, RC direct and a lost RC, 6 of 6. Found and fixed: the checker crashed on a log line QEMU cut short (a busy Mac); such lines are now counted and skipped |
 | 90 | **One screen per concept** (Ben, 3 Nov: "the gazeboo with nav2 selection with cubes and stuff all as a single screen and then hardware as a seperate screen. Just the stuff we control"): **Drive** (Gazebo or the camera, Nav2 and its choices, the cubes, localization, the algorithms) and **Hardware** (only what we control: the actuators, the sensors, calibration). The debug screen's parts move into Drive; the HUD and the map stay in the car | 0.3: today's step is 87 |
+| 97 | **The 0.2 release notes, as an advertisement** (Ben, 3 Nov: "a release note like an advertisement of what is done, what is going to be done. How to use the stuff we have"): `release-notes.md`'s clean look; a short feature list; the names spelled out (NDT, MPPI, ICP...); each screen's picture, its command, what it means and how to use it (the hardware test in front of the car); the cockpit explained; what's left | 🔧 3 Nov |
+| 98 | **The faint car behind every screen** (Ben: "there was an outline of the car in the background before. I liked that"): today only the HUD draws it; the map, the debug screen and the hardware panel too, and new screenshots | 🔧 3 Nov |
 | 91 | **PR #21**: close #20, open #21 from the fork's `main`, after the full tests | ⬜ last |
 | 92 | **Ben, tonight**: the people named; the hardware lead's OK for A8 and H1; the restore test's spare SD card | ⬜ Ben |
 
@@ -78,7 +80,6 @@ Ben, 1 Nov: "I do like the 23 ideas? lets keep them around like the diffusion pa
 | 78 | **The talking model**: a vision-language model that explains, never drives | design first |
 | | **The Initial D HUD**: the arcade gauge in Carleton red and black | ✅ in 0.2, on every screen (TODO 80, 81) |
 | | **The little robot** (a tribute to WALL-E): the map's car, eyes peeking on the panel and the debug screen | ✅ 2 Nov; ⬜ the HUD's eyes, after the Initial D HUD |
-| | **Calm** theme colours from Ben's oirp-spss work | waits on Ben (campus or VPN) |
 | 73 | The cockpit's **algorithm switch**; then **merge the cockpit and the debug HUD** into one (the hardware panel stays apart: it drives) | 0.3 |
 | 71 | **The hardware panel's pages**: actuators off, measure, direct control, type in measurements, joystick, speed and distance; the car tests from the panel (72); the calibration page's open bits (70: wheel angles typed in; a pixi task for the panel on the car's network) | 0.3 |
 | 76 | **Python speed** on the Orin: measure (`timing-test`), the cubes to Rust first if they miss their budget | car day, then 0.3 |
