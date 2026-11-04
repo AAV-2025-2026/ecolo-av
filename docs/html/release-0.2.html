@@ -7,7 +7,7 @@
 <!-- Generated from docs/release-0.2.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>AAV 0.2: the guide</h1>
-<div class="meta">41 min read · 21 sections</div></header>
+<div class="meta">43 min read · 21 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -511,9 +511,9 @@ run on the car.</p>
 <td>every sensor's number, simple buttons, the steering's ends</td>
 </tr>
 <tr>
-<td><strong>Cockpit</strong> (Lichtblick)</td>
-<td>any laptop</td>
-<td>every driving detail on one screen</td>
+<td><strong>Cockpit</strong> (Lichtblick): the Drive screen</td>
+<td>the lab or a laptop</td>
+<td>every driving detail on one screen, and which algorithms run</td>
 </tr>
 </tbody>
 </table></div>
@@ -712,7 +712,38 @@ probably off. This page finds the steering actuator's two ends and its centre, t
 </table></div>
 <p>More: <a href="actuator-tests.html#find-the-steering-actuators-ends-and-centre">Actuator tests</a>.</p>
 <h3 id="the-cockpit">The cockpit</h3>
-<p><img alt="The cockpit in Lichtblick" src="../img/cockpit.png" /></p>
+<p>The <strong>Drive</strong> screen: every driving detail on one screen (Ben, 3 Nov: "the gazeboo with nav2 selection with
+cubes and stuff all as a single screen"): both cameras, the status lights, the street
+map, the 3D view with the cubes, the plan and <strong>each localizer</strong>, the speed and steering
+plots, and a new <strong>Algorithms</strong> table: which planner, path follower and localizers this
+run uses. Live in Gazebo's test lot, 3 Nov:</p>
+<p><img alt="The cockpit in Lichtblick: the Algorithms table, the localizers, the cubes" src="../img/cockpit-drive.jpg" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Panel</th>
+<th>New on 3 Nov</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Algorithms</td>
+<td>planner, path follower, obstacles, the EKFs' inputs, NDT, KISS-ICP, AMCL (<code>/system/algorithms</code>)</td>
+</tr>
+<tr>
+<td>3D</td>
+<td><code>/map</code>; NDT's and AMCL's poses; the EKFs' arrows and NDT's scan (scripts: not showing yet)</td>
+</tr>
+<tr>
+<td>Speed plot</td>
+<td>KISS-ICP's speed and the local EKF's beside the wheels'</td>
+</tr>
+<tr>
+<td>Tabs</td>
+<td>Localizers (NDT, KISS-ICP lights) · Swap tracker · Launch switches</td>
+</tr>
+</tbody>
+</table></div>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -723,23 +754,50 @@ probably off. This page finds the steering actuator's two ends and its centre, t
 <tbody>
 <tr>
 <td><strong>What it does</strong></td>
-<td>every driving detail on one screen, like Foxglove's nuScenes demo: both cameras, the status lights, the street map, the 3D view with the plan and the cubes, speed and steering plots, the path follower switch</td>
+<td>everything for driving on one screen: Gazebo's view or the car's cameras, Nav2's goal, the cubes, the localizers, which algorithms run</td>
 </tr>
 <tr>
 <td><strong>Run it</strong></td>
-<td><code>pixi run sim world:=road foxglove:=true</code>, then in Lichtblick: Foxglove WebSocket <code>ws://localhost:8765</code>, and import <code>tools/foxglove/cockpit.json</code></td>
+<td><code>pixi run sim world:=test_lot foxglove:=true</code> (add <code>voxels:=true ndt:=true kiss_icp:=true</code> to see them), then in Lichtblick: Foxglove WebSocket <code>ws://localhost:8765</code>, and import <code>tools/foxglove/cockpit.json</code></td>
 </tr>
 <tr>
 <td><strong>Tips</strong></td>
-<td>send a goal with the 3D panel's <strong>Publish</strong> tool, set to <strong>Pose</strong>. On the car it is watch only. The street map needs the internet</td>
+<td>send a goal with the 3D panel's <strong>Publish</strong> tool, set to <strong>Pose</strong>. Lichtblick keeps its old copy of a layout it already has: import under a new name. On the car it is watch only. The street map needs the internet</td>
 </tr>
 <tr>
 <td><strong>How solid</strong></td>
-<td>sim (one screenshot, 1 Nov). The path follower panel is untested in the app</td>
+<td>sim, seen live 3 Nov. Not showing yet: the EKFs' arrows and NDT's scan (two layout scripts); NDT's map and KISS-ICP's cloud have no topic yet</td>
 </tr>
 </tbody>
 </table></div>
-<p>More: <a href="foxglove.html#cockpit">Watch from a laptop</a>.</p>
+<p>More: <a href="foxglove.html#cockpit">Watch from a laptop</a>. Where it's going (0.3): one <strong>Drive</strong>
+screen that takes in the debug screen's views, and the <strong>Hardware</strong> panel apart (TODO 90):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Screen</th>
+<th>0.2</th>
+<th>0.3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Drive</strong> (the cockpit)</td>
+<td>driving, Nav2, cubes, localizers, algorithms</td>
+<td>absorbs the debug screen</td>
+</tr>
+<tr>
+<td><strong>Hardware</strong> (the panel)</td>
+<td>sensors, buttons, steering's ends</td>
+<td>stays separate</td>
+</tr>
+<tr>
+<td><strong>HUD</strong> and <strong>map</strong></td>
+<td>in the car</td>
+<td>stay in the car</td>
+</tr>
+</tbody>
+</table></div>
 <h3 id="the-colours-and-the-little-robot">The colours and the little robot</h3>
 <p>Ben, 2 Nov: "something nicer than Catppuccin". <strong>Initial D red and black</strong> is the default
 on every screen. Change it with <code>theme:</code> in the screen's yaml.</p>
@@ -1900,6 +1958,10 @@ planner (too close to its 150 ms) and the cubes (if the Orin is slow).</p>
 <tr>
 <td>Calm colours</td>
 <td>waits on Ben</td>
+</tr>
+<tr>
+<td>The cockpit's algorithm switch; one screen from the cockpit and the debug screen</td>
+<td>in 0.2: the cockpit shows which algorithms run (3 Nov); the switch and the debug screen's views for 0.3</td>
 </tr>
 <tr>
 <td>More hardware panel pages: measurements, joystick, the car tests</td>

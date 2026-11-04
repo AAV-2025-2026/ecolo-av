@@ -16,7 +16,7 @@ asks the bridge for each topic the panels show.
 | `driving.json` | Driving | 3D view following the car (model, lidar scan, local costmap, Nav2's plan and goal, radar, stop zone), the camera preview, speed and steering against commanded, e-stop, watchdog, output gate |
 | `sensors-health.json` | Sensors health | every `/diagnostics` status: each sensor's rate and longest gap, EKFs, twist_mux, camera streams; the sensor watchdog's lock and state; the sensor mux's state ("every sensor as asked"); a timeline of the watchdog stop, the output gate, "sources ok" and the e-stop |
 | `map.json` | Map | the car on a street map: the EKF's position and the raw GPS; fix or no fix; the street route's status |
-| `cockpit.json` | Cockpit | everything on one screen: the front camera and Gazebo's chase camera; e-stop, watchdog, localization health, output gate, `/diagnostics`; the street map; a big 3D view (the car, lidar scan, voxel cubes, costmap, plan and goal, radar, stop zone; click to send a goal); speed and steering plots; a Call Service panel that swaps the tracker live (sim); the launch switches |
+| `cockpit.json` | Cockpit (the Drive screen) | everything for driving on one screen: the front camera and Gazebo's chase camera; e-stop, watchdog, localization health, output gate, `/diagnostics`; the street map; a big 3D view (the car, lidar scan, voxel cubes, costmap, `/map`, plan and goal, radar, stop zone; each localizer's pose and NDT's scan; click to send a goal); the Algorithms table (`/system/algorithms`); speed (wheels, local EKF, KISS-ICP, asked) and steering plots; a tab of localizers (NDT, KISS-ICP), the tracker swap (sim) and the launch switches |
 
 Each file is the app's own JSON: `configById`, `globalVariables`, `userNodes`, `layout`.
 
@@ -30,8 +30,8 @@ Read by: the Foxglove and Lichtblick apps; `tools/layout_check.py`
 - Every topic gets through the bridge's WiFi list
   (`ros/bringup/aav_bringup/config/foxglove_bridge.yaml`, `topic_whitelist`).
 - Rename a topic in the contract, and rename it here in the same change.
-- A user script's output (`/studio_script/...`, the cockpit's launch switches) is made
-  inside the app: `layout_check.py` counts the script's `inputs` instead.
+- A user script's output (`/studio_script/...`: the cockpit's launch switches, the EKFs'
+  arrows, NDT's scan) is made inside the app: `layout_check.py` counts the script's `inputs` instead.
 
 ## Side Effects
 

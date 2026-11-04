@@ -49,6 +49,8 @@ bench's argument names:
   chase_camera:=false no chase camera: by default a camera behind and above the car
                       (aav_gazebo), for Lichtblick's cockpit layout (tools/foxglove/
                       cockpit.json): /vehicle/gazebo/chase_camera/compressed
+  run_info            always: which algorithms the run uses, from these arguments, on
+                      /system/algorithms (aav_run_info), for the cockpit's Algorithms table
   obstacle:=true      the bench's 1 m box in the lane, 15 m ahead (aav_gazebo)
   lidar:=false        no roof lidar. It's on by default (15 Oct): a simulated 16-beam
                       lidar on /sensors/lidar/points, which Nav2 reads as a 2D scan
@@ -239,6 +241,15 @@ def launch_setup(context):
         include(context, 'aav_localization', 'localization.launch.py', use_sim_time='true',
                 ndt_ekf=str(ndt_ekf).lower(), kiss_ekf=str(kiss_ekf).lower()),
     ]
+    # What this run uses, in words, for the cockpit's Algorithms table (aav_run_info).
+    actions.append(Node(package='aav_run_info', executable='run_info', name='run_info',
+                        parameters=[{'use_sim_time': True, 'profile': f'sim world:={world}',
+                                     'nav': flag['nav'], 'planner': planner,
+                                     'controller': controller, 'tracker': tracker,
+                                     'lidar': lidar, 'radar': radar,
+                                     'voxels': flag['voxels'], 'amcl': amcl, 'ndt': ndt,
+                                     'ndt_ekf': ndt_ekf, 'kiss_icp': kiss_icp,
+                                     'kiss_ekf': kiss_ekf}]))
     if radar:
         # The radar stand-in, as the bench's: few points per object, so small clusters.
         actions.append(include(context, 'aav_radar_clusters', 'radar_clusters.launch.py',

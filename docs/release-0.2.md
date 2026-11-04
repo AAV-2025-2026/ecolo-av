@@ -129,7 +129,7 @@ run on the car.
 | **Map** | the car's big screen | the route on Ottawa's streets |
 | **Debug screen** | a laptop or the lab | what the car sees, in 3D |
 | **Hardware panel** | the Orin's screen or a wired laptop | every sensor's number, simple buttons, the steering's ends |
-| **Cockpit** (Lichtblick) | any laptop | every driving detail on one screen |
+| **Cockpit** (Lichtblick): the Drive screen | the lab or a laptop | every driving detail on one screen, and which algorithms run |
 
 ### The HUD
 
@@ -212,16 +212,36 @@ More: [Actuator tests](actuator-tests.md#find-the-steering-actuators-ends-and-ce
 
 ### The cockpit
 
-![The cockpit in Lichtblick](img/cockpit.png)
+The **Drive** screen: every driving detail on one screen (Ben, 3 Nov: "the gazeboo with nav2 selection with
+cubes and stuff all as a single screen"): both cameras, the status lights, the street
+map, the 3D view with the cubes, the plan and **each localizer**, the speed and steering
+plots, and a new **Algorithms** table: which planner, path follower and localizers this
+run uses. Live in Gazebo's test lot, 3 Nov:
+
+![The cockpit in Lichtblick: the Algorithms table, the localizers, the cubes](img/cockpit-drive.jpg)
+
+| Panel | New on 3 Nov |
+|---|---|
+| Algorithms | planner, path follower, obstacles, the EKFs' inputs, NDT, KISS-ICP, AMCL (`/system/algorithms`) |
+| 3D | `/map`; NDT's and AMCL's poses; the EKFs' arrows and NDT's scan (scripts: not showing yet) |
+| Speed plot | KISS-ICP's speed and the local EKF's beside the wheels' |
+| Tabs | Localizers (NDT, KISS-ICP lights) · Swap tracker · Launch switches |
 
 | | |
 |---|---|
-| **What it does** | every driving detail on one screen, like Foxglove's nuScenes demo: both cameras, the status lights, the street map, the 3D view with the plan and the cubes, speed and steering plots, the path follower switch |
-| **Run it** | `pixi run sim world:=road foxglove:=true`, then in Lichtblick: Foxglove WebSocket `ws://localhost:8765`, and import `tools/foxglove/cockpit.json` |
-| **Tips** | send a goal with the 3D panel's **Publish** tool, set to **Pose**. On the car it is watch only. The street map needs the internet |
-| **How solid** | sim (one screenshot, 1 Nov). The path follower panel is untested in the app |
+| **What it does** | everything for driving on one screen: Gazebo's view or the car's cameras, Nav2's goal, the cubes, the localizers, which algorithms run |
+| **Run it** | `pixi run sim world:=test_lot foxglove:=true` (add `voxels:=true ndt:=true kiss_icp:=true` to see them), then in Lichtblick: Foxglove WebSocket `ws://localhost:8765`, and import `tools/foxglove/cockpit.json` |
+| **Tips** | send a goal with the 3D panel's **Publish** tool, set to **Pose**. Lichtblick keeps its old copy of a layout it already has: import under a new name. On the car it is watch only. The street map needs the internet |
+| **How solid** | sim, seen live 3 Nov. Not showing yet: the EKFs' arrows and NDT's scan (two layout scripts); NDT's map and KISS-ICP's cloud have no topic yet |
 
-More: [Watch from a laptop](foxglove.md#cockpit).
+More: [Watch from a laptop](foxglove.md#cockpit). Where it's going (0.3): one **Drive**
+screen that takes in the debug screen's views, and the **Hardware** panel apart (TODO 90):
+
+| Screen | 0.2 | 0.3 |
+|---|---|---|
+| **Drive** (the cockpit) | driving, Nav2, cubes, localizers, algorithms | absorbs the debug screen |
+| **Hardware** (the panel) | sensors, buttons, steering's ends | stays separate |
+| **HUD** and **map** | in the car | stay in the car |
 
 ### The colours and the little robot
 
@@ -655,6 +675,7 @@ Every idea is kept (Ben, 1 Nov: "I do like the 23 ideas? lets keep them around")
 | The talking model: explains, never drives | idea |
 | The little robot on the in-car HUD | idea |
 | Calm colours | waits on Ben |
+| The cockpit's algorithm switch; one screen from the cockpit and the debug screen | in 0.2: the cockpit shows which algorithms run (3 Nov); the switch and the debug screen's views for 0.3 |
 | More hardware panel pages: measurements, joystick, the car tests | idea |
 | Python speed on the Orin (the cubes to Rust if too slow) | measure on car day |
 | Brake and throttle: measure, then set | after the steering |

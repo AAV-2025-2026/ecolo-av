@@ -54,6 +54,11 @@ OPTIONAL = {
     '/perception/voxels/cubes': 'voxels:=true (the voxels trial, with the lidar)',
     '/vehicle/gazebo/chase_camera/compressed':
         "Gazebo's chase camera (a world that renders sensors; sim only)",
+    '/localization/ndt/pose': 'ndt:=true (the NDT trial: world:=test_lot, its map made)',
+    '/localization/ndt/status': 'ndt:=true (the NDT trial)',
+    '/localization/amcl/pose': 'amcl:=true (the AMCL trial), once the car has moved',
+    '/localization/kiss_icp/odom': 'kiss_icp:=true (the KISS-ICP trial, with the lidar)',
+    '/localization/kiss_icp/status': 'kiss_icp:=true (the KISS-ICP trial)',
 }
 # The services the layouts call, and the parts that serve them only when asked for.
 OPTIONAL_SERVICES = {
@@ -104,6 +109,8 @@ def shown_topics(layout):
             shown.add(topic(config['path']))
         elif kind == 'CallService':
             continue                           # a service: shown_services
+        elif kind == 'Tab':
+            continue                           # its panels are in configById too
         elif kind == 'Table':
             shown.add(topic(config['topicPath']))
         elif kind in ('Plot', 'StateTransitions'):
