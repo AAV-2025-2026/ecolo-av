@@ -2,8 +2,9 @@
 """
 Draw the pictures for docs/whats-new.md.
 
-Three diagrams (Graphviz) and five charts (matplotlib), into docs/img/whats-new-*.svg
-and *.png.
+Four diagrams (Graphviz) and seven charts (matplotlib), into docs/img/whats-new-*.svg
+and *.png. The 3 November ones (the plan, diffusion against the lattice, the defaults)
+are for docs/release-0.2.md.
 
     pixi run python3 tools/whats_new_figures.py
 
@@ -80,6 +81,19 @@ DIAGRAMS = {
   you -> qwen; qwen -> drive [label="asks yes first"]; claude -> drive; claude -> read;
   drive -> car;
 """,
+    'whats-new-plan': """
+  tonight [label="Tonight, 3 Nov\\nPR #21\\nreview: Arsh"];
+  meet [label="4 Nov meeting\\n0.2", %(new)s];
+  daya [label="Car day A\\nnothing destroyed\\nback up, steering,\\nbrake, joystick on stands"];
+  dayb [label="Car day B\\na restore proven\\nPis to 24.04,\\nthe Orin's reflash"];
+  v03 [label="0.3\\nit drove\\nDrive and Hardware screens,\\ndiffusion to 90 %%"];
+  later [label="Later\\na model builds\\nour algorithms, as trials"];
+  rankdir=TB;
+  { rank=same; tonight -> meet; }
+  { rank=same; daya -> dayb; }
+  { rank=same; v03 -> later; }
+  meet -> daya; dayb -> v03;
+""",
 }
 
 
@@ -126,6 +140,82 @@ def bars(name, title, rows, unit, note, best='low', fmt='{:g}'):
     return out
 
 
+def _panel(ax, title):
+    """Style one panel the way bars() styles its chart."""
+    ax.set_facecolor(SURFACE)
+    for side in ('top', 'right', 'bottom'):
+        ax.spines[side].set_visible(False)
+    ax.spines['left'].set_color(GRID)
+    ax.tick_params(axis='y', length=0, labelsize=10, labelcolor=INK)
+    ax.set_xticks([])
+    ax.set_title(title, loc='left', fontsize=11, color=INK, pad=8)
+
+
+def _hbars(ax, rows, unit, fmt, top=None, spread=None):
+    """Bars in one panel: rows = [(label, value, is_pick)]; spread = +- per row."""
+    labels = [r[0] for r in rows][::-1]
+    values = [r[1] for r in rows][::-1]
+    colours = [PICK if r[2] else OTHER for r in rows][::-1]
+    ax.barh(labels, values, color=colours, height=0.56, edgecolor=SURFACE, linewidth=2)
+    top = top or max(values)
+    ends = list(values)
+    if spread:
+        err = spread[::-1]
+        ax.errorbar(values, range(len(values)), xerr=err, fmt='none', ecolor=INK_2,
+                    elinewidth=1.2, capsize=3)
+        ends = [v + e for v, e in zip(values, err)]
+    for y, (v, end) in enumerate(zip(values, ends)):
+        ax.text(end + top * 0.02, y, fmt.format(v) + unit, va='center', fontsize=9.5,
+                color=INK)
+    ax.set_xlim(0, top * 1.35)
+
+
+def _save(fig, name, note):
+    fig.text(0.01, 0.01, note, fontsize=8.5, color=INK_2)
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
+    out = IMG / f'{name}.png'
+    fig.savefig(out, facecolor=SURFACE)
+    plt.close(fig)
+    return out
+
+
+def diffusion_chart():
+    """Draw diffusion against the lattice: tour time per run, the model's share of plans."""
+    fig, (left, right) = plt.subplots(1, 2, figsize=(10, 3.4), dpi=200,
+                                      gridspec_kw={'width_ratios': [1, 1]})
+    fig.patch.set_facecolor(SURFACE)
+    _panel(left, 'Lot tour time, each run  (lower is better)')
+    _hbars(left, [
+        ('lattice, run 1', 184, True), ('lattice, run 2', 183, True),
+        ('lattice, run 3', 184, True), ('diffusion, run 1', 270, False),
+        ('diffusion, run 2', 177, False), ('diffusion, run 3', 179, False),
+    ], ' s', '{:g}')
+    _panel(right, 'Plans from the model  (higher is better)')
+    _hbars(right, [('2 Nov', 63, False), ('3 Nov', 73, True)], ' %', '{:g}', top=100)
+    right.axvline(90, color=INK, linewidth=1.2, linestyle=(0, (4, 3)))
+    right.text(90, 1.45, ' the goal, 90 %', fontsize=9, color=INK, va='bottom')
+    right.set_ylim(-0.6, 1.9)
+    return _save(fig, 'whats-new-diffusion',
+                 "Gazebo's lot tour, reversing on, MPPI, 3 Nov; 3 runs each, 12 of 12 legs "
+                 'every run. Diffusion run 1: one slow home leg (149 s).')
+
+
+def defaults_chart():
+    """Draw the defaults against NDT-EKF and the cubes: tour time, the global EKF's error."""
+    fig, (left, right) = plt.subplots(1, 2, figsize=(9.6, 2.9), dpi=200)
+    fig.patch.set_facecolor(SURFACE)
+    names = ['default', 'ndt_ekf:=true', 'voxels:=true']
+    _panel(left, 'Lot tour time, mean ± spread  (lower is better)')
+    _hbars(left, list(zip(names, [183.4, 193.8, 199.9], [True, False, False])), ' s',
+           '{:g}', spread=[0.7, 18.1, 14.1])
+    _panel(right, 'Global EKF off the truth  (lower is better)')
+    _hbars(right, list(zip(names, [0.174, 0.018, 0.175], [True, False, False])), ' m',
+           '{:g}')
+    return _save(fig, 'whats-new-defaults',
+                 "Gazebo's lot tour, 3 Nov, 3 runs each, 12 of 12 legs every run. Blue: "
+                 'what runs today. NDT-EKF waits for a map in git.')
+
+
 CHARTS = [
     ('whats-new-planners', 'The lot tour, by planner, with reversing', [
         ('State Lattice (the default)', 184, True),
@@ -164,6 +254,8 @@ def main():
         print('wrote', diagram(name, body).relative_to(ROOT))
     for name, title, rows, unit, note, best in CHARTS:
         print('wrote', bars(name, title, rows, unit, note, best).relative_to(ROOT))
+    for chart in (diffusion_chart, defaults_chart):
+        print('wrote', chart().relative_to(ROOT))
     return 0
 
 
