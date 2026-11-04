@@ -7,7 +7,7 @@
 <!-- Generated from docs/release-0.2.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>AAV 0.2: the guide</h1>
-<div class="meta">44 min read · 21 sections</div></header>
+<div class="meta">52 min read · 22 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -98,7 +98,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#how-to-read-this-page">How to read this page</a><a href="#contents">Contents</a><a href="#your-first-hour">Your first hour</a><a href="#02-in-one-page">0.2 in one page</a><a href="#the-defaults">The defaults</a><a href="#the-screens">The screens</a><a href="#the-joystick-and-the-joystick-alive-check">The joystick and the joystick-alive check</a><a href="#the-rust-esp32-firmware">The Rust ESP32 firmware</a><a href="#the-state-machine">The state machine</a><a href="#localization-where-am-i">Localization: where am I?</a><a href="#why-dont-the-two-ekfs-talk">Why don&#x27;t the two EKFs talk?</a><a href="#perception-whats-around">Perception: what&#x27;s around?</a><a href="#planning-drawing-the-path">Planning: drawing the path</a><a href="#following-steering-along-the-path">Following: steering along the path</a><a href="#safety-the-layers-that-stop-the-car">Safety: the layers that stop the car</a><a href="#at-the-car">At the car</a><a href="#tools">Tools</a><a href="#which-parts-are-python-and-is-that-ok">Which parts are Python, and is that OK?</a><a href="#kept-for-03-and-later">Kept for 0.3 and later</a><a href="#how-solid-is-02">How solid is 0.2?</a><a href="#the-checks-run-for-this-page">The checks run for this page</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#how-to-read-this-page">How to read this page</a><a href="#contents">Contents</a><a href="#your-first-hour">Your first hour</a><a href="#02-in-one-page">0.2 in one page</a><a href="#the-plan">The plan</a><a href="#the-defaults">The defaults</a><a href="#the-screens">The screens</a><a href="#the-joystick-and-the-joystick-alive-check">The joystick and the joystick-alive check</a><a href="#the-rust-esp32-firmware">The Rust ESP32 firmware</a><a href="#the-state-machine">The state machine</a><a href="#localization-where-am-i">Localization: where am I?</a><a href="#why-dont-the-two-ekfs-talk">Why don&#x27;t the two EKFs talk?</a><a href="#perception-whats-around">Perception: what&#x27;s around?</a><a href="#planning-drawing-the-path">Planning: drawing the path</a><a href="#following-steering-along-the-path">Following: steering along the path</a><a href="#safety-the-layers-that-stop-the-car">Safety: the layers that stop the car</a><a href="#at-the-car">At the car</a><a href="#tools">Tools</a><a href="#which-parts-are-python-and-is-that-ok">Which parts are Python, and is that OK?</a><a href="#kept-for-03-and-later">Kept for 0.3 and later</a><a href="#how-solid-is-02">How solid is 0.2?</a><a href="#the-checks-run-for-this-page">The checks run for this page</a></nav>
 <div class="lead"><p>What each part of release 0.2 does, how to run it, and how far to trust it. It carries
 on from <a href="whats-new.html">What's new</a> (22 October to 1 November), which stays as history.</p>
 <blockquote>
@@ -109,8 +109,11 @@ on from <a href="whats-new.html">What's new</a> (22 October to 1 November), whic
 <li><strong>Safety:</strong> the joystick-alive check, and in the Rust ESP32 firmware the heartbeat brake and the state machine.</li>
 <li><strong>Car day:</strong> Day A destroys nothing; Day B upgrades, once a restore is proven.</li>
 <li><strong>Commands:</strong> 45, in groups. New here? Start at <a href="#your-first-hour">Your first hour</a>.</li>
+<li><strong>Next:</strong> the 4 Nov meeting, then car day A. <a href="#the-plan">The plan</a>.</li>
 </ul>
-</blockquote></div>
+</blockquote>
+<p><img alt="The stack: sensors, localization, perception, navigation, ego, the car" src="../img/whats-new-stack.svg" /></p>
+<p class="caption">The whole stack on one page. Blue: built from 22 October on. Grey: there before.</p></div>
 <section class="card"><h2 id="how-to-read-this-page">How to read this page</h2>
 <p>Each part has one small table:</p>
 <div class="table-wrap"><table>
@@ -181,7 +184,7 @@ on from <a href="whats-new.html">What's new</a> (22 October to 1 November), whic
 <tbody>
 <tr>
 <td>Start</td>
-<td><a href="#your-first-hour">Your first hour</a> · <a href="#02-in-one-page">0.2 in one page</a> · <a href="#the-defaults">The defaults</a></td>
+<td><a href="#your-first-hour">Your first hour</a> · <a href="#02-in-one-page">0.2 in one page</a> · <a href="#the-plan">The plan</a> · <a href="#the-defaults">The defaults</a></td>
 </tr>
 <tr>
 <td>Screens</td>
@@ -355,6 +358,8 @@ on from <a href="whats-new.html">What's new</a> (22 October to 1 November), whic
 <h3 id="when-is-02-done">When is 0.2 done?</h3>
 <p>When every box on <a href="car-day.html#ready-for-car-day-the-02-checklist">the 0.2 checklist</a> is
 ticked. Where it stood on 2 November:</p>
+<!-- 3 Nov checks: the lead fills -->
+
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -393,6 +398,52 @@ ticked. Where it stood on 2 November:</p>
 </tr>
 </tbody>
 </table></div>
+</section>
+<section class="card"><h2 id="the-plan">The plan</h2>
+<p><img alt="The plan: tonight, the meeting, car day A, car day B, 0.3, later" src="../img/whats-new-plan.svg" /></p>
+<p class="caption">From tonight to 0.3 and after. Blue: where we are.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>When</th>
+<th>What</th>
+<th>Who decides</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Tonight, 3 Nov</strong></td>
+<td>PR #21 from the fork's <code>main</code>, after the full tests (TODO 91); review by Arsh. The people named, the hardware lead's OK for A8 and H1, the restore test's spare SD card (TODO 92)</td>
+<td>Ben; Arsh reviews</td>
+</tr>
+<tr>
+<td><strong>4 Nov meeting</strong></td>
+<td>0.2: this guide, on screen</td>
+<td>the team</td>
+</tr>
+<tr>
+<td><strong>Car day A</strong> (nothing destroyed)</td>
+<td>back up every machine; our stack beside theirs; the steering's ends; the brake on stands; the Rust ESP32, if the hardware lead agrees; the joystick on stands; walking pace; measure; record all day</td>
+<td>the hardware lead for the hardware; an approver signs each step you can't undo</td>
+</tr>
+<tr>
+<td><strong>Car day B</strong> (later)</td>
+<td>a restore proven first; the Pis to Ubuntu 24.04; the Orin's reflash, once JetPack 7.2 is confirmed</td>
+<td>the hardware lead; the approver</td>
+</tr>
+<tr>
+<td><strong>0.3 = it drove</strong></td>
+<td>one screen per concept: <strong>Drive</strong> and <strong>Hardware</strong> (TODO 90); the hardware panel's pages; brake and throttle setting; diffusion to 90 % and on the Orin; Rust where the Orin's timing says so; the cubes and the post (TODO 93)</td>
+<td>the team; the hardware lead for the hardware</td>
+</tr>
+<tr>
+<td><strong>Later</strong></td>
+<td>a model builds our algorithms from the recordings, each one a trial beside the default (TODO 96)</td>
+<td>the team, after car day's data</td>
+</tr>
+</tbody>
+</table></div>
+<p>The car day steps, one by one: <a href="car-day.html#the-order">Car day, the order</a>.</p>
 </section>
 <section class="card"><h2 id="the-defaults">The defaults</h2>
 <p>What runs when you give no switch. Every switch: <a href="switches.html">Switches</a>.</p>
@@ -517,6 +568,8 @@ ticked. Where it stood on 2 November:</p>
 <p>The lattice is the quickest round the lot with reversing; Hybrid-A* keeps the U-turn when
 the car may only go forward. MPPI finished the most legs of Nav2's two. Every one of the
 23 switches started and finished a leg (3 Nov).</p>
+<p><img alt="The defaults against NDT-EKF and the cubes: tour time and the global EKF's error" src="../img/whats-new-defaults.png" /></p>
+<p class="caption">Today's defaults are the quickest; NDT-EKF is 10 times closer to the truth, but needs a map that isn't in git.</p>
 </section>
 <section class="card"><h2 id="the-screens">The screens</h2>
 <div class="table-wrap"><table>
@@ -614,6 +667,8 @@ the car may only go forward. MPPI finished the most legs of Nav2's two. Every on
 </table></div>
 <h3 id="the-debug-screen">The debug screen</h3>
 <p><img alt="The debug screen in Initial D" src="../img/debug-hud-initial-d.png" /></p>
+<p><img alt="The debug screen: cubes, localizers, Nav2's cubes and the health checks" src="../img/debug-hud-health.png" /></p>
+<p class="caption">The debug screen, 1 Nov: Nav2's cubes in red (key V), where each localizer puts the car, and the localization health checks.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -642,6 +697,8 @@ the car may only go forward. MPPI finished the most legs of Nav2's two. Every on
 </table></div>
 <h3 id="the-hardware-panel">The hardware panel</h3>
 <p><img alt="The hardware panel in Initial D" src="../img/hw-panel-initial-d.png" /></p>
+<p><img alt="The hardware panel in Gazebo" src="../img/hw-panel-gazebo.png" /></p>
+<p class="caption">The hardware panel driving Gazebo's car: every sensor's number, and the simple buttons.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -1145,6 +1202,7 @@ request older than 100 ms. Leaving always latches: the computer must re-arm.</p>
 </section>
 <section class="card"><h2 id="localization-where-am-i">Localization: where am I?</h2>
 <p><img alt="Localization: the two EKFs, NDT and KISS-ICP" src="../img/whats-new-localization.svg" /></p>
+<p class="caption">The point cloud feeds NDT and KISS-ICP (blue, trials) beside the two EKFs.</p>
 <h3 id="the-two-ekfs-the-default">The two EKFs (the default)</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -1253,6 +1311,24 @@ request older than 100 ms. Leaving always latches: the computer must re-arm.</p>
 </tbody>
 </table></div>
 <p><img alt="NDT keeps the global EKF within 2 cm" src="../img/whats-new-ndt.png" /></p>
+<p class="caption">With NDT, the global EKF stays within 2 cm, with or without the GPS.</p>
+<p><img alt="KISS-ICP drifts 8 times less than the wheels, in Gazebo" src="../img/whats-new-odometry.png" /></p>
+<p class="caption">KISS-ICP drifts 8 times less than the wheels, with no GPS (Gazebo's wheels barely slip).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>NDT</th>
+<th>ICP (KISS-ICP's idea)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><img alt="NDT: the map, its blobs, a new scan, and the match" src="../img/learn-ndt.png" /></td>
+<td><img alt="ICP: pair the points, then move to close the pairs" src="../img/learn-icp.png" /></td>
+</tr>
+</tbody>
+</table></div>
+<p class="caption">Left: NDT turns the map into blobs and slides the scan onto them. Right: ICP pairs each point with the nearest, then moves to close the pairs.</p>
 <p>More: <a href="trials.html">Trials</a>, <a href="learn-localization.html">Learn: localization</a>.</p>
 </section>
 <section class="card"><h2 id="why-dont-the-two-ekfs-talk">Why don't the two EKFs talk?</h2>
@@ -1354,6 +1430,11 @@ request older than 100 ms. Leaving always latches: the computer must re-arm.</p>
 </tbody>
 </table></div>
 <p><img alt="RF-DETR finds the stop sign twice as far away" src="../img/whats-new-detector.png" /></p>
+<p class="caption">RF-DETR Nano finds a stop sign at 20 m; YOLO11n at 10 m.</p>
+<p><img alt="The lane finder: the camera, and its bird's-eye view" src="../img/lane-finder.png" /></p>
+<p class="caption">The lane finder (OpenCV): the camera, and its bird's-eye view.</p>
+<p><img alt="The roof lidar from above: one sweep" src="../img/sim-lidar.png" /></p>
+<p class="caption">The roof lidar from above, one sweep: what the flat scan and the cubes are made from.</p>
 <p>More: <a href="perception.html">Perception</a>, <a href="camera-pipeline.html">Camera pipeline</a>.</p>
 </section>
 <section class="card"><h2 id="planning-drawing-the-path">Planning: drawing the path</h2>
@@ -1387,7 +1468,7 @@ request older than 100 ms. Leaving always latches: the computer must re-arm.</p>
 <td><strong>Diffusion</strong></td>
 <td>a small model draws 16 paths; a guard checks each; the lattice's path if none passes or it's late</td>
 <td><code>... planner:=diffusion</code></td>
-<td>every leg, 178-182 s; 63 % of plans from the model</td>
+<td>every leg; 177, 179 and 270 s; 73 % of plans from the model (3 Nov)</td>
 <td>trial; the car refuses it</td>
 </tr>
 <tr>
@@ -1402,10 +1483,16 @@ request older than 100 ms. Leaving always latches: the computer must re-arm.</p>
 <p><strong>Diffusion, the tips</strong></p>
 <ul>
 <li>Once: <code>pixi install --locked -e learn</code>, <code>pixi run diffusion data</code>, <code>pixi run diffusion train</code>.</li>
-<li>Not a winner yet: the design asks for 90 % from the model. The U-turn is its weakest leg.</li>
-<li>Model and guard take 126-145 ms of a 150 ms budget beside Gazebo on a Mac: too close.</li>
+<li>Not a winner yet: the design asks for 90 % from the model. The U-turn is its weakest leg
+  (52 % from the model there), though 5 s quicker than the lattice's.</li>
+<li>Model and guard take 119-126 ms (mean) of a 150 ms budget beside Gazebo on a Mac: too close.</li>
 </ul>
+<p><img alt="Diffusion against the lattice: tour time per run, and the model's share of plans" src="../img/whats-new-diffusion.png" /></p>
+<p class="caption">3 Nov: diffusion beat the lattice in 2 of 3 runs; one slow home leg made its first run 270 s. The model drew 73 % of the plans (2 Nov: 63 %); the goal is 90 %.</p>
 <p><img alt="The lattice is the fastest round the lot" src="../img/whats-new-planners.png" /></p>
+<p class="caption">30 Oct: the lattice drives the lot tour 29 s quicker than Hybrid-A*.</p>
+<p><img alt="The lattice's moves for our car" src="../img/lattice-primitives.png" /></p>
+<p class="caption">The lattice's moves: short arcs our car can really drive, forwards and backwards.</p>
 <p>More: <a href="switches.html#who-draws-the-route">Switches</a>, <a href="trials.html#diffusion-2-nov-a-model-draws-the-lattice-guards">Trials</a>.</p>
 </section>
 <section class="card"><h2 id="following-steering-along-the-path">Following: steering along the path</h2>
@@ -1463,6 +1550,9 @@ request older than 100 ms. Leaving always latches: the computer must re-arm.</p>
 <li>Compare them on the same routes: <code>pixi run measure controllers</code>.</li>
 </ul>
 <p><img alt="Legs finished, by path follower" src="../img/whats-new-followers.png" /></p>
+<p class="caption">29 Oct, forward only: MPPI finished the fewest, but stays the default: it reads the costmap.</p>
+<p><img alt="The lot tour with reversing" src="../img/controllers-lot-reversing.svg" /></p>
+<p class="caption">Reversing allowed: both followers make the U-turn by backing up (a three-point turn); MPPI's turn is the wider.</p>
 <p>More: <a href="controllers.html">Controllers</a>, <a href="switches.html#who-steers-along-the-path">Switches</a>.</p>
 </section>
 <section class="card"><h2 id="safety-the-layers-that-stop-the-car">Safety: the layers that stop the car</h2>
@@ -1755,49 +1845,245 @@ request older than 100 ms. Leaving always latches: the computer must re-arm.</p>
 </tr>
 </tbody>
 </table></div>
+<p><img alt="Talking to the car: Qwen on the laptop, Claude through MCP" src="../img/whats-new-language.svg" /></p>
+<p class="caption">Two ways to talk to the car: <code>pixi run talk</code> (Qwen, on the laptop, asks yes first) and Claude Code through the drive server. Both go through the drive server's hard limits.</p>
 <p>More: <a href="mcp.html">AI apps (MCP)</a>.</p>
 <h3 id="the-commands">The commands</h3>
-<p>89 commands became 45. Each group is one command with a word after it. Every one, with
-what it does: README's "Every command".</p>
+<p>89 commands became 45. Each is <code>pixi run &lt;command&gt;</code>; a family is one command and a word
+after it (<code>pixi run get models</code>). The source, with more words: README's "Every command".</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
 <th>Group</th>
-<th>Commands</th>
+<th>Command</th>
+<th>One line</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Every day</td>
-<td><code>build</code>, <code>test</code>, <code>lint</code>, <code>docs</code></td>
+<td><strong>Every day</strong></td>
+<td><code>build</code></td>
+<td>compiles our ROS packages</td>
 </tr>
 <tr>
-<td>Try it without the car</td>
-<td><code>turtle</code>, <code>sim</code>, <code>bench</code>, <code>demo</code> (<code>--debug</code>), <code>pick</code>, <code>keyboard</code>, <code>view</code>, <code>carla-car</code>, <code>drive-to-point</code>, <code>ghost</code>, <code>sim-fault</code></td>
+<td></td>
+<td><code>test</code></td>
+<td>every test and the style check, this computer only</td>
 </tr>
 <tr>
-<td>The screens</td>
-<td><code>hud</code>, <code>map</code>, <code>debug-hud</code>, <code>hw-panel</code> (each with <code>--demo</code>), <code>rviz</code>, <code>graph</code></td>
+<td></td>
+<td><code>lint</code></td>
+<td>checks our Python against ROS's style rules</td>
 </tr>
 <tr>
-<td>Check that it works</td>
-<td><code>check &lt;profile&gt;</code>, <code>bench-check</code>, <code>sim-check</code>, <code>measure &lt;what&gt;</code>, <code>ndt-map</code>, <code>diffusion</code></td>
+<td></td>
+<td><code>docs</code></td>
+<td>rebuilds the web pages and the PDFs</td>
 </tr>
 <tr>
-<td>At the car</td>
-<td><code>car &lt;machine&gt;</code>, <code>estop</code>, <code>clear &lt;estop, gate, geofence, watchdog&gt;</code>, <code>actuator-test</code>, <code>calibrate-camera</code>, <code>doctor</code></td>
+<td><strong>Try it, no car</strong></td>
+<td><code>turtle</code></td>
+<td>turtlesim plays the car</td>
 </tr>
 <tr>
-<td>Before car day</td>
-<td><code>car-day-check</code>, <code>car-day-build</code>, <code>car-kit</code>, <code>get &lt;what&gt;</code></td>
+<td></td>
+<td><code>keyboard</code></td>
+<td>drive from the keyboard: <code>--local</code> with <code>turtle</code> or <code>bench</code>, <code>--sim</code> with <code>sim</code></td>
 </tr>
 <tr>
-<td>Firmware</td>
-<td><code>pico &lt;board&gt; &lt;step&gt;</code>, <code>esp &lt;step&gt;</code></td>
+<td></td>
+<td><code>sim</code></td>
+<td>Gazebo plays the car (<code>world:=road</code>, <code>hud:=true</code>...)</td>
 </tr>
 <tr>
-<td>AI and maps</td>
-<td><code>detect</code>, <code>laptop-bench</code>, <code>talk</code>; <code>-e mcp mcp</code>, <code>-e routes router</code></td>
+<td></td>
+<td><code>demo</code></td>
+<td>Gazebo, RViz, the HUD and the map at once; <code>--debug</code> adds the debug screen</td>
+</tr>
+<tr>
+<td></td>
+<td><code>pick</code></td>
+<td>a menu of the switches: prints the command and runs it; <code>pick last</code> again</td>
+</tr>
+<tr>
+<td></td>
+<td><code>bench</code></td>
+<td>the real car's software, stand-ins for the hardware</td>
+</tr>
+<tr>
+<td></td>
+<td><code>view</code></td>
+<td>the car's model in RViz</td>
+</tr>
+<tr>
+<td></td>
+<td><code>carla-car</code></td>
+<td>CARLA plays the car: <code>host:=&lt;the CARLA computer&gt;</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>drive-to-point</code></td>
+<td>drive to one point and stop smoothly: <code>--sim --ahead 20</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>ghost</code></td>
+<td>a pretend person in Nav2's view: <code>ghost ahead 10</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>sim-fault</code></td>
+<td>make a Gazebo sensor fail: <code>sim-fault gps stop</code>, then <code>gps ok</code></td>
+</tr>
+<tr>
+<td><strong>Screens</strong> (<code>--demo</code>: no ROS)</td>
+<td><code>hud</code></td>
+<td>the in-car screen</td>
+</tr>
+<tr>
+<td></td>
+<td><code>map</code></td>
+<td>the big screen's map window</td>
+</tr>
+<tr>
+<td></td>
+<td><code>debug-hud</code></td>
+<td>the debug screen: cubes, localizers, every sensor</td>
+</tr>
+<tr>
+<td></td>
+<td><code>hw-panel</code></td>
+<td>the hardware panel: every sensor, simple buttons, hold Space to drive</td>
+</tr>
+<tr>
+<td></td>
+<td><code>rviz</code></td>
+<td>RViz with the driving layout</td>
+</tr>
+<tr>
+<td></td>
+<td><code>graph</code></td>
+<td>a live picture of the nodes and topics</td>
+</tr>
+<tr>
+<td><strong>Check it works</strong></td>
+<td><code>check</code></td>
+<td>the running graph against the contract: <code>check sim</code> (or <code>turtle</code>, <code>road</code>, <code>spine</code>, <code>car</code>, <code>replay</code>, <code>bench</code>)</td>
+</tr>
+<tr>
+<td></td>
+<td><code>bench-check</code></td>
+<td>bench mode, the whole graph tested (2 min)</td>
+</tr>
+<tr>
+<td></td>
+<td><code>sim-check</code></td>
+<td>Gazebo's road world, headless, the whole graph tested (2 min)</td>
+</tr>
+<tr>
+<td></td>
+<td><code>measure</code></td>
+<td><code>controllers</code>, <code>timing</code>, <code>stream</code>, <code>atob &lt;bag&gt;</code>, <code>bandwidth</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>diffusion</code></td>
+<td>the diffusion trial: <code>data</code>, <code>train</code>, <code>score</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>ndt-map</code></td>
+<td>NDT's map of the test lot: <code>drive</code> or <code>build</code></td>
+</tr>
+<tr>
+<td><strong>At the car</strong></td>
+<td><code>car</code></td>
+<td>the real car: <code>car orin</code> (or <code>motor_pi</code>, <code>laptop</code>, <code>all</code>)</td>
+</tr>
+<tr>
+<td></td>
+<td><code>estop</code></td>
+<td>block every driver: the car brakes</td>
+</tr>
+<tr>
+<td></td>
+<td><code>clear</code></td>
+<td>a person clears a latch: <code>estop</code>, <code>gate</code>, <code>geofence</code>, <code>watchdog</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>actuator-test</code></td>
+<td>the actuator tests, on stands and in a lot: <code>--list</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>calibrate-camera</code></td>
+<td>calibrate a streamed camera</td>
+</tr>
+<tr>
+<td></td>
+<td><code>doctor</code></td>
+<td>can this computer join the car's ROS network?</td>
+</tr>
+<tr>
+<td><strong>Before car day</strong></td>
+<td><code>car-day-check</code></td>
+<td>is this laptop ready? Until 0 missing</td>
+</tr>
+<tr>
+<td></td>
+<td><code>car-day-build</code></td>
+<td>builds what the laptop takes to the car</td>
+</tr>
+<tr>
+<td></td>
+<td><code>car-kit</code></td>
+<td>our Jazzy for the car's computers, on a USB stick</td>
+</tr>
+<tr>
+<td></td>
+<td><code>get</code></td>
+<td>downloads what git doesn't keep: <code>vendor</code>, <code>models</code>, <code>mediamtx</code>, <code>places</code>, <code>street-map</code>, <code>carla-osm</code>, <code>routes</code>, <code>all</code></td>
+</tr>
+<tr>
+<td><strong>Firmware</strong> (bench only)</td>
+<td><code>pico</code></td>
+<td>our Rust Pico 2 boards: <code>pico &lt;board&gt; &lt;tools, build or flash&gt;</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>esp</code></td>
+<td>the Rust ESP32: <code>tools</code>, <code>build</code>, <code>flash</code>, <code>qemu-tools</code>, <code>qemu-check</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>-e firmware legacy-esp32</code></td>
+<td>today's C++ ESP32 firmware (PlatformIO)</td>
+</tr>
+<tr>
+<td><strong>Perception, AI, maps</strong></td>
+<td><code>detect</code></td>
+<td>the object detector on a picture or the cameras</td>
+</tr>
+<tr>
+<td></td>
+<td><code>laptop-bench</code></td>
+<td>your laptop's detector against bench mode</td>
+</tr>
+<tr>
+<td></td>
+<td><code>talk</code></td>
+<td>tell the car what to do in plain English (turtle, sim or bench)</td>
+</tr>
+<tr>
+<td></td>
+<td><code>-e mcp mcp</code>, <code>-e mcp drive-server</code></td>
+<td>the MCP servers: read-only, and the drive tools</td>
+</tr>
+<tr>
+<td></td>
+<td><code>-e routes router</code></td>
+<td>the street router (needs <code>get routes</code>)</td>
 </tr>
 </tbody>
 </table></div>
@@ -2047,6 +2333,8 @@ planner (too close to its 150 ms) and the cubes (if the Orin is slow).</p>
 </section>
 <section class="card"><h2 id="the-checks-run-for-this-page">The checks run for this page</h2>
 <p>Run on Ben's Mac, 2 November:</p>
+<!-- 3 Nov checks: the lead fills -->
+
 <div class="table-wrap"><table>
 <thead>
 <tr>

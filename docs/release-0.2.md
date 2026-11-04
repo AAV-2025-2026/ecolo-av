@@ -9,6 +9,12 @@ on from [What's new](whats-new.md) (22 October to 1 November), which stays as hi
 > - **Safety:** the joystick-alive check, and in the Rust ESP32 firmware the heartbeat brake and the state machine.
 > - **Car day:** Day A destroys nothing; Day B upgrades, once a restore is proven.
 > - **Commands:** 45, in groups. New here? Start at [Your first hour](#your-first-hour).
+> - **Next:** the 4 Nov meeting, then car day A. [The plan](#the-plan).
+
+![The stack: sensors, localization, perception, navigation, ego, the car](img/whats-new-stack.svg)
+
+The whole stack on one page. Blue: built from 22 October on. Grey: there before.
+{: .caption }
 
 ## How to read this page
 
@@ -33,7 +39,7 @@ Each part has one small table:
 
 | Part | Sections |
 |---|---|
-| Start | [Your first hour](#your-first-hour) · [0.2 in one page](#02-in-one-page) · [The defaults](#the-defaults) |
+| Start | [Your first hour](#your-first-hour) · [0.2 in one page](#02-in-one-page) · [The plan](#the-plan) · [The defaults](#the-defaults) |
 | Screens | [HUD](#the-hud) · [Map](#the-map-window) · [Debug screen](#the-debug-screen) · [Hardware panel](#the-hardware-panel) · [Steering calibration](#steering-find-the-ends-and-the-centre) · [Cockpit](#the-cockpit) · [Colours](#the-colours-and-the-little-robot) |
 | Driving by hand | [The joystick](#the-joystick-and-the-joystick-alive-check) |
 | Firmware | [The Rust ESP32](#the-rust-esp32-firmware) · [The state machine](#the-state-machine) |
@@ -87,6 +93,8 @@ New to the team? Run these in order, on a Mac or on Linux. The setup before step
 When every box on [the 0.2 checklist](car-day.md#ready-for-car-day-the-02-checklist) is
 ticked. Where it stood on 2 November:
 
+<!-- 3 Nov checks: the lead fills -->
+
 | Check | State |
 |---|---|
 | Every test green (`pixi run test`) | ✅ 1516 tests, 0 failures (2 Nov) |
@@ -96,6 +104,24 @@ ticked. Where it stood on 2 November:
 | The first-move gaps (TODO 74) | 🔧 the joystick-alive check built, passed on the bench (2 Nov), its car test in A9b; ⬜ the throttle cap |
 | The people named | ⬜ Ben and the team |
 | The hardware lead's answers (H1, C1, `.211`, the router) | ⬜ the hardware lead |
+
+## The plan
+
+![The plan: tonight, the meeting, car day A, car day B, 0.3, later](img/whats-new-plan.svg)
+
+From tonight to 0.3 and after. Blue: where we are.
+{: .caption }
+
+| When | What | Who decides |
+|---|---|---|
+| **Tonight, 3 Nov** | PR #21 from the fork's `main`, after the full tests (TODO 91); review by Arsh. The people named, the hardware lead's OK for A8 and H1, the restore test's spare SD card (TODO 92) | Ben; Arsh reviews |
+| **4 Nov meeting** | 0.2: this guide, on screen | the team |
+| **Car day A** (nothing destroyed) | back up every machine; our stack beside theirs; the steering's ends; the brake on stands; the Rust ESP32, if the hardware lead agrees; the joystick on stands; walking pace; measure; record all day | the hardware lead for the hardware; an approver signs each step you can't undo |
+| **Car day B** (later) | a restore proven first; the Pis to Ubuntu 24.04; the Orin's reflash, once JetPack 7.2 is confirmed | the hardware lead; the approver |
+| **0.3 = it drove** | one screen per concept: **Drive** and **Hardware** (TODO 90); the hardware panel's pages; brake and throttle setting; diffusion to 90 % and on the Orin; Rust where the Orin's timing says so; the cubes and the post (TODO 93) | the team; the hardware lead for the hardware |
+| **Later** | a model builds our algorithms from the recordings, each one a trial beside the default (TODO 96) | the team, after car day's data |
+
+The car day steps, one by one: [Car day, the order](car-day.md#the-order).
 
 ## The defaults
 
@@ -125,6 +151,11 @@ What runs when you give no switch. Every switch: [Switches](switches.md).
 The lattice is the quickest round the lot with reversing; Hybrid-A* keeps the U-turn when
 the car may only go forward. MPPI finished the most legs of Nav2's two. Every one of the
 23 switches started and finished a leg (3 Nov).
+
+![The defaults against NDT-EKF and the cubes: tour time and the global EKF's error](img/whats-new-defaults.png)
+
+Today's defaults are the quickest; NDT-EKF is 10 times closer to the truth, but needs a map that isn't in git.
+{: .caption }
 
 ## The screens
 
@@ -164,6 +195,11 @@ More: [HUD](hud.md).
 
 ![The debug screen in Initial D](img/debug-hud-initial-d.png)
 
+![The debug screen: cubes, localizers, Nav2's cubes and the health checks](img/debug-hud-health.png)
+
+The debug screen, 1 Nov: Nav2's cubes in red (key V), where each localizer puts the car, and the localization health checks.
+{: .caption }
+
 | | |
 |---|---|
 | **What it does** | what the car sees, in 3D: the lidar's cubes, where each localizer puts the car (EKF, AMCL, NDT), Nav2's own cubes, the localization health checks |
@@ -174,6 +210,11 @@ More: [HUD](hud.md).
 ### The hardware panel
 
 ![The hardware panel in Initial D](img/hw-panel-initial-d.png)
+
+![The hardware panel in Gazebo](img/hw-panel-gazebo.png)
+
+The hardware panel driving Gazebo's car: every sensor's number, and the simple buttons.
+{: .caption }
 
 | | |
 |---|---|
@@ -385,6 +426,9 @@ request older than 100 ms. Leaving always latches: the computer must re-arm.
 
 ![Localization: the two EKFs, NDT and KISS-ICP](img/whats-new-localization.svg)
 
+The point cloud feeds NDT and KISS-ICP (blue, trials) beside the two EKFs.
+{: .caption }
+
 ### The two EKFs (the default)
 
 | | |
@@ -413,6 +457,21 @@ request older than 100 ms. Leaving always latches: the computer must re-arm.
 | **How solid** | trial, sim | trial, sim | trial, sim | trial, sim |
 
 ![NDT keeps the global EKF within 2 cm](img/whats-new-ndt.png)
+
+With NDT, the global EKF stays within 2 cm, with or without the GPS.
+{: .caption }
+
+![KISS-ICP drifts 8 times less than the wheels, in Gazebo](img/whats-new-odometry.png)
+
+KISS-ICP drifts 8 times less than the wheels, with no GPS (Gazebo's wheels barely slip).
+{: .caption }
+
+| NDT | ICP (KISS-ICP's idea) |
+|---|---|
+| ![NDT: the map, its blobs, a new scan, and the match](img/learn-ndt.png) | ![ICP: pair the points, then move to close the pairs](img/learn-icp.png) |
+
+Left: NDT turns the map into blobs and slides the scan onto them. Right: ICP pairs each point with the nearest, then moves to close the pairs.
+{: .caption }
 
 More: [Trials](trials.md), [Learn: localization](learn-localization.md).
 
@@ -466,6 +525,19 @@ So each fuses the raw sensors itself; that's `robot_localization`'s standard set
 
 ![RF-DETR finds the stop sign twice as far away](img/whats-new-detector.png)
 
+RF-DETR Nano finds a stop sign at 20 m; YOLO11n at 10 m.
+{: .caption }
+
+![The lane finder: the camera, and its bird's-eye view](img/lane-finder.png)
+
+The lane finder (OpenCV): the camera, and its bird's-eye view.
+{: .caption }
+
+![The roof lidar from above: one sweep](img/sim-lidar.png)
+
+The roof lidar from above, one sweep: what the flat scan and the cubes are made from.
+{: .caption }
+
 More: [Perception](perception.md), [Camera pipeline](camera-pipeline.md).
 
 ## Planning: drawing the path
@@ -476,16 +548,30 @@ A **planner** draws the path; a **path follower** steers along it.
 |---|---|---|---|---|
 | **State Lattice** (default) | joins short moves the car can really make, forwards and backwards | `pixi run sim world:=test_lot` | every leg, 184 s | sim, the default |
 | **Hybrid-A*** (forward only) | searches forward moves only | `... planner:=hybrid` | every leg, 213 s | sim, the default when forward only |
-| **Diffusion** | a small model draws 16 paths; a guard checks each; the lattice's path if none passes or it's late | `... planner:=diffusion` | every leg, 178-182 s; 63 % of plans from the model | trial; the car refuses it |
+| **Diffusion** | a small model draws 16 paths; a guard checks each; the lattice's path if none passes or it's late | `... planner:=diffusion` | every leg; 177, 179 and 270 s; 73 % of plans from the model (3 Nov) | trial; the car refuses it |
 | smac2d, navfn, theta_star | grid planners: ignore the turning circle | `... planner:=smac2d` | 2 of 4 (smac2d) | sim only; the car refuses them |
 
 **Diffusion, the tips**
 
 - Once: `pixi install --locked -e learn`, `pixi run diffusion data`, `pixi run diffusion train`.
-- Not a winner yet: the design asks for 90 % from the model. The U-turn is its weakest leg.
-- Model and guard take 126-145 ms of a 150 ms budget beside Gazebo on a Mac: too close.
+- Not a winner yet: the design asks for 90 % from the model. The U-turn is its weakest leg
+  (52 % from the model there), though 5 s quicker than the lattice's.
+- Model and guard take 119-126 ms (mean) of a 150 ms budget beside Gazebo on a Mac: too close.
+
+![Diffusion against the lattice: tour time per run, and the model's share of plans](img/whats-new-diffusion.png)
+
+3 Nov: diffusion beat the lattice in 2 of 3 runs; one slow home leg made its first run 270 s. The model drew 73 % of the plans (2 Nov: 63 %); the goal is 90 %.
+{: .caption }
 
 ![The lattice is the fastest round the lot](img/whats-new-planners.png)
+
+30 Oct: the lattice drives the lot tour 29 s quicker than Hybrid-A*.
+{: .caption }
+
+![The lattice's moves for our car](img/lattice-primitives.png)
+
+The lattice's moves: short arcs our car can really drive, forwards and backwards.
+{: .caption }
 
 More: [Switches](switches.md#who-draws-the-route), [Trials](trials.md#diffusion-2-nov-a-model-draws-the-lattice-guards).
 
@@ -505,6 +591,14 @@ More: [Switches](switches.md#who-draws-the-route), [Trials](trials.md#diffusion-
 - Compare them on the same routes: `pixi run measure controllers`.
 
 ![Legs finished, by path follower](img/whats-new-followers.png)
+
+29 Oct, forward only: MPPI finished the fewest, but stays the default: it reads the costmap.
+{: .caption }
+
+![The lot tour with reversing](img/controllers-lot-reversing.svg)
+
+Reversing allowed: both followers make the U-turn by backing up (a three-point turn); MPPI's turn is the wider.
+{: .caption }
 
 More: [Controllers](controllers.md), [Switches](switches.md#who-steers-along-the-path).
 
@@ -606,23 +700,65 @@ More: [Watch from a laptop](foxglove.md).
 | **Tips** | it sees the ROS network it was started on: the car's, if your laptop is on it |
 | **How solid** | works; `tools/tests/test_mcp_parts.py` checks it never writes |
 
+![Talking to the car: Qwen on the laptop, Claude through MCP](img/whats-new-language.svg)
+
+Two ways to talk to the car: `pixi run talk` (Qwen, on the laptop, asks yes first) and Claude Code through the drive server. Both go through the drive server's hard limits.
+{: .caption }
+
 More: [AI apps (MCP)](mcp.md).
 
 ### The commands
 
-89 commands became 45. Each group is one command with a word after it. Every one, with
-what it does: README's "Every command".
+89 commands became 45. Each is `pixi run <command>`; a family is one command and a word
+after it (`pixi run get models`). The source, with more words: README's "Every command".
 
-| Group | Commands |
-|---|---|
-| Every day | `build`, `test`, `lint`, `docs` |
-| Try it without the car | `turtle`, `sim`, `bench`, `demo` (`--debug`), `pick`, `keyboard`, `view`, `carla-car`, `drive-to-point`, `ghost`, `sim-fault` |
-| The screens | `hud`, `map`, `debug-hud`, `hw-panel` (each with `--demo`), `rviz`, `graph` |
-| Check that it works | `check <profile>`, `bench-check`, `sim-check`, `measure <what>`, `ndt-map`, `diffusion` |
-| At the car | `car <machine>`, `estop`, `clear <estop, gate, geofence, watchdog>`, `actuator-test`, `calibrate-camera`, `doctor` |
-| Before car day | `car-day-check`, `car-day-build`, `car-kit`, `get <what>` |
-| Firmware | `pico <board> <step>`, `esp <step>` |
-| AI and maps | `detect`, `laptop-bench`, `talk`; `-e mcp mcp`, `-e routes router` |
+| Group | Command | One line |
+|---|---|---|
+| **Every day** | `build` | compiles our ROS packages |
+| | `test` | every test and the style check, this computer only |
+| | `lint` | checks our Python against ROS's style rules |
+| | `docs` | rebuilds the web pages and the PDFs |
+| **Try it, no car** | `turtle` | turtlesim plays the car |
+| | `keyboard` | drive from the keyboard: `--local` with `turtle` or `bench`, `--sim` with `sim` |
+| | `sim` | Gazebo plays the car (`world:=road`, `hud:=true`...) |
+| | `demo` | Gazebo, RViz, the HUD and the map at once; `--debug` adds the debug screen |
+| | `pick` | a menu of the switches: prints the command and runs it; `pick last` again |
+| | `bench` | the real car's software, stand-ins for the hardware |
+| | `view` | the car's model in RViz |
+| | `carla-car` | CARLA plays the car: `host:=<the CARLA computer>` |
+| | `drive-to-point` | drive to one point and stop smoothly: `--sim --ahead 20` |
+| | `ghost` | a pretend person in Nav2's view: `ghost ahead 10` |
+| | `sim-fault` | make a Gazebo sensor fail: `sim-fault gps stop`, then `gps ok` |
+| **Screens** (`--demo`: no ROS) | `hud` | the in-car screen |
+| | `map` | the big screen's map window |
+| | `debug-hud` | the debug screen: cubes, localizers, every sensor |
+| | `hw-panel` | the hardware panel: every sensor, simple buttons, hold Space to drive |
+| | `rviz` | RViz with the driving layout |
+| | `graph` | a live picture of the nodes and topics |
+| **Check it works** | `check` | the running graph against the contract: `check sim` (or `turtle`, `road`, `spine`, `car`, `replay`, `bench`) |
+| | `bench-check` | bench mode, the whole graph tested (2 min) |
+| | `sim-check` | Gazebo's road world, headless, the whole graph tested (2 min) |
+| | `measure` | `controllers`, `timing`, `stream`, `atob <bag>`, `bandwidth` |
+| | `diffusion` | the diffusion trial: `data`, `train`, `score` |
+| | `ndt-map` | NDT's map of the test lot: `drive` or `build` |
+| **At the car** | `car` | the real car: `car orin` (or `motor_pi`, `laptop`, `all`) |
+| | `estop` | block every driver: the car brakes |
+| | `clear` | a person clears a latch: `estop`, `gate`, `geofence`, `watchdog` |
+| | `actuator-test` | the actuator tests, on stands and in a lot: `--list` |
+| | `calibrate-camera` | calibrate a streamed camera |
+| | `doctor` | can this computer join the car's ROS network? |
+| **Before car day** | `car-day-check` | is this laptop ready? Until 0 missing |
+| | `car-day-build` | builds what the laptop takes to the car |
+| | `car-kit` | our Jazzy for the car's computers, on a USB stick |
+| | `get` | downloads what git doesn't keep: `vendor`, `models`, `mediamtx`, `places`, `street-map`, `carla-osm`, `routes`, `all` |
+| **Firmware** (bench only) | `pico` | our Rust Pico 2 boards: `pico <board> <tools, build or flash>` |
+| | `esp` | the Rust ESP32: `tools`, `build`, `flash`, `qemu-tools`, `qemu-check` |
+| | `-e firmware legacy-esp32` | today's C++ ESP32 firmware (PlatformIO) |
+| **Perception, AI, maps** | `detect` | the object detector on a picture or the cameras |
+| | `laptop-bench` | your laptop's detector against bench mode |
+| | `talk` | tell the car what to do in plain English (turtle, sim or bench) |
+| | `-e mcp mcp`, `-e mcp drive-server` | the MCP servers: read-only, and the drive tools |
+| | `-e routes router` | the street router (needs `get routes`) |
 
 | Old | New |
 |---|---|
@@ -699,6 +835,8 @@ The list: [TODO](../TODO.md), "0.3 and later".
 ## The checks run for this page
 
 Run on Ben's Mac, 2 November:
+
+<!-- 3 Nov checks: the lead fills -->
 
 | Check | Result | What's left |
 |---|---|---|
