@@ -53,7 +53,8 @@ PAGES = [
     ('work.md', 'Work', "The plan, what's done, what needs doing"),
     ('plan.md', 'The plan', 'The proposal as a to-do list: the gates, every task'),
     ('features.md', 'Features', 'What the software does, why, and who built it'),
-    ('release-0.2.md', 'Release 0.2', 'what 0.2 has, by area, with pictures'),
+    ('release-0.2.md', 'The 0.2 guide',
+     'Each part of 0.2: what it does, how to run it, tips, how solid'),
     ('whats-new.md', "What's new", '22 Oct to 1 Nov, by area, with pictures (history)'),
     ('audit-friday.md', 'Audit, 16 Oct', 'The hardware audit, machine by machine'),
     ('audit-questions.md', 'Audit questions', 'What only the car can tell us'),
@@ -147,7 +148,7 @@ RELEASE = 'release-notes.md'   # also printed on its own, with a cover, to share
 RELEASE_PDF = 'aav-release-notes.pdf'
 # Pages also printed on their own, with a cover, to share: page -> (PDF, footer words).
 SHARED = {RELEASE: (RELEASE_PDF, 'release notes'),
-          'release-0.2.md': ('aav-0.2.pdf', 'release 0.2'),
+          'release-0.2.md': ('aav-0.2.pdf', 'the 0.2 guide'),
           'whats-new.md': ('aav-whats-new.pdf', "what's new")}
 # A shared page's own PDF: a running footer, and the cover on a page of its own.
 RELEASE_STYLE = """
