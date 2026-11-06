@@ -22,8 +22,8 @@ pub enum Target {
     Car,
     /// The bench (`source:=bench`): /control/bench/actuator_cmd.
     Bench,
-    /// Gazebo's spine profile (`source:=sim`): /control/gazebo/actuator_cmd.
-    Gazebo,
+    /// Gazebo's spine profile (`source:=sim`): /control/sim/actuator_cmd.
+    Sim,
 }
 
 impl Target {
@@ -32,7 +32,7 @@ impl Target {
         match self {
             Target::Car => "car",
             Target::Bench => "bench",
-            Target::Gazebo => "gazebo",
+            Target::Sim => "sim",
         }
     }
 }
@@ -49,7 +49,7 @@ pub struct UnknownTarget(pub String);
 
 impl fmt::Display for UnknownTarget {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "target {}: use car, bench or gazebo", self.0)
+        write!(f, "target {}: use car, bench or sim", self.0)
     }
 }
 
@@ -62,7 +62,7 @@ impl FromStr for Target {
         match name {
             "car" => Ok(Target::Car),
             "bench" => Ok(Target::Bench),
-            "gazebo" => Ok(Target::Gazebo),
+            "sim" => Ok(Target::Sim),
             other => Err(UnknownTarget(other.into())),
         }
     }

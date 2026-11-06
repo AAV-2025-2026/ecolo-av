@@ -125,6 +125,7 @@ Add `--demo` to any of the four for pretend data: no ROS, no car, no build.
 | `map` | the big screen's map window |
 | `debug-hud` | the debug screen: the lidar's cubes, the localizers, every sensor |
 | `hw-panel` | the hardware panel: every sensor's number, and simple buttons (hold Space to drive) for Gazebo or the bench, beside `sim` or `demo --debug` (this computer only) |
+| `dev-window` | the developer window (Bevy): Ben's layout. Pretend data; `--live` beside `demo` or `sim`; `--watch` listens only |
 | `rviz` | RViz with the driving layout: map, costmaps, path, car |
 | `graph` | a live picture of the nodes and topics |
 
@@ -133,10 +134,12 @@ Add `--demo` to any of the four for pretend data: no ROS, no car, no build.
 | Command | What it does |
 |---|---|
 | `check` | the running graph against the contract: `check turtle` (or `sim`, `road`, `spine`, `car`, `replay`, `bench`) |
+| `drop-in` | is what's running a true drop-in? Each stream's rate and frame against the contract; only listens |
 | `bench-check` | starts bench mode and tests the whole graph: contract, drive, e-stops (2 min) |
 | `sim-check` | starts Gazebo's road world headless and tests the whole graph in it (2 min) |
 | `measure` | `measure controllers`: Pure Pursuit against MPPI (and the trials: docs/trials.md) on the same routes; `measure timing`: are messages on time?; `measure stream`: the camera stream end to end; `measure atob <bag>`: scores an A-to-B run; `measure bandwidth`: every topic's MB/s |
 | `diffusion` | the diffusion planner trial (`planner:=diffusion`): `diffusion data` (the lattice's and Hybrid-A*'s paths on random maps, no Gazebo), `diffusion train` (the model, scored by its guard, into `models/diffusion/planner.onnx`; `pixi install --locked -e learn` first), `diffusion score` |
+| `campus` | Carleton for Gazebo, Nav2 and NDT, from OpenStreetMap, into `maps/campus/`: then `pixi run sim world:=campus` ([docs](docs/campus.md)) |
 | `ndt-map` | NDT's map of Gazebo's test lot: `drive` the mapping route headless, or `build` from a bag; into `maps/ndt/` |
 
 ### At the car

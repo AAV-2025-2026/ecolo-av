@@ -140,7 +140,7 @@
     },
     "Image!chase": {
       "imageMode": {
-        "imageTopic": "/vehicle/gazebo/chase_camera/compressed"
+        "imageTopic": "/vehicle/sim/chase_camera/compressed"
       }
     },
     "map!gps": {

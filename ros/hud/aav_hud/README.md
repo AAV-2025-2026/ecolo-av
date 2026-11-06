@@ -96,7 +96,7 @@ Other parameters: `stale_after` (1.0 s), `plan_stale_after` (3.0 s; `plan_kept_f
 | sub | `voxels_cubes_topic`: `/perception/voxels/cubes` (reliable, keep last 1, base_link; red wireframes, key V) | sensor_msgs/PointCloud2 |
 | sub | `voxels_status_topic`: `/perception/voxels/status` (Nav2's cubes section: road fit, count, ms) | diagnostic_msgs/DiagnosticStatus |
 | sub | `health_topic`: `/localization/health` (OK, or WARN and each check) | std_msgs/String |
-| sub | `local_odom_topic`: `/localization/odom/local`; `global_odom_topic`: `/localization/odom/global`; `truth_topic`: `/vehicle/gazebo/truth`; `wheel_odom_topic`: `/vehicle/odom` | nav_msgs/Odometry |
+| sub | `local_odom_topic`: `/localization/odom/local`; `global_odom_topic`: `/localization/odom/global`; `truth_topic`: `/vehicle/sim/truth`; `wheel_odom_topic`: `/vehicle/odom` | nav_msgs/Odometry |
 | sub | `amcl_topic`: `/localization/amcl/pose`; `ndt_pose_topic`: `/localization/ndt/pose` (purple) | geometry_msgs/PoseWithCovarianceStamped |
 | sub | `amcl_particles_topic`: `/localization/amcl/particles` (best effort; small orange arrows) | nav2_msgs/ParticleCloud |
 | sub | `ndt_status_topic`: `/localization/ndt/status` (the panel's NDT section) | diagnostic_msgs/DiagnosticStatus |

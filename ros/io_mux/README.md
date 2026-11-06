@@ -14,7 +14,7 @@ Makes sure **exactly one backend** plays the car, and the real car moves only on
 
 | Package | What it is |
 |---|---|
-| [aav_io_mux](./aav_io_mux/README.md) | `sensor_mux` (checks each sensor's source) and `output_mux` (one target: car, gazebo, bench, turtle or carla) |
+| [aav_io_mux](./aav_io_mux/README.md) | `sensor_mux` (checks each sensor's source) and `output_mux` (one target: car, sim, bench, turtle or carla) |
 
 ## Invariants
 

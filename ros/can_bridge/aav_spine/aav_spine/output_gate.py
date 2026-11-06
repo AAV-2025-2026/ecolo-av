@@ -11,7 +11,7 @@ commands, and its watchdog would only latch it again.
 |---|---|---|
 | real | car | /control/car/actuator_cmd |
 | bench | bench | /control/bench/actuator_cmd |
-| sim | gazebo | /control/gazebo/actuator_cmd |
+| sim | sim | /control/sim/actuator_cmd |
 
 Times come from a steady clock (time.monotonic), never the node's: in Gazebo that one is
 simulated, and a paused simulation must not keep an old OPEN fresh.
@@ -24,7 +24,7 @@ from typing import Optional
 # Every refusal starts with this: arm_when_open retries only these.
 GATE_SHUT = 'the safety gate is shut'
 # The bridge's source:= -> the output mux's target:= it reads commands from.
-TARGETS = {'real': 'car', 'bench': 'bench', 'sim': 'gazebo'}
+TARGETS = {'real': 'car', 'bench': 'bench', 'sim': 'sim'}
 TIMEOUT = 1.5   # s: the output mux says its state twice a second
 
 
@@ -33,7 +33,7 @@ class OutputGate:
 
     def __init__(self, target: str, timeout: float = TIMEOUT):
         if target not in TARGETS.values():
-            raise ValueError(f'target {target}: use car, bench or gazebo')
+            raise ValueError(f'target {target}: use car, bench or sim')
         self.target = target
         self.timeout = timeout
         self.line: Optional[str] = None

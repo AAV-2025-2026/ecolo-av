@@ -1,11 +1,11 @@
 """
 The whole stack in Gazebo: same nodes and configs as the car, simulated hardware.
 
-  ros2 launch aav_bringup sim.launch.py [world:=empty|test_lot|road] [nav:=true]
+  ros2 launch aav_bringup sim.launch.py [world:=empty|test_lot|road|campus] [nav:=true]
       [teleop:=false] [gui:=true] [rviz:=true]
       [perception:=false] [lane:=false|true|fake] [camera_obstacles:=false] [hud:=false]
       [map:=false] [foxglove:=false] [chase_camera:=true]
-      [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true] [radar:=true]
+      [obstacle:=false] [start_x:=0.0] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true] [radar:=true]
       [actuator_model:=true] [speed_loop:=default|smooth|lqi] [sim_speed:=]
       [reversing:=true] [controller:=mppi] [planner:=lattice] [tracker:=none]
       [amcl:=false] [voxels:=false]
@@ -25,7 +25,9 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
 world:=empty pairs with the empty map (phase 2); world:=test_lot with
 maps/example_lot.yaml (phase 3); world:=road, the bench's road in Gazebo, with the empty
 map: chosen automatically. The car starts at the world origin facing east, which is also
-the map origin (the datum); start_y and start_yaw move it, as on the bench.
+the map origin (the datum); start_x, start_y and start_yaw move it, as on the bench.
+world:=campus is Carleton (pixi run campus makes it): its map, its NDT guess and a start in lot
+P4 come with it, because the datum itself is on a station shelter there.
 
 The road and test_lot worlds render the car's three cameras, its radar stand-in and the
 roof lidar (aav_gazebo worlds.has_sensors), so the car's whole graph runs there, with the
@@ -48,7 +50,7 @@ bench's argument names:
                       preview where the world renders it; docs/foxglove.md)
   chase_camera:=false no chase camera: by default a camera behind and above the car
                       (aav_gazebo), for Lichtblick's cockpit layout (tools/foxglove/
-                      cockpit.json): /vehicle/gazebo/chase_camera/compressed
+                      cockpit.json): /vehicle/sim/chase_camera/compressed
   run_info            always: which algorithms the run uses, from these arguments, on
                       /system/algorithms (aav_run_info), for the cockpit's Algorithms table
   obstacle:=true      the bench's 1 m box in the lane, 15 m ahead (aav_gazebo)
@@ -144,9 +146,11 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node, SetParameter
 from launch_ros.substitutions import FindPackageShare
 
-MAPS = {'empty': 'empty.yaml', 'test_lot': 'example_lot.yaml', 'road': 'empty.yaml'}
+MAPS = {'empty': 'empty.yaml', 'test_lot': 'example_lot.yaml', 'road': 'empty.yaml',
+        worlds.CAMPUS: os.path.abspath(worlds.CAMPUS_MAP)}
+DEFAULT_NDT_MAP = os.path.join('maps', 'ndt', 'test_lot.pcd')
 # What each world shows in RViz: the road world adds the camera, the radar and the truth.
-LAYOUTS = {'road': 'road.rviz', 'test_lot': 'road.rviz'}
+LAYOUTS = {'road': 'road.rviz', 'test_lot': 'road.rviz', worlds.CAMPUS: 'road.rviz'}
 # The parts that read the camera, so need a world that renders it.
 CAMERA_PARTS = ('perception', 'camera_obstacles')
 
@@ -166,10 +170,22 @@ def launch_setup(context):
     world = arg('world')
     if world not in MAPS:
         raise ValueError(f'world:={world}: pick one of {sorted(MAPS)}')
+    start_x, start_y, start_yaw = arg('start_x'), arg('start_y'), arg('start_yaw')
+    ndt_map = arg('ndt_map')
+    if world == worlds.CAMPUS:
+        # Not on the world's origin unless someone asks: it's on a station shelter.
+        worlds.world_file('', world)
+        with open(worlds.CAMPUS_PLACE) as place:
+            x, y, yaw = worlds.campus_start(place.read())
+        if float(start_x) == 0.0 and float(start_y) == 0.0:
+            start_x, start_y, start_yaw = str(x), str(y), str(yaw)
+        if ndt_map == DEFAULT_NDT_MAP:
+            ndt_map = worlds.CAMPUS_NDT
     flag = {n: arg(n).lower() == 'true'
             for n in ('nav', 'teleop', 'rviz', 'perception', 'camera_obstacles', 'hud',
                       'map', 'foxglove', 'reversing', 'watchdog', 'faults',
-                      'ghost', 'plan_around', 'watch_hud', 'geofence', 'voxels')}
+                      'ghost', 'plan_around', 'watch_hud', 'geofence', 'voxels',
+                      'screen_cubes')}
     lane = arg('lane').lower()
     if lane not in ('false', 'true', 'fake'):
         raise ValueError(f'lane:={lane}: use true (the lane finder), fake or false')
@@ -194,15 +210,15 @@ def launch_setup(context):
     if amcl and not (world == 'test_lot' and flag['nav'] and lidar):
         raise ValueError('amcl:=true needs world:=test_lot nav:=true lidar:=true: the only '
                          'world with a real map, and AMCL reads the lidar')
-    if flag['voxels'] and not lidar:
+    if (flag['voxels'] or flag['screen_cubes']) and not lidar:
         raise ValueError('voxels:=true needs the lidar (lidar:=true, world:=road or test_lot): '
                          'the cubes come from it')
-    if ndt and not (world == 'test_lot' and lidar):
-        raise ValueError('ndt:=true (and ndt_ekf:=true) needs world:=test_lot lidar:=true: '
-                         'the only world with '
+    if ndt and not (world in ('test_lot', worlds.CAMPUS) and lidar):
+        raise ValueError('ndt:=true (and ndt_ekf:=true) needs world:=test_lot or campus and '
+                         'lidar:=true: the only worlds with '
                          'a lidar map (pixi run ndt-map drive), and NDT reads the lidar')
-    if ndt and not os.path.isfile(arg('ndt_map')):
-        raise ValueError(f'ndt:=true: no map at ndt_map:={arg("ndt_map")}. Make it with '
+    if ndt and not os.path.isfile(ndt_map):
+        raise ValueError(f'ndt:=true: no map at ndt_map:={ndt_map}. Make it with '
                          '`pixi run ndt-map drive`')
     if kiss_icp and not lidar:
         raise ValueError('kiss_icp:=true (and kiss_ekf:=true) needs the lidar: '
@@ -215,7 +231,7 @@ def launch_setup(context):
         # Every node on simulated time, those in the included files too.
         SetParameter(name='use_sim_time', value=True),
         include(context, 'aav_gazebo', 'gazebo.launch.py', world=world, gui=arg('gui'),
-                obstacle=arg('obstacle'), start_y=arg('start_y'), start_yaw=arg('start_yaw'),
+                obstacle=arg('obstacle'), start_x=start_x, start_y=start_y, start_yaw=start_yaw,
                 lidar=arg('lidar'), radar=arg('radar'), chase_camera=arg('chase_camera'),
                 actuator_model=arg('actuator_model'), speed_loop=arg('speed_loop'),
                 faults=flag['faults'],
@@ -227,7 +243,7 @@ def launch_setup(context):
                 sim_max_speed=arg('sim_speed')),
         # ego's commands go to Gazebo (gazebo_adapter, or spine_bridge with spine:=true)
         # only while every source is SIM (aav_io_mux).
-        include(context, 'aav_io_mux', 'io_mux.launch.py', target='gazebo', source='sim'),
+        include(context, 'aav_io_mux', 'io_mux.launch.py', target='sim', source='sim'),
         include(context, 'aav_scripted', 'scripted.launch.py', use_sim_time='true'),
         include(context, 'aav_drive_to_point', 'drive_to_point.launch.py', use_sim_time='true',
                 watchdog=arg('watchdog')),
@@ -262,6 +278,7 @@ def launch_setup(context):
                                map=os.path.join(nav_share, 'maps', MAPS[world]),
                                radar=radar, lidar=lidar, ghost=flag['ghost'],
                                voxels=flag['voxels'],
+                               screen_cubes=flag['screen_cubes'],
                                collision_monitor=radar or lidar or flag['ghost'],
                                camera_obstacles=flag['camera_obstacles'],
                                max_speed=arg('sim_speed'),
@@ -272,8 +289,8 @@ def launch_setup(context):
                                # A trial tracker may be swapped live here (the debug
                                # HUD's panel shows which): Gazebo only, never the car.
                                live_swap='true',
-                               amcl=amcl, amcl_x=0.0, amcl_y=arg('start_y'),
-                               amcl_yaw=arg('start_yaw'),
+                               amcl=amcl, amcl_x=start_x, amcl_y=start_y,
+                               amcl_yaw=start_yaw,
                                # The test lot's map for AMCL: finer, outlines only
                                # (maps/README.md). AMCL runs only in the test lot.
                                amcl_map=(os.path.join(nav_share, 'maps',
@@ -283,9 +300,10 @@ def launch_setup(context):
     if ndt:
         # Scored only (measure controllers --ndt), unless ndt_ekf:=true: then ekf_global
         # reads its pose (measure controllers --ndt-ekf scores the difference).
+        here = {'ndt_min_score': worlds.CAMPUS_NDT_MIN_SCORE} if world == worlds.CAMPUS else {}
         actions.append(include(context, 'aav_ndt', 'ndt.launch.py', use_sim_time='true',
-                               ndt_map=arg('ndt_map'), ndt_x=0.0, ndt_y=arg('start_y'),
-                               ndt_yaw=arg('start_yaw')))
+                               ndt_map=ndt_map, ndt_x=start_x, ndt_y=start_y,
+                               ndt_yaw=start_yaw, **here))
     if kiss_icp:
         # Scored only (measure controllers --kiss-icp), unless kiss_ekf:=true: then
         # ekf_local reads its twist (measure controllers --kiss-ekf scores the difference).
@@ -306,8 +324,8 @@ def launch_setup(context):
                                backend=('spine' if arg('spine').lower() == 'true' else
                                         'gazebo_esp32' if arg('esp32').lower() == 'true'
                                         else 'gazebo'),
-                               radius=arg('geofence_radius'), centre_x='0.0',
-                               centre_y=arg('start_y'), max_speed=arg('sim_speed'),
+                               radius=arg('geofence_radius'), centre_x=start_x,
+                               centre_y=start_y, max_speed=arg('sim_speed'),
                                use_sim_time='true'))
     if flag['teleop']:
         actions.append(include(context, 'aav_teleop', 'teleop.launch.py', use_sim_time='true'))
@@ -379,6 +397,8 @@ def generate_launch_description():
                               description='foxglove_bridge on 127.0.0.1:8765 (Lichtblick)'),
         DeclareLaunchArgument('obstacle', default_value='false',
                               description="a 1 m box in the car's lane, 15 m ahead"),
+        DeclareLaunchArgument('start_x', default_value='0.0',
+                              description='m: start the car this far ahead (east) of the origin'),
         DeclareLaunchArgument('start_y', default_value='0.0',
                               description="m: start the car this far left of the road's centre"),
         DeclareLaunchArgument('start_yaw', default_value='0.0',
@@ -430,6 +450,9 @@ def generate_launch_description():
         DeclareLaunchArgument('faults', default_value='false',
                               description='route the front left picture through '
                                           'gazebo_adapter, for fault.camera'),
+        DeclareLaunchArgument('screen_cubes', default_value='false',
+                              description='true: the cubes for the developer window, while '
+                                          'Nav2 stays on the flat scan'),
         DeclareLaunchArgument('voxels', default_value='false',
                               description='true: Nav2 reads the lidar as 0.25 m cubes '
                                           '(aav_voxels, a trial) instead of the flat scan'),
@@ -472,8 +495,7 @@ def generate_launch_description():
         DeclareLaunchArgument('ndt_ekf', default_value='false',
                               description='a trial: NDT (ndt:=true implied) and its pose '
                                           'into ekf_global, beside the GPS'),
-        DeclareLaunchArgument('ndt_map', default_value=os.path.join('maps', 'ndt',
-                                                                    'test_lot.pcd'),
+        DeclareLaunchArgument('ndt_map', default_value=DEFAULT_NDT_MAP,
                               description="NDT's map (pixi run ndt-map drive); relative to "
                                           'where the launch starts'),
         DeclareLaunchArgument('kiss_icp', default_value='false',

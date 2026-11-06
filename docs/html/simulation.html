@@ -45,10 +45,11 @@
 <a href="learn-lidar.html">Learn: lidar</a>
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
 <a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
-<a href="learn-can.html">Learn: CAN</a>
 <span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
 <a href="status.html">Status</a>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
@@ -326,7 +327,7 @@ real-time factor at 0.98-0.99.</p>
 <tr>
 <td>Chase camera (Gazebo's view, not a sensor)</td>
 <td><code>/aav/chase_camera/image</code></td>
-<td><code>/vehicle/gazebo/chase_camera/image_raw</code>, and its JPEG <code>.../compressed</code>, for Lichtblick's <a href="foxglove.html#cockpit">cockpit</a></td>
+<td><code>/vehicle/sim/chase_camera/image_raw</code>, and its JPEG <code>.../compressed</code>, for Lichtblick's <a href="foxglove.html#cockpit">cockpit</a></td>
 <td>10 Hz</td>
 <td>none</td>
 <td>road and test_lot; on by default, <code>chase_camera:=false</code> drops it</td>
@@ -334,7 +335,7 @@ real-time factor at 0.98-0.99.</p>
 <tr>
 <td>Where the car really is</td>
 <td><code>/model/aav/truth</code></td>
-<td><code>/vehicle/gazebo/truth</code>, for checks only</td>
+<td><code>/vehicle/sim/truth</code>, for checks only</td>
 <td>50 Hz</td>
 <td>none</td>
 <td>road</td>
@@ -607,7 +608,7 @@ pixi run sim-check --spine                # tests it (3 more minutes)</code></pr
 </thead>
 <tbody>
 <tr>
-<td>Takes ego's commands (<code>/control/gazebo/actuator_cmd</code>)</td>
+<td>Takes ego's commands (<code>/control/sim/actuator_cmd</code>)</td>
 <td><code>gazebo_adapter</code></td>
 <td><code>spine_bridge</code> (only one backend at a time)</td>
 </tr>
@@ -753,7 +754,7 @@ bench's road, built in 3D, so the car's own camera and radar can see it.</p>
 <tr>
 <td>Where the car really is</td>
 <td>Gazebo's own pose, like the bench's <code>/vehicle/bench/truth</code></td>
-<td><code>/vehicle/gazebo/truth</code>, for checks only</td>
+<td><code>/vehicle/sim/truth</code>, for checks only</td>
 </tr>
 </tbody>
 </table></div>
@@ -1551,7 +1552,7 @@ as <code>replay</code> (priority 40). It's open loop, so the car drifts from the
 <tr>
 <td>4</td>
 <td>Is the output mux open, and a backend listening?</td>
-<td><code>ros2 topic echo /safety/output_mux/state</code> says OPEN; <code>ros2 topic info /control/gazebo/actuator_cmd -v</code></td>
+<td><code>ros2 topic echo /safety/output_mux/state</code> says OPEN; <code>ros2 topic info /control/sim/actuator_cmd -v</code></td>
 </tr>
 <tr>
 <td>5</td>

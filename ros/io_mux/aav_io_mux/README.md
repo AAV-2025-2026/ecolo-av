@@ -20,12 +20,12 @@ topics (pictures, point clouds) cost nothing extra.
 | Target | Its source | Command topic |
 |---|---|---|
 | `car` | REAL | `/control/car/actuator_cmd` |
-| `gazebo`, `turtle`, `carla` | SIM | `/control/<target>/actuator_cmd` |
+| `sim` (Gazebo today), `turtle`, `carla` | SIM | `/control/<target>/actuator_cmd` |
 | `bench` | BENCH | `/control/bench/actuator_cmd` |
 
 ## Interface
 
-Launch: `ros2 launch aav_io_mux io_mux.launch.py target:=car|gazebo|bench|turtle|carla [source:=real|sim|bench|replay]`.
+Launch: `ros2 launch aav_io_mux io_mux.launch.py target:=car|sim|bench|turtle|carla [source:=real|sim|bench|replay]`.
 An empty `target` starts no output mux (a replay drives nothing). An empty `source`
 takes the target's. A source the target can't take is refused before anything starts.
 

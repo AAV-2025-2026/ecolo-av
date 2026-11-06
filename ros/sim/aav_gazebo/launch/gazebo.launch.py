@@ -1,27 +1,27 @@
 """
 Gazebo Harmonic as the car: world, the car from the URDF, the bridge and the adapter.
 
-  ros2 launch aav_gazebo gazebo.launch.py [world:=empty|test_lot|road] [gui:=true]
-      [follow:=true] [obstacle:=false] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true]
+  ros2 launch aav_gazebo gazebo.launch.py [world:=empty|test_lot|road|campus] [gui:=true]
+      [follow:=true] [obstacle:=false] [start_x:=0.0] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true]
       [radar:=true] [actuator_model:=true] [faults:=false] [spine:=false] [arm:=true]
       [esp32:=false] [esp32_loop:=pi] [chase_camera:=true]
       [bridge:=rust|python]
 
-  /control/gazebo/actuator_cmd ──> gazebo_adapter ──> /gazebo/cmd_vel ──bridge──> Ackermann system
+  /control/sim/actuator_cmd ──> gazebo_adapter ──> /gazebo/cmd_vel ──bridge──> Ackermann system
                        (the actuator model: vehicle.yaml's actuators:, unless
                         actuator_model:=false)
   Gazebo odometry, IMU, NavSat ──bridge──> gazebo_adapter ──> /vehicle/odom,
                                            /sensors/imu/data_raw, /sensors/gps/fix, /vehicle/status
   Gazebo joints ──bridge──> /joint_states;  Gazebo clock ──bridge──> /clock
-  Gazebo's truth ──bridge──> /vehicle/gazebo/truth (where the car really is, for checks)
+  Gazebo's truth ──bridge──> /vehicle/sim/truth (where the car really is, for checks)
 
 spine:=true puts the spine in the loop (docs/full-simulation.md step 4): the car's own
 spine_bridge takes ego's commands instead of gazebo_adapter, and spine_sim (car:=gazebo)
 runs the spine's firmware logic (spine-core) on its CAN frames, on Gazebo's clock:
 
-  /control/gazebo/actuator_cmd ──> spine_bridge ──> /can/tx ──> spine_sim (the spine's logic)
-  spine_sim ──> /vehicle/gazebo/spine_outputs ──> gazebo_adapter (the actuator model) ──> Gazebo
-  gazebo_adapter ──> /vehicle/gazebo/wheels, /vehicle/gazebo/steering ──> spine_sim
+  /control/sim/actuator_cmd ──> spine_bridge ──> /can/tx ──> spine_sim (the spine's logic)
+  spine_sim ──> /vehicle/sim/spine_outputs ──> gazebo_adapter (the actuator model) ──> Gazebo
+  gazebo_adapter ──> /vehicle/sim/wheels, /vehicle/sim/steering ──> spine_sim
   spine_sim ──> /can/rx ──> spine_bridge ──> /vehicle/odom, status, steering, wheels...
 
 esp32:=true puts today's car in the loop instead: the car's own legacy_uart_bridge takes
@@ -30,14 +30,14 @@ throttle ramp, its brake, no command timeout), over a local TCP socket in place 
 serial wire. esp32_loop:= is the bridge's speed_loop.mode: pi (feed-forward plus PI on
 the wheel speed, the default here) or open (the 2025-26 mapping):
 
-  /control/gazebo/actuator_cmd ──> legacy_uart_bridge ──TCP──> gazebo_esp32 (the firmware)
-  gazebo_esp32 ──> /vehicle/gazebo/esp32_outputs ──> gazebo_adapter (the actuator model)
+  /control/sim/actuator_cmd ──> legacy_uart_bridge ──TCP──> gazebo_esp32 (the firmware)
+  gazebo_esp32 ──> /vehicle/sim/esp32_outputs ──> gazebo_adapter (the actuator model)
   gazebo_adapter ──> /vehicle/odom (the wheel speed, as the car's wheel sensors) ──> the bridge
 
 In the sim the bridge's no-timeout lock is lifted (allow_programs_without_timeout), so
 programs drive as on a supervised stand: there is no car to run away.
 
-Still one backend: spine_bridge alone reads ego's commands (/control/gazebo/actuator_cmd,
+Still one backend: spine_bridge alone reads ego's commands (/control/sim/actuator_cmd,
 from the output mux); bridge:= picks its language, rust (aav_spine_bridge, the default)
 or python (aav_spine). arm:=true (the default) arms the spine 12 s after start-up, as
 the bench does, once the output mux says OPEN (aav_spine's arm_when_open: spine_bridge
@@ -58,8 +58,8 @@ chase_camera:=true, the default, adds a camera behind and above the car where th
 renders sensors, for Lichtblick's cockpit layout (tools/foxglove/cockpit.json): Gazebo's
 picture without Gazebo's window. A third bridge and image_transport's republish:
 
-  chase camera ──chase bridge──> /vehicle/gazebo/chase_camera/image_raw (640 x 360, 10 Hz)
-               ──chase_jpeg────> /vehicle/gazebo/chase_camera/compressed (JPEG)
+  chase camera ──chase bridge──> /vehicle/sim/chase_camera/image_raw (640 x 360, 10 Hz)
+               ──chase_jpeg────> /vehicle/sim/chase_camera/compressed (JPEG)
 
 lidar:=true, the default, adds a simulated 16-beam roof lidar in a world that renders
 sensors; elsewhere it is ignored. lidar:=false drops it, if a busy Mac struggles with its
@@ -170,15 +170,15 @@ def esp32_in_the_loop(context, car, sim_time):
                           'frame_version': 1, 'allow_programs_without_timeout': True,
                           'speed_loop.mode': LaunchConfiguration('esp32_loop').perform(context),
                           **sim_time}],
-             remappings=[('control/car/actuator_cmd', 'control/gazebo/actuator_cmd'),
-                         ('control/car/heartbeat', 'control/gazebo/heartbeat')]),
+             remappings=[('control/car/actuator_cmd', 'control/sim/actuator_cmd'),
+                         ('control/car/heartbeat', 'control/sim/heartbeat')]),
     ]
 
 
 def chase_camera(share, sim_time):
     """Return the chase camera's bridge, and its JPEG for Lichtblick (republish)."""
-    raw = '/vehicle/gazebo/chase_camera/image_raw'
-    jpeg = '/vehicle/gazebo/chase_camera'
+    raw = '/vehicle/sim/chase_camera/image_raw'
+    jpeg = '/vehicle/sim/chase_camera'
     return [
         Node(package='ros_gz_bridge', executable='parameter_bridge', name='gz_chase_bridge',
              parameters=[{'config_file': os.path.join(share, 'config', 'bridge_chase.yaml')},
@@ -219,7 +219,8 @@ def launch_setup(context):
     car = vehicle.load()
     v = car['vehicle']
     sim_time = {'use_sim_time': True}
-    start = ['-y', LaunchConfiguration('start_y').perform(context),
+    start = ['-x', LaunchConfiguration('start_x').perform(context),
+             '-y', LaunchConfiguration('start_y').perform(context),
              '-Y', LaunchConfiguration('start_yaw').perform(context)]
     actions = [
         IncludeLaunchDescription(
@@ -302,12 +303,15 @@ def launch_setup(context):
 def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('world', default_value='empty',
-                              description='empty, test_lot or road'),
+                              description='empty, test_lot, road or campus (pixi run campus)'),
         DeclareLaunchArgument('gui', default_value='true'),
         DeclareLaunchArgument('follow', default_value='true',
                               description="point the window's camera at the car"),
         DeclareLaunchArgument('obstacle', default_value='false',
                               description="the bench's 1 m box in the car's lane, 15 m ahead"),
+        DeclareLaunchArgument('start_x', default_value='0.0',
+                              description='m: start the car this far ahead (east) of the '
+                                          "world's origin"),
         DeclareLaunchArgument('start_y', default_value='0.0',
                               description='m: start the car this far left (north) of the '
                                           "world's origin"),
@@ -319,7 +323,7 @@ def generate_launch_description():
         DeclareLaunchArgument('chase_camera', default_value='true',
                               description='a camera behind and above the car, for '
                                           "Lichtblick's cockpit layout, as "
-                                          '/vehicle/gazebo/chase_camera/compressed '
+                                          '/vehicle/sim/chase_camera/compressed '
                                           '(worlds that render sensors)'),
         DeclareLaunchArgument('radar', default_value='true',
                               description='pass the radar stand-in on, as '

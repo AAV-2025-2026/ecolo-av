@@ -45,10 +45,11 @@
 <a href="learn-lidar.html">Learn: lidar</a>
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
 <a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
-<a href="learn-can.html">Learn: CAN</a>
 <span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
 <a href="status.html">Status</a>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
@@ -272,6 +273,9 @@ below <code>stop_speed</code>, so from 1 m/s the car rolls about 10 m. The geofe
 program held (<code>COASTING</code>) until test 4.3 measures the stop and someone writes
 <code>actuators.open_loop_decel</code> into <code>vehicle.yaml</code>. (The no-timeout lock holds them on
 today's firmware anyway.)</p>
+<p><strong>Changing the mode doesn't release them.</strong> <code>speed_loop.mode: pi</code> needs its own measured
+stop, <code>actuators.pi_loop_decel</code>. And never run <code>pi</code> on stands without a driven-wheel speed
+(TODO 49b): the wheels the car measures don't turn, so the loop raises the throttle.</p>
 <h3 id="a-sites-polygon-a-todo-for-the-team">A site's polygon (a TODO for the team)</h3>
 <ol>
 <li>Survey the datum (the 26 Oct review's W3) and set it in <code>navsat.yaml</code>.</li>

@@ -45,10 +45,11 @@
 <a href="learn-lidar.html">Learn: lidar</a>
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
 <a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
-<a href="learn-can.html">Learn: CAN</a>
 <span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
 <a href="status.html">Status</a>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
@@ -1004,7 +1005,7 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 </tr>
 <tr>
 <td><strong>In → out</strong></td>
-<td><code>/control/car/actuator_cmd</code> (or <code>bench</code>, <code>gazebo</code>), <code>/safety/estop</code>, <code>/can/rx</code> → <code>/can/tx</code>, <code>/vehicle/odom</code>, <code>/vehicle/status</code>, <code>/vehicle/joint_states</code>; service <code>/spine/arm</code></td>
+<td><code>/control/car/actuator_cmd</code> (or <code>bench</code>, <code>sim</code>), <code>/safety/estop</code>, <code>/can/rx</code> → <code>/can/tx</code>, <code>/vehicle/odom</code>, <code>/vehicle/status</code>, <code>/vehicle/joint_states</code>; service <code>/spine/arm</code></td>
 </tr>
 <tr>
 <td><strong>Origin</strong></td>
@@ -1149,7 +1150,7 @@ one-line entry, pointing at their own README (<a href="#more-packages-see-their-
 </tr>
 <tr>
 <td><strong>In → out</strong></td>
-<td><code>/control/gazebo/actuator_cmd</code>, <code>/gazebo/odom</code>, <code>/gazebo/imu</code>, <code>/gazebo/navsat</code>, <code>/gazebo/radar/points</code> → <code>/gazebo/cmd_vel</code>, <code>/vehicle/odom</code>, <code>/vehicle/status</code>, <code>/sensors/imu/data_raw</code>, <code>/sensors/gps/fix</code>, <code>/sensors/radar/points</code>. The road world's bridges add <code>/sensors/camera/front_left/*</code>, <code>/sensors/lidar/points</code> and <code>/vehicle/gazebo/truth</code></td>
+<td><code>/control/sim/actuator_cmd</code>, <code>/gazebo/odom</code>, <code>/gazebo/imu</code>, <code>/gazebo/navsat</code>, <code>/gazebo/radar/points</code> → <code>/gazebo/cmd_vel</code>, <code>/vehicle/odom</code>, <code>/vehicle/status</code>, <code>/sensors/imu/data_raw</code>, <code>/sensors/gps/fix</code>, <code>/sensors/radar/points</code>. The road world's bridges add <code>/sensors/camera/front_left/*</code>, <code>/sensors/lidar/points</code> and <code>/vehicle/sim/truth</code></td>
 </tr>
 <tr>
 <td><strong>Origin</strong></td>

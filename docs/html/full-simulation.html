@@ -45,10 +45,11 @@
 <a href="learn-lidar.html">Learn: lidar</a>
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
 <a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
-<a href="learn-can.html">Learn: CAN</a>
 <span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
 <a href="status.html">Status</a>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
@@ -517,7 +518,7 @@ and step 8 swaps in the real numbers without changing any code.</p>
 car, as the bench does. Off by default; one switch turns it on:</p>
 <pre class="highlight"><code class="language-bash">pixi run sim spine:=true          # Gazebo, with the spine in the loop
 pixi run sim-check --spine        # proves it: the normal checks, then the spine's stops</code></pre>
-<pre class="highlight"><code class="language-text"> ego ──► output_mux ──/control/gazebo/actuator_cmd──► spine_bridge ──CAN frames──► spine_sim: the spine's own logic
+<pre class="highlight"><code class="language-text"> ego ──► output_mux ──/control/sim/actuator_cmd──► spine_bridge ──CAN frames──► spine_sim: the spine's own logic
                                                          (arming, 100 ms watchdog, both
                                                           e-stops, its speed loop)
                                                               │ throttle, brake, gear, steering
@@ -536,7 +537,7 @@ pixi run sim-check --spine        # proves it: the normal checks, then the spine
 <tbody>
 <tr>
 <td>One backend</td>
-<td><code>spine_bridge</code> alone reads ego's commands (<code>/control/gazebo/actuator_cmd</code>, from the output mux). <code>gazebo_adapter</code> then only drives the actuator model from the spine's outputs, and no longer publishes <code>/vehicle/*</code></td>
+<td><code>spine_bridge</code> alone reads ego's commands (<code>/control/sim/actuator_cmd</code>, from the output mux). <code>gazebo_adapter</code> then only drives the actuator model from the spine's outputs, and no longer publishes <code>/vehicle/*</code></td>
 </tr>
 <tr>
 <td><code>/system/source</code></td>

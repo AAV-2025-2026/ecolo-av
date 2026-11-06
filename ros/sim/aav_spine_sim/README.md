@@ -26,7 +26,7 @@ The `car` parameter picks which car the spine drives:
 ```
 spine_bridge ─/can/tx─> spine_sim (spine-core, 100 Hz) ─/can/rx─> spine_bridge
                            │ car:=model:  Plant ─> /vehicle/bench/truth ─> aav_bench
-                           │ car:=gazebo: /vehicle/gazebo/spine_outputs ─> gazebo_adapter
+                           │ car:=gazebo: /vehicle/sim/spine_outputs ─> gazebo_adapter
 ```
 
 ## Interface
@@ -38,11 +38,11 @@ spine_bridge ─/can/tx─> spine_sim (spine-core, 100 Hz) ─/can/rx─> spine_
 | Subscribes | `/can/tx` | `can_msgs/Frame` | always: what `spine_bridge` puts on the bus |
 | Subscribes | `/vehicle/bench/hw_estop` | `std_msgs/Bool` | always: true = hardware e-stop pressed |
 | Subscribes | `/vehicle/bench/driver_faults` | `std_msgs/UInt16` | always: pretend a driver failed (fault bits) |
-| Subscribes | `/vehicle/gazebo/wheels` | `aav_interfaces/WheelSpeeds` | `car:=gazebo` |
-| Subscribes | `/vehicle/gazebo/steering` | `aav_interfaces/ActuatorState` | `car:=gazebo` |
+| Subscribes | `/vehicle/sim/wheels` | `aav_interfaces/WheelSpeeds` | `car:=gazebo` |
+| Subscribes | `/vehicle/sim/steering` | `aav_interfaces/ActuatorState` | `car:=gazebo` |
 | Publishes | `/can/rx` | `can_msgs/Frame` | always: VEHICLE_FEEDBACK 50 Hz, VEHICLE_STATUS 10 Hz, WHEEL_SPEED_L and _R 100 Hz |
 | Publishes | `/vehicle/bench/truth` | `nav_msgs/Odometry` (`map` to `base_link`, 50 Hz) | `car:=model` |
-| Publishes | `/vehicle/gazebo/spine_outputs` | `aav_interfaces/SpineOutputs` (100 Hz) | `car:=gazebo` |
+| Publishes | `/vehicle/sim/spine_outputs` | `aav_interfaces/SpineOutputs` (100 Hz) | `car:=gazebo` |
 
 Parameters: `car` (model), `wheelbase`, `track`, `wheel_radius` (m), `max_steering`
 (rad), `start_x`, `start_y` (m), `start_yaw` (rad), `speed_loop` (default, smooth or lqi).

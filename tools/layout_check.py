@@ -52,7 +52,7 @@ OPTIONAL = {
         "a camera: camera_stream on the car, foxglove.launch.py's preview elsewhere",
     '/safety/collision_monitor/stop_zone': 'a radar or lidar (collision_monitor)',
     '/perception/voxels/cubes': 'voxels:=true (the voxels trial, with the lidar)',
-    '/vehicle/gazebo/chase_camera/compressed':
+    '/vehicle/sim/chase_camera/compressed':
         "Gazebo's chase camera (a world that renders sensors; sim only)",
     '/localization/ndt/pose': 'ndt:=true (the NDT trial: world:=test_lot, its map made)',
     '/localization/ndt/status': 'ndt:=true (the NDT trial)',

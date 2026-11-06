@@ -35,6 +35,8 @@ SPINE_WATCHDOG = 0.1    # s
 # gazebo_adapter's cmd_timeout default (aav_gazebo gazebo_adapter.py): Gazebo's stand-in.
 GAZEBO_TIMEOUT = 0.2    # s
 BACKENDS = ('spine', 'uart', 'gazebo', 'gazebo_esp32')
+# vehicle.yaml's actuators key for how each legacy speed_loop.mode was measured to stop.
+MEASURED_STOP = {'open': 'open_loop_decel', 'pi': 'pi_loop_decel'}
 SAMPLE = 0.5            # m between the points checked along each stopping path
 
 
@@ -182,17 +184,24 @@ def backend_stale(backend: str, spine: Optional[Mapping] = None,
     raise ValueError(f'backend {backend}: pick one of {", ".join(BACKENDS)}')
 
 
+def measured_stop(legacy: Mapping, actuators: Mapping) -> Optional[float]:
+    """Return how the legacy bridge's speed loop was measured to stop (m/s^2), or None."""
+    key = MEASURED_STOP.get(legacy.get('speed_loop.mode', 'open'))
+    return actuators.get(key) if key else None
+
+
 def coasts(backend: str, legacy: Optional[Mapping], actuators: Mapping) -> bool:
     """
     Return whether the backend can't be counted on to brake to a stop.
 
     legacy_uart_bridge's speed_loop.mode `open` brakes only below stop_speed: from 1 m/s
-    the car coasts on drag, about 10 m. Until test 4.3 measures how it really stops
-    (vehicle.yaml actuators `open_loop_decel`), the geofence keeps every program held.
+    the car coasts on drag, about 10 m. `pi` asks for the brake, but nobody has seen how the
+    car answers. So whatever the mode, until test 4.3 measures how it really stops (vehicle.yaml
+    actuators `open_loop_decel`, `pi_loop_decel`), the geofence keeps every program held:
+    changing the mode alone never releases them. A mode we don't know stays held.
     Gazebo's ESP32 stand-in is a simulator: never counted as coasting.
     """
-    return (backend == 'uart' and legacy.get('speed_loop.mode', 'open') == 'open'
-            and not actuators.get('open_loop_decel'))
+    return backend == 'uart' and not measured_stop(legacy, actuators)
 
 
 def motion_from(ego: Mapping, vehicle_cfg: Mapping, backend: str, rate_hz: float,
@@ -211,8 +220,8 @@ def motion_from(ego: Mapping, vehicle_cfg: Mapping, backend: str, rate_hz: float
                         pose_lag, float(act.get('brake_dead_time', 0.0)))
     coasting = coasts(backend, legacy, act)
     brake = float(act['max_brake'])
-    if backend == 'uart' and not coasting and act.get('open_loop_decel'):
-        brake = min(brake, float(act['open_loop_decel']))
+    if backend == 'uart' and not coasting:
+        brake = min(brake, float(measured_stop(legacy, act)))
     top = float(ego['max_speed']) if max_speed is None else float(max_speed)
     motion = Motion(reaction_time=rho,
                     braking=braking(float(ego['max_deceleration']), brake),
@@ -364,9 +373,9 @@ class Geofence:
             return self._say(False, STANDS, 'stands mode: NO FENCE. The wheels must be off '
                                             'the ground')
         if self.coasting:
-            return self._say(True, COASTING, 'the backend coasts (legacy speed_loop open): '
+            return self._say(True, COASTING, "the legacy speed loop's stop isn't measured: "
                                              'no program may drive until test 4.3 measures '
-                                             'its stop (vehicle.yaml open_loop_decel)')
+                                             'it (vehicle.yaml open_loop_decel, pi_loop_decel)')
         pose = self.pose
         if pose is None:
             return self._say(True, STARTING, 'no global pose yet')

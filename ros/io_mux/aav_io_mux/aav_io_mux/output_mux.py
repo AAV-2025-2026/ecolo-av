@@ -13,10 +13,10 @@ Publishes   control/<target>/actuator_cmd  ackermann_msgs/AckermannDriveStamped:
                                       or STOP, the target, and why
 Serves      safety/output_mux/clear   std_srvs/Trigger: a person reopens a latched stop
 
-Parameters  target (car; gazebo, turtle, carla or bench), settle (2.0 s), stale_after
+Parameters  target (car; sim, turtle, carla or bench), settle (2.0 s), stale_after
             (3.0 s)
 
-The target decides the source its data must come from: car REAL; gazebo, turtle and
+The target decides the source its data must come from: car REAL; simo, turtle and
 carla SIM; bench BENCH (provenance.TARGETS). Each backend reads only its own target's
 topic, so a simulator's ego can never reach the real car's backend.
 

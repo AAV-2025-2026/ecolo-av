@@ -85,7 +85,7 @@ def test_the_safety_gate_shut_refuses_arming(bridge):
     fresh_command(bridge)
     for gate, says in ((None, '/safety/output_mux/state'),
                        ('WAIT - car: all REAL, settling for 2 s', 'settling'),
-                       (stop, stop), ('OPEN - gazebo: every source SIM', 'another target')):
+                       (stop, stop), ('OPEN - sim: every source SIM', 'another target')):
         answer = arm(bridge, gate=gate)
         assert not answer.success, gate
         assert answer.message.startswith('the safety gate is shut'), answer.message

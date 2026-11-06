@@ -42,6 +42,7 @@ so add `--local`: `pixi run tools/ros.sh --local python3 tools/<script>.py`.
 | `check_graph.py` | the running graph against `docs/interfaces.yaml`; then `/localization/health`'s line (warn only) | `check <profile>` |
 | `bench_check.py` | starts bench mode, tests the whole graph: contract, drive, e-stops | `bench-check` |
 | `sim_check.py` | Gazebo's road world headless, the whole graph, a drive (`--voxels`: Nav2 on the lidar's cubes) | `sim-check` |
+| `drop_in_check.py`, `drop_in.py` | is what's running a true drop-in: each stream's rate and frame against the contract's `drop_in` rules (`drop_in.py`: the logic, no ROS) | `drop-in` |
 | `gz_crash.py` | did Gazebo itself crash at start-up? (sim-check retries once) | - |
 | `layout_check.py` | is every topic in `foxglove/` served by a bridge? | - |
 | `ci_annotate.py` | a failed test log into GitHub annotations | (CI) |
@@ -84,6 +85,7 @@ so add `--local`: `pixi run tools/ros.sh --local python3 tools/<script>.py`.
 | Script | Does | Task |
 |---|---|---|
 | `ros.sh` | the workspace sourced; `--local` for stand-ins | (most tasks) |
+| `dev_window.sh` | the developer window (Bevy): pretend data, `--live` beside a sim here, or `--watch` | `dev-window` |
 | `screen.sh` | one of the four raylib screens, live or with pretend data (`--demo`) | `hud`, `map`, `debug-hud`, `hw-panel` |
 | `demo_all.sh` | Gazebo, RViz, the HUD and the map window in one go (`--debug`: the debug HUD too) | `demo` |
 | `pick.py` | a plain-words menu of the sim's switches (route, follower, where-am-I, speed loop): prints, saves and runs the command (`docs/switches.md`) | `pick` |
@@ -96,6 +98,7 @@ so add `--local`: `pixi run tools/ros.sh --local python3 tools/<script>.py`.
 | `diffusion_data.py` | the teachers' paths (the lattice, Hybrid-A*) on random maps: map_server and planner_server only, no Gazebo | `diffusion data` |
 | `lattice_primitives.py` | the State Lattice planner's primitives for our car, by Nav2's generator (`--check`: still right for `vehicle.yaml`?) | - (needs `pixi run get vendor`) |
 | `heading_check.py` | the global EKF's heading against Gazebo's truth | - (ros.sh --local) |
+| `campus_world.py` | Carleton from OpenStreetMap: a Gazebo world, one Nav2 map of the whole campus, and NDT's guessed map (tested without ROS) | `campus` |
 | `ndt_map.py` | NDT's map of the test lot: drive the mapping route, or build from a bag (its maths without ROS) | `ndt-map` |
 | `gazebo_steering.py` | how much later Gazebo's wheels turn than the actuator model's (run with `tools/ros.sh --local`) | - |
 | `timing_test.py` | every topic's gaps and late messages, parked and driving | `measure timing` |

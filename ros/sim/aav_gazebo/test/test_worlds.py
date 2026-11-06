@@ -41,6 +41,21 @@ def test_world_files_and_an_unknown_world():
         worlds.world_file(str(PACKAGE), 'moon')
 
 
+def test_the_campus_is_made_not_kept(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    with pytest.raises(ValueError, match='pixi run campus'):
+        worlds.world_file(str(PACKAGE), worlds.CAMPUS)
+    sdf = tmp_path / worlds.CAMPUS_SDF
+    sdf.parent.mkdir(parents=True)
+    sdf.write_text('<sdf/>')
+    assert worlds.world_file(str(PACKAGE), worlds.CAMPUS) == str(sdf.resolve())
+
+
+def test_the_campus_says_where_the_car_starts():
+    place = 'start: {x: 49.25, y: -70.75, yaw: 0.0}\n'
+    assert worlds.campus_start(place) == (49.25, -70.75, 0.0)
+
+
 def test_the_road_and_lot_worlds_render_sensors():
     def renders(world):
         return worlds.has_sensors(worlds.world_file(str(PACKAGE), world))

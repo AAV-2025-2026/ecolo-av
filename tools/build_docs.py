@@ -79,6 +79,8 @@ PAGES = [
     ('learn-control.md', 'Learn: control', 'Feedback loops, PID, Ackermann, limits, timeouts'),
     ('controllers.md', 'Controllers',
      'Every controller, side by side: which one, where it runs, and why'),
+    ('campus.md', 'The campus',
+     'Carleton in Gazebo: what is real, what is guessed, what was measured'),
     ('maps-and-position.md', 'Maps and position',
      'From the wheels to OpenStreetMap: frames, the datum, costmaps'),
     ('learn-nav2.md', 'Learn: Nav2', 'Planner, controller, behaviour tree, collision_monitor'),

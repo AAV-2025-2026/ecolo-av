@@ -40,7 +40,7 @@
   direction: GZ_TO_ROS
 
 # Where the car really is, in the map frame, in every world: for checks (sim_check.py), like the bench's /vehicle/bench/truth.
-- ros_topic_name: /vehicle/gazebo/truth
+- ros_topic_name: /vehicle/sim/truth
   gz_topic_name: /model/aav/truth
   ros_type_name: nav_msgs/msg/Odometry
   gz_type_name: gz.msgs.Odometry

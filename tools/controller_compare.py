@@ -61,7 +61,7 @@ For each tour and controller it:
    --reversing), on a ROS domain and Gazebo partition of its own, on this computer only;
 2. waits for Gazebo's truth, the global EKF and Nav2;
 3. sends each leg's goal in turn, each from where the last one ended, and records where the
-   car really was (/vehicle/gazebo/truth), the planner's paths (/plan), the controller's
+   car really was (/vehicle/sim/truth), the planner's paths (/plan), the controller's
    speed (/cmd_vel_nav), ego's steering, the sensor watchdog and collision_monitor; with a
    tracker its tick (/drivers/nav/track/status); with --amcl, /localization/amcl/pose;
    with --ndt, /localization/ndt/pose and /localization/ndt/status; with --kiss-icp,
@@ -206,7 +206,7 @@ class Recorder(Node):
         self.last_truth = self.glob = None
         self.lock, self.locked, self.states = None, False, set()
         self.monitor, self.monitor_stops = None, 0
-        self.create_subscription(Odometry, '/vehicle/gazebo/truth', self.on_truth, 10)
+        self.create_subscription(Odometry, '/vehicle/sim/truth', self.on_truth, 10)
         self.create_subscription(Odometry, '/localization/odom/global', self.on_global, 10)
         self.create_subscription(Path, '/plan', self.on_plan, 10)
         self.create_subscription(PoseWithCovarianceStamped, '/localization/amcl/pose',

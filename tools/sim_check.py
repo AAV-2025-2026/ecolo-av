@@ -71,7 +71,7 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
    while nothing is within 8.4 m. Unless --no-lidar, the simulated roof lidar: 1800 x 16 rays
    in lidar_link, 10 Hz, some of them hitting the ground and the sign; and lidar_scan's 2D
    scan of it for Nav2 (/sensors/lidar/scan: 720 ranges in base_link, 10 Hz, the sign in it).
-5. Drives a scripted profile, and compares where the car really is (/vehicle/gazebo/truth)
+5. Drives a scripted profile, and compares where the car really is (/vehicle/sim/truth)
    with where the car's own software thinks it is (/localization/odom/global). After all
    the drives of this run, `wheels vs IMU and GPS`: the watchdog's wheel cross check never
    said DISAGREE, and the worst gaps it saw (its /diagnostics).
@@ -323,7 +323,7 @@ class Probe(Node):
         # Every truth sample, lane message and sensor stamp, from the start: lane keeping
         # starts as soon as the camera sees the lane, before its check begins.
         self.track, self.lanes, self.image_stamps, self.cloud_stamps = [], [], [], []
-        self.create_subscription(Odometry, '/vehicle/gazebo/truth', self.on_truth, 10)
+        self.create_subscription(Odometry, '/vehicle/sim/truth', self.on_truth, 10)
         self.create_subscription(Odometry, '/localization/odom/global',
                                  lambda m: setattr(self, 'glob', m), 10)
         self.create_subscription(LaneGeometry, '/perception/lane/geometry', self.on_lane, 10)
@@ -365,7 +365,7 @@ class Probe(Node):
         self.status, self.demands, self.direct = None, [], {}
         self.latches = []    # Gazebo's time each time the spine stopped being armed
         self.create_subscription(VehicleStatus, '/vehicle/status', self.on_status, 10)
-        self.create_subscription(SpineOutputs, '/vehicle/gazebo/spine_outputs',
+        self.create_subscription(SpineOutputs, '/vehicle/sim/spine_outputs',
                                  lambda m: self.on_demand(seconds(m.header.stamp), m.throttle,
                                                           m.brake), 10)
         self.create_subscription(ActuatorState, '/vehicle/throttle',

@@ -104,7 +104,7 @@ Visualization Manager:
       Covariance:
         Value: false
       Topic:
-        Value: /vehicle/gazebo/truth
+        Value: /vehicle/sim/truth
     - Class: rviz_default_plugins/PointCloud2
       Name: Radar points
       Enabled: true

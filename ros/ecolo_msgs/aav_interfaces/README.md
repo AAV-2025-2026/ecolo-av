@@ -19,7 +19,7 @@ Every message starts with `std_msgs/Header header`, except `SensorSource` (an en
 | `VehicleStatus` | `/vehicle/status`, every backend (spine_bridge: 10 Hz, CAN 0x181 with 0x180) | `mode` (`MODE_MANUAL` 0, `MODE_RC` 1, `MODE_COMPUTER` 2, `MODE_TEST` 3), `armed`, `estop_active`, `speed` (m/s, − in reverse), `steering_angle` (rad, + left), `throttle`, `brake` (0..1), `faults` (uint16 bits, below) |
 | `ActuatorState` | `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake`, the backend | `command`, `measured`; NaN = not known |
 | `WheelSpeeds` | `/vehicle/wheels`, the backend | `front_left`, `front_right`, `rear_left`, `rear_right` (m/s, NaN = not measured), `direction_measured` |
-| `SpineOutputs` | `/vehicle/gazebo/spine_outputs`, spine_sim, 100 Hz (simulation only) | `throttle`, `brake` (0..1), `reverse`, `steering` (rad, + left) |
+| `SpineOutputs` | `/vehicle/sim/spine_outputs`, spine_sim, 100 Hz (simulation only) | `throttle`, `brake` (0..1), `reverse`, `steering` (rad, + left) |
 | `Heartbeat` | `/control/<target>/heartbeat`, the output mux | `counter` (uint8, +1 per command passed on, wraps 255 → 0) |
 | `RcSticks` | `/vehicle/rc`, legacy_uart_bridge, 50 Hz | `mode_switch` (`SWITCH_NONE` 0, `SWITCH_COMPUTER` 1, `SWITCH_RC_VIA_ROS` 2, `SWITCH_RC_DIRECT` 3), `throttle`, `steering` (−1..1, + forward, + left), `brake` |
 | `ActuatorRaw` | `/vehicle/steering_actuator/raw`, `/vehicle/brake_actuator/raw`, legacy_uart_bridge, 50 Hz | `valid`, `position` (counts, 0..4095: the Jrk's scaled feedback, not converted), `calibration` (`CALIBRATION_*`: the firmware's steering calibration state) |

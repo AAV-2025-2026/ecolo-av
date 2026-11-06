@@ -40,12 +40,12 @@ def test_a_quiet_output_mux_counts_as_shut():
 
 def test_open_for_another_target_is_not_this_bridges_gate():
     gate = OutputGate('car')
-    gate.heard('OPEN - gazebo: every source SIM', 0.0)
+    gate.heard('OPEN - sim: every source SIM', 0.0)
     assert gate.refusal(0.0) == (f'{GATE_SHUT}: the output mux is for another target '
-                                 '(OPEN - gazebo: every source SIM); this bridge needs '
+                                 '(OPEN - sim: every source SIM); this bridge needs '
                                  'target car')
     for target, line in (('bench', 'OPEN - bench: every source BENCH'),
-                         ('gazebo', 'OPEN - gazebo: every source SIM')):
+                         ('sim', 'OPEN - sim: every source SIM')):
         own = OutputGate(target)
         own.heard(line, 0.0)
         assert own.refusal(0.0) is None
@@ -62,6 +62,6 @@ def test_arm_when_open_retries_only_the_gate():
 
 
 def test_targets_by_source():
-    assert TARGETS == {'real': 'car', 'bench': 'bench', 'sim': 'gazebo'}
+    assert TARGETS == {'real': 'car', 'bench': 'bench', 'sim': 'sim'}
     with pytest.raises(ValueError, match='turtle'):
         OutputGate('turtle')

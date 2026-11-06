@@ -1,13 +1,13 @@
 """
 The sensor mux and the output mux: where the data comes from, and where the commands go.
 
-  ros2 launch aav_io_mux io_mux.launch.py target:=car|gazebo|bench|turtle|carla
+  ros2 launch aav_io_mux io_mux.launch.py target:=car|sim|bench|turtle|carla
       [source:=real|sim|bench|replay]
 
   target   who plays the car: the output mux sends ego's commands to
            /control/<target>/actuator_cmd. Empty: no output mux (a replay drives nothing)
   source   where the sensor data must come from; empty: the target's own (car: real;
-           gazebo, turtle, carla: sim; bench: bench). A source the target can't take is
+           sim, turtle, carla: sim; bench: bench). A source the target can't take is
            refused here: the real car only ever runs on real data
 
 Every profile launch file includes this with its own target (turtle, sim, bench, car,
@@ -35,7 +35,7 @@ def launch_setup(context):
 def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('target', default_value='',
-                              description='car, gazebo, bench, turtle or carla: who plays the '
+                              description='car, sim, bench, turtle or carla: who plays the '
                                           'car (empty: no output mux)'),
         DeclareLaunchArgument('source', default_value='',
                               description="real, sim, bench or replay (empty: the target's)"),

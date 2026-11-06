@@ -45,10 +45,11 @@
 <a href="learn-lidar.html">Learn: lidar</a>
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
 <a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
-<a href="learn-can.html">Learn: CAN</a>
 <span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
 <a href="status.html">Status</a>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
@@ -513,7 +514,7 @@ good as the GPS that placed it: average the fix for 30 s (section 5).</p>
 <p>To record a run: <code>tools/record.sh</code> records the EKF, the wheels and <code>/control/cmd_vel</code>.
 For B from the point driver's feedback, also record <code>/drive_to_point/_action/feedback</code> (a hidden topic:
 <code>ros2 bag record --include-hidden-topics</code>), <code>/drivers/point/cmd_vel</code>, and in Gazebo
-<code>/vehicle/gazebo/truth</code>.</p>
+<code>/vehicle/sim/truth</code>.</p>
 </section>
 <section class="card"><h2 id="5-where-am-i-is-the-hard-part">5. "Where am I?" is the hard part</h2>
 <div class="table-wrap"><table>

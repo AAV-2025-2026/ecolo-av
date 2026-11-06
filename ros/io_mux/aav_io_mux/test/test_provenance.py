@@ -17,13 +17,13 @@ def gazebo(*topics, kind=SIM):
 
 def test_each_target_needs_its_own_source_and_topic():
     assert p.target_of('car') == REAL
-    assert p.target_of('gazebo') == p.target_of('turtle') == p.target_of('carla') == SIM
+    assert p.target_of('sim') == p.target_of('turtle') == p.target_of('carla') == SIM
     assert p.target_of('bench') == BENCH
     assert p.command_topic('car') == '/control/car/actuator_cmd'
-    assert p.command_topic('gazebo') == '/control/gazebo/actuator_cmd'
+    assert p.command_topic('sim') == '/control/sim/actuator_cmd'
 
 
-@pytest.mark.parametrize('bad', ['', 'real', 'Car', 'sim'])
+@pytest.mark.parametrize('bad', ['', 'real', 'Car', 'gazebo'])
 def test_an_unknown_target_is_refused(bad):
     with pytest.raises(ValueError, match='target:='):
         p.command_topic(bad)
@@ -31,13 +31,13 @@ def test_an_unknown_target_is_refused(bad):
 
 def test_a_launch_takes_the_targets_own_source_and_no_other():
     assert p.choose('car', '') == ('car', 'real')
-    assert p.choose('gazebo', 'sim') == ('gazebo', 'sim')
+    assert p.choose('sim', 'sim') == ('sim', 'sim')
     assert p.choose('bench', '') == ('bench', 'bench')
     assert p.choose('', 'replay') == ('', 'replay')
     with pytest.raises(ValueError, match='target:=car needs source:=real, not sim'):
         p.choose('car', 'sim')
-    with pytest.raises(ValueError, match='target:=gazebo needs source:=sim, not real'):
-        p.choose('gazebo', 'real')
+    with pytest.raises(ValueError, match='target:=sim needs source:=sim, not real'):
+        p.choose('sim', 'real')
     with pytest.raises(ValueError, match='give target'):
         p.choose('', '')
 
@@ -310,7 +310,7 @@ def test_an_announcer_not_heard_yet_holds_the_gate_and_its_sim_latches():
 
 
 def test_gazebo_refuses_a_real_backend_in_its_graph():
-    gate = Gate('gazebo', settle=0.0)
+    gate = Gate('sim', settle=0.0)
     gate.report = ok(0.0, source=SIM)
     gate.entries = gazebo(IMU)
     assert gate.is_open(0.0)

@@ -102,7 +102,7 @@ def test_the_defaults_start_what_pixi_run_sim_always_has():
                          'watchdog.launch.py', 'geofence.launch.py'}
     assert sent['gazebo.launch.py']['world'] == 'empty'
     # ego's commands reach Gazebo through the output mux, only while everything is SIM.
-    assert sent['io_mux.launch.py'] == {'target': 'gazebo', 'source': 'sim'}
+    assert sent['io_mux.launch.py'] == {'target': 'sim', 'source': 'sim'}
     nav = sent['navigation.launch.py']
     assert (nav['radar'], nav['lidar'], nav['collision_monitor'], nav['camera_obstacles']) == (
         'false', 'false', 'false', 'false')
@@ -376,6 +376,37 @@ def test_ndt_needs_the_test_lot_the_lidar_and_its_map(tmp_path):
     # The start pose is the car's, as AMCL's; on simulated time.
     assert sent == {'use_sim_time': 'true', 'ndt_map': str(map_file), 'ndt_x': '0.0',
                     'ndt_y': '4.0', 'ndt_yaw': '1.0'}
+
+
+def campus_files(folder):
+    made = folder / 'maps' / 'campus'
+    made.mkdir(parents=True)
+    (made / 'campus.sdf').write_text(
+        '<sdf><world><plugin name="gz::sim::systems::Sensors"/></world></sdf>')
+    (made / 'place.yaml').write_text('start: {x: 49.25, y: -70.75, yaw: 0.5}\n')
+    (folder / 'maps' / 'ndt').mkdir()
+    (folder / 'maps' / 'ndt' / 'campus.pcd').write_bytes(b'')
+
+
+def test_the_campus_starts_the_car_in_its_lot_with_its_own_maps(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    campus_files(tmp_path)
+    sent = included(started(SIM, world='campus', ndt='true'))
+    gazebo = sent['gazebo.launch.py']
+    assert (gazebo['start_x'], gazebo['start_y'], gazebo['start_yaw']) == (
+        '49.25', '-70.75', '0.5')
+    ndt = sent['ndt.launch.py']
+    assert (ndt['ndt_x'], ndt['ndt_y']) == ('49.25', '-70.75')
+    assert ndt['ndt_map'].endswith('campus.pcd') and ndt['ndt_min_score'] == '1.5'
+    assert sent['geofence.launch.py']['centre_x'] == '49.25'
+
+
+def test_the_campus_start_can_be_moved(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    campus_files(tmp_path)
+    gazebo = included(started(SIM, world='campus', start_x='124', start_y='-98'))[
+        'gazebo.launch.py']
+    assert (gazebo['start_x'], gazebo['start_y']) == ('124', '-98')
 
 
 def test_ndt_ekf_starts_ndt_and_feeds_its_pose_to_the_global_ekf(tmp_path):

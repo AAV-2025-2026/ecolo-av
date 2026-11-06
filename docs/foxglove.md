@@ -74,7 +74,7 @@ ndt:=true kiss_icp:=true amcl:=true`, driving to a goal 18 m ahead.*
 | Panel | Shows | Topic |
 |---|---|---|
 | Front camera | the front left camera, small, once a second | `/perception/camera/front_left/preview/compressed` |
-| Chase camera | Gazebo's picture from behind the car (sim only) | `/vehicle/gazebo/chase_camera/compressed` |
+| Chase camera | Gazebo's picture from behind the car (sim only) | `/vehicle/sim/chase_camera/compressed` |
 | Status | e-stop, sensor watchdog, localization health (word and text), output gate, `/diagnostics` warnings | `/vehicle/status`, `/safety/...`, `/localization/health`, `/diagnostics` |
 | Map | the EKF (blue) and the raw GPS (orange) | `/localization/gps/fix`, `/sensors/gps/fix` |
 | 3D | the car, lidar scan, voxel cubes, local costmap, Nav2's `/map`, plan, goal, radar, stop zone | as in Driving, plus `/perception/voxels/cubes`, `/map` |

@@ -11,7 +11,7 @@ feedback comes back as `/vehicle/*`. Only one of these runs at a time.
 ```
 
 `spine_bridge` on a stand-in reads `/control/bench/actuator_cmd` or
-`/control/gazebo/actuator_cmd` instead (its `source` parameter: `bench` or `sim`).
+`/control/sim/actuator_cmd` instead (its `source` parameter: `bench` or `sim`).
 
 ## Subdirectories & Boundaries
 

@@ -286,7 +286,7 @@ Exactly one runs at a time. Each reads ego's commands from the output mux, on it
 | **Does** | sends ego's commands to the spine board as CAN frames, and turns its replies into speed and status |
 | **Why** | the future real car: one CAN bus between the Orin and the actuators. Today (`role:=sensors`, `car.launch.py actuators:=uart`): only reads the wheel sensors on the Orin's CAN bus, and sends nothing ([Today's wiring](can-plan.md#todays-wiring-23-october)) |
 | **Runs on** | the Orin (`spine: true` in `orin.yaml`: the CAN bus is wired to it) |
-| **In → out** | `/control/car/actuator_cmd` (or `bench`, `gazebo`), `/safety/estop`, `/can/rx` → `/can/tx`, `/vehicle/odom`, `/vehicle/status`, `/vehicle/joint_states`; service `/spine/arm` |
+| **In → out** | `/control/car/actuator_cmd` (or `bench`, `sim`), `/safety/estop`, `/can/rx` → `/can/tx`, `/vehicle/odom`, `/vehicle/status`, `/vehicle/joint_states`; service `/spine/arm` |
 | **Origin** | ours; `ros2_socketcan` (stock, Linux only) puts the frames on the wire |
 | **Language** | the node runs in Rust by default: `aav_spine_bridge`, on `spine-core`'s CAN code. `bridge:=python` runs this package's Python one. Both read `config/spine.yaml` |
 | **Status** | [[works]] on the bench against `spine_sim`, both languages. No spine board on the car yet |
@@ -329,7 +329,7 @@ Exactly one runs at a time. Each reads ego's commands from the output mux, on it
 | **Does** | puts Gazebo's simulated car behind the real car's topics, with an IMU and GPS; in the road world, a camera, a radar stand-in and (with `lidar:=true`) a roof lidar |
 | **Why** | Nav2 and the EKFs can be tested with the same settings as on the car |
 | **Runs on** | any laptop (headless on oirp-spss) |
-| **In → out** | `/control/gazebo/actuator_cmd`, `/gazebo/odom`, `/gazebo/imu`, `/gazebo/navsat`, `/gazebo/radar/points` → `/gazebo/cmd_vel`, `/vehicle/odom`, `/vehicle/status`, `/sensors/imu/data_raw`, `/sensors/gps/fix`, `/sensors/radar/points`. The road world's bridges add `/sensors/camera/front_left/*`, `/sensors/lidar/points` and `/vehicle/gazebo/truth` |
+| **In → out** | `/control/sim/actuator_cmd`, `/gazebo/odom`, `/gazebo/imu`, `/gazebo/navsat`, `/gazebo/radar/points` → `/gazebo/cmd_vel`, `/vehicle/odom`, `/vehicle/status`, `/sensors/imu/data_raw`, `/sensors/gps/fix`, `/sensors/radar/points`. The road world's bridges add `/sensors/camera/front_left/*`, `/sensors/lidar/points` and `/vehicle/sim/truth` |
 | **Origin** | ours, on stock Gazebo Harmonic and `ros_gz` |
 | **Status** | [[works]] headless on Linux and a Mac; its window on a Mac |
 | **Run alone** | `pixi run sim` (`gui:=false` on a Mac) |

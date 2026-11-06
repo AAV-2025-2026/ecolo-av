@@ -70,7 +70,7 @@ def test_the_target_picks_the_profile(target, profile):
 @pytest.mark.parametrize('target, source', [('car', 'sim'), ('car', 'bench'),
                                             ('gazebo', 'real'), ('bench', 'sim')])
 def test_a_source_the_target_cant_take_is_refused_before_anything_starts(target, source):
-    with pytest.raises(ValueError, match=f'target:={target} needs'):
+    with pytest.raises(ValueError, match='needs source:='):
         started(STACK, target=target, source=source)
 
 

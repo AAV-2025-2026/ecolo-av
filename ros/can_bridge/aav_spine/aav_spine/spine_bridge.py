@@ -3,7 +3,7 @@ spine_bridge: the ROS side of the CAN spine.
 
 Subscribes  control/<target>/actuator_cmd  ackermann_msgs/AckermannDriveStamped: ego's
                               command, from the output mux (aav_io_mux) - control/car/ for
-                              source real, control/bench/ for bench, control/gazebo/ for
+                              source real, control/bench/ for bench, control/sim/ for
                               sim. Never /ego/actuator_cmd itself: on the car, only an
                               output mux that found every source REAL reaches this node
             safety/estop      std_msgs/Bool
@@ -75,7 +75,7 @@ SOURCES = {'real': SensorSource.REAL, 'bench': SensorSource.BENCH, 'sim': Sensor
 # Where ego's commands come from, for each source: the output mux's topic for the target
 # this bridge plays (aav_io_mux provenance.TARGETS). The real car's only from target car.
 COMMANDS = {'real': 'control/car/actuator_cmd', 'bench': 'control/bench/actuator_cmd',
-            'sim': 'control/gazebo/actuator_cmd'}
+            'sim': 'control/sim/actuator_cmd'}
 # What this node publishes, for /system/source.
 ANNOUNCED = (('vehicle', '/vehicle/status'), ('odometry', '/vehicle/odom'),
              ('steering', '/vehicle/steering'), ('throttle', '/vehicle/throttle'),

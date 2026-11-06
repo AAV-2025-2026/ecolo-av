@@ -31,7 +31,7 @@ NAMES = {REAL: 'REAL', SIM: 'SIM', BENCH: 'BENCH', REPLAY: 'REPLAY'}
 # source:= on the sensor mux: where this run's sensor data must come from.
 SOURCES = {'real': REAL, 'sim': SIM, 'bench': BENCH, 'replay': REPLAY}
 # target:= on the output mux: who plays the car, and the source its data must come from.
-TARGETS = {'car': REAL, 'gazebo': SIM, 'turtle': SIM, 'carla': SIM, 'bench': BENCH}
+TARGETS = {'car': REAL, 'sim': SIM, 'turtle': SIM, 'carla': SIM, 'bench': BENCH}
 
 # The sensor topics the sensor mux watches: the raw data, as each driver or stand-in
 # publishes it. The derived topics (/sensors/imu/data, the EKFs) follow from these.
@@ -83,7 +83,7 @@ def choose(target: str, source: str) -> Tuple[str, str]:
     take: the output mux would refuse every command, so say so before anything starts.
     """
     if not target and not source:
-        raise ValueError('give target:= (car, gazebo, bench, turtle, carla) or source:=')
+        raise ValueError('give target:= (car, sim, bench, turtle, carla) or source:=')
     if target:
         needs = target_of(target)
         if not source:

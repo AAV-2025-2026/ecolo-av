@@ -2,7 +2,7 @@
 gazebo_gps: Gazebo's NavSat sensor, made to read like the car's GPS.
 
 Subscribes  gazebo/navsat             sensor_msgs/NavSatFix (bridged NavSat sensor)
-            /vehicle/gazebo/truth     nav_msgs/Odometry: the car's true heading, speed and
+            /vehicle/sim/truth     nav_msgs/Odometry: the car's true heading, speed and
                                       turn, for the receiver's velocity (gps.py)
 Publishes   sensors/gps/fix           sensor_msgs/NavSatFix, in gps_link, a fix, with a
                                       covariance
@@ -52,7 +52,7 @@ class GazeboGps(SensorRelay):
         self.pub = self.create_publisher(NavSatFix, 'sensors/gps/fix', 10)
         self.vel_pub = self.create_publisher(TwistWithCovarianceStamped,
                                              'sensors/gps/fix_velocity', 10)
-        self.create_subscription(Odometry, '/vehicle/gazebo/truth',
+        self.create_subscription(Odometry, '/vehicle/sim/truth',
                                  lambda m: setattr(self, 'truth', m), 10)
         self.create_subscription(NavSatFix, 'gazebo/navsat', self.on_navsat, 10)
 

@@ -80,6 +80,10 @@ program held (`COASTING`) until test 4.3 measures the stop and someone writes
 `actuators.open_loop_decel` into `vehicle.yaml`. (The no-timeout lock holds them on
 today's firmware anyway.)
 
+**Changing the mode doesn't release them.** `speed_loop.mode: pi` needs its own measured
+stop, `actuators.pi_loop_decel`. And never run `pi` on stands without a driven-wheel speed
+(TODO 49b): the wheels the car measures don't turn, so the loop raises the throttle.
+
 ### A site's polygon (a TODO for the team)
 
 1. Survey the datum (the 26 Oct review's W3) and set it in `navsat.yaml`.

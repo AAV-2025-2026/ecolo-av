@@ -91,3 +91,16 @@ def test_the_config_keeps_the_designs_numbers():
     assert p['cubes'] == [4.0, 2.0, 1.0]
     assert (p['min_height'], p['max_range'], p['thin']) == (0.3, 45.0, 1.0)
     assert (p['lost_after'], p['step_m']) == (5, 0.1)
+
+
+def test_a_place_can_set_its_own_score_floor_and_the_file_cant_beat_it(tmp_path):
+    map_file = tmp_path / 'map.pcd'
+    map_file.write_bytes(b'')
+    assert parameters(ndt_map=str(map_file))['min_score_per_point'] == 2.3
+    assert parameters(ndt_map=str(map_file), ndt_min_score='1.5')['min_score_per_point'] == 1.5
+    # rclrs lets a file's `ndt:` section beat a later dictionary, so the file must not be given
+    # at all: found on the car's world on 5 Nov, when NDT quietly kept 2.3.
+    launch_file = load()
+    node = launch_file.nodes(context_for(launch_file, ndt_map=str(map_file),
+                                         ndt_min_score='1.5'))[0]
+    assert not any(isinstance(p, ParameterFile) for p in node._Node__parameters)

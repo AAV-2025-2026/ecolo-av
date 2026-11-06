@@ -10,7 +10,7 @@ itself) and one node per sensor, as on the car.
 ## Overview
 
 ```
-/control/gazebo/actuator_cmd ─> gazebo_adapter ─> /gazebo/cmd_vel ─bridge─> Ackermann system
+/control/sim/actuator_cmd ─> gazebo_adapter ─> /gazebo/cmd_vel ─bridge─> Ackermann system
                                (the actuator model)
 Gazebo IMU, NavSat, radar ─bridge─> gazebo_imu, gazebo_gps, gazebo_radar ─> /sensors/...
 Gazebo odometry, joints ─bridge─> gazebo_adapter ─> /vehicle/odom, wheels, status...
@@ -21,12 +21,13 @@ Gazebo odometry, joints ─bridge─> gazebo_adapter ─> /vehicle/odom, wheels,
 | `empty.sdf` | flat ground; renders nothing, runs headless anywhere |
 | `test_lot.sdf` | the walls, building and parked cars of `aav_navigation`'s example lot map; renders the sensors too |
 | `road.sdf` | a road with a stop sign; renders the cameras, the radar stand-in and the roof lidar |
+| `campus` | Carleton, from OpenStreetMap; made by `pixi run campus` into `maps/campus/`, not kept in git (`docs/campus.md`) |
 
 A world renders sensors only if it loads Gazebo's Sensors system (`worlds.has_sensors`).
 `test_lot.sdf` and `road.sdf` both do. In such a world the lidar and the radar run by
 default (`lidar:=true`, `radar:=true`); set either to false to leave it out.
 So does a chase camera behind and above the car (`chase_camera:=true`), for Lichtblick's
-cockpit layout: `/vehicle/gazebo/chase_camera/compressed` (`config/bridge_chase.yaml`).
+cockpit layout: `/vehicle/sim/chase_camera/compressed` (`config/bridge_chase.yaml`).
 That needs a GPU, ogre2 on a Mac, or `tools/software_gl.sh`. Every world is named
 `aav`, and its origin must sit on the datum in `navsat.yaml`.
 
@@ -51,13 +52,13 @@ Arguments: `world` (empty, test_lot, road), `gui`, `follow`, `obstacle`, `start_
 
 | Node | Subscribes | Publishes |
 |---|---|---|
-| `gazebo_adapter` | `/control/gazebo/actuator_cmd` (AckermannDriveStamped; not with spine), `/vehicle/gazebo/spine_outputs` (SpineOutputs; only with spine), `/vehicle/gazebo/esp32_outputs` (SpineOutputs; only with esp32), `/gazebo/odom`, `/joint_states` | `/gazebo/cmd_vel` (Twist), `/vehicle/odom`, `/vehicle/status`, `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake`, `/vehicle/wheels` (with spine: `/vehicle/gazebo/wheels`, `/vehicle/gazebo/steering`), `/system/source` (latched, all SIM) |
+| `gazebo_adapter` | `/control/sim/actuator_cmd` (AckermannDriveStamped; not with spine), `/vehicle/sim/spine_outputs` (SpineOutputs; only with spine), `/vehicle/sim/esp32_outputs` (SpineOutputs; only with esp32), `/gazebo/odom`, `/joint_states` | `/gazebo/cmd_vel` (Twist), `/vehicle/odom`, `/vehicle/status`, `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake`, `/vehicle/wheels` (with spine: `/vehicle/sim/wheels`, `/vehicle/sim/steering`), `/system/source` (latched, all SIM) |
 | `gazebo_imu` | `/gazebo/imu`, `/gazebo/odom` | `/sensors/imu/data_raw` (Imu, `imu_link`, no orientation) |
-| `gazebo_gps` | `/gazebo/navsat`, `/vehicle/gazebo/truth` | `/sensors/gps/fix` (NavSatFix, `gps_link`), `/sensors/gps/fix_velocity` (TwistWithCovarianceStamped) |
+| `gazebo_gps` | `/gazebo/navsat`, `/vehicle/sim/truth` | `/sensors/gps/fix` (NavSatFix, `gps_link`), `/sensors/gps/fix_velocity` (TwistWithCovarianceStamped) |
 | `gazebo_radar` | `/gazebo/radar/points` (best effort), `/gazebo/odom` | `/sensors/radar/points` (best effort, `radar_link`, the TI driver's fields); only with `radar:=true` (the default) in a world that renders sensors |
-| `gazebo_esp32` | TCP 127.0.0.1:47000 + the ROS domain: `legacy_uart_bridge`'s frames; only with `esp32:=true` | `/vehicle/gazebo/esp32_outputs` (SpineOutputs, 50 Hz) |
+| `gazebo_esp32` | TCP 127.0.0.1:47000 + the ROS domain: `legacy_uart_bridge`'s frames; only with `esp32:=true` | `/vehicle/sim/esp32_outputs` (SpineOutputs, 50 Hz) |
 | `gazebo_camera` | `/gazebo/camera/front_left/image_raw` | `/sensors/camera/front_left/image_raw`; only with `faults:=true` in a world that renders sensors |
-| `gz_bridge`, `gz_road_bridge`, `gz_lidar_bridge` | (stock `ros_gz_bridge`, `config/bridge*.yaml`) | `/clock`, `/joint_states`, `/vehicle/gazebo/truth`, the cameras, `/sensors/lidar/points` |
+| `gz_bridge`, `gz_road_bridge`, `gz_lidar_bridge` | (stock `ros_gz_bridge`, `config/bridge*.yaml`) | `/clock`, `/joint_states`, `/vehicle/sim/truth`, the cameras, `/sensors/lidar/points` |
 
 ### Parameters
 
@@ -102,7 +103,7 @@ lidar's obstacle check in `tools/sim_check.py`), `stop_sign`.
 - The actuator model, not Gazebo, sets the limits. Its numbers are `vehicle.yaml`'s
   `actuators:` section.
 - Each sensor node is its own process, so a slow one can't make another late.
-- Gazebo's truth (`/vehicle/gazebo/truth`) is for checks and the GPS's velocity only;
+- Gazebo's truth (`/vehicle/sim/truth`) is for checks and the GPS's velocity only;
   it never reaches localization.
 - Units: m, m/s, rad, s. Positive steering turns left. Throttle and brake are 0 to 1.
 

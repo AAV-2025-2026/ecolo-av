@@ -465,15 +465,15 @@
 <path fill="none" stroke="#888888" d="M1836.31,-337.85C1843.51,-392.31 1870.7,-554.99 1948.5,-661.36 1955.61,-671.09 1965.18,-679.7 1974.9,-686.93"/>
 <polygon fill="#888888" stroke="#888888" points="1972.76,-689.7 1982.96,-692.55 1976.76,-683.96 1972.76,-689.7"/>
 </g>
-<!-- /vehicle/gazebo/truth -->
+<!-- /vehicle/sim/truth -->
 <g id="node59" class="node">
-<title>/vehicle/gazebo/truth</title>
-<text xml:space="preserve" text-anchor="middle" x="2018" y="-320.56" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#222222">/vehicle/gazebo/truth</text>
+<title>/vehicle/sim/truth</title>
+<text xml:space="preserve" text-anchor="middle" x="2018" y="-320.56" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#222222">/vehicle/sim/truth</text>
 <text xml:space="preserve" text-anchor="middle" x="2018" y="-310.81" font-family="Helvetica,sans-Serif" font-size="9.00" fill="#222222">Odometry</text>
 </g>
-<!-- gz_bridge&#45;&gt;/vehicle/gazebo/truth -->
+<!-- gz_bridge&#45;&gt;/vehicle/sim/truth -->
 <g id="edge66" class="edge">
-<title>gz_bridge&#45;&gt;/vehicle/gazebo/truth</title>
+<title>gz_bridge&#45;&gt;/vehicle/sim/truth</title>
 <path fill="none" stroke="#888888" d="M1865.15,-319.36C1890.09,-319.36 1925.88,-319.36 1956.45,-319.36"/>
 <polygon fill="#888888" stroke="#888888" points="1956.37,-322.86 1966.37,-319.36 1956.37,-315.86 1956.37,-322.86"/>
 </g>

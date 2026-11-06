@@ -102,7 +102,7 @@ Parameters: aav_teleop `config/joy_alive.yaml`: `enable_button` 0, `motion_axes`
 | `NEAR` (a stopping path within `margin` + σ of the edge) | on | `hysteresis` further in |
 | `LOST` (no pose `max_age`, σ over `max_std`, NaN, no GPS `gps_max_age`) | on | by itself |
 | `OUTSIDE`, `JUMP` | on | latched: a person clears it |
-| `COASTING` (legacy speed loop `open`, stop not measured) | on | `vehicle.yaml` `open_loop_decel` |
+| `COASTING` (the legacy speed loop's stop not measured, in either mode) | on | `vehicle.yaml` `open_loop_decel` or `pi_loop_decel`, for the running mode |
 | `STANDS` (`stands:=true`) | open, logged every 5 s | |
 
 `launch/geofence.launch.py backend:=spine|uart|gazebo|gazebo_esp32 [radius:=30]
@@ -144,7 +144,7 @@ each profile passes the inputs it has (sim, bench, car).
 | `sensor_watchdog.py` | no | the node |
 | `hold.py` | yes | `StopHold`: locked from a stop until `clear_time` s of no stop |
 | `stop_hold.py` | no | the node |
-| `geofence.py` | yes | `Circle`, `Polygon`, `site_fence`; `Motion`, `reaction_time`, `braking`, `backend_stale`, `coasts`, `motion_from`, `stopping_distance`, `along_arc`; `Settings`, `Pose`, `Geofence` (the states) |
+| `geofence.py` | yes | `Circle`, `Polygon`, `site_fence`; `Motion`, `reaction_time`, `braking`, `backend_stale`, `measured_stop`, `coasts`, `motion_from`, `stopping_distance`, `along_arc`; `Settings`, `Pose`, `Geofence` (the states) |
 | `geofence_node.py` | no | the node `geofence` |
 | `joy_alive.py` | yes | `JoyAlive`: the joystick's `WAITING`, `SILENT`, `FROZEN` and their latch |
 | `joy_alive_node.py` | no | the node `joy_alive` |

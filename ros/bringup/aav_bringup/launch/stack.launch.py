@@ -28,13 +28,16 @@ from launch.substitutions import LaunchConfiguration
 
 PROFILES = {'turtle': 'turtle.launch.py', 'gazebo': 'sim.launch.py',
             'bench': 'bench.launch.py', 'car': 'car.launch.py', 'carla': 'carla.launch.py'}
+# target:= here names the program; the output mux only knows the job: any simulator is `sim`.
+MUX_TARGET = {'gazebo': 'sim'}
 
 
 def launch_setup(context):
     target = LaunchConfiguration('target').perform(context).strip()
     if target not in PROFILES:
         raise ValueError(f'target:={target}: use one of {", ".join(PROFILES)}')
-    choose(target, LaunchConfiguration('source').perform(context).strip())
+    choose(MUX_TARGET.get(target, target),
+           LaunchConfiguration('source').perform(context).strip())
     path = os.path.join(get_package_share_directory('aav_bringup'), 'launch', PROFILES[target])
     # The rest of the command line's arguments reach the profile as they are: launch
     # arguments are shared with an included file.

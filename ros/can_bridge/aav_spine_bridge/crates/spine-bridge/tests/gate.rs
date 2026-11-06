@@ -114,19 +114,19 @@ fn a_quiet_output_mux_counts_as_shut() {
 fn open_for_another_target_is_not_this_bridges_gate() {
     let t0 = Instant::now();
     let mut bridge = Bridge::new(SETTINGS);
-    bridge.output_mux_state("OPEN - gazebo: every source SIM", t0);
+    bridge.output_mux_state("OPEN - sim: every source SIM", t0);
     let message = refused(&mut bridge, t0);
     assert_eq!(
         message,
         format!(
             "{GATE_SHUT}: the output mux is for another target \
-             (OPEN - gazebo: every source SIM); this bridge needs target car"
+             (OPEN - sim: every source SIM); this bridge needs target car"
         )
     );
     // The bench's and Gazebo's bridges read their own.
     for (target, line) in [
         (Target::Bench, "OPEN - bench: every source BENCH"),
-        (Target::Gazebo, "OPEN - gazebo: every source SIM"),
+        (Target::Sim, "OPEN - sim: every source SIM"),
     ] {
         let mut gate = OutputGate::new(target, secs(1.5));
         gate.heard(line, t0);
@@ -154,7 +154,7 @@ fn the_estop_is_said_first() {
 fn targets_by_name() {
     assert_eq!("car".parse(), Ok(Target::Car));
     assert_eq!("bench".parse(), Ok(Target::Bench));
-    assert_eq!("gazebo".parse(), Ok(Target::Gazebo));
+    assert_eq!("sim".parse(), Ok(Target::Sim));
     assert!("turtle".parse::<Target>().is_err());
-    assert_eq!(Target::Gazebo.to_string(), "gazebo");
+    assert_eq!(Target::Sim.to_string(), "sim");
 }

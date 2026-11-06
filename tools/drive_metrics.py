@@ -5,7 +5,7 @@ No ROS here, so the tests run anywhere (tools/tests/test_drive_metrics.py).
 
 One leg is one Nav2 goal. It records, on Gazebo's clock:
 
-  truth     [(t, x, y, yaw)]        where the car really was (/vehicle/gazebo/truth, map frame)
+  truth     [(t, x, y, yaw)]        where the car really was (/vehicle/sim/truth, map frame)
   plans     [(t, [(x, y), ...])]    each path the planner sent (/plan), as it arrived
   steering  [(t, angle)]            ego's steering command (/ego/actuator_cmd), rad
   asked     [(t, v)]                the controller's speed command (/cmd_vel_nav), m/s

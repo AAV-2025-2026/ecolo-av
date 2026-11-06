@@ -158,7 +158,7 @@ class Recorder(Node):
         self.truth = self.glob = None
         self.recording = False
         self.create_subscription(Bool, '/safety/sensor_watchdog/lock', self.on_lock, 10)
-        self.create_subscription(Odometry, '/vehicle/gazebo/truth', self.on_truth, 10)
+        self.create_subscription(Odometry, '/vehicle/sim/truth', self.on_truth, 10)
         self.create_subscription(Odometry, '/localization/odom/global', self.on_global, 10)
         self.create_subscription(Log, '/rosout', self.on_log, QoSProfile(
             depth=1000, reliability=ReliabilityPolicy.RELIABLE,

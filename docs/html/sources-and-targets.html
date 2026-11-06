@@ -45,10 +45,11 @@
 <a href="learn-lidar.html">Learn: lidar</a>
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
 <a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
-<a href="learn-can.html">Learn: CAN</a>
 <span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
 <a href="status.html">Status</a>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
@@ -125,7 +126,7 @@ everything is real. Package <code>aav_io_mux</code>, built 23 Oct.</p>
  Gazebo        ├─► /sensors/... ──► sensor_mux         │                        legacy_uart_bridge
  bench mocks   │   /vehicle/...      │ /system/sensor_mux/state
  a bag (replay)┘   /system/source ───┤ (ok? which source?)
-                                     ▼                 ├─► /control/gazebo/.. ──► gazebo_adapter
+                                     ▼                 ├─► /control/sim/.. ──► gazebo_adapter
  drivers ─► twist_mux ─► ego ─► output_mux ────────────┤   /control/bench/... ──► spine_bridge (bench)
                     /ego/actuator_cmd  (target:=car)   └─► /control/turtle/.. ──► turtlesim_adapter</code></pre>
 </section>
@@ -282,7 +283,7 @@ gate is shut (Ben, 24 Oct), and says why.</p>
 <tr>
 <td><code>sim</code> (Gazebo, <code>spine:=true</code>)</td>
 <td><code>gazebo</code></td>
-<td><code>OPEN - gazebo: ...</code></td>
+<td><code>OPEN - sim: ...</code></td>
 </tr>
 </tbody>
 </table></div>

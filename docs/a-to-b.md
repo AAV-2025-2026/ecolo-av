@@ -219,7 +219,7 @@ good as the GPS that placed it: average the fix for 30 s (section 5).
 To record a run: `tools/record.sh` records the EKF, the wheels and `/control/cmd_vel`.
 For B from the point driver's feedback, also record `/drive_to_point/_action/feedback` (a hidden topic:
 `ros2 bag record --include-hidden-topics`), `/drivers/point/cmd_vel`, and in Gazebo
-`/vehicle/gazebo/truth`.
+`/vehicle/sim/truth`.
 
 ## 5. "Where am I?" is the hard part
 

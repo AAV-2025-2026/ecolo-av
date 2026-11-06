@@ -214,7 +214,8 @@ def nodes(context):
     tracker = vehicle.check_tracker(LaunchConfiguration('tracker').perform(context), reversing)
     amcl = flag(context, 'amcl')
     voxels = flag(context, 'voxels')
-    if voxels and not lidar:
+    screen_cubes = flag(context, 'screen_cubes')
+    if (voxels or screen_cubes) and not lidar:
         raise ValueError('voxels:=true needs lidar:=true: the cubes come from the lidar')
     if amcl and not lidar:
         raise ValueError('amcl:=true needs lidar:=true: AMCL reads /sensors/lidar/scan')
@@ -300,8 +301,10 @@ def nodes(context):
         actions.append(Node(package='aav_lidar', executable='lidar_scan', name='lidar_scan',
                             output='screen',
                             parameters=[params, {'use_sim_time': use_sim_time}]))
-    if voxels:
-        # The trial: the cubes, for the costmap and collision_monitor. Not a lifecycle node.
+    if voxels or screen_cubes:
+        # The cubes, for the costmap and collision_monitor (voxels:=true), or only for the
+        # developer window (screen_cubes:=true: Nav2 stays on the flat scan). Not a
+        # lifecycle node.
         actions.append(Node(package='aav_voxels', executable='voxels', name='voxels',
                             output='screen',
                             parameters=[params, {'use_sim_time': use_sim_time}]))
@@ -414,6 +417,9 @@ def generate_launch_description():
                               description='true: a pretend person (aav_ghost), its own '
                                           'costmap layer and collision_monitor source; '
                                           'placed with pixi run ghost'),
+        DeclareLaunchArgument('screen_cubes', default_value='false',
+                              description='true (with lidar:=true): run aav_voxels for the '
+                                          "developer window; Nav2 doesn't read its cubes"),
         DeclareLaunchArgument('voxels', default_value='false',
                               description='true (with lidar:=true): the trial, aav_voxels: '
                                           "the costmap's lidar_layer and collision_monitor "
