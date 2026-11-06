@@ -1,0 +1,19 @@
+# dev_window's topics: every name lives here, never in the code (ros/hud/README.md).
+# Built into the program. The contract is docs/interfaces.yaml.
+cubes: /perception/voxels/cubes                  # PointCloud2, base_link: what the car made
+road: /perception/voxels/ground                  # PointCloud2, base_link: the road it saw
+local_odom: /localization/odom/local             # Odometry, odom: places the cubes
+global_odom: /localization/odom/global           # Odometry, map: the car on the map
+picture: /vehicle/sim/chase_camera/image_raw  # Image: the scene
+ndt_pose: /localization/ndt/pose                 # PoseWithCovarianceStamped, map: NDT's answer
+ndt_status: /localization/ndt/status             # DiagnosticStatus: its fit and numbers
+log: /rosout                                     # rcl_interfaces Log: the console
+plan: /plan                                      # Path: Nav2's plan
+map: /map                                        # OccupancyGrid, latched
+costmap: /global_costmap/costmap                 # OccupancyGrid: the danger halo
+source: /system/source                           # DataSource, latched: SIM or real
+status: /vehicle/status                          # VehicleStatus: the e-stop
+gate: /safety/output_mux/state                   # String: the output gate
+watchdog: /safety/sensor_watchdog/state          # String: the sensor watchdog
+goal: /goal_pose                                 # PoseStamped, out: only in developer mode
+estop: /safety/estop                             # Bool, out: only ever true, developer mode
