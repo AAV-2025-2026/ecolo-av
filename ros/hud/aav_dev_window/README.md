@@ -45,12 +45,12 @@ pixi run dev-window --cubes 60000 --seconds 8 --screenshot /tmp/window.png
 
 | Key | Does | Key | Does |
 |---|---|---|---|
-| G | road cubes | M | NDT's map |
-| V | Nav2's cubes (red) | S | live scan |
-| N | NDT's cells (purple) | P | plan |
+| G | road cubes: the lidar's waves | M | NDT's map |
+| V | outline every live cube | S | live scan |
+| N | NDT's cells, dark to light purple (off: raw cubes) | P | plan |
 | O | costmap | C, R | from the car or behind it; reset |
 
-Mouse on the cubes: drag turns the head. From behind, right-drag also moves and the wheel zooms. On the map: click picks a goal,
+Mouse on the cubes: drag turns the head and the wheel zooms. From behind, right-drag also moves. On the map: click picks a goal,
 right-drag moves, wheel zooms.
 
 ## Invariants

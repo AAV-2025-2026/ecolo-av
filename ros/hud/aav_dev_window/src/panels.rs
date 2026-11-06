@@ -32,10 +32,12 @@ const SCENE_SHARE: f32 = 0.68;
 const CUBES_SHARE: f32 = 0.34;
 const MAP_SHARE: f32 = 0.44;
 /// The driver's view at rest: a little down, as the lidar's eyes are level with a wall's top.
-const LOOK_DOWN: [f32; 2] = [0.0, -0.08];
-/// The view from the car, top to bottom, radians: close enough to read walls 30 m away.
-pub const DRIVER_FOV: f32 = 0.62;
+const LOOK_DOWN: [f32; 2] = [0.0, -0.18];
+/// The view from the car, top to bottom, radians: wide, as Ben preferred. The wheel zooms.
+pub const DRIVER_FOV: f32 = 1.15;
 /// A map wider than this, metres, shows the car's surroundings, not all of itself.
+/// Cubes lower than this are the ground's waves, kerbs and grass: not compared with NDT's map.
+pub const WAVES_TOP: f32 = 0.45;
 /// The most of NDT's cells drawn on the flat map at once.
 const MAX_MAP_CELLS: usize = 8_000;
 const BIG_MAP: f64 = 300.0;
@@ -77,7 +79,7 @@ pub struct Layers {
 impl Default for Layers {
     fn default() -> Self {
         Self {
-            road: false,
+            road: true,
             nav2_cubes: false,
             ndt_cubes: true,
             costmap: true,
@@ -127,9 +129,13 @@ struct GridLayer {
 }
 
 impl GridLayer {
+    /// Nav2 sends the whole grid again and again. An unchanged one costs nothing: making a
+    /// picture of a campus takes long enough to freeze the window, and makes it flash.
     fn set(&mut self, grid: Grid) {
-        self.grid = Some(grid);
-        self.fresh = true;
+        if self.grid.as_ref() != Some(&grid) {
+            self.grid = Some(grid);
+            self.fresh = true;
+        }
     }
 
     /// Paints the grid at its place on the map, making a new texture if it changed.
@@ -147,10 +153,17 @@ impl GridLayer {
                 [grid.info.width as usize, grid.info.height as usize],
                 &grid.to_rgba(palette),
             );
-            self.texture = Some(
-                ui.ctx()
-                    .load_texture(name, image, egui::TextureOptions::NEAREST),
-            );
+            // The same texture, new contents: a new one would be blank for a frame.
+            match &mut self.texture {
+                Some(texture) => texture.set(image, egui::TextureOptions::NEAREST),
+                None => {
+                    self.texture = Some(ui.ctx().load_texture(
+                        name,
+                        image,
+                        egui::TextureOptions::NEAREST,
+                    ));
+                }
+            }
             self.fresh = false;
         }
         if let Some(texture) = &self.texture {
@@ -222,7 +235,7 @@ impl WorldNews {
         let index = self
             .ndt_index
             .get_or_insert_with(|| feed::MapIndex::new(&cells.centres, cells.size));
-        self.map_match = index.match_cubes(&cubes);
+        self.map_match = index.match_cubes(&cubes, WAVES_TOP);
     }
 
     /// One piece of news. The picture isn't here: it goes straight into its image.
@@ -815,8 +828,13 @@ fn map_panel(ui: &mut egui::Ui, state: &mut UiState, feed: &mut dyn feed::Feed) 
                 .map(|[x, y]| to(Point::new(f64::from(*x), f64::from(*y))))
                 .filter(|at| rect.contains(*at))
                 .take(MAX_MAP_CELLS);
+            // Squares, not circles: thousands of circles cost more than the rest of the frame.
             for at in on_screen {
-                painter.circle_filled(at, 1.0, egui::Color32::from_rgb(205, 165, 245));
+                painter.rect_filled(
+                    egui::Rect::from_center_size(at, egui::vec2(2.0, 2.0)),
+                    0.0,
+                    egui::Color32::from_rgb(205, 165, 245),
+                );
             }
         }
     }

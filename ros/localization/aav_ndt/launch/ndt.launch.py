@@ -67,12 +67,15 @@ def nodes(context):
              'start_yaw': float(arg('ndt_yaw')),
              'start_from_global': arg('ndt_from_global').lower() == 'true'}
     settings = os.path.join(share, 'config', 'ndt.yaml')
-    if arg('ndt_min_score'):
+    if arg('ndt_min_score') or arg('ndt_min_height'):
         # Not by adding it to the list below: rclrs lets the file's `ndt:` section beat a
         # later dictionary's wildcard, so NDT would quietly keep the file's number (5 Nov).
         with open(settings) as file:
             settings = yaml.safe_load(file)['ndt']['ros__parameters']
-        settings['min_score_per_point'] = float(arg('ndt_min_score'))
+        if arg('ndt_min_score'):
+            settings['min_score_per_point'] = float(arg('ndt_min_score'))
+        if arg('ndt_min_height'):
+            settings['min_height'] = float(arg('ndt_min_height'))
     return [Node(package='aav_ndt', executable='ndt', name='ndt', output='screen',
                  parameters=[settings,
                              car_parameters(vehicle.load()), start,
@@ -92,6 +95,9 @@ def generate_launch_description():
         DeclareLaunchArgument('ndt_min_score', default_value='',
                               description="below this a fit is poor (empty: ndt.yaml's). It "
                                           'depends on the place: measure it there'),
+        DeclareLaunchArgument('ndt_min_height', default_value='',
+                              description='m above the ground: what NDT ignores below (empty: '
+                                          "ndt.yaml's)"),
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         OpaqueFunction(function=nodes),
     ])

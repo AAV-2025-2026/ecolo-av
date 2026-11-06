@@ -34,6 +34,11 @@ CAMPUS_NDT = os.path.join('maps', 'ndt', 'campus.pcd')
 # recorded map, and stayed within 0.12 m of the truth. Whether a WRONG pose can score this
 # high isn't measured, so don't feed it to the EKF here (ndt_ekf) until it is.
 CAMPUS_NDT_MIN_SCORE = 1.5
+# The grass is a kerb up, 0.30 m (Ben, 5 Nov), right on the car's usual 0.3 m floor, so half of
+# every hit on it would count as an obstacle, or as a wall for NDT. NDT looks above it. The
+# screen's cubes look below it, so the kerb and the grass show as the lidar's rings.
+CAMPUS_NDT_FLOOR = 0.45
+CAMPUS_CUBE_FLOOR = 0.12
 
 
 def world_file(share: str, world: str) -> str:

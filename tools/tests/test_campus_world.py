@@ -89,23 +89,51 @@ def test_walls_face_out_whichever_way_the_ring_goes():
             assert outward > 0.0
 
 
-def test_nothing_on_the_ground_is_above_where_the_car_drives():
-    for z in (c.GRASS_Z, c.GREEN_Z, c.WATER_Z, c.LOT_Z, c.PATH_Z, c.ROAD_Z, c.PAINT_Z):
+def test_pavement_is_under_the_car_and_the_grass_a_foot_up():
+    for z in (c.LOT_Z, c.ROAD_Z, c.PAINT_Z):
         assert z < 0.0
-    assert c.GRASS_Z < c.LOT_Z < c.ROAD_Z < c.PAINT_Z
+    assert c.GRASS_Z == c.KERB_HEIGHT == 0.30
+    assert c.GRASS_Z < c.PATH_Z < c.KERB_TOP_Z
 
 
-def test_a_kerb_stops_where_the_lot_opens_onto_a_road():
+def test_rectangles_cover_a_mask_exactly():
+    mask = np.zeros((6, 8), dtype=bool)
+    mask[1:4, 2:5] = True
+    mask[4, 2:7] = True
+    mask[2, 7] = True
+    made = np.zeros_like(mask)
+    found = c.rectangles(mask)
+    for col0, col1, row0, row1 in found:
+        assert not made[row0:row1, col0:col1].any(), 'no overlaps'
+        made[row0:row1, col0:col1] = True
+    assert (made == mask).all()
+    assert len(found) == 3, 'equal rows share a rectangle'
+
+
+def test_kerbs_run_round_the_pavement_and_stay_on_the_map():
     grid = c.Grid((-20.0, -20.0, 30.0, 30.0))
     grid.fill(SQUARE, 1)
-    # A road along the east edge.
-    grid.fill([(10.0, -5.0), (15.0, -5.0), (15.0, 15.0), (10.0, 15.0)], 1)
-    runs = c.kerb_runs(SQUARE, grid)
-    kerbed = [p for run in runs for p in run]
-    assert kerbed, 'the other three sides have kerbs'
-    east_edge = [p for p in kerbed if p[0] > 9.9 and 1.0 < p[1] < 9.0]
-    assert not east_edge
-    assert any(p[0] < 0.1 for p in kerbed)
+    edges = c.pavement_edges(grid.free, grid)
+    assert len(edges) == 1 and edges[0][0] == edges[0][-1]
+    xs = [p[0] for p in edges[0]]
+    ys = [p[1] for p in edges[0]]
+    assert abs(min(xs)) < 0.5 and abs(max(xs) - 10.0) < 0.5
+    assert abs(min(ys)) < 0.5 and abs(max(ys) - 10.0) < 0.5
+
+
+def test_a_path_stops_at_the_road_it_crosses():
+    grid = c.Grid((-20.0, -20.0, 30.0, 30.0))
+    grid.fill(SQUARE, 1)
+    parts = c.off_pavement([(-10.0, 5.0), (20.0, 5.0)], grid)
+    assert len(parts) == 2
+    assert parts[0][-1][0] <= 1.0 and parts[1][0][0] >= 9.0
+
+
+def test_a_park_round_a_road_leaves_the_road_open(tmp_path):
+    meshes, _, grid, _, _, _, _ = c.build(read_small(tmp_path), (-5, -5, 30, 30))
+    assert grid.is_free(2.0, 7.0), 'the lot is drivable'
+    assert meshes['grass'].vertices and meshes['kerb'].vertices
+    assert not grid.is_free(-3.0, 5.0), 'the grass is not'
 
 
 def test_the_grid_is_blocked_until_a_road_opens_it_and_y_goes_up():

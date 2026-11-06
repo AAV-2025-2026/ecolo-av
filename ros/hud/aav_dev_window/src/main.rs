@@ -44,8 +44,8 @@ use crate::feed::{Feed, Update};
 const USAGE: &str = "usage: dev_window [--live] [--developer] [--ndt-map FILE] \
                      [--click-goal X,Y] [--cubes N] \
                      [--all-layers] [--seconds S] [--screenshot FILE]";
-/// One NDT map cube's edge, metres: `debug_hud.yaml`'s `ndt_map_cell`.
-const NDT_CELL: f64 = 1.0;
+/// One NDT map cube's edge on screen, metres: at 1 m a kerb looked as big as a building.
+const NDT_CELL: f64 = 0.5;
 /// The most outlines drawn in red. Drawing lines costs more than drawing cubes.
 const MAX_OUTLINES: usize = 2_000;
 /// The view's width from behind, top to bottom, radians. From the car: `state.driver_fov`.
@@ -215,7 +215,6 @@ fn main() -> AppExit {
         Ok(eyes) => ui_state.eyes = eyes,
         Err(why) => ui_state.world.note(format!("the car's eyes: {why}")),
     }
-    ui_state.layers.road = options.all_layers;
     ui_state.layers.nav2_cubes = options.all_layers;
     ui_state.world.ndt = if options.live {
         options.ndt_map.as_deref().map(|path| {
@@ -486,6 +485,15 @@ fn cubes_to_show(state: &panels::UiState, near: &[usize]) -> Vec<(Vec3, f32, Loo
                     .iter()
                     .filter_map(|&i| world.cubes.cubes.get(i))
                     .map(|c| (Vec3::from_array(c.centre), 1.0, Look::NotOnMap)),
+            );
+            // Kerbs and raised grass: the lidar's waves, in their own colours.
+            shown.extend(
+                world
+                    .cubes
+                    .cubes
+                    .iter()
+                    .filter(|c| c.centre[2] < panels::WAVES_TOP)
+                    .map(raw),
             );
             shown.extend(
                 near.iter()

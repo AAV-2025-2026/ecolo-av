@@ -1625,12 +1625,17 @@ ours wins: a simulator we write can share our mistakes. Design:
 - **A drive suggests, a person accepts** (Ben: "Thats a great point"). Not built yet.
 - **Top right:** one set of cells, dark purple to light purple, with a legend; orange is the
   lidar seeing what the map hasn't.
+- **Is the lidar's view the occupancy map?** Nearly: the cubes are an occupancy grid, built fresh
+  from each scan. NDT holds the shape of what stood still when it was recorded. A person shows as
+  cubes that fit no cell. We use no occupancy *network*: that's a camera model.
+- **Joystick back:** ego runs every change of direction through a stop, then reverses, capped
+  at 0.5 m/s. The model is there, with guessed numbers until the car's tests measure them.
 - **Found:** NDT's 2.3 floor is the test lot's (1.5 on the campus, wrong poses unmeasured); with
   reversing on, the car backed a long way to a goal behind it. See `docs/campus.md`.
 
 ## Open threads
 
-- **The campus (5 Nov):** which lot is the real one and where the measurements are (Ben); test the kerbs (TODO 119); how a wrong pose scores on the campus (TODO 121); reversing on long drives (TODO 122).
+- **The campus (5 Nov):** which lot is the real one and where the measurements are (Ben); test the kerbs (TODO 119); how a wrong pose scores on the campus (TODO 121); reversing on long drives (TODO 122); MPPI's speed (TODO 123); the wiggle (TODO 124).
 - **Own simulator:** does the Bevy window pass on a slower laptop? EGM review of the design; does carly have a GPU?
 - **The Mac as a driver:** does the car stop if the MacBook drops off (TODO 116)?
 - **One car (4-5 Nov):** Ben's direction (our own algorithms now, one design down the road; corrected 5 Nov) and five picks in `docs/designs/2026-11-04_one-car.md`; the detail in `2026-11-04_weak-links.md` and `2026-11-04_research-ideas.md`; five designs of 5 Nov (one window, knows itself, behaviour and speed, tracks and memory, shadow mode). EGM: zoom out done, 3 blockers open (`2026-11-05_egm-review.md`); three stages not run. Open for Ben: which algorithm first, how "our own" fits "prefer stock packages", each design's questions.

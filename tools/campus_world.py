@@ -24,8 +24,8 @@ What's measured and what's guessed:
     | shape, most road widths       | widths without a tag, where kerbs run,     |
     |                               | tree sizes, trees inside woods, all looks  |
 
-Kerbs are 0.30 m tall (Ben, 5 Nov): round every surface lot and island, wherever the outside
-isn't also drivable, plus every kerb mapped in OpenStreetMap.
+The campus's shape (Ben, 5 Nov): everything that isn't pavement is a foot up, held in by a
+concrete kerb, with grass on top. So a kerb runs along every edge of every road and lot.
 
 The data is (c) OpenStreetMap contributors, under the ODbL: whatever shows it must say so.
 No ROS here: tools/tests/test_campus_world.py tests the maths.
@@ -60,9 +60,9 @@ NDT_OUT = ROOT / 'maps' / 'ndt' / 'campus'
 
 CELL = 0.25            # m: one cell of Nav2's map, the same as the test lot's
 KERB_HEIGHT = 0.30     # m: "foot tall" (Ben, 5 Nov)
-KERB_WIDTH = 0.15      # m
+KERB_TOP = 0.30        # m wide on top: it also hides the grass's 0.25 m steps along its edge
 NDT_SPACING = 0.33     # m between the guessed map's points: 9 to a square metre of wall
-NDT_FLOOR = 0.30       # m: below this the lidar's map keeps nothing (tools/ndt_map.py)
+NDT_FLOOR = 0.45       # m: above the grass (aav_gazebo worlds.CAMPUS_NDT_FLOOR)
 NDT_CEILING = 16.0     # m: the lidar's top beam (15 degrees) reaches about this at its 45 m
 START_LOT = 'P4'       # the car's first home: a lot beside the datum
 SIMPLIFY_OVER = 400    # corners: rings longer than this are simplified to SIMPLIFY_TO metres
@@ -75,9 +75,13 @@ DEFAULT_FLOORS = 3     # a building with no height in OpenStreetMap
 # Floors we know that OpenStreetMap doesn't say: Carleton's tallest building.
 KNOWN_FLOORS = {'Dunton Tower': 22}
 
-# The heights of the flat layers, m: under the car's z = 0, so nothing it drives on is a step.
-GRASS_Z, GREEN_Z, WATER_Z = -0.06, -0.05, -0.045
-LOT_Z, PATH_Z, ROAD_Z, PAINT_Z = -0.03, -0.02, -0.01, -0.005
+# The heights of the layers, m. The car drives on z = 0; the rest of the campus is a kerb up.
+BASE_Z = -0.08                       # the foot of every building
+UNDER_Z = -0.05                      # the pavement under everything
+LOT_Z, ROAD_Z, PAINT_Z = -0.03, -0.01, -0.005
+GRASS_Z, PATH_Z, KERB_TOP_Z = KERB_HEIGHT, KERB_HEIGHT + 0.004, KERB_HEIGHT + 0.006
+# What the raised ground is, cell by cell.
+PAVEMENT, GRASS, GREEN_AREA, WATER_AREA = 0, 1, 2, 3
 
 # Width of a road with no width tag, m.
 ROAD_WIDTHS = {'trunk': 9.0, 'trunk_link': 6.0, 'primary': 9.0, 'primary_link': 6.0,
@@ -421,38 +425,70 @@ class Grid:
             'occupied_thresh: 0.65\nfree_thresh: 0.25\n')
 
 
-def kerb_runs(ring, grid, step=1.0, look=1.0):
+def rectangles(mask):
     """
-    Return the stretches of a lot's edge that get a kerb: where its outside isn't drivable.
+    Return a mask's True cells as few rectangles: (first col, end col, first row, end row).
 
-    A lot opens onto a road or the next lot with no kerb. grid holds roads and lots already.
+    Each row is cut into runs, and a run the same as the row above's grows that rectangle.
     """
-    points = open_ring(ring)
-    if signed_area(ring) < 0.0:
-        points.reverse()
-    runs, current = [], []
-    for a, b in zip(points, points[1:] + points[:1]):
-        length = math.dist(a, b)
-        if length < 1e-6:
+    done, open_runs = [], {}
+    padded = np.zeros((mask.shape[0], mask.shape[1] + 2), dtype=np.int8)
+    padded[:, 1:-1] = mask
+    steps = np.diff(padded, axis=1)
+    for row in range(mask.shape[0]):
+        starts = np.flatnonzero(steps[row] == 1)
+        ends = np.flatnonzero(steps[row] == -1)
+        runs = set(zip(starts.tolist(), ends.tolist()))
+        for run in set(open_runs) - runs:
+            done.append((run[0], run[1], open_runs.pop(run), row))
+        for run in runs - set(open_runs):
+            open_runs[run] = row
+    done.extend((run[0], run[1], first, mask.shape[0]) for run, first in open_runs.items())
+    return done
+
+
+def raised_ground(mesh, surface, value, grid, z, tile):
+    """Add the cells of one kind of raised ground to a mesh, as flat rectangles."""
+    for col0, col1, row0, row1 in rectangles(surface == value):
+        west, east = grid.west + col0 * grid.cell, grid.west + col1 * grid.cell
+        top = grid.south + (grid.height - row0) * grid.cell
+        bottom = grid.south + (grid.height - row1) * grid.cell
+        mesh.flat([(west, bottom), (east, bottom), (east, top), (west, top)], z, tile)
+
+
+def pavement_edges(pavement, grid, tolerance=1.0):
+    """Return the edges of the pavement as closed lines, in metres: where the kerbs go."""
+    found, _ = cv2.findContours(pavement, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
+    edges = []
+    for contour in found:
+        if len(contour) < 3:
             continue
-        # Going anticlockwise, the outside is on the right.
-        ox, oy = (b[1] - a[1]) / length * look, -(b[0] - a[0]) / length * look
-        steps = max(1, int(length / step))
-        for i in range(steps):
-            t0, t1 = i / steps, (i + 1) / steps
-            p0 = (a[0] + (b[0] - a[0]) * t0, a[1] + (b[1] - a[1]) * t0)
-            p1 = (a[0] + (b[0] - a[0]) * t1, a[1] + (b[1] - a[1]) * t1)
-            middle = ((p0[0] + p1[0]) / 2.0, (p0[1] + p1[1]) / 2.0)
-            if grid.is_free(middle[0] + ox, middle[1] + oy):
+        fewer = cv2.approxPolyDP(contour, tolerance, True).reshape(-1, 2)
+        points = [(grid.west + float(col) * grid.cell,
+                   grid.south + (grid.height - 1 - float(row)) * grid.cell)
+                  for col, row in fewer]
+        edges.append(points + points[:1])
+    return edges
+
+
+def off_pavement(points, grid, step=1.0):
+    """Return the parts of a line that aren't over pavement: a path doesn't float over a road."""
+    parts, current = [], []
+    for a, b in zip(points, points[1:]):
+        for i in range(max(1, int(math.dist(a, b) / step))):
+            n = max(1, int(math.dist(a, b) / step))
+            p0 = (a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n)
+            p1 = (a[0] + (b[0] - a[0]) * (i + 1) / n, a[1] + (b[1] - a[1]) * (i + 1) / n)
+            if grid.is_free((p0[0] + p1[0]) / 2.0, (p0[1] + p1[1]) / 2.0):
                 if len(current) >= 2:
-                    runs.append(current)
+                    parts.append(current)
                 current = []
             else:
                 current = current or [p0]
                 current.append(p1)
     if len(current) >= 2:
-        runs.append(current)
-    return runs
+        parts.append(current)
+    return parts
 
 
 def floors_of(tags, key=''):
@@ -514,7 +550,7 @@ def add_tree(meshes, at, rng):
     radius = 0.08 + height * 0.02
     ring = [(at[0] + radius * math.cos(i * math.pi / 3.0),
              at[1] + radius * math.sin(i * math.pi / 3.0)) for i in range(6)]
-    meshes['bark'].prism_walls(ring + ring[:1], GRASS_Z, trunk_top, (1.0, 2.0))
+    meshes['bark'].prism_walls(ring + ring[:1], BASE_Z, trunk_top, (1.0, 2.0))
     crown = height * rng.uniform(0.28, 0.38)
     middle = (at[0], at[1], trunk_top + crown * 0.8)
     for a, b, c in BALL:
@@ -610,7 +646,7 @@ def build(campus, box):
         grid.fill(ring, 1)
         report['lots'] += 1
 
-    # Kerbs round the lots, then the islands inside them.
+    # Islands inside lots go back up with the grass.
     lot_mask = np.zeros_like(grid.free)
     for area in by_kind['lot']:
         cv2.fillPoly(lot_mask, [grid.pixels(open_ring(area.ring))], 1)
@@ -621,43 +657,41 @@ def build(campus, box):
         row = int(round(grid.height - 1 - (y - grid.south) / grid.cell))
         if 0 <= col < grid.width and 0 <= row < grid.height and lot_mask[row, col]:
             islands.append(area.ring)
-
-    def lay_kerb(points):
-        points = straighten(points)
-        for shape in strip_quads(points, KERB_WIDTH, corners=False):
-            meshes['kerb'].flat(shape, KERB_HEIGHT, tile=4.0)
-            meshes['kerb'].prism_walls(shape + shape[:1], 0.0, KERB_HEIGHT, (4.0, 4.0))
-            solids.prism_walls(shape + shape[:1], 0.0, KERB_HEIGHT)
-        report['kerbs_m'] += sum(math.dist(a, b) for a, b in zip(points, points[1:]))
-
-    kerbs = []
-    for area in by_kind['lot']:
-        kerbs.extend(kerb_runs(area.ring, grid))
     for ring in islands:
-        points = open_ring(ring)
-        meshes['green'].flat(ring, LOT_Z + 0.001, tile=6.0)
         grid.fill(ring, 0)
-        kerbs.append(points + points[:1])
         report['islands'] += 1
-    for line in campus.lines:
-        if line.tags.get('barrier') == 'kerb' and any(in_box(p, box) for p in line.points):
-            kerbs.append(line.points)
-    for points in kerbs:
-        lay_kerb(points)
-        grid.line(points, 0)
-        # In NDT's guess too: right at the cubes' floor, a lidar sees them on and off.
-        walls.append((points, NDT_FLOOR))
 
-    # What isn't a road or a lot: greens, woods, water.
+    # A kerb along every edge of the pavement, then the raised ground behind it.
+    pavement = grid.free.copy()
+    edges = pavement_edges(pavement, grid)
+    edges += [line.points for line in campus.lines if line.tags.get('barrier') == 'kerb'
+              and any(in_box(p, box) for p in line.points)]
+    for points in edges:
+        points = straighten(points)
+        for shape in strip_quads(points, KERB_TOP, corners=False):
+            meshes['kerb'].flat(shape, KERB_TOP_Z, tile=4.0)
+            solids.prism_walls(shape + shape[:1], 0.0, KERB_HEIGHT)
+        for a, b in zip(points, points[1:]):
+            meshes['kerb'].wall(a, b, ROAD_Z, KERB_TOP_Z, 0.0, (4.0, 4.0))
+            meshes['kerb'].wall(b, a, ROAD_Z, KERB_TOP_Z, 0.0, (4.0, 4.0))
+        report['kerbs_m'] += sum(math.dist(a, b) for a, b in zip(points, points[1:]))
+        grid.line(points, 0)
+
+    # What's on the raised ground. Painted on a grid, not laid on top: a park's outline takes
+    # in the roads through it, and a road must stay a hole in the grass.
+    surface = np.full(pavement.shape, GRASS, dtype=np.uint8)
     for area in by_kind['green'] + by_kind['wood']:
-        ring = simplify(area.ring)
-        meshes['green'].flat(ring, GREEN_Z, tile=6.0)
+        cv2.fillPoly(surface, [grid.pixels(open_ring(simplify(area.ring)))], GREEN_AREA)
         report['greens'] += 1
     for area in by_kind['water']:
         ring = simplify(area.ring)
-        meshes['water'].flat(ring, WATER_Z, tile=8.0)
+        cv2.fillPoly(surface, [grid.pixels(open_ring(ring))], WATER_AREA)
         grid.fill(ring, 0)
         report['water'] += 1
+    surface[pavement > 0] = PAVEMENT
+    raised_ground(meshes['grass'], surface, GRASS, grid, GRASS_Z, 6.0)
+    raised_ground(meshes['green'], surface, GREEN_AREA, grid, GRASS_Z, 6.0)
+    raised_ground(meshes['water'], surface, WATER_AREA, grid, GRASS_Z, 8.0)
     wood_trees = []
     for area in by_kind['wood']:
         wood_trees += scatter(simplify(area.ring), rng)
@@ -666,17 +700,21 @@ def build(campus, box):
 
     # Paths and rails are for the eye: not being roads, they're blocked already, and a road
     # that crosses a rail stays open. Fences and walls do block.
+    grid_of_pavement = Grid(box)
+    grid_of_pavement.free = pavement
     for line in campus.lines:
         tags = line.tags
         if below_ground(tags) or not any(in_box(p, box) for p in line.points):
             continue
         if tags.get('highway') in PATHS:
-            for shape in strip_quads(line.points, PATH_WIDTH):
-                meshes['path'].flat(shape, PATH_Z, tile=4.0)
+            for part in off_pavement(line.points, grid_of_pavement):
+                for shape in strip_quads(straighten(part), PATH_WIDTH):
+                    meshes['path'].flat(shape, PATH_Z, tile=4.0)
             report['paths'] += 1
         elif tags.get('railway') == 'light_rail':
-            for shape in strip_quads(line.points, 4.0):
-                meshes['rail'].flat(shape, PATH_Z, tile=4.0)
+            for part in off_pavement(line.points, grid_of_pavement):
+                for shape in strip_quads(straighten(part), 4.0):
+                    meshes['rail'].flat(shape, PATH_Z, tile=4.0)
         elif tags.get('natural') == 'tree_row':
             for a, b in zip(line.points, line.points[1:]):
                 for i in range(max(1, int(math.dist(a, b) / ROW_TREE_SPACING))):
@@ -697,7 +735,7 @@ def build(campus, box):
         report['unknown_height'] += ('building:levels' not in area.tags
                                      and 'height' not in area.tags)
         material = 'stone' if stable(area.key) % 3 == 0 else 'brick'
-        meshes[material].prism_walls(ring, GRASS_Z, height, (12.0, 3 * FLOOR_HEIGHT))
+        meshes[material].prism_walls(ring, BASE_Z, height, (12.0, 3 * FLOOR_HEIGHT))
         solids.prism_walls(ring, 0.0, height)
         meshes['roof'].flat(ring, height, tile=8.0)
         grid.fill(ring, 0)
@@ -712,9 +750,17 @@ def build(campus, box):
     report['trees'] = len(trees)
     report['kerbs_m'] = round(report['kerbs_m'])
 
-    half = 2500.0
-    ground = [(-half, -half), (half, -half), (half, half), (-half, half)]
-    meshes['grass'].flat(ground, GRASS_Z, tile=6.0)
+    # Past the box, plain raised grass to the horizon.
+    west, south, east, north = box
+    # Under it all, pavement: where a road's edge and a kerb's don't quite meet, no sky shows.
+    meshes['lot'].flat([(west, south), (east, south), (east, north), (west, north)],
+                       UNDER_Z, tile=8.0)
+    far = 2500.0
+    for ring in ([(-far, -far), (far, -far), (far, south), (-far, south)],
+                 [(-far, north), (far, north), (far, far), (-far, far)],
+                 [(-far, south), (west, south), (west, north), (-far, north)],
+                 [(east, south), (far, south), (far, north), (east, north)]):
+        meshes['grass'].flat(ring, GRASS_Z, tile=6.0)
     return meshes, solids, grid, walls, trunks, report, by_kind['lot']
 
 

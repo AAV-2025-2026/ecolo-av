@@ -279,6 +279,10 @@ def launch_setup(context):
                                radar=radar, lidar=lidar, ghost=flag['ghost'],
                                voxels=flag['voxels'],
                                screen_cubes=flag['screen_cubes'],
+                               full_costmap=world != worlds.CAMPUS,
+                               cube_floor=(worlds.CAMPUS_CUBE_FLOOR
+                                           if world == worlds.CAMPUS and not flag['voxels']
+                                           else ''),
                                collision_monitor=radar or lidar or flag['ghost'],
                                camera_obstacles=flag['camera_obstacles'],
                                max_speed=arg('sim_speed'),
@@ -300,7 +304,8 @@ def launch_setup(context):
     if ndt:
         # Scored only (measure controllers --ndt), unless ndt_ekf:=true: then ekf_global
         # reads its pose (measure controllers --ndt-ekf scores the difference).
-        here = {'ndt_min_score': worlds.CAMPUS_NDT_MIN_SCORE} if world == worlds.CAMPUS else {}
+        here = ({'ndt_min_score': worlds.CAMPUS_NDT_MIN_SCORE,
+                 'ndt_min_height': worlds.CAMPUS_NDT_FLOOR} if world == worlds.CAMPUS else {})
         actions.append(include(context, 'aav_ndt', 'ndt.launch.py', use_sim_time='true',
                                ndt_map=ndt_map, ndt_x=start_x, ndt_y=start_y,
                                ndt_yaw=start_yaw, **here))

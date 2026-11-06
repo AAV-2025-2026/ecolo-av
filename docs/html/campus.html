@@ -7,7 +7,7 @@
 <!-- Generated from docs/campus.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The campus</h1>
-<div class="meta">4 min read · 6 sections</div></header>
+<div class="meta">5 min read · 6 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -122,7 +122,7 @@ because the datum itself is on a station shelter.</p></div>
 </tr>
 <tr>
 <td>their shapes</td>
-<td>where kerbs run (9.8 km: 0.30 m round the lots)</td>
+<td>where kerbs run (58 km: every edge of every road and lot, 0.30 m)</td>
 </tr>
 <tr>
 <td>many road widths</td>
@@ -167,10 +167,14 @@ you read by hand are for checking it.</p>
 </tr>
 </tbody>
 </table></div>
+<p><strong>The shape (Ben, 5 Nov):</strong> everything that isn't pavement is a foot up, held in by a concrete
+kerb, with grass on top.</p>
 <p><strong>One costmap, no segments.</strong> It works on a Mac: only roads and lots are free. Gazebo held
-real time (0.98-1.01) and the window about 100 fps. Nav2's planner loop runs at about 8 Hz, not
-the 20 Hz it wants, and warns about it in the console. Paths and grass are blocked: the car
-stays on roads and lots.</p>
+real time (0.98-1.01). Nav2's planner loop runs at about 8 Hz, not the 20 Hz it wants, and warns
+about it in the console. Paths and grass are blocked: the car stays on roads and lots.</p>
+<p><strong>Sent once.</strong> At this size Nav2 sending the whole costmap every second froze the window (up to
+1.66 s) and may have caused the flashing. <code>world:=campus</code> sends it once, then only changes. The
+window also skips a grid it already has.</p>
 </section>
 <section class="card"><h2 id="what-was-measured-gazebo-5-nov">What was measured (Gazebo, 5 Nov)</h2>
 <div class="table-wrap"><table>
@@ -190,11 +194,11 @@ stays on roads and lots.</p>
 <td>within 0.36 m</td>
 </tr>
 <tr>
-<td>NDT against the truth, on the guess</td>
-<td>within 0.12 m (near buildings, 60 s)</td>
+<td>NDT against the truth, on the guess, grass raised</td>
+<td>within 0.13 m (near buildings, 90 s)</td>
 </tr>
 <tr>
-<td>NDT on a map recorded on that road</td>
+<td>NDT on a map recorded on that road, grass not raised</td>
 <td>within 0.11 m</td>
 </tr>
 </tbody>
@@ -204,7 +208,10 @@ world, so of course it fits here.</p>
 </section>
 <section class="card"><h2 id="ndts-score-floor">NDT's score floor</h2>
 <p><code>ndt.yaml</code>'s 2.3 is the test lot's, with walls close by. On the campus, fits at the true place
-score 1.73-1.94 on the guess, and 2.00-2.31 on a recorded map. So this world uses 1.5.</p>
+score about 1.6-1.9 on the guess, and 2.00-2.31 on a recorded map. So this world uses 1.5.</p>
+<p><strong>Floors.</strong> The grass is at 0.30 m, right on the car's usual 0.3 m floor. NDT looked at it and
+got lost, so here NDT looks above 0.45 m. The window's cubes look down to 0.12 m, so kerbs and
+grass show as the lidar's rings. Nav2's flat scan keeps 0.3 m: untested against kerbs (TODO 119).</p>
 <p><strong>Not measured:</strong> how high a <em>wrong</em> pose scores here. Until it is, leave <code>ndt_ekf</code> off on the
 campus: NDT is watched, and doesn't steer the estimate.</p>
 </section>
@@ -219,10 +226,18 @@ campus: NDT is watched, and doesn't steer the estimate.</p>
 <tbody>
 <tr>
 <td>With <code>reversing</code> on, the car backs a long way to a goal behind it, at 0.5 m/s</td>
-<td>use <code>reversing:=false</code> here; a decision for later</td>
+<td>use <code>reversing:=false</code> here; a decision for later (TODO 122)</td>
 </tr>
 <tr>
-<td>Kerbs sit at the cubes' 0.3 m floor</td>
+<td>MPPI stays near 1 m/s even with <code>sim_speed:=3</code>; RPP reached 2.8 m/s</td>
+<td>TODO 123</td>
+</tr>
+<tr>
+<td>The car wiggles: the turn rate flips about once a second</td>
+<td>TODO 124</td>
+</tr>
+<tr>
+<td>Kerbs sit at Nav2's 0.3 m floor</td>
 <td>TODO 119: test it now this world exists</td>
 </tr>
 <tr>
@@ -231,7 +246,7 @@ campus: NDT is watched, and doesn't steer the estimate.</p>
 </tr>
 <tr>
 <td>Lidar cubes reach 30 m, NDT's points 45 m</td>
-<td>so the top right can look empty in open space</td>
+<td>so the top view can look empty in open space</td>
 </tr>
 </tbody>
 </table></div>

@@ -223,12 +223,14 @@ impl MapIndex {
     /// Which cells the live cubes light, and which cubes are near no cell. A wall's face can
     /// fall on the edge of its cell, so a cube counts if a cell's centre is within one cell's
     /// edge of it. Past that, the world has something the map doesn't.
-    pub fn match_cubes(&self, cubes: &[[f32; 3]]) -> MapMatch {
+    /// Cubes below `floor` count as neither: they're the ground.
+    pub fn match_cubes(&self, cubes: &[[f32; 3]], floor: f32) -> MapMatch {
         let mut result = MapMatch {
             lit: vec![false; self.count],
             off_map: Vec::new(),
         };
-        for (number, cube) in cubes.iter().enumerate() {
+        let above = cubes.iter().enumerate().filter(|(_, c)| c[2] >= floor);
+        for (number, cube) in above {
             match self.nearest(cube) {
                 Some(cell) => result.lit[cell] = true,
                 None => result.off_map.push(number),
@@ -467,7 +469,7 @@ mod tests {
     #[test]
     fn a_live_cube_lights_its_map_cell() {
         let centres = [[0.5, 0.5, 0.5], [5.5, 0.5, 0.5]];
-        let found = MapIndex::new(&centres, 1.0).match_cubes(&[[0.2, 0.9, 0.1]]);
+        let found = MapIndex::new(&centres, 1.0).match_cubes(&[[0.2, 0.9, 0.1]], 0.0);
         assert_eq!(found.lit, vec![true, false]);
         assert!(found.off_map.is_empty());
     }
@@ -475,7 +477,8 @@ mod tests {
     #[test]
     fn a_cube_off_the_map_is_listed() {
         let centres = [[0.5, 0.5, 0.5]];
-        let found = MapIndex::new(&centres, 1.0).match_cubes(&[[0.2, 0.2, 0.2], [9.0, 9.0, 0.2]]);
+        let found =
+            MapIndex::new(&centres, 1.0).match_cubes(&[[0.2, 0.2, 0.2], [9.0, 9.0, 0.2]], 0.0);
         assert_eq!(found.off_map, vec![1]);
         assert_eq!(found.share_on_map(2), Some(0.5));
     }
@@ -483,7 +486,7 @@ mod tests {
     #[test]
     fn a_cube_just_over_a_cells_edge_still_lights_it() {
         let centres = [[0.5, 0.5, 0.5]];
-        let found = MapIndex::new(&centres, 1.0).match_cubes(&[[1.1, 0.5, 0.5]]);
+        let found = MapIndex::new(&centres, 1.0).match_cubes(&[[1.1, 0.5, 0.5]], 0.0);
         assert_eq!(found.lit, vec![true]);
         assert!(found.off_map.is_empty());
     }
@@ -491,9 +494,17 @@ mod tests {
     #[test]
     fn a_cube_past_one_cell_away_is_off_the_map() {
         let centres = [[0.5, 0.5, 0.5]];
-        let found = MapIndex::new(&centres, 1.0).match_cubes(&[[1.9, 0.5, 0.5]]);
+        let found = MapIndex::new(&centres, 1.0).match_cubes(&[[1.9, 0.5, 0.5]], 0.0);
         assert_eq!(found.lit, vec![false]);
         assert_eq!(found.off_map, vec![0]);
+    }
+
+    #[test]
+    fn the_ground_is_neither_on_the_map_nor_new() {
+        let centres = [[0.5, 0.5, 0.5]];
+        let found = MapIndex::new(&centres, 1.0).match_cubes(&[[9.0, 9.0, 0.2]], 0.45);
+        assert!(found.off_map.is_empty());
+        assert_eq!(found.lit, vec![false]);
     }
 
     #[test]

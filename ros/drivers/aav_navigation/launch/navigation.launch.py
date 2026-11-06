@@ -231,6 +231,12 @@ def nodes(context):
                     if vehicle.server_planner(planner) == 'lattice' else None)
     trees = '_car_reversing.xml' if reversing else '_car.xml'
     rewrites = vehicle.nav2_rewrites(v, reversing, planner)
+    cube_floor = LaunchConfiguration('cube_floor').perform(context).strip()
+    if cube_floor:
+        rewrites['voxels.ros__parameters.min_height'] = cube_floor
+    if not flag(context, 'full_costmap'):
+        rewrites['global_costmap.global_costmap.ros__parameters.always_send_full_costmap'] = (
+            'false')
     rewrites.update({
         'yaml_filename': map_yaml,
         'default_nav_to_pose_bt_xml': f'{share}/behavior_trees/navigate_to_pose{trees}',
@@ -417,6 +423,12 @@ def generate_launch_description():
                               description='true: a pretend person (aav_ghost), its own '
                                           'costmap layer and collision_monitor source; '
                                           'placed with pixi run ghost'),
+        DeclareLaunchArgument('cube_floor', default_value='',
+                              description="m above the road: the cubes' floor (empty: the "
+                                          "car's obstacle height)"),
+        DeclareLaunchArgument('full_costmap', default_value='true',
+                              description='false: the global costmap goes out once, then only '
+                                          'its changes. For a map too big to send every second'),
         DeclareLaunchArgument('screen_cubes', default_value='false',
                               description='true (with lidar:=true): run aav_voxels for the '
                                           "developer window; Nav2 doesn't read its cubes"),
