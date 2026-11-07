@@ -7,6 +7,7 @@
 
 use std::{
     collections::{HashMap, VecDeque},
+    fmt,
     time::{Duration, Instant},
 };
 
@@ -76,6 +77,35 @@ impl Row {
             Self::GeofenceLock => "geofence",
             Self::SteeringRaw => "steering raw",
         }
+    }
+}
+
+/// The car's speed, as far as the panel knows it.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Speed {
+    /// m/s, fresh.
+    Measured(f64),
+    Unknown(SpeedUnknown),
+}
+
+/// Why the speed isn't known.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SpeedUnknown {
+    /// No `/vehicle/status` yet.
+    Never,
+    /// `/vehicle/status` went quiet.
+    Stale,
+    /// It comes, but its speed is NaN: nothing measures it (today's ESP32 uplink).
+    NotANumber,
+}
+
+impl fmt::Display for SpeedUnknown {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Never => "no /vehicle/status yet",
+            Self::Stale => "/vehicle/status went quiet",
+            Self::NotANumber => "/vehicle/status says NaN: nothing measures the speed",
+        })
     }
 }
 
@@ -308,12 +338,30 @@ impl PanelState {
         self.geofence_lock == Some(true) && self.health(Row::GeofenceLock, now).is_ok()
     }
 
-    /// The measured speed, m/s (`/vehicle/status`), while fresh.
+    /// The speed `/vehicle/status` gives: measured, or why it isn't known. NaN is
+    /// unknown, never stopped: the legacy ESP32's uplink has no wheel speed, so its
+    /// bridge sends NaN all the time (review 2, M5).
+    pub fn speed(&self, now: Instant) -> Speed {
+        let Some(v) = self.vehicle else {
+            return Speed::Unknown(SpeedUnknown::Never);
+        };
+        if !self.health(Row::Vehicle, now).is_ok() {
+            return Speed::Unknown(SpeedUnknown::Stale);
+        }
+        let speed = f64::from(v.speed.0);
+        if speed.is_finite() {
+            Speed::Measured(speed)
+        } else {
+            Speed::Unknown(SpeedUnknown::NotANumber)
+        }
+    }
+
+    /// The measured speed, m/s (`/vehicle/status`), while fresh and a number.
     pub fn seen_speed(&self, now: Instant) -> Option<f64> {
-        let v = self.vehicle?;
-        self.health(Row::Vehicle, now)
-            .is_ok()
-            .then_some(f64::from(v.speed.0))
+        match self.speed(now) {
+            Speed::Measured(v) => Some(v),
+            Speed::Unknown(_) => None,
+        }
     }
 
     /// The measured steering, rad (`/vehicle/steering`), while fresh.
@@ -330,11 +378,13 @@ impl PanelState {
             .filter(|_| self.health(Row::SteeringRaw, now).is_ok())
     }
 
-    /// What the calibration page needs to know to be allowed.
-    pub fn calibration_situation(&self, now: Instant) -> CalSituation {
+    /// What the calibration page needs to know to be allowed. `still_confirmed`: a
+    /// person pressed ON STANDS, STILL (the page's [`crate::calibration::CalPage`]).
+    pub fn calibration_situation(&self, now: Instant, still_confirmed: bool) -> CalSituation {
         CalSituation {
             estop: self.estop_on(),
-            speed: self.seen_speed(now),
+            speed: self.speed(now),
+            still_confirmed,
             raw: self.fresh_raw(now),
         }
     }
@@ -578,7 +628,73 @@ mod tests {
         );
         let later = t + Duration::from_secs(2);
         assert_eq!(s.fresh_raw(later), None);
-        let why = readiness(&s.calibration_situation(later));
-        assert_eq!(why, vec![NotReady::SpeedUnseen, NotReady::NoRaw]);
+        let why = readiness(&s.calibration_situation(later, false));
+        assert_eq!(
+            why,
+            vec![NotReady::SpeedUnknown(SpeedUnknown::Never), NotReady::NoRaw]
+        );
+    }
+
+    fn status(speed: f32) -> Update {
+        use hud_core::{
+            units::{Fraction, MetresPerSecond, Radians},
+            vehicle::{Faults, Mode},
+        };
+        Update::Vehicle(VehicleStatus {
+            mode: Mode::from(2),
+            armed: true,
+            estop_active: false,
+            speed: MetresPerSecond(speed),
+            steering_angle: Radians(0.0),
+            throttle: Fraction::new(0.0),
+            brake: Fraction::new(1.0),
+            faults: Faults(0),
+        })
+    }
+
+    #[test]
+    fn a_nan_speed_is_unknown_never_stopped() {
+        let t = Instant::now();
+        let mut s = state();
+        assert_eq!(s.speed(t), Speed::Unknown(SpeedUnknown::Never));
+        // Today's ESP32 uplink: the bridge sends NaN, all the time.
+        s.apply(status(f32::NAN), t);
+        assert_eq!(s.speed(t), Speed::Unknown(SpeedUnknown::NotANumber));
+        assert_eq!(s.seen_speed(t), None);
+        s.apply(status(f32::INFINITY), t);
+        assert_eq!(s.seen_speed(t), None);
+        s.apply(status(0.0), t);
+        assert_eq!(s.speed(t), Speed::Measured(0.0));
+        assert_eq!(s.seen_speed(t), Some(0.0));
+        assert_eq!(
+            s.speed(t + Duration::from_secs(2)),
+            Speed::Unknown(SpeedUnknown::Stale)
+        );
+    }
+
+    #[test]
+    fn a_nan_speed_never_lets_the_calibration_page_ask_on_its_own() {
+        use crate::calibration::{allowance, readiness, Allowance, FirmwareState, NotReady};
+        let t = Instant::now();
+        let mut s = state();
+        s.apply(status(f32::NAN), t);
+        s.apply(
+            Update::SteeringRaw(Raw {
+                position: Some(2000),
+                state: FirmwareState::Off,
+            }),
+            t,
+        );
+        let why = readiness(&s.calibration_situation(t, false));
+        assert_eq!(why, vec![NotReady::SpeedUnknown(SpeedUnknown::NotANumber)]);
+        // A person says ON STANDS, STILL: the software allows it, on their word.
+        let confirmed = s.calibration_situation(t, true);
+        assert!(readiness(&confirmed).is_empty());
+        assert!(matches!(
+            allowance(&confirmed),
+            Allowance::SoftwareAllows {
+                speed: crate::calibration::StillBy::PersonSaid
+            }
+        ));
     }
 }

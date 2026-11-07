@@ -183,7 +183,9 @@ it; never vehicle.yaml).
   BENCH only (1.0 m/s); off on the real car, on stands too until TODO 49b (the reason is
   on screen).
 - `hw_panel`'s calibration page never drives (GO is off there) and asks nothing while it
-  isn't allowed (an e-stop, the car moving, the speed or the position unseen); leaving
+  isn't allowed (an e-stop, the car moving, the speed unknown, the position unseen). A
+  NaN speed is unknown, never stopped: then a person's ON STANDS, STILL is needed, and the
+  page says SOFTWARE ALLOWS, ON A PERSON'S WORD; leaving
   the page ends its mode. Jog targets stay in `jog_min`..`jog_max`, the check's inside
   the measured limits; the check stops and holds on resistance. It never writes
   vehicle.yaml or the firmware: SAVE writes a file for a person to copy.

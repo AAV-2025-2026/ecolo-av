@@ -413,6 +413,8 @@ impl Panel {
         if self.page == Page::Calibration && page != Page::Calibration {
             let position = self.position(now);
             self.cal.press(CalPress::End, now, position, &[]);
+            // A person's ON STANDS, STILL holds only while they stay on the page.
+            self.cal.forget_still();
         }
         self.page = page;
     }
@@ -422,9 +424,15 @@ impl Panel {
         self.state.fresh_raw(now).and_then(|r| r.position)
     }
 
+    /// What the calibration page's checks rest on now.
+    fn cal_situation(&self, now: Instant) -> calibration::Situation {
+        self.state
+            .calibration_situation(now, self.cal.still_confirmed())
+    }
+
     /// Why the calibration page may not ask now.
     fn cal_ready(&self, now: Instant) -> Vec<NotReady> {
-        calibration::readiness(&self.state.calibration_situation(now))
+        calibration::readiness(&self.cal_situation(now))
     }
 
     /// This frame's calibration presses; returns what to send to the bridge now.
@@ -485,6 +493,7 @@ impl Panel {
                 no_timeout_lock: self.state.no_timeout_lock,
                 // Not read yet (a parameter of the legacy bridge): unknown.
                 speed_loop_mode: None,
+                speed_seen: self.state.seen_speed(now).is_some(),
             },
             self.caps,
         )
@@ -637,7 +646,7 @@ fn run(
         if save {
             panel.save();
         }
-        let cal_ready = panel.cal_ready(now);
+        let cal_allowance = calibration::allowance(&panel.cal_situation(now));
         if passes.just_passed(&panel.cal) {
             egg.drive_across(now);
         }
@@ -667,7 +676,7 @@ fn run(
             stands: opts.stands,
             page: panel.page,
             cal: &panel.cal,
-            cal_ready: &cal_ready,
+            cal_allowance: &cal_allowance,
             saved: panel.saved.as_deref(),
             hide_keys: matches!(show, Show::Drive { .. }),
         };

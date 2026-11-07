@@ -1,13 +1,13 @@
 //! The steering calibration page (docs/actuator-tests.md, way B).
 //!
 //! ```text
-//! | ALLOWED (or NOT ALLOWED: why)                                    |
+//! | SOFTWARE ALLOWS (or NOT ALLOWED: why)                            |
 //! | bridge: LIMP - the steering actuator's motor is off ...          |
 //! | 1985 counts      firmware JOG    page: holding at 1990           |
 //! | [====|=====L=====C=====R=====|====]  the counts, left on the left|
 //! | [GO LIMP][HOLD][< STEP LEFT][STEP RIGHT >][END]                  |
 //! | [MARK LEFT][MARK CENTRE][MARK RIGHT][CLEAR MARKS][SAVE]          |
-//! | [               LOCK-TO-LOCK CHECK                ]              |
+//! | [ON STANDS, STILL][         LOCK-TO-LOCK CHECK          ]         |
 //! | the last thing that happened                                     |
 //! | MARKS AND LIMITS, the lines to copy | LOCK-TO-LOCK CHECK         |
 //! ```
@@ -15,7 +15,7 @@
 use hud_app::paint::ToColor;
 use hud_core::theme::Rgba;
 use panel_core::{
-    calibration::{CalPage, CalPress, Mode},
+    calibration::{Allowance, CalPage, CalPress, Mode, StillBy},
     state::PanelState,
     steering_limits::{self, Mark, COUNTS_MAX},
     sweep::Outcome,
@@ -64,9 +64,15 @@ pub fn layout(w: f32) -> Vec<(Button, Rectangle)> {
             .enumerate()
             .map(|(i, b)| (b, at(i, row2))),
     );
+    // A person's word for an unknown speed (NaN on today's ESP32), beside the check.
+    let confirm_w = 2.0 * col + GAP;
+    out.push((
+        Button::Cal(CalPress::ConfirmStill),
+        Rectangle::new(MARGIN, row3, confirm_w, 56.0),
+    ));
     out.push((
         Button::Cal(CalPress::Check),
-        Rectangle::new(MARGIN, row3, cw, 56.0),
+        Rectangle::new(MARGIN + confirm_w + GAP, row3, cw - confirm_w - GAP, 56.0),
     ));
     out
 }
@@ -94,20 +100,24 @@ impl Ui {
         let w = d.get_screen_width() as f32;
         let h = d.get_screen_height() as f32;
         let cal = f.cal;
-        let ready = f.cal_ready.is_empty();
+        let ready = matches!(f.cal_allowance, Allowance::SoftwareAllows { .. });
         let raw = state.fresh_raw(f.now);
         let position = raw.and_then(|r| r.position);
 
-        // Allowed, or why not.
-        if ready {
-            let s = "CALIBRATION ALLOWED: standing still, no e-stop, the position seen";
-            self.text(d, s, MARGIN, 104.0, 21.0, t.good);
-        } else {
-            let why: Vec<String> = f.cal_ready.iter().map(ToString::to_string).collect();
-            let s = format!("NOT ALLOWED: {}", why.join("; "));
-            let s = fit(&self.font, &s, w - 2.0 * MARGIN, 21.0);
-            self.text(d, &s, MARGIN, 104.0, 21.0, t.warn);
-        }
+        // What the software allows, and on what; never "safe": people check the rest.
+        let ink = match f.cal_allowance {
+            Allowance::SoftwareAllows {
+                speed: StillBy::Measured(_),
+            } => t.good,
+            _ => t.warn,
+        };
+        let s = fit(
+            &self.font,
+            &f.cal_allowance.to_string(),
+            w - 2.0 * MARGIN,
+            21.0,
+        );
+        self.text(d, &s, MARGIN, 104.0, 21.0, ink);
         let bridge = match &state.calibration_line {
             Some((at, line)) if f.now.saturating_duration_since(*at).as_secs_f64() < 3.0 => {
                 format!("bridge: {line}")
@@ -149,6 +159,7 @@ impl Ui {
                         && !matches!(cal.mode(), Mode::Sweep(_))
                 }
                 Button::Save => matches!(cal.limits(), Some(Ok(_))),
+                Button::Cal(CalPress::ConfirmStill) => true,
                 Button::Cal(_) => ready,
                 _ => true,
             };

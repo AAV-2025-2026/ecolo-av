@@ -33,6 +33,7 @@ use std::{
 };
 
 use crate::{
+    state::{Speed, SpeedUnknown},
     steering_limits::{self, Limits, Mark, Marks, MeasurementError},
     sweep::{Outcome, Sweep, SweepSettings},
 };
@@ -113,7 +114,8 @@ pub struct Raw {
 pub enum NotReady {
     Estop,
     Moving(f64),
-    SpeedUnseen,
+    /// No speed is known, and no person has pressed ON STANDS, STILL.
+    SpeedUnknown(SpeedUnknown),
     /// No fresh `/vehicle/steering_actuator/raw`.
     NoRaw,
     /// It comes, but without a position (the feedback isn't analog, or a version 2 uplink).
@@ -125,7 +127,11 @@ impl fmt::Display for NotReady {
         match self {
             Self::Estop => f.write_str("the e-stop is on"),
             Self::Moving(v) => write!(f, "the car moves ({v:+.2} m/s)"),
-            Self::SpeedUnseen => f.write_str("the speed isn't seen (/vehicle/status)"),
+            Self::SpeedUnknown(why) => write!(
+                f,
+                "the speed isn't known ({why}): check the car is on stands and still, then \
+                 press ON STANDS, STILL"
+            ),
             Self::NoRaw => f.write_str(
                 "no steering actuator position (the bridge needs uplink true, frame_version 3)",
             ),
@@ -143,22 +149,30 @@ pub const STANDSTILL: f64 = 0.05;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Situation {
     pub estop: bool,
-    /// The speed seen (m/s), while fresh.
-    pub speed: Option<f64>,
+    /// The speed: measured (fresh, a number), or why not. NaN is unknown, never stopped.
+    pub speed: Speed,
+    /// A person pressed ON STANDS, STILL: they checked the car is on stands and still.
+    /// It stands in for an unknown speed only; a measured movement always refuses.
+    pub still_confirmed: bool,
     /// The latest raw message, while fresh.
     pub raw: Option<Raw>,
 }
 
-/// Every reason the page may not ask now; empty: allowed.
+/// Every reason the page may not ask now; empty: the software allows it.
 pub fn readiness(s: &Situation) -> Vec<NotReady> {
     let mut why = Vec::new();
     if s.estop {
         why.push(NotReady::Estop);
     }
     match s.speed {
-        None => why.push(NotReady::SpeedUnseen),
-        Some(v) if v.abs() >= STANDSTILL => why.push(NotReady::Moving(v)),
-        Some(_) => {}
+        // A NaN that slipped through is unknown too.
+        Speed::Measured(v) if !v.is_finite() && !s.still_confirmed => {
+            why.push(NotReady::SpeedUnknown(SpeedUnknown::NotANumber))
+        }
+        Speed::Measured(v) if v.abs() >= STANDSTILL => why.push(NotReady::Moving(v)),
+        Speed::Measured(_) => {}
+        Speed::Unknown(u) if !s.still_confirmed => why.push(NotReady::SpeedUnknown(u)),
+        Speed::Unknown(_) => {}
     }
     match s.raw {
         None => why.push(NotReady::NoRaw),
@@ -166,6 +180,61 @@ pub fn readiness(s: &Situation) -> Vec<NotReady> {
         Some(_) => {}
     }
     why
+}
+
+/// On what the software takes the car to be still.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum StillBy {
+    /// A measured speed under [`STANDSTILL`], m/s.
+    Measured(f64),
+    /// Nothing measures the speed: a person's ON STANDS, STILL.
+    PersonSaid,
+}
+
+/// What the page's top line says: never "safe". The software's checks pass, or why not;
+/// the people at the car check the rest (who set the current limit, hands clear).
+#[derive(Debug, Clone, PartialEq)]
+pub enum Allowance {
+    NotAllowed(Vec<NotReady>),
+    SoftwareAllows { speed: StillBy },
+}
+
+/// [`readiness`], with what "still" rests on.
+pub fn allowance(s: &Situation) -> Allowance {
+    let why = readiness(s);
+    if !why.is_empty() {
+        return Allowance::NotAllowed(why);
+    }
+    let speed = match s.speed {
+        Speed::Measured(v) if v.is_finite() => StillBy::Measured(v),
+        _ => StillBy::PersonSaid,
+    };
+    Allowance::SoftwareAllows { speed }
+}
+
+impl fmt::Display for Allowance {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NotAllowed(why) => {
+                f.write_str("NOT ALLOWED: ")?;
+                let words: Vec<String> = why.iter().map(ToString::to_string).collect();
+                f.write_str(&words.join("; "))
+            }
+            Self::SoftwareAllows {
+                speed: StillBy::Measured(v),
+            } => write!(
+                f,
+                "SOFTWARE ALLOWS: speed {v:+.2} m/s, no e-stop, the position seen. People \
+                 check the rest"
+            ),
+            Self::SoftwareAllows {
+                speed: StillBy::PersonSaid,
+            } => f.write_str(
+                "SOFTWARE ALLOWS, ON A PERSON'S WORD: the speed is unknown, ON STANDS, STILL \
+                 pressed; no e-stop, the position seen",
+            ),
+        }
+    }
 }
 
 /// What goes to `/drivers/buttons/steering_calibration` (SteeringCalibration's modes).
@@ -188,6 +257,9 @@ pub enum CalPress {
     ClearMarks,
     Check,
     End,
+    /// ON STANDS, STILL: a person checked the car is on stands and still, for when
+    /// nothing measures the speed. Pressed again, it is withdrawn.
+    ConfirmStill,
 }
 
 /// The page's numbers (config/hw_panel.yaml).
@@ -231,6 +303,9 @@ pub struct CalPage {
     note: Option<String>,
     /// The lock-to-lock check's last result.
     checked: Option<Outcome>,
+    /// A person pressed ON STANDS, STILL. Cleared by pressing again, an e-stop, a
+    /// measured movement, and leaving the page.
+    still_confirmed: bool,
 }
 
 impl CalPage {
@@ -243,7 +318,18 @@ impl CalPage {
             right: None,
             note: None,
             checked: None,
+            still_confirmed: false,
         }
+    }
+
+    /// Whether a person said ON STANDS, STILL (and hasn't withdrawn it).
+    pub fn still_confirmed(&self) -> bool {
+        self.still_confirmed
+    }
+
+    /// Forgets ON STANDS, STILL: leaving the page.
+    pub fn forget_still(&mut self) {
+        self.still_confirmed = false;
     }
 
     pub fn mode(&self) -> &Mode {
@@ -404,6 +490,14 @@ impl CalPage {
                     None => self.note = Some("can't check: mark left, centre and right".into()),
                 }
             }
+            CalPress::ConfirmStill => {
+                self.still_confirmed = !self.still_confirmed;
+                self.note = Some(if self.still_confirmed {
+                    "ON STANDS, STILL: on your word. Press again to withdraw it".into()
+                } else {
+                    "ON STANDS, STILL withdrawn".into()
+                });
+            }
             CalPress::End => {
                 self.stop_check("END pressed");
                 if self.mode != Mode::Off {
@@ -445,6 +539,13 @@ impl CalPage {
 
     /// One frame: what to send now (None: nothing). `raw` and `ready` as for a press.
     pub fn tick(&mut self, now: Instant, raw: Option<Raw>, ready: &[NotReady]) -> Option<Request> {
+        // An e-stop or a measured movement: a person's word no longer holds.
+        if ready
+            .iter()
+            .any(|r| matches!(r, NotReady::Estop | NotReady::Moving(_)))
+        {
+            self.still_confirmed = false;
+        }
         if let Some(why) = ready.first().filter(|_| self.is_asking()) {
             let why = why.to_string();
             self.stop_check(&why);
@@ -535,13 +636,15 @@ mod tests {
     fn readiness_says_every_reason() {
         let ok = Situation {
             estop: false,
-            speed: Some(0.0),
+            speed: Speed::Measured(0.0),
+            still_confirmed: false,
             raw: raw(2000, FirmwareState::Off),
         };
         assert!(readiness(&ok).is_empty());
         let bad = Situation {
             estop: true,
-            speed: Some(0.3),
+            speed: Speed::Measured(0.3),
+            still_confirmed: false,
             raw: Some(Raw {
                 position: None,
                 state: FirmwareState::Off,
@@ -553,13 +656,111 @@ mod tests {
         );
         let unseen = Situation {
             estop: false,
-            speed: None,
+            speed: Speed::Unknown(SpeedUnknown::Stale),
+            still_confirmed: false,
             raw: None,
         };
         assert_eq!(
             readiness(&unseen),
-            vec![NotReady::SpeedUnseen, NotReady::NoRaw]
+            vec![NotReady::SpeedUnknown(SpeedUnknown::Stale), NotReady::NoRaw]
         );
+    }
+
+    fn situation(speed: Speed, still_confirmed: bool) -> Situation {
+        Situation {
+            estop: false,
+            speed,
+            still_confirmed,
+            raw: raw(2000, FirmwareState::Off),
+        }
+    }
+
+    #[test]
+    fn a_nan_speed_is_never_still() {
+        // Review 2, M5: NaN.abs() >= 0.05 is false, so a NaN once let the page ask.
+        let nan = situation(Speed::Measured(f64::NAN), false);
+        assert_eq!(
+            readiness(&nan),
+            vec![NotReady::SpeedUnknown(SpeedUnknown::NotANumber)]
+        );
+        assert!(matches!(allowance(&nan), Allowance::NotAllowed(_)));
+        let unknown = situation(Speed::Unknown(SpeedUnknown::NotANumber), false);
+        assert!(matches!(allowance(&unknown), Allowance::NotAllowed(_)));
+        assert!(allowance(&unknown).to_string().contains("ON STANDS, STILL"));
+    }
+
+    #[test]
+    fn a_persons_word_stands_in_for_an_unknown_speed_only() {
+        let unknown = situation(Speed::Unknown(SpeedUnknown::NotANumber), true);
+        assert_eq!(
+            allowance(&unknown),
+            Allowance::SoftwareAllows {
+                speed: StillBy::PersonSaid
+            }
+        );
+        let words = allowance(&unknown).to_string();
+        assert!(
+            words.starts_with("SOFTWARE ALLOWS, ON A PERSON'S WORD"),
+            "{words}"
+        );
+        // A measured movement refuses, whatever a person said.
+        let moving = situation(Speed::Measured(0.4), true);
+        assert_eq!(readiness(&moving), vec![NotReady::Moving(0.4)]);
+        // A measured standstill needs no word, and says what it rests on.
+        let still = situation(Speed::Measured(0.01), false);
+        assert_eq!(
+            allowance(&still),
+            Allowance::SoftwareAllows {
+                speed: StillBy::Measured(0.01)
+            }
+        );
+        // Never "safe", never plain "ALLOWED".
+        for a in [allowance(&unknown), allowance(&still)] {
+            let s = a.to_string();
+            assert!(s.starts_with("SOFTWARE ALLOWS") && !s.to_lowercase().contains("safe"));
+        }
+    }
+
+    #[test]
+    fn on_stands_still_is_a_toggle_and_an_estop_or_movement_clears_it() {
+        let t = Instant::now();
+        let mut page = CalPage::new(settings());
+        assert!(!page.still_confirmed());
+        page.press(CalPress::ConfirmStill, t, Some(2000), &[]);
+        assert!(page.still_confirmed());
+        page.press(CalPress::ConfirmStill, t, Some(2000), &[]);
+        assert!(!page.still_confirmed());
+        // Confirmed, asking limp: an e-stop ends the mode and the word.
+        page.press(CalPress::ConfirmStill, t, Some(2000), &[]);
+        page.press(CalPress::Limp, t, Some(2000), &[]);
+        assert_eq!(page.tick(t, None, &[]), Some(Request::Limp));
+        assert_eq!(page.tick(t, None, &[NotReady::Estop]), Some(Request::Off));
+        assert!(!page.still_confirmed());
+        page.press(CalPress::ConfirmStill, t, Some(2000), &[]);
+        page.tick(t, None, &[NotReady::Moving(0.2)]);
+        assert!(!page.still_confirmed());
+        page.press(CalPress::ConfirmStill, t, Some(2000), &[]);
+        page.forget_still();
+        assert!(!page.still_confirmed());
+    }
+
+    #[test]
+    fn withdrawing_the_word_ends_what_runs() {
+        let t = Instant::now();
+        let mut page = CalPage::new(settings());
+        let unknown = |confirmed| {
+            readiness(&situation(
+                Speed::Unknown(SpeedUnknown::NotANumber),
+                confirmed,
+            ))
+        };
+        page.press(CalPress::Limp, t, Some(2000), &unknown(false));
+        assert_eq!(page.tick(t, None, &unknown(false)), None);
+        page.press(CalPress::ConfirmStill, t, Some(2000), &unknown(false));
+        page.press(CalPress::Limp, t, Some(2000), &unknown(true));
+        assert_eq!(page.tick(t, None, &unknown(true)), Some(Request::Limp));
+        page.press(CalPress::ConfirmStill, t, Some(2000), &unknown(true));
+        assert_eq!(page.tick(t, None, &unknown(false)), Some(Request::Off));
     }
 
     #[test]

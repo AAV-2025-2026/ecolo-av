@@ -787,7 +787,7 @@ mode (option B in the design).
 | `/system/source` | Speed buttons |
 |---|---|
 | SIM, BENCH | **on**, up to 1.0 m/s |
-| REAL, `stands:=true` | the preflight's refusal: **off** until a driven-wheel speed exists (TODO 49b), the Rust ESP32 and `speed_loop.mode open`; then 0.3 m/s, stopped after 4 s of unseen speed. Today: off, and the screen says why |
+| REAL, `stands:=true` | the preflight's refusal: **off** until a driven-wheel speed exists (TODO 49b), the Rust ESP32 and `speed_loop.mode open`; **off** while no wheel speed is seen (none, stale or NaN); then 0.3 m/s, stopped after 4 s of unseen speed. Today: off, and the screen says why |
 | REAL on the ground, nothing announced, REPLAY | **off** |
 
 The rules are `aav_actuator_tests/safety.py`'s, ported to Rust (panel-core `rules`) with
@@ -833,7 +833,7 @@ bridge's settings it needs: [actuator-tests.md, way B](actuator-tests.md#way-b-t
 
 | Part of the page | Shows |
 |---|---|
-| top line | **ALLOWED**, or **NOT ALLOWED** and every reason: the e-stop, the car moving, the speed or the position not seen |
+| top line | **SOFTWARE ALLOWS** (never "safe": people check the rest), or **NOT ALLOWED** and every reason: the e-stop, the car moving, the speed unknown, the position not seen |
 | bridge | the bridge's own line (`/vehicle/steering_actuator/calibration`): what it does, or REFUSED and why |
 | big number | the position now, in counts (`/vehicle/steering_actuator/raw`); the firmware's state; what the page asks |
 | the bar | 0 to 4095, the steering's **left on the left**: the jog range, the limits (green), the marks L C R, the target (box), the position (arrow) |
@@ -850,6 +850,21 @@ bridge's settings it needs: [actuator-tests.md, way B](actuator-tests.md#way-b-t
 | CLEAR MARKS | forget the three marks |
 | SAVE (W) | write the result to a file (below) |
 | LOCK-TO-LOCK CHECK (K) | centre to the left limit, back, to the right limit, back, at 100 counts a second |
+| ON STANDS, STILL (no key) | a person's word that the car is on stands and still, for when nothing measures the speed. Press again to withdraw it |
+
+**When the speed is unknown.** On today's ESP32 the uplink has no wheel speed, so
+`/vehicle/status` says NaN all the time. NaN means **unknown, never stopped**:
+
+| Speed | Top line | Can the page ask? |
+|---|---|---|
+| measured, under 0.05 m/s | SOFTWARE ALLOWS: speed +0.00 m/s ... | yes |
+| measured, 0.05 m/s or more | NOT ALLOWED: the car moves | no, whatever a person said |
+| NaN, stale or none | NOT ALLOWED: the speed isn't known ... press ON STANDS, STILL | no |
+| NaN, stale or none, and ON STANDS, STILL pressed | SOFTWARE ALLOWS, ON A PERSON'S WORD (amber) | yes |
+
+The word is forgotten on an e-stop, a measured movement, pressing the button again, or
+leaving the page. The speed buttons (the throttle) get no such word: on the real car's
+stands they stay off while no wheel speed is seen.
 
 **What it sends:** `/drivers/buttons/steering_calibration` at 10 Hz, only while the window
 draws: limp, or jog to a target. END sends "off" for 0.5 s, then nothing. Not allowed, or

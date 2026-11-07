@@ -37,7 +37,7 @@ use hud_core::{
 };
 use panel_core::{
     buttons::{Buttons, Press},
-    calibration::{CalPage, CalPress, NotReady},
+    calibration::{Allowance, CalPage, CalPress},
     gate::Gate,
     state::{PanelState, Row},
     steering_limits::Mark,
@@ -110,6 +110,7 @@ impl Button {
             Self::Cal(CalPress::Mark(Mark::Right)) => "MARK RIGHT",
             Self::Cal(CalPress::ClearMarks) => "CLEAR MARKS",
             Self::Cal(CalPress::Check) => "LOCK-TO-LOCK CHECK",
+            Self::Cal(CalPress::ConfirmStill) => "ON STANDS, STILL",
             Self::Save => "SAVE",
             Self::Press(Press::SpeedUp) => "SPEED +",
             Self::Press(Press::SpeedDown) => "SPEED -",
@@ -218,8 +219,8 @@ pub struct Frame<'a> {
     pub stands: bool,
     pub page: Page,
     pub cal: &'a CalPage,
-    /// Why the calibration page may not ask now (empty: allowed).
-    pub cal_ready: &'a [NotReady],
+    /// Whether the software allows the calibration page to ask now, and on what.
+    pub cal_allowance: &'a Allowance,
     /// The calibration result's file, once saved.
     pub saved: Option<&'a str>,
     /// The little robot drives across the bottom lane: the keys line steps aside.
@@ -565,7 +566,8 @@ impl Ui {
         let t = self.theme;
         let down = f.held == Some(b)
             || (b == Button::Go && f.buttons.is_driving())
-            || b == Button::Tab(f.page);
+            || b == Button::Tab(f.page)
+            || (b == Button::Cal(CalPress::ConfirmStill) && f.cal.still_confirmed());
         let (fill, ink) = match (b, enabled, down) {
             (Button::Estop, _, true) => (t.stop_fill_alt, t.stop_ink),
             (Button::Estop, _, false) => (t.stop_fill, t.stop_ink),
@@ -692,6 +694,6 @@ mod tests {
         let room = Room::new(1280.0, 860.0, 850.0, 800.0, &wide);
         assert_eq!(room.corner, None);
         assert_eq!(room.lane, None);
-        assert_eq!(layout(1280.0, Page::Calibration).len(), 3 + 11);
+        assert_eq!(layout(1280.0, Page::Calibration).len(), 3 + 12);
     }
 }
