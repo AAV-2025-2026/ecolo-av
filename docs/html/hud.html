@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">65 min read · 8 sections</div></header>
+<div class="meta">70 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -133,7 +133,7 @@
 <td><a href="#the-hardware-panel">The hardware panel</a></td>
 <td><code>hw_panel</code></td>
 <td>the Orin's screen, or a wired laptop</td>
-<td>every sensor's number, and simple buttons for the actuators (Gazebo and the bench for now)</td>
+<td>every sensor's number, and simple buttons for the actuators (Gazebo and the bench for now); the steering calibration; the graphs of the Pi-to-ESP32 path</td>
 </tr>
 </tbody>
 </table></div>
@@ -1994,7 +1994,7 @@ mode (option B in the design).</p>
 </tr>
 <tr>
 <td>REAL, <code>stands:=true</code></td>
-<td>the preflight's refusal: <strong>off</strong> until a driven-wheel speed exists (TODO 49b), the Rust ESP32 and <code>speed_loop.mode open</code>; then 0.3 m/s, stopped after 4 s of unseen speed. Today: off, and the screen says why</td>
+<td>the preflight's refusal: <strong>off</strong> until a driven-wheel speed exists (TODO 49b), the Rust ESP32 and <code>speed_loop.mode open</code>; <strong>off</strong> while no wheel speed is seen (none, stale or NaN); then 0.3 m/s, stopped after 4 s of unseen speed. Today: off, and the screen says why</td>
 </tr>
 <tr>
 <td>REAL on the ground, nothing announced, REPLAY</td>
@@ -2062,7 +2062,7 @@ bridge's settings it needs: <a href="actuator-tests.html#way-b-the-hardware-pane
 <tbody>
 <tr>
 <td>top line</td>
-<td><strong>ALLOWED</strong>, or <strong>NOT ALLOWED</strong> and every reason: the e-stop, the car moving, the speed or the position not seen</td>
+<td><strong>SOFTWARE ALLOWS</strong> (never "safe": people check the rest), or <strong>NOT ALLOWED</strong> and every reason: the e-stop, the car moving, the speed unknown, the position not seen</td>
 </tr>
 <tr>
 <td>bridge</td>
@@ -2126,8 +2126,48 @@ bridge's settings it needs: <a href="actuator-tests.html#way-b-the-hardware-pane
 <td>LOCK-TO-LOCK CHECK (K)</td>
 <td>centre to the left limit, back, to the right limit, back, at 100 counts a second</td>
 </tr>
+<tr>
+<td>ON STANDS, STILL (no key)</td>
+<td>a person's word that the car is on stands and still, for when nothing measures the speed. Press again to withdraw it</td>
+</tr>
 </tbody>
 </table></div>
+<p><strong>When the speed is unknown.</strong> On today's ESP32 the uplink has no wheel speed, so
+<code>/vehicle/status</code> says NaN all the time. NaN means <strong>unknown, never stopped</strong>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Speed</th>
+<th>Top line</th>
+<th>Can the page ask?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>measured, under 0.05 m/s</td>
+<td>SOFTWARE ALLOWS: speed +0.00 m/s ...</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>measured, 0.05 m/s or more</td>
+<td>NOT ALLOWED: the car moves</td>
+<td>no, whatever a person said</td>
+</tr>
+<tr>
+<td>NaN, stale or none</td>
+<td>NOT ALLOWED: the speed isn't known ... press ON STANDS, STILL</td>
+<td>no</td>
+</tr>
+<tr>
+<td>NaN, stale or none, and ON STANDS, STILL pressed</td>
+<td>SOFTWARE ALLOWS, ON A PERSON'S WORD (amber)</td>
+<td>yes</td>
+</tr>
+</tbody>
+</table></div>
+<p>The word is forgotten on an e-stop, a measured movement, pressing the button again, or
+leaving the page. The speed buttons (the throttle) get no such word: on the real car's
+stands they stay off while no wheel speed is seen.</p>
 <p><strong>What it sends:</strong> <code>/drivers/buttons/steering_calibration</code> at 10 Hz, only while the window
 draws: limp, or jog to a target. END sends "off" for 0.5 s, then nothing. Not allowed, or
 the page left (Tab): it ends at once. GO never drives on this page.</p>
@@ -2175,6 +2215,141 @@ ends at 3420 and 610 and a centre at 1985 (it steers right). <code>--cal-self-te
 page itself (limp, mark, hold, check); <code>--demo-bind 2800</code> adds a stiff spot, which the
 check must find:</p>
 <p><img alt="The check stopped by a stiff spot at 2800 (--demo-bind 2800)" src="../img/hw-panel-calibration-stopped.png" /></p>
+<h3 id="the-graphs-page">The graphs page</h3>
+<p>Tab twice (or the GRAPHS tab). One question: <strong>does the Pi pass ego's commands on to the
+ESP32?</strong> Design: <a href="../designs/2026-11-07_esp32-debug-link_brief.md">the ESP32 debug link</a>,
+"The plan now" (Ben, 7 Nov: graphs in <code>hw_panel</code>).</p>
+<p><img alt="The graphs page (--demo): every hop OK, steering, brake and throttle over 60 s" src="../img/hw-panel-graphs.png" /></p>
+<pre class="highlight"><code class="language-text">ego ──► mux ──► Pi wrote ──► ESP32 got
+/ego/actuator_cmd   /control/car/actuator_cmd   /control/car/link_frame   the ESP32's status lines</code></pre>
+<p><strong>The hop chain.</strong> Each hop gets one word:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Word</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OK</td>
+<td>fresh, its value changed in the last 60 s, and it matched the hop before</td>
+</tr>
+<tr>
+<td>DIFFERENT</td>
+<td>it didn't match, or frames were bad, skipped or failed to write</td>
+</tr>
+<tr>
+<td>STALE</td>
+<td>heard, but not for over a second</td>
+</tr>
+<tr>
+<td>NO DATA</td>
+<td>nothing in 60 s</td>
+</tr>
+<tr>
+<td>NOT TESTED</td>
+<td>the value never changed, or nothing to compare with. <strong>A parked car is NOT TESTED, never OK</strong></td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Hop</th>
+<th>Compared with</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ego</td>
+<td>nothing</td>
+<td>fresh and changing</td>
+</tr>
+<tr>
+<td>mux</td>
+<td>ego</td>
+<td>paired by the header's stamp (the mux copies it): equal</td>
+</tr>
+<tr>
+<td>Pi wrote</td>
+<td>mux</td>
+<td>it must change when the mux's does, the same way (correlation 0.5 or more): no key pairs them</td>
+</tr>
+<tr>
+<td>ESP32 got</td>
+<td>Pi wrote</td>
+<td>paired by counter and check byte: equal within the JSON's rounding (0.01)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Ego has no brake value, so only the ESP32 hop tests the brake.</p>
+<p><strong>The graphs.</strong> Steering, brake and throttle, in the frame's own units (-1..1), over the
+last 60 s. Two lines each, told apart by style and a label at the end:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Line</th>
+<th>From</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Pi wrote (a line)</td>
+<td><code>/control/car/link_frame</code>, a sample (10 a second)</td>
+</tr>
+<tr>
+<td>ESP32 (dots)</td>
+<td>the ESP32's status lines (<code>rx</code>, with <code>--esp32</code>); without them, the uplink's brake and throttle outputs (<code>/vehicle/brake</code>, <code>/vehicle/throttle</code>'s command), labelled "what it drives, not what it got"</td>
+</tr>
+</tbody>
+</table></div>
+<p>Beside each: now, avg, low and high for both lines. A gap where status lines were lost,
+a red line where the board restarted. Below: the IMU's turn rate as a small graph, and the
+IMU and GPS rows from their own topics.</p>
+<p><strong>The status strip</strong> is the real proof of the wire (review 2, M2): frames the Pi wrote
+(and their rise in 60 s), write failures, the ESP32's own <code>frames</code>, <code>bad</code>, <code>skipped</code> and
+<code>repeats</code>, the uplink's frames, lost and bad, and status lines lost. The graphs only
+sample: the page says "sampled N frames", never "every frame".</p>
+<p><strong>FREEZE (P)</strong> keeps a copy to read while the car carries on; press again to go live. An
+e-stop freezes it by itself, to read what led to it.</p>
+<p><strong>The ESP32's own lines (<code>--esp32</code>).</strong> Read only:</p>
+<pre class="highlight"><code class="language-bash">hw_panel --esp32 ws://192.168.4.1:81/             # beside ROS
+ros2 launch aav_hud hw_panel.launch.py esp32:=ws://192.168.4.1:81/
+hw_panel --demo --page graphs                     # a pretend path, every hop OK</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Its own thread, its own queue</td>
+<td>a slow board never slows the window; a full queue drops lines, and the gap in <code>seq</code> shows</td>
+</tr>
+<tr>
+<td>Sends only the WebSocket's opening, a pong or a close</td>
+<td>it never commands anything</td>
+</tr>
+<tr>
+<td>Feeds the graphs and the strip only</td>
+<td>never the buttons, the gate or the calibration page's rules</td>
+</tr>
+<tr>
+<td>Tries again every 2 s; 5 s silent is lost</td>
+<td>the board sends a heartbeat each second</td>
+</tr>
+<tr>
+<td><code>ws://</code> only</td>
+<td>no TLS (<code>wss://</code>)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The lines' format is <code>firmware/status/README.md</code>; the reader is tested on its
+<code>golden.jsonl</code>.</p>
 <h3 id="how-its-built_3">How it's built</h3>
 <div class="table-wrap"><table>
 <thead>
@@ -2186,11 +2361,11 @@ check must find:</p>
 <tbody>
 <tr>
 <td><code>crates/panel-core</code></td>
-<td>the logic, no ROS, no raylib: <code>buttons</code>, <code>gate</code>, <code>rules</code> (safety.py's), <code>state</code> (every sensor's number), <code>config</code>, <code>vehicle</code>; the calibration page's <code>calibration</code>, <code>steering_limits</code> (steering_limits.py's, on shared vectors) and <code>sweep</code> (the lock-to-lock check). <code>cargo test -p panel-core</code></td>
+<td>the logic, no ROS, no raylib: <code>buttons</code>, <code>gate</code>, <code>rules</code> (safety.py's), <code>state</code> (every sensor's number), <code>config</code>, <code>vehicle</code>; the calibration page's <code>calibration</code>, <code>steering_limits</code> (steering_limits.py's, on shared vectors) and <code>sweep</code> (the lock-to-lock check); the graphs page's <code>graphs</code> (the lines, the numbers, the verdicts, FREEZE), <code>esp32</code> (the status lines) and <code>ws</code> (the WebSocket's frames). <code>cargo test -p panel-core</code></td>
 </tr>
 <tr>
 <td><code>crates/panel-app</code></td>
-<td>the window (raylib) and the node (rclrs): the 10 ms timer sends the buttons' command and the calibration request (heartbeat-gated) and the e-stop burst</td>
+<td>the window (raylib) and the node (rclrs): the 10 ms timer sends the buttons' command and the calibration request (heartbeat-gated) and the e-stop burst; <code>esp32.rs</code> reads the ESP32's WebSocket on its own thread</td>
 </tr>
 <tr>
 <td><code>config/hw_panel.yaml</code></td>

@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">82 min read · 4 sections</div></header>
+<div class="meta">83 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -360,17 +360,25 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/ego/actuator_cmd</code></td>
 <td><code>ackermann_msgs/msg/AckermannDriveStamped</code></td>
 <td><code>ego</code></td>
-<td><code>output_mux</code></td>
+<td><code>output_mux</code>, <code>hw_panel</code></td>
 <td>turtle, sim, car, bench</td>
-<td>50 Hz, always. speed (m/s), steering_angle (rad, + left), acceleration, steering_angle_velocity. No backend reads it - the output mux passes it on to the one target's /control/<target>/actuator_cmd (aav_io_mux, docs/sources-and-targets.md).</td>
+<td>50 Hz, always. speed (m/s), steering_angle (rad, + left), acceleration, steering_angle_velocity. No backend reads it - the output mux passes it on to the one target's /control/<target>/actuator_cmd (aav_io_mux, docs/sources-and-targets.md). The hardware panel's GRAPHS page reads it only to judge the first hop (ego), and pairs it with the mux's output by stamp.</td>
 </tr>
 <tr>
 <td><code>/control/car/actuator_cmd</code></td>
 <td><code>ackermann_msgs/msg/AckermannDriveStamped</code></td>
 <td><code>output_mux</code></td>
-<td><code>spine_bridge</code>, <code>legacy_uart_bridge</code></td>
+<td><code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>hw_panel</code></td>
 <td>car</td>
-<td>The real car's commands - ego's /ego/actuator_cmd, passed on unchanged by output_mux target:=car, and only while the sensor mux says every source is REAL and nothing on /system/source says otherwise. Anything else and it sends nothing - latched until /safety/output_mux/clear on evidence (an announcement of another source, the sensor mux's problems), only held shut on doubt (the sensor mux not heard or quiet for 3 s, or its doubts); the backends' own timeouts brake (spine_bridge 0.1 s then the spine's 100 ms, legacy_uart_bridge 0.3 s). The real backends read only this topic (spine_bridge with source real), so a simulator's ego can't reach them.</td>
+<td>The real car's commands - ego's /ego/actuator_cmd, passed on unchanged by output_mux target:=car, and only while the sensor mux says every source is REAL and nothing on /system/source says otherwise. Anything else and it sends nothing - latched until /safety/output_mux/clear on evidence (an announcement of another source, the sensor mux's problems), only held shut on doubt (the sensor mux not heard or quiet for 3 s, or its doubts); the backends' own timeouts brake (spine_bridge 0.1 s then the spine's 100 ms, legacy_uart_bridge 0.3 s). The real backends read only this topic (spine_bridge with source real), so a simulator's ego can't reach them. The hardware panel's GRAPHS page only reads it (the mux hop - equal to ego's, paired by stamp).</td>
+</tr>
+<tr>
+<td><code>/control/car/link_frame</code></td>
+<td><code>aav_interfaces/msg/LinkFrame</code></td>
+<td><code>legacy_uart_bridge</code></td>
+<td><code>hw_panel</code></td>
+<td>-</td>
+<td>What the Pi really wrote to the ESP32 - a sample of the serial frames (link_frame_rate_hz, default 10), with the frame's own values and a count of every frame written. tools/link_check.py compares the counts with the ESP32's. Named by role, as the bridge is interim.</td>
 </tr>
 <tr>
 <td><code>/control/car/heartbeat</code></td>
@@ -525,12 +533,20 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>One line for people, on each change and at 2 Hz while anyone asks - what the steering calibration does and why, such as "LIMP - the steering actuator's motor is off" or "REFUSED - steering_calibration is none - stands or bench only, set by the hardware lead". The bridge's own refusals come first (its steering_calibration parameter, frame_version 3, a fresh uplink, no e-stop, ego not driving, the car not moving); then the firmware's state from the uplink. Only with uplink true.</td>
 </tr>
 <tr>
+<td><code>/vehicle/esp32/uplink_health</code></td>
+<td><code>aav_interfaces/msg/UplinkHealth</code></td>
+<td><code>legacy_uart_bridge</code></td>
+<td><code>hw_panel</code></td>
+<td>-</td>
+<td>How the ESP32's uplink frames arrive - fresh, frames, lost and bad, 1 Hz, only with uplink true.</td>
+</tr>
+<tr>
 <td><code>/vehicle/throttle</code></td>
 <td><code>aav_interfaces/msg/ActuatorState</code></td>
-<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code></td>
+<td><code>spine_bridge</code>, <code>gazebo_adapter</code>, <code>carla_adapter</code>, <code>legacy_uart_bridge</code></td>
 <td><code>actuator_test</code>, <code>hw_panel</code></td>
 <td>sim, bench</td>
-<td>The throttle, 0..1. From the spine (car, bench) only measured; command is NaN, as the spine's speed loop decides it. In Gazebo, command is the speed loop's, measured the actuator model's.</td>
+<td>The throttle, 0..1. From the spine (car, bench) only measured; command is NaN, as the spine's speed loop decides it. In Gazebo, command is the speed loop's, measured the actuator model's. From legacy_uart_bridge (uplink true) command is the value the firmware asks for before its ramp, and measured is NaN - no sensor reads the throttle.</td>
 </tr>
 <tr>
 <td><code>/vehicle/brake</code></td>
