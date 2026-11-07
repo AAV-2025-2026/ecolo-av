@@ -824,6 +824,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>built</td>
 </tr>
 <tr>
+<td>ESP32 status lines (<code>json-log</code>, <code>wifi-status</code>, <code>status-lines</code>)</td>
+<td>Ben, 7 Nov: the Rust does the C++'s WiFi jobs, with JSON instead of streaming text and a way to pause, so we can see whether the Pi passes its messages to the ESP32 correctly. The <code>firmware/status</code> lines on the USB cable, and, off by default and read only, over WiFi: a page with graphs, <code>/status.json</code>, <code>/scan</code>, a WebSocket; the tick's worst gap and late ticks for the timing test; <code>tools/esp32_status_sim.py</code> to try the page without a board</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
 <td>ESP32 actuator firmware in C++ (<code>aav_umod_esp32</code>)</td>
 <td>It drives today's car, so it stays until its Rust version is proven</td>
 <td>the 2025-26 team</td>
