@@ -29,6 +29,12 @@ hw_panel:
     steering_raw_topic: /vehicle/steering_actuator/raw          # aav_interfaces/msg/ActuatorRaw: counts, and the firmware's calibration state
     steering_calibration_topic: /drivers/buttons/steering_calibration  # aav_interfaces/msg/SteeringCalibration: sent at 10 Hz while the page asks (limp, jog)
     calibration_line_topic: /vehicle/steering_actuator/calibration  # std_msgs/msg/String: the bridge's line, what it does and why not
+    # --- the GRAPHS page (Tab; docs/hud.md, "The graphs page"): read only ---
+    ego_command_topic: /ego/actuator_cmd          # ackermann_msgs/msg/AckermannDriveStamped: ego's command (the first hop)
+    car_command_topic: /control/car/actuator_cmd  # ackermann_msgs/msg/AckermannDriveStamped: the output mux's, for the real car (paired with ego's by stamp)
+    link_frame_topic: /control/car/link_frame     # aav_interfaces/msg/LinkFrame: a sample of the frames the Pi wrote to the ESP32
+    uplink_health_topic: /vehicle/esp32/uplink_health  # aav_interfaces/msg/UplinkHealth: how the ESP32's uplink frames arrive
+    esp32_url: ""          # the ESP32's WebSocket for its JSON status lines (firmware/status), such as ws://192.168.4.1:81/; empty: not read. Read only; --esp32 URL sets it too
     # --- the buttons ---
     stale_after: 1.0      # s: a topic this quiet shows STALE
     speed_step: 0.1       # m/s a press of Speed + or Speed -

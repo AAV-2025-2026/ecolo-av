@@ -24,6 +24,10 @@
 //!             steering_raw_topic    aav_interfaces/ActuatorRaw     the calibration page: counts, the
 //!                                                                  firmware's calibration state
 //!             calibration_line_topic std_msgs/String               the bridge's line: what, why not
+//!             ego_command_topic, car_command_topic  ackermann_msgs/AckermannDriveStamped  the GRAPHS
+//!                                                                  page: ego's and the mux's command
+//!             link_frame_topic      aav_interfaces/LinkFrame       the GRAPHS page: what the Pi wrote
+//!             uplink_health_topic   aav_interfaces/UplinkHealth    the GRAPHS page: the uplink's counts
 //! Publishes   buttons_topic         geometry_msgs/TwistStamped     only while GO is held (and 0.5 s
 //!                                                                  of zeros after), at 10 Hz, and only
 //!                                                                  while the window draws
@@ -35,7 +39,10 @@
 //!             creep (m/s), sim_cap (m/s), stands_cap (m/s), theme (initial_d, mocha, latte, calm);
 //!             the calibration page's jog_step, jog_min, jog_max, sweep_max_error (counts),
 //!             sweep_rate (counts/s), sweep_stall (s); easter_egg (the little robot, true),
-//!             easter_egg_after (s)
+//!             easter_egg_after (s); esp32_url (the ESP32's WebSocket, read only; empty: off)
+//! Reads       --esp32 ws://...: the ESP32's JSON status lines (firmware/status), on a
+//!             thread of its own; it only ever sends the WebSocket's opening, a pong or a
+//!             close. They feed the GRAPHS page only, never the buttons or the gate
 //! Writes      SAVE on the calibration page: the result, for a person to copy, in
 //!             $XDG_DATA_HOME/aav/steering-calibration/ (~/.local/share/...); never
 //!             vehicle.yaml or the firmware
@@ -44,12 +51,14 @@
 //! swaps the ROS node for a pretend car. The logic is in panel-core.
 //!
 //! usage: hw_panel [--demo [--demo-bind COUNTS]] [--stands] [--fullscreen] [--monitor NAME|N]
-//!                 [--list-monitors] [--config FILE] [--vehicle FILE] [--page calibration]
+//!                 [--list-monitors] [--config FILE] [--vehicle FILE]
+//!                 [--page drive|calibration|graphs] [--esp32 ws://HOST:PORT/]
 //!                 [--screenshot FILE [--after S]] [--self-test SPEED:SECONDS]
 //!                 [--cal-self-test] [--robot-now] [--ros-args ...]
 
 mod cal_script;
 mod demo;
+mod esp32;
 mod robot;
 #[cfg(feature = "ros")]
 mod ros;
@@ -73,6 +82,7 @@ use panel_core::{
     config::PanelConfig,
     easter_egg::{self, PassWatch},
     gate::{self, Caps, Gate, Situation},
+    graphs::Freezer,
     rules::Kind,
     state::{self as panel_state, PanelState, Update},
     steering_limits::Mark,
@@ -83,19 +93,23 @@ use raylib::prelude::*;
 use crate::{
     cal_script::CalScript,
     demo::Demo,
-    source::DataSource,
+    esp32::Esp32Reader,
+    source::{DataSource, WithEsp32},
     ui::{Button, Frame, Page, Ui},
 };
 
 const USAGE: &str = "\
 usage: hw_panel [--demo [--demo-bind COUNTS]] [--stands] [--fullscreen] [--monitor NAME|N]
-                [--list-monitors] [--config FILE] [--vehicle FILE] [--page calibration]
+                [--list-monitors] [--config FILE] [--vehicle FILE]
+                [--page drive|calibration|graphs] [--esp32 ws://HOST:PORT/]
                 [--screenshot FILE [--after S]] [--self-test SPEED:SECONDS]
                 [--cal-self-test] [--robot-now] [--ros-args ...]
 
   --demo             a pretend car: no ROS, no car
   --demo-bind COUNTS the demo's steering has a stiff spot there (the check finds it)
-  --page calibration open on the steering calibration page
+  --page PAGE        open on this page: drive, calibration (steering) or graphs
+  --esp32 URL        also read the ESP32's status lines from its WebSocket, such as
+                     ws://192.168.4.1:81/ (read only: the GRAPHS page; esp32_url too)
   --stands           the car's wheels are off the ground (the speed buttons stay off on
                      the real car until TODO 49b: a driven-wheel speed)
   --fullscreen       fill the screen (F11 switches too)
@@ -115,9 +129,10 @@ usage: hw_panel [--demo [--demo-bind COUNTS]] [--stands] [--fullscreen] [--monit
 
 keys: Space held = GO (the car moves only while it is held), Up or + / Down or -
       speed, Left / Right steer, C centre, S stop, E e-stop, F11 full screen,
-      Tab the other page.
+      Tab the next page.
       Steering calibration page: L limp, H hold, Left / Right step, 1 2 3 mark left,
-      centre, right, K lock-to-lock check, W save, O end";
+      centre, right, K lock-to-lock check, W save, O end.
+      Graphs page: P freeze (an e-stop freezes too)";
 
 /// The command line, before `--ros-args`.
 #[derive(Debug, Default)]
@@ -136,6 +151,7 @@ struct Options {
     demo_bind: Option<u16>,
     cal_self_test: bool,
     robot_now: bool,
+    esp32: Option<String>,
 }
 
 impl Options {
@@ -176,8 +192,14 @@ impl Options {
                     opts.page = Some(match value("--page")?.as_str() {
                         "calibration" => Page::Calibration,
                         "drive" => Page::Drive,
-                        other => bail!("--page: drive or calibration, not {other:?}"),
+                        "graphs" => Page::Graphs,
+                        other => bail!("--page: drive, calibration or graphs, not {other:?}"),
                     })
+                }
+                "--esp32" => {
+                    let url = value("--esp32")?;
+                    panel_core::ws::Url::parse(&url).context("--esp32")?;
+                    opts.esp32 = Some(url);
                 }
                 "--demo-bind" => {
                     let c: u16 = value("--demo-bind")?
@@ -306,17 +328,35 @@ fn main() -> Result<()> {
         window::print_monitors();
         return Ok(());
     }
-    let config = match &opts.config {
+    let mut config = match &opts.config {
         Some(path) => PanelConfig::from_yaml(&read(path)?)
             .with_context(|| format!("in {}", path.display()))?,
         None => PanelConfig::default(),
     };
+    if let Some(url) = &opts.esp32 {
+        config.esp32_url = url.clone();
+    }
     let vehicle = match &opts.vehicle {
         Some(path) => Vehicle::from_vehicle_yaml(&read(path)?)
             .with_context(|| format!("in {}", path.display()))?,
         None => Vehicle::default(),
     };
-    let (source, config) = open_source(&opts, args, config)?;
+    let (source, mut config) = open_source(&opts, args, config)?;
+    // --esp32 wins over esp32_url from a parameters file.
+    if let Some(url) = &opts.esp32 {
+        config.esp32_url = url.clone();
+    }
+    // The ESP32's status lines beside it: --esp32, or esp32_url (a ROS parameter too).
+    let source: Box<dyn DataSource> = match config.esp32()? {
+        Some(url) => {
+            println!("hw_panel: reading the ESP32's status lines from {url} (read only)");
+            Box::new(WithEsp32 {
+                inner: source,
+                esp32: Esp32Reader::start(url)?,
+            })
+        }
+        None => source,
+    };
     run(opts, source, &config, &vehicle)
 }
 
@@ -327,7 +367,10 @@ fn open_source(
     config: PanelConfig,
 ) -> Result<(Box<dyn DataSource>, PanelConfig)> {
     if opts.demo {
-        return Ok((Box::new(Demo::new(Instant::now(), opts.demo_bind)), config));
+        // With a real ESP32's lines, the demo pretends none of its own.
+        let lines = config.esp32_url.trim().is_empty();
+        let demo = Demo::new(Instant::now(), opts.demo_bind, lines);
+        return Ok((Box::new(demo), config));
     }
     #[cfg(feature = "ros")]
     {
@@ -382,6 +425,8 @@ struct Panel {
     cal: CalPage,
     /// The calibration result's file, once saved (or why it wasn't).
     saved: Option<String>,
+    /// The GRAPHS page's FREEZE.
+    freezer: Freezer,
 }
 
 impl Panel {
@@ -405,6 +450,7 @@ impl Panel {
             page: Page::Drive,
             cal: CalPage::new(config.calibration()),
             saved: None,
+            freezer: Freezer::default(),
         }
     }
 
@@ -413,6 +459,8 @@ impl Panel {
         if self.page == Page::Calibration && page != Page::Calibration {
             let position = self.position(now);
             self.cal.press(CalPress::End, now, position, &[]);
+            // A person's ON STANDS, STILL holds only while they stay on the page.
+            self.cal.forget_still();
         }
         self.page = page;
     }
@@ -422,9 +470,15 @@ impl Panel {
         self.state.fresh_raw(now).and_then(|r| r.position)
     }
 
+    /// What the calibration page's checks rest on now.
+    fn cal_situation(&self, now: Instant) -> calibration::Situation {
+        self.state
+            .calibration_situation(now, self.cal.still_confirmed())
+    }
+
     /// Why the calibration page may not ask now.
     fn cal_ready(&self, now: Instant) -> Vec<NotReady> {
-        calibration::readiness(&self.state.calibration_situation(now))
+        calibration::readiness(&self.cal_situation(now))
     }
 
     /// This frame's calibration presses; returns what to send to the bridge now.
@@ -468,6 +522,9 @@ impl Panel {
             }
             self.state.apply(update, now);
         }
+        // An e-stop freezes the graphs, to read what led to it.
+        self.freezer
+            .watch_estop(now, self.state.estop_on(), &self.state.graphs);
         // Unknown to anything is the first announcement, not a change.
         let kind = self.state.kind();
         if self
@@ -485,6 +542,7 @@ impl Panel {
                 no_timeout_lock: self.state.no_timeout_lock,
                 // Not read yet (a parameter of the legacy bridge): unknown.
                 speed_loop_mode: None,
+                speed_seen: self.state.seen_speed(now).is_some(),
             },
             self.caps,
         )
@@ -611,7 +669,11 @@ fn run(
             _ => {}
         }
         if rl.is_key_pressed(KeyboardKey::KEY_TAB) {
-            panel.show(panel.page.other(), now);
+            panel.show(panel.page.next(), now);
+        }
+        let on_graphs = panel.page == Page::Graphs;
+        if on_graphs && (clicked == Some(Button::Freeze) || rl.is_key_pressed(KeyboardKey::KEY_P)) {
+            panel.freezer.toggle(now, &panel.state.graphs);
         }
         let save =
             on_cal && (clicked == Some(Button::Save) || rl.is_key_pressed(KeyboardKey::KEY_W));
@@ -637,13 +699,14 @@ fn run(
         if save {
             panel.save();
         }
-        let cal_ready = panel.cal_ready(now);
+        let cal_allowance = calibration::allowance(&panel.cal_situation(now));
         if passes.just_passed(&panel.cal) {
             egg.drive_across(now);
         }
         let page = match panel.page {
             Page::Drive => 0,
             Page::Calibration => 1,
+            Page::Graphs => 2,
         };
         let watch = easter_egg::watch(
             &panel.state,
@@ -667,9 +730,11 @@ fn run(
             stands: opts.stands,
             page: panel.page,
             cal: &panel.cal,
-            cal_ready: &cal_ready,
+            cal_allowance: &cal_allowance,
             saved: panel.saved.as_deref(),
             hide_keys: matches!(show, Show::Drive { .. }),
+            freezer: &panel.freezer,
+            stale_after: config.stale_after(),
         };
         let mut d = rl.begin_drawing(&thread);
         let room = ui.draw(&mut d, &panel.state, &frame);
@@ -931,7 +996,7 @@ mod tests {
     /// a frame every 20 ms of the demo's time.
     fn run_cal_self_test(bind: Option<u16>) -> (bool, Option<panel_core::sweep::Outcome>) {
         let t0 = Instant::now();
-        let mut demo = Demo::new(t0, bind);
+        let mut demo = Demo::new(t0, bind, true);
         let mut panel = Panel::new(&PanelConfig::default(), &Vehicle::default(), false);
         panel.show(Page::Calibration, t0);
         let mut script = CalScript::new(bind.is_some());
@@ -970,12 +1035,19 @@ mod tests {
         let o = Options::parse(&args(&["--page", "calibration"])).expect("ok");
         assert_eq!(o.page, Some(Page::Calibration));
         assert!(Options::parse(&args(&["--page", "x"])).is_err());
+        let o = Options::parse(&args(&["--page", "graphs"])).expect("ok");
+        assert_eq!(o.page, Some(Page::Graphs));
+        let o = Options::parse(&args(&["--esp32", "ws://192.168.4.1:81/"])).expect("ok");
+        assert_eq!(o.esp32.as_deref(), Some("ws://192.168.4.1:81/"));
+        assert!(Options::parse(&args(&["--esp32", "http://x/"])).is_err());
+        assert!(Options::parse(&args(&["--esp32", "wss://x/"])).is_err());
     }
 
     #[test]
     fn the_keys_say_what_the_help_says() {
         assert!(USAGE.contains("K lock-to-lock check") && USAGE.contains("W save"));
         assert!(USAGE.contains("Space held = GO") && USAGE.contains("C centre"));
+        assert!(USAGE.contains("P freeze"));
         let centre = PRESS_KEYS.iter().find(|(_, p)| *p == Press::Centre);
         assert_eq!(centre.map(|(k, _)| *k), Some(KeyboardKey::KEY_C));
     }

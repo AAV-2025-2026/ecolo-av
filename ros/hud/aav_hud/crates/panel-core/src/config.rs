@@ -47,11 +47,19 @@ pub enum Topic {
     SteeringCalibration,
     /// Read: the bridge's one line about the calibration.
     CalibrationLine,
+    /// Read (the GRAPHS page): ego's command.
+    EgoCommand,
+    /// Read (the GRAPHS page): the output mux's command for the real car.
+    CarCommand,
+    /// Read (the GRAPHS page): a sample of the frames the Pi wrote to the ESP32.
+    LinkFrame,
+    /// Read (the GRAPHS page): how the ESP32's uplink frames arrive.
+    UplinkHealth,
 }
 
 impl Topic {
     /// Every topic.
-    pub const ALL: [Topic; 20] = [
+    pub const ALL: [Topic; 24] = [
         Topic::Buttons,
         Topic::Estop,
         Topic::Control,
@@ -72,6 +80,10 @@ impl Topic {
         Topic::SteeringRaw,
         Topic::SteeringCalibration,
         Topic::CalibrationLine,
+        Topic::EgoCommand,
+        Topic::CarCommand,
+        Topic::LinkFrame,
+        Topic::UplinkHealth,
     ];
 
     /// The ROS parameter that holds this topic's name.
@@ -97,6 +109,10 @@ impl Topic {
             Self::SteeringRaw => "steering_raw_topic",
             Self::SteeringCalibration => "steering_calibration_topic",
             Self::CalibrationLine => "calibration_line_topic",
+            Self::EgoCommand => "ego_command_topic",
+            Self::CarCommand => "car_command_topic",
+            Self::LinkFrame => "link_frame_topic",
+            Self::UplinkHealth => "uplink_health_topic",
         }
     }
 }
@@ -193,6 +209,12 @@ pub struct PanelConfig {
     pub steering_raw_topic: String,
     pub steering_calibration_topic: String,
     pub calibration_line_topic: String,
+    pub ego_command_topic: String,
+    pub car_command_topic: String,
+    pub link_frame_topic: String,
+    pub uplink_health_topic: String,
+    /// The ESP32's WebSocket for its status lines (`ws://...`); empty: not read. Read only.
+    pub esp32_url: String,
     /// Seconds without a message before a topic shows STALE.
     pub stale_after: f64,
     /// m/s a press of Speed + or Speed -.
@@ -239,6 +261,8 @@ pub enum ConfigError {
     Count(&'static str, i64),
     #[error("jog_min ({min}) must be below jog_max ({max})")]
     JogRange { min: u16, max: u16 },
+    #[error("esp32_url: {0}")]
+    Esp32Url(#[from] crate::ws::WsError),
 }
 
 #[derive(Deserialize)]
@@ -287,6 +311,7 @@ impl PanelConfig {
                 max: self.jog_max,
             });
         }
+        self.esp32()?;
         Ok(())
     }
 
@@ -313,6 +338,10 @@ impl PanelConfig {
             Topic::SteeringRaw => &self.steering_raw_topic,
             Topic::SteeringCalibration => &self.steering_calibration_topic,
             Topic::CalibrationLine => &self.calibration_line_topic,
+            Topic::EgoCommand => &self.ego_command_topic,
+            Topic::CarCommand => &self.car_command_topic,
+            Topic::LinkFrame => &self.link_frame_topic,
+            Topic::UplinkHealth => &self.uplink_health_topic,
         }
     }
 
@@ -339,6 +368,10 @@ impl PanelConfig {
             Topic::SteeringRaw => &mut self.steering_raw_topic,
             Topic::SteeringCalibration => &mut self.steering_calibration_topic,
             Topic::CalibrationLine => &mut self.calibration_line_topic,
+            Topic::EgoCommand => &mut self.ego_command_topic,
+            Topic::CarCommand => &mut self.car_command_topic,
+            Topic::LinkFrame => &mut self.link_frame_topic,
+            Topic::UplinkHealth => &mut self.uplink_health_topic,
         };
         *slot = name;
     }
@@ -417,6 +450,14 @@ impl PanelConfig {
         }
     }
 
+    /// The ESP32's WebSocket, if one is set.
+    pub fn esp32(&self) -> Result<Option<crate::ws::Url>, crate::ws::WsError> {
+        match self.esp32_url.trim() {
+            "" => Ok(None),
+            url => crate::ws::Url::parse(url).map(Some),
+        }
+    }
+
     /// [`PanelConfig::stale_after`] as a Duration.
     pub fn stale_after(&self) -> Duration {
         Duration::from_secs_f64(self.stale_after)
@@ -446,6 +487,8 @@ mod tests {
         assert_eq!((c.sim_cap, c.stands_cap), (1.0, 0.3));
         assert_eq!(c.topic(Topic::Buttons), "/drivers/buttons/cmd_vel");
         assert_eq!(c.theme, ThemeName::InitialD);
+        assert_eq!(c.topic(Topic::LinkFrame), "/control/car/link_frame");
+        assert_eq!(c.esp32(), Ok(None), "the ESP32 isn't read unless asked");
         assert!(c.easter_egg);
         assert_eq!(c.easter_egg_settings().idle_after, Duration::from_secs(60));
         let cal = c.calibration();
@@ -494,6 +537,11 @@ mod tests {
         assert!(matches!(
             PanelConfig::from_yaml(&bad),
             Err(ConfigError::Count("jog_step", 0))
+        ));
+        let bad = BUILT_IN_YAML.replace("esp32_url: \"\"", "esp32_url: http://x/");
+        assert!(matches!(
+            PanelConfig::from_yaml(&bad),
+            Err(ConfigError::Esp32Url(_))
         ));
         let bad = BUILT_IN_YAML.replace("stands_cap: 0.3", "stands_cap: 3.0");
         assert!(matches!(
