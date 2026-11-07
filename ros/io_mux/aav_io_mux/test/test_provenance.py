@@ -326,3 +326,42 @@ def test_the_bench_needs_bench_sources():
     assert gate.is_open(0.0)
     gate.entries.append(Entry('gazebo_adapter', 'gps', GPS, SIM))
     assert not gate.is_open(0.1)
+
+
+def open_gate(**args):
+    gate = Gate('sim', settle=0.0, **args)
+    gate.report = Report(0.0, SIM, True, (), ())
+    return gate
+
+
+def test_commands_wait_for_the_screens_they_need():
+    gate = open_gate(screens=('dev_window',))
+    assert not gate.is_open(0.5), 'not heard yet'
+    gate.beat('dev_window', 0.5)
+    gate.update(0.5)
+    assert gate.is_open(0.6)
+    assert not gate.is_open(1.7), 'quiet for over a second'
+    assert not gate.latched, 'a quiet screen only waits'
+    gate.report = Report(1.8, SIM, True, (), ())
+    gate.beat('dev_window', 1.8)
+    gate.update(1.8)
+    assert gate.is_open(1.9), 'and comes back'
+
+
+def test_every_screen_named_must_beat():
+    gate = open_gate(screens=('dev_window', 'hw_panel'))
+    gate.beat('dev_window', 0.5)
+    gate.update(0.5)
+    assert not gate.is_open(0.6)
+    gate.beat('hw_panel', 0.6)
+    gate.update(0.6)
+    assert gate.is_open(0.7)
+
+
+def test_no_screens_named_changes_nothing():
+    assert open_gate().is_open(0.1)
+
+
+def test_the_real_car_refuses_the_screens_rule():
+    with pytest.raises(ValueError, match='takes no screens'):
+        Gate('car', screens=('dev_window',))

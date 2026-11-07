@@ -38,24 +38,28 @@ pub const DRIVER_FOV: f32 = 1.15;
 /// A map wider than this, metres, shows the car's surroundings, not all of itself.
 /// Cubes lower than this are the ground's waves, kerbs and grass: not compared with NDT's map.
 pub const WAVES_TOP: f32 = 0.45;
-/// The most of NDT's cells drawn on the flat map at once.
-const MAX_MAP_CELLS: usize = 8_000;
+/// NDT's picture on the flat map: metres per pixel, and the most pixels a side.
+const FOOTPRINT_CELL: f32 = 0.5;
+const MAX_FOOTPRINT: usize = 4096;
 const BIG_MAP: f64 = 300.0;
 const BIG_MAP_VIEW: f64 = 160.0;
 /// Log lines kept for the console.
 const CONSOLE_LINES: usize = 500;
 /// The most cubes drawn on the map. A real scan has about 2,000; beyond that it's a blur.
 const MAX_MAP_CUBES: usize = 4_000;
-/// The map's colours: a dark floor and bright walls, with unknown nearly black.
+/// A wall's colour, on the map and the costmap alike: when they differed, a wall flashed each
+/// time Nav2 cleared or sent its costmap again (Ben, 5 Nov).
+const WALL: [u8; 3] = [172, 150, 180];
+/// The map's colours: a dark floor and walls, with unknown nearly black.
 const MAP_COLOURS: Palette = Palette {
     free: [32, 32, 36, 255],
-    occupied: [205, 205, 210, 255],
+    occupied: [WALL[0], WALL[1], WALL[2], 255],
     unknown: [12, 12, 14, 255],
 };
-/// The costmap's: see-through where free, into purple and magenta over the map.
+/// The costmap's: the wall's colour, fading out as the danger falls.
 const COST_COLOURS: Palette = Palette {
-    free: [90, 70, 170, 0],
-    occupied: [150, 40, 130, 120],
+    free: [WALL[0], WALL[1], WALL[2], 0],
+    occupied: [WALL[0], WALL[1], WALL[2], 255],
     unknown: [0, 0, 0, 0],
 };
 
@@ -63,6 +67,24 @@ const COST_COLOURS: Palette = Palette {
 pub const NDT_DARK_RGB: [u8; 3] = [54, 36, 92];
 pub const NDT_LIT_RGB: [u8; 3] = [216, 160, 255];
 pub const NEW_CUBE_RGB: [u8; 3] = [255, 158, 40];
+
+/// The cubes' height bands, as the debug HUD's legend says them.
+pub const BAND_RGB: [[u8; 3]; 6] = [
+    [58, 66, 78],
+    [34, 96, 128],
+    [42, 136, 158],
+    [62, 178, 188],
+    [116, 212, 212],
+    [204, 244, 240],
+];
+const BAND_LEGEND: [([u8; 3], &str); 6] = [
+    (BAND_RGB[0], "ground"),
+    (BAND_RGB[1], "< 0.75 m"),
+    (BAND_RGB[2], "< 1.25 m"),
+    (BAND_RGB[3], "< 1.75 m"),
+    (BAND_RGB[4], "< 2.5 m"),
+    (BAND_RGB[5], "higher"),
+];
 
 /// What's drawn. The defaults are the quiet view Ben asked for.
 #[derive(Clone, Copy, Debug)]
@@ -81,7 +103,7 @@ impl Default for Layers {
         Self {
             road: true,
             nav2_cubes: false,
-            ndt_cubes: true,
+            ndt_cubes: false,
             costmap: true,
             ndt_map: true,
             scan: true,
@@ -188,13 +210,14 @@ pub struct WorldNews {
     pub car_odom: Pose,
     pub car_map: Pose,
     ndt_index: Option<feed::MapIndex>,
+    ndt_picture: Option<egui::TextureHandle>,
     pub ndt: Option<MapCells>,
     /// How the newest cubes sit on NDT's map.
     pub map_match: feed::MapMatch,
     ndt_status: Option<NdtStatus>,
     ndt_pose: Option<Pose>,
     pub picture_size: Option<[u32; 2]>,
-    plan: Vec<Point>,
+    pub plan: Vec<Point>,
     map: GridLayer,
     costmap: GridLayer,
     origins: Origins,
@@ -267,9 +290,10 @@ impl WorldNews {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Eyes {
     /// From the car, looking where it drives: what it sees.
-    #[default]
     Driver,
-    /// Behind the car and above it, through the debug HUD's `Orbit`.
+    /// Behind the car and above it, through the debug HUD's `Orbit`: the view that's easiest to
+    /// read (Ben, 5 Nov), so the one it opens with.
+    #[default]
     Orbit,
 }
 
@@ -415,7 +439,7 @@ pub fn draw(
     });
     panel(&mut root, console_rect, |ui| console_panel(ui, state));
     cubes_panel(&mut root, cubes_rect, state);
-    ndt_line(&root, cubes_rect, &state.world);
+    ndt_line(&root, cubes_rect, &state.world, state.layers.ndt_cubes);
     panel(&mut root, map_rect, |ui| map_panel(ui, state, feed));
     panel(&mut root, corner_rect, |ui| corner_panel(ui, state));
 
@@ -654,16 +678,43 @@ fn cubes_panel(root: &mut egui::Ui, rect: egui::Rect, state: &mut UiState) {
     );
 }
 
+/// NDT's footprint: (west, south, east, north), metres.
+fn footprint_bounds(points: &[[f32; 2]]) -> [f32; 4] {
+    points.iter().fold(
+        [f32::MAX, f32::MAX, f32::MIN, f32::MIN],
+        |[w, s, e, n], [x, y]| [w.min(*x), s.min(*y), e.max(*x), n.max(*y)],
+    )
+}
+
+/// NDT's footprint as a picture, made once: drawing a campus's dots every frame cost more than
+/// the rest of the map together.
+fn footprint_image(points: &[[f32; 2]]) -> egui::ColorImage {
+    let [west, south, east, north] = footprint_bounds(points);
+    let size = |span: f32| ((span / FOOTPRINT_CELL).ceil() as usize + 1).clamp(1, MAX_FOOTPRINT);
+    let (width, height) = (size(east - west), size(north - south));
+    let mut image = egui::ColorImage::new(
+        [width, height],
+        vec![egui::Color32::TRANSPARENT; width * height],
+    );
+    let dot = egui::Color32::from_rgb(205, 165, 245);
+    for [x, y] in points {
+        let col = (((x - west) / (east - west).max(1.0)) * (width - 1) as f32) as usize;
+        let row = (((north - y) / (north - south).max(1.0)) * (height - 1) as f32) as usize;
+        image.pixels[row * width + col] = dot;
+    }
+    image
+}
+
 /// What the colours mean, so nobody has to guess.
-fn legend(root: &egui::Ui, rect: egui::Rect, world: &WorldNews) {
-    let rows: &[([u8; 3], &str)] = if world.ndt.is_some() {
+fn legend(root: &egui::Ui, rect: egui::Rect, world: &WorldNews, ndt_cubes: bool) {
+    let rows: &[([u8; 3], &str)] = if ndt_cubes && world.ndt.is_some() {
         &[
             (NDT_DARK_RGB, "NDT's map"),
             (NDT_LIT_RGB, "lidar sees it too"),
             (NEW_CUBE_RGB, "lidar only: not on the map"),
         ]
     } else {
-        &[([150, 225, 205], "lidar's cubes (no NDT map)")]
+        &BAND_LEGEND
     };
     let mut x = rect.left() + 8.0;
     let y = rect.top() + 50.0;
@@ -683,7 +734,7 @@ fn legend(root: &egui::Ui, rect: egui::Rect, world: &WorldNews) {
 }
 
 /// NDT's state over the cubes: is localization holding, and how far from the EKF?
-fn ndt_line(root: &egui::Ui, rect: egui::Rect, world: &WorldNews) {
+fn ndt_line(root: &egui::Ui, rect: egui::Rect, world: &WorldNews, ndt_cubes: bool) {
     let mut line = feed::ndt_line(world.ndt_status.as_ref(), world.ndt_pose, world.car_map);
     if let Some(share) = world.map_match.share_on_map(world.cubes.cubes.len()) {
         line.words
@@ -702,7 +753,7 @@ fn ndt_line(root: &egui::Ui, rect: egui::Rect, world: &WorldNews) {
         egui::FontId::proportional(16.0),
         colour,
     );
-    legend(root, rect, world);
+    legend(root, rect, world, ndt_cubes);
     if world.cubes.cubes.is_empty() {
         root.painter().text(
             rect.center(),
@@ -819,23 +870,23 @@ fn map_panel(ui: &mut egui::Ui, state: &mut UiState, feed: &mut dyn feed::Feed) 
     }
     if layers.ndt_map {
         if let Some(cells) = &world.ndt {
-            // A campus has far too many for one frame: only those on screen, and not all of
-            // those when zoomed far out.
-            let on_screen = cells
-                .footprint
-                .points
-                .iter()
-                .map(|[x, y]| to(Point::new(f64::from(*x), f64::from(*y))))
-                .filter(|at| rect.contains(*at))
-                .take(MAX_MAP_CELLS);
-            // Squares, not circles: thousands of circles cost more than the rest of the frame.
-            for at in on_screen {
-                painter.rect_filled(
-                    egui::Rect::from_center_size(at, egui::vec2(2.0, 2.0)),
-                    0.0,
-                    egui::Color32::from_rgb(205, 165, 245),
-                );
-            }
+            let texture = world.ndt_picture.get_or_insert_with(|| {
+                ui.ctx().load_texture(
+                    "ndt_map",
+                    footprint_image(&cells.footprint.points),
+                    egui::TextureOptions::NEAREST,
+                )
+            });
+            let bounds = footprint_bounds(&cells.footprint.points);
+            painter.image(
+                texture.id(),
+                egui::Rect::from_min_max(
+                    to(Point::new(f64::from(bounds[0]), f64::from(bounds[3]))),
+                    to(Point::new(f64::from(bounds[2]), f64::from(bounds[1]))),
+                ),
+                egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+                egui::Color32::WHITE,
+            );
         }
     }
     let car = world.car_map;

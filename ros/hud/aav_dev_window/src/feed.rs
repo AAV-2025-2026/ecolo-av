@@ -85,6 +85,9 @@ pub trait Feed: Send + Sync {
 
     /// Sets the e-stop. Only ever sets it: clearing is `pixi run clear estop`.
     fn press_estop(&mut self) -> Result<(), String>;
+
+    /// A frame reached the screen. A live feed's heartbeat says so, while frames keep coming.
+    fn frame_drawn(&self) {}
 }
 
 /// The last gate before a goal or e-stop leaves the window: this run may command, and every

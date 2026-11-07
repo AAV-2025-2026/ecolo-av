@@ -59,6 +59,9 @@ bench's argument names:
                       (navigation.launch.py lidar:=true: its local costmap and
                       collision_monitor). Its earlier flakiness on a Mac came from other
                       programs competing
+  watch_screens:=dev_window,hw_panel  commands flow only while those screens beat (they
+                      send it with --developer): close one and the output mux closes, and
+                      with spine:=true the spine's own state machine latches
   sim_speed:=3        a higher top speed (m/s, up to 5), for ego and Nav2, in Gazebo only:
                       the car's 1.0 m/s cap (ego.yaml, nav2.yaml) is for its first drives.
                       ego refuses it outside a simulator
@@ -181,6 +184,7 @@ def launch_setup(context):
             start_x, start_y, start_yaw = str(x), str(y), str(yaw)
         if ndt_map == DEFAULT_NDT_MAP:
             ndt_map = worlds.CAMPUS_NDT
+    sim_speed = arg('sim_speed') or (worlds.CAMPUS_SPEED if world == worlds.CAMPUS else '')
     flag = {n: arg(n).lower() == 'true'
             for n in ('nav', 'teleop', 'rviz', 'perception', 'camera_obstacles', 'hud',
                       'map', 'foxglove', 'reversing', 'watchdog', 'faults',
@@ -240,10 +244,11 @@ def launch_setup(context):
         include(context, 'aav_command_mux', 'mux.launch.py', use_sim_time='true',
                 sensor_lock=flag['watchdog'], geofence_lock=flag['geofence']),
         include(context, 'aav_ego', 'ego.launch.py', use_sim_time='true',
-                sim_max_speed=arg('sim_speed')),
+                sim_max_speed=sim_speed),
         # ego's commands go to Gazebo (gazebo_adapter, or spine_bridge with spine:=true)
         # only while every source is SIM (aav_io_mux).
-        include(context, 'aav_io_mux', 'io_mux.launch.py', target='sim', source='sim'),
+        include(context, 'aav_io_mux', 'io_mux.launch.py', target='sim', source='sim',
+                **({'screens': arg('watch_screens')} if arg('watch_screens') else {})),
         include(context, 'aav_scripted', 'scripted.launch.py', use_sim_time='true'),
         include(context, 'aav_drive_to_point', 'drive_to_point.launch.py', use_sim_time='true',
                 watchdog=arg('watchdog')),
@@ -285,7 +290,7 @@ def launch_setup(context):
                                            else ''),
                                collision_monitor=radar or lidar or flag['ghost'],
                                camera_obstacles=flag['camera_obstacles'],
-                               max_speed=arg('sim_speed'),
+                               max_speed=sim_speed,
                                reversing=str(flag['reversing']).lower(),
                                controller=controller, tracker=tracker, planner=planner,
                                lattice_headings=arg('lattice_headings'),
@@ -330,7 +335,7 @@ def launch_setup(context):
                                         'gazebo_esp32' if arg('esp32').lower() == 'true'
                                         else 'gazebo'),
                                radius=arg('geofence_radius'), centre_x=start_x,
-                               centre_y=start_y, max_speed=arg('sim_speed'),
+                               centre_y=start_y, max_speed=sim_speed,
                                use_sim_time='true'))
     if flag['teleop']:
         actions.append(include(context, 'aav_teleop', 'teleop.launch.py', use_sim_time='true'))
@@ -455,6 +460,10 @@ def generate_launch_description():
         DeclareLaunchArgument('faults', default_value='false',
                               description='route the front left picture through '
                                           'gazebo_adapter, for fault.camera'),
+        DeclareLaunchArgument('watch_screens', default_value='',
+                              description='screens whose heartbeat commands need, such as '
+                                          'dev_window,hw_panel: lose one and, with '
+                                          'spine:=true, the spine latches'),
         DeclareLaunchArgument('screen_cubes', default_value='false',
                               description='true: the cubes for the developer window, while '
                                           'Nav2 stays on the flat scan'),

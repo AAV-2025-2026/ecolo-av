@@ -22,6 +22,8 @@ pub const NODE_NAME: &str = "hw_panel";
 /// Each topic the panel sends on or listens to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Topic {
+    /// Sent: frames drawn, for a test of what stops the car.
+    ScreenAlive,
     /// Sent: the buttons' command, into twist_mux.
     Buttons,
     /// Sent (true only) and read.
@@ -51,7 +53,8 @@ pub enum Topic {
 
 impl Topic {
     /// Every topic.
-    pub const ALL: [Topic; 20] = [
+    pub const ALL: [Topic; 21] = [
+        Topic::ScreenAlive,
         Topic::Buttons,
         Topic::Estop,
         Topic::Control,
@@ -77,6 +80,7 @@ impl Topic {
     /// The ROS parameter that holds this topic's name.
     pub fn parameter(self) -> &'static str {
         match self {
+            Self::ScreenAlive => "screen_alive_topic",
             Self::Buttons => "buttons_topic",
             Self::Estop => "estop_topic",
             Self::Control => "control_topic",
@@ -173,6 +177,7 @@ impl Count {
 /// The settings.
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct PanelConfig {
+    pub screen_alive_topic: String,
     pub buttons_topic: String,
     pub estop_topic: String,
     pub control_topic: String,
@@ -293,6 +298,7 @@ impl PanelConfig {
     /// The name of one topic.
     pub fn topic(&self, topic: Topic) -> &str {
         match topic {
+            Topic::ScreenAlive => &self.screen_alive_topic,
             Topic::Buttons => &self.buttons_topic,
             Topic::Estop => &self.estop_topic,
             Topic::Control => &self.control_topic,
@@ -319,6 +325,7 @@ impl PanelConfig {
     /// Sets the name of one topic (from a ROS parameter).
     pub fn set_topic(&mut self, topic: Topic, name: String) {
         let slot = match topic {
+            Topic::ScreenAlive => &mut self.screen_alive_topic,
             Topic::Buttons => &mut self.buttons_topic,
             Topic::Estop => &mut self.estop_topic,
             Topic::Control => &mut self.control_topic,

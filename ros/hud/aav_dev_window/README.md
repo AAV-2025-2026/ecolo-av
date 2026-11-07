@@ -47,8 +47,8 @@ pixi run dev-window --cubes 60000 --seconds 8 --screenshot /tmp/window.png
 |---|---|---|---|
 | G | road cubes: the lidar's waves | M | NDT's map |
 | V | outline every live cube | S | live scan |
-| N | NDT's cells, dark to light purple (off: raw cubes) | P | plan |
-| O | costmap | C, R | from the car or behind it; reset |
+| N | NDT's cells, dark to light purple (off, the default: cubes by height) | P | plan |
+| O | costmap | C, R | from behind it (the default) or the car; reset |
 
 Mouse on the cubes: drag turns the head and the wheel zooms. From behind, right-drag also moves. On the map: click picks a goal,
 right-drag moves, wheel zooms.
@@ -63,6 +63,8 @@ right-drag moves, wheel zooms.
 
 ## Side Effects
 
+- `--live` also publishes `/hud/dev_window/heartbeat`: frames drawn, 10 Hz. Only sim's
+  `watch_screens:=` reads it.
 - Opens a window. `--live` publishes `/goal_pose` and `/safety/estop` (only ever true), after
   every gate: developer mode, ROS kept on this computer, every sensor SIM. `--watch` and pretend
   data have no publishers. Cancelling a Nav2 goal isn't built yet.

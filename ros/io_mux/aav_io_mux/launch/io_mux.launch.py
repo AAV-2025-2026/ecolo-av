@@ -28,7 +28,9 @@ def launch_setup(context):
                     parameters=[{'source': source}])]
     if target:
         actions.append(Node(package='aav_io_mux', executable='output_mux', name='output_mux',
-                            parameters=[{'target': target}]))
+                            parameters=[{'target': target,
+                                         'screens': LaunchConfiguration('screens')
+                                         .perform(context)}]))
     return actions
 
 
@@ -39,5 +41,8 @@ def generate_launch_description():
                                           'car (empty: no output mux)'),
         DeclareLaunchArgument('source', default_value='',
                               description="real, sim, bench or replay (empty: the target's)"),
+        DeclareLaunchArgument('screens', default_value='',
+                              description='screens that must be alive for commands to flow, '
+                                          'such as dev_window,hw_panel: a test, never the car'),
         OpaqueFunction(function=launch_setup),
     ])

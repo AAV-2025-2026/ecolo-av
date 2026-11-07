@@ -200,6 +200,7 @@ it; never vehicle.yaml).
 ## Side Effects
 
 - Opens a window: it needs a screen, and fails without one.
+- `hw_panel` publishes `/hud/hw_panel/heartbeat`; only sim's `watch_screens:=` reads it.
 - Publishes `/safety/estop`, `/hud/heartbeat` and `/goal_pose` (a goal drives the car);
   `hw_panel` publishes `/drivers/buttons/cmd_vel` (the buttons drive the car).
 - `map` reads the PMTiles and SQLite files from disk; `debug_hud` reads `ndt_map` (a PCD)

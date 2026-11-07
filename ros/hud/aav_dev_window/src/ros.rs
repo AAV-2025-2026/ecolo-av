@@ -10,6 +10,7 @@
 //! Serves and calls nothing.
 
 use std::{
+    sync::atomic::{AtomicU64, Ordering},
     sync::{
         mpsc::{self, Receiver, SyncSender},
         Arc, Mutex, PoisonError,
@@ -29,6 +30,7 @@ use debug_core::{
 };
 use hud_core::{
     estop::{EstopButton, PERIOD},
+    heartbeat::{Frames, Heartbeat},
     origin::{Announcement, Entry, Origin},
     picture::Picture,
     units::{Fraction, MetresPerSecond, Radians},
@@ -46,7 +48,7 @@ use ros_env::geometry_msgs::msg::{Pose as PoseMsg, PoseStamped, PoseWithCovarian
 use ros_env::nav_msgs::msg::{OccupancyGrid, Odometry, Path};
 use ros_env::rcl_interfaces::msg::Log;
 use ros_env::sensor_msgs::msg::{Image, PointCloud2};
-use ros_env::std_msgs::msg::{Bool, String as StringMsg};
+use ros_env::std_msgs::msg::{Bool, String as StringMsg, UInt64};
 use serde::Deserialize;
 
 use crate::feed::{Feed, Level, Update};
@@ -83,6 +85,7 @@ struct Topics {
     watchdog: String,
     goal: String,
     estop: String,
+    screen_alive: String,
 }
 
 /// The two commands, which exist only in developer mode.
@@ -97,6 +100,8 @@ pub struct RosFeed {
     /// Newest-only: a slow window gets the newest picture, not a backlog.
     picture: Arc<Mutex<Option<Picture>>>,
     commands: Option<Commands>,
+    /// How many frames have reached the screen, for the heartbeat.
+    drawn: Arc<AtomicU64>,
     estop: Mutex<EstopButton>,
     local: bool,
 }
@@ -110,10 +115,12 @@ impl RosFeed {
         let (tx, updates) = mpsc::sync_channel(QUEUE);
         let picture = Arc::new(Mutex::new(None));
         let shared = Arc::clone(&picture);
+        let drawn = Arc::new(AtomicU64::new(0));
+        let frames = Arc::clone(&drawn);
         thread::Builder::new()
             .name("ros".into())
             .spawn(move || {
-                if let Err(e) = spin(developer, tx, shared, ready_tx.clone()) {
+                if let Err(e) = spin(developer, tx, shared, frames, ready_tx.clone()) {
                     let _ = ready_tx.send(Err(format!("{e:#}")));
                     eprintln!("dev_window: the ROS node stopped: {e:#}");
                 }
@@ -127,6 +134,7 @@ impl RosFeed {
             updates: Mutex::new(updates),
             picture,
             commands,
+            drawn,
             estop: Mutex::new(EstopButton::default()),
             local,
         })
@@ -175,6 +183,10 @@ impl Feed for RosFeed {
         message.pose.orientation.z = half.sin();
         message.pose.orientation.w = half.cos();
         commands.goal.publish(message).map_err(|e| e.to_string())
+    }
+
+    fn frame_drawn(&self) {
+        self.drawn.fetch_add(1, Ordering::Relaxed);
     }
 
     fn press_estop(&mut self) -> Result<(), String> {
@@ -334,6 +346,7 @@ fn spin(
     developer: bool,
     tx: SyncSender<Update>,
     picture: Arc<Mutex<Option<Picture>>>,
+    frames: Arc<AtomicU64>,
     ready: mpsc::Sender<Ready>,
 ) -> Result<(), RclrsError> {
     let topics: Topics = match serde_yaml_ng::from_str(include_str!("../config/dev_window.yaml")) {
@@ -482,6 +495,21 @@ fn spin(
             goal: node.create_publisher(topics.goal.as_str())?,
             estop: node.create_publisher(topics.estop.as_str().qos(estop_qos))?,
         })
+    } else {
+        None
+    };
+    // The window's heartbeat: hud-core's rule, so it stops if the drawing does.
+    let _alive = if developer {
+        let alive: Publisher<UInt64> = node.create_publisher(topics.screen_alive.as_str())?;
+        let mut heartbeat = Heartbeat::default();
+        Some(
+            node.create_timer_repeating(Duration::from_millis(10), move || {
+                let drawn = Frames(frames.load(Ordering::Relaxed));
+                if let Some(Frames(count)) = heartbeat.poll(Instant::now(), drawn) {
+                    let _ = alive.publish(UInt64 { data: count });
+                }
+            })?,
+        )
     } else {
         None
     };

@@ -57,7 +57,7 @@ use ros_env::aav_interfaces::msg::{
 };
 use ros_env::geometry_msgs::msg::{Twist, TwistStamped, Vector3};
 use ros_env::sensor_msgs::msg::{BatteryState, Image, Imu, NavSatFix, PointCloud2};
-use ros_env::std_msgs::msg::{Bool, Header, String as StringMsg};
+use ros_env::std_msgs::msg::{Bool, Header, String as StringMsg, UInt64};
 
 /// How many updates may wait for the screen. More are dropped: the screen is stuck.
 const QUEUE: usize = 512;
@@ -318,6 +318,8 @@ fn spin(
 
     let estop_pub: Publisher<Bool> =
         node.create_publisher(topic(Topic::Estop).as_str().qos(reliable10))?;
+    let alive_pub: Publisher<UInt64> =
+        node.create_publisher(topic(Topic::ScreenAlive).as_str().qos(reliable10))?;
     let buttons_pub: Publisher<TwistStamped> =
         node.create_publisher(topic(Topic::Buttons).as_str().qos(reliable10))?;
     let calibration_pub: Publisher<SteeringCalibration> =
@@ -334,7 +336,8 @@ fn spin(
             let now = Instant::now();
             // The buttons: only while the window draws.
             let drawn = Frames(shared.frames.load(Ordering::Relaxed));
-            if heartbeat.poll(now, drawn).is_some() {
+            if let Some(Frames(count)) = heartbeat.poll(now, drawn) {
+                let _ = alive_pub.publish(UInt64 { data: count });
                 let command = *shared
                     .command
                     .lock()

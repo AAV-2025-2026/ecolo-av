@@ -4,6 +4,7 @@ output_mux: passes ego's commands to one target, only while every source is that
 Subscribes  ego/actuator_cmd          ackermann_msgs/AckermannDriveStamped (ego, 50 Hz)
             system/sensor_mux/state   aav_interfaces/SourceCheck (the sensor mux, 2 Hz)
             system/source             aav_interfaces/DataSource, latched
+            hud/<screen>/heartbeat    std_msgs/UInt64: only for each of `screens`
 Publishes   control/<target>/actuator_cmd  ackermann_msgs/AckermannDriveStamped: ego's
                                       command, unchanged, while the gate is open
             control/<target>/heartbeat  aav_interfaces/Heartbeat: one for each command passed
@@ -14,9 +15,9 @@ Publishes   control/<target>/actuator_cmd  ackermann_msgs/AckermannDriveStamped:
 Serves      safety/output_mux/clear   std_srvs/Trigger: a person reopens a latched stop
 
 Parameters  target (car; sim, turtle, carla or bench), settle (2.0 s), stale_after
-            (3.0 s)
+            (3.0 s), screens (comma-separated names, empty: none; refused for car)
 
-The target decides the source its data must come from: car REAL; simo, turtle and
+The target decides the source its data must come from: car REAL; sim, turtle and
 carla SIM; bench BENCH (provenance.TARGETS). Each backend reads only its own target's
 topic, so a simulator's ego can never reach the real car's backend.
 
@@ -45,7 +46,7 @@ import rclpy
 from rclpy.clock import Clock, ClockType
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-from std_msgs.msg import String
+from std_msgs.msg import String, UInt64
 from std_srvs.srv import Trigger
 
 
@@ -57,7 +58,9 @@ class OutputMux(Node):
         topic = provenance.command_topic(self.target)
         self.gate = provenance.Gate(self.target,
                                     settle=self.declare_parameter('settle', 2.0).value,
-                                    stale_after=self.declare_parameter('stale_after', 3.0).value)
+                                    stale_after=self.declare_parameter('stale_after', 3.0).value,
+                                    screens=tuple(n.strip() for n in self.declare_parameter(
+                                        'screens', '').value.split(',') if n.strip()))
         self.announcers = provenance.Announcers()
         self.last_state = None
         self.out = self.create_publisher(AckermannDriveStamped, topic, 10)
@@ -68,6 +71,10 @@ class OutputMux(Node):
         self.create_subscription(AckermannDriveStamped, 'ego/actuator_cmd', self.on_cmd, 10)
         self.create_subscription(SourceCheck, 'system/sensor_mux/state', self.on_check, 10)
         self.create_subscription(DataSource, 'system/source', self.on_source, ANNOUNCEMENTS)
+        for screen in self.gate.screens:
+            self.create_subscription(
+                UInt64, f'hud/{screen}/heartbeat',
+                lambda _msg, name=screen: self.gate.beat(name, time.monotonic()), 10)
         self.create_service(Trigger, 'safety/output_mux/clear', self.on_clear)
         # Little work beside the commands, so a command never waits long behind it: the
         # graph (who still announces) twice a second, and the state with it.

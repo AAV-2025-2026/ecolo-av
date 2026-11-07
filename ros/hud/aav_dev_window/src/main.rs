@@ -259,14 +259,14 @@ fn main() -> AppExit {
 }
 
 fn band_colour(band: Band) -> Color {
-    match band {
-        Band::Ground => Color::srgb(0.20, 0.20, 0.20),
-        Band::Knee => Color::srgb(0.20, 0.55, 0.50),
-        Band::Waist => Color::srgb(0.30, 0.70, 0.62),
-        Band::Head => Color::srgb(0.42, 0.82, 0.72),
-        Band::High => Color::srgb(0.60, 0.92, 0.82),
-        Band::Above => Color::srgb(0.85, 1.0, 0.92),
-    }
+    rgb(match band {
+        Band::Ground => panels::BAND_RGB[0],
+        Band::Knee => panels::BAND_RGB[1],
+        Band::Waist => panels::BAND_RGB[2],
+        Band::Head => panels::BAND_RGB[3],
+        Band::High => panels::BAND_RGB[4],
+        Band::Above => panels::BAND_RGB[5],
+    })
 }
 
 fn setup(
@@ -371,6 +371,7 @@ fn take_news(
     handle: Res<PictureImage>,
     mut images: ResMut<Assets<Image>>,
 ) {
+    source.0.frame_drawn();
     let now = Instant::now();
     for update in source.0.drain(now) {
         if let Update::Picture(picture) = update {
@@ -545,6 +546,26 @@ fn draw_wireframes(state: Res<panels::UiState>, mut gizmos: Gizmos) {
                 .with_scale(Vec3::new(2.6, 1.2, 1.4)),
             Color::srgb(0.55, 0.75, 1.0),
         );
+    }
+    // Rings round the car, for reading distance; where it's going; and which way it faces.
+    let at = Vec3::new(car.position.x as f32, car.position.y as f32, 0.05);
+    if state.camera == panels::Eyes::Orbit {
+        for radius in [10.0, 20.0, 40.0] {
+            gizmos.circle(
+                Isometry3d::from_translation(at),
+                radius,
+                Color::srgb(0.25, 0.28, 0.30),
+            );
+        }
+        let heading = Vec3::new(car.yaw.cos() as f32, car.yaw.sin() as f32, 0.0);
+        gizmos.arrow(at, at + heading * 3.0, Color::srgb(0.5, 1.0, 0.3));
+    }
+    if state.layers.plan {
+        let line = world.plan.iter().map(|p| {
+            let odom = feed::odom_to_map([p.x as f32, p.y as f32], world.car_map, car);
+            Vec3::new(odom.x as f32, odom.y as f32, 0.1)
+        });
+        gizmos.linestrip(line, Color::srgb(1.0, 0.85, 0.2));
     }
     if state.layers.nav2_cubes {
         for cube in world.cubes.cubes.iter().take(MAX_OUTLINES) {

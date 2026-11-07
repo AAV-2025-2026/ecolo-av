@@ -232,6 +232,30 @@ pixi run sim-check --spine                # tests it (3 more minutes)
 
 Stop times in full: [Full simulation](full-simulation.md#stop-times-the-direct-path-vs-the-spine).
 
+### A screen as a heartbeat: `watch_screens:=`
+
+Ben, 5 Nov: test what happens when a screen dies. Each screen sends its own heartbeat: the frames
+it has drawn. Name them, and commands flow only while they all beat.
+
+```text
+screen stops ─► output mux WAIT ─► no commands ─► the spine's 100 ms watchdog ─► stop, latched
+```
+
+```bash
+pixi run sim world:=test_lot spine:=true watch_screens:=dev_window,hw_panel
+pixi run dev-window --live      # and pixi run hw-panel: the car arms once both beat
+```
+
+| Step (`spine:=true`, 5 Nov) | Output mux | Spine |
+|---|---|---|
+| The window beats | OPEN | computer, armed |
+| The window closes | WAIT, within 1.5 s | manual, not armed, `CMD_TIMEOUT` |
+| The window comes back | OPEN | **stays latched**: disarm, then arm |
+
+It uses the same stop as a lost computer, with no change to the firmware or the CAN frames. It
+needs a person to re-arm, because `arm_when_open` arms only once. The real car refuses this rule:
+a laptop dropping off isn't a reason to brake on the road.
+
 ### Faster in Gazebo: `sim_speed:=`
 
 The car's top speed is 1 m/s (walking pace, `ego.yaml` and `nav2.yaml`), for its first

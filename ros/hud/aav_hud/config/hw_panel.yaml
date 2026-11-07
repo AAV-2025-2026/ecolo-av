@@ -6,6 +6,7 @@
 hw_panel:
   ros__parameters:
     # --- what it sends ---
+    screen_alive_topic: /hud/hw_panel/heartbeat   # std_msgs/msg/UInt64: frames drawn, 10 Hz
     buttons_topic: /drivers/buttons/cmd_vel       # geometry_msgs/msg/TwistStamped: twist_mux's buttons slot (45), only while GO is held
     estop_topic: /safety/estop                    # std_msgs/msg/Bool: the E-STOP button sends true 5 times, never false; also read: an e-stop zeroes the buttons
     # --- the command path, read ---

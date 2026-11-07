@@ -16,4 +16,5 @@ status: /vehicle/status                          # VehicleStatus: the e-stop
 gate: /safety/output_mux/state                   # String: the output gate
 watchdog: /safety/sensor_watchdog/state          # String: the sensor watchdog
 goal: /goal_pose                                 # PoseStamped, out: only in developer mode
+screen_alive: /hud/dev_window/heartbeat         # UInt64, out: only in developer mode, frames drawn
 estop: /safety/estop                             # Bool, out: only ever true, developer mode
