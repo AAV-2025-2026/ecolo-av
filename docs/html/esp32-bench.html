@@ -90,6 +90,7 @@
 <a href="can-plan.html">CAN plan</a>
 <a href="rust-firmware.html">Rust firmware</a>
 <a class="here" href="esp32-bench.html">ESP32 first flash</a>
+<a href="esp32-safety.html">ESP32 safety rules</a>
 <a href="platforms.html">Platforms</a>
 <a href="bandwidth.html">Bandwidth</a>
 <a href="car-install.html">From a USB stick</a>
@@ -104,7 +105,8 @@
 <nav class="toc"><span>On this page:</span><a href="#before-the-board-the-emulator">Before the board: the emulator</a><a href="#what-you-need">What you need</a><a href="#1-build-and-save-the-c-first">1. Build, and save the C++ first</a><a href="#2-flash">2. Flash</a><a href="#2a-the-first-check-the-gate">2a. The first check: the gate</a><a href="#3-checks-wheels-off-the-ground">3. Checks, wheels off the ground</a><a href="#the-uplink-and-the-rc-modes-on-the-bench">The uplink and the RC modes, on the bench</a><a href="#4-roll-back-to-the-c">4. Roll back to the C++</a><a href="#after-the-bench">After the bench</a></nav>
 <div class="lead"><p>The plan for the first time the Rust program (<code>firmware/spine/boards/esp32-umod</code>) goes onto
 the car's ESP32 control board. Do it with Ben, <strong>wheels off the ground</strong>, with the C++
-ready to go back on. What the program is: <a href="rust-firmware.html">Rust firmware</a>.</p>
+ready to go back on. What the program is: <a href="rust-firmware.html">Rust firmware</a>.
+Its safety rules (boot, release, lost links, what each failure does): <a href="esp32-safety.html">ESP32 safety</a>.</p>
 <p><span class="badge b-untested">untested</span> Nothing here has been done on a board yet. The emulator has (next section).</p>
 <div class="admonition warning">
 <p class="admonition-title">Before you start</p>
@@ -1005,7 +1007,7 @@ the ground; checks 1 to 14 passed first.</p>
 </tbody>
 </table></div></section>
 <nav class="prevnext"><a class="prev" href="rust-firmware.html"><small>Previous</small>← Rust firmware</a>
-<a class="next" href="platforms.html"><small>Next</small>Platforms →</a></nav>
+<a class="next" href="esp32-safety.html"><small>Next</small>ESP32 safety rules →</a></nav>
 </main>
 <footer>Source: <code>docs/esp32-bench.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

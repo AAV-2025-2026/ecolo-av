@@ -3,6 +3,7 @@
 **The aim:** see whether the Motor Pi passes its messages to the ESP32 correctly, and take
 the car's measurements, one part at a time. The plan and its two reviews:
 `docs/designs/2026-11-07_esp32-debug-link_brief.md` ("The plan now" wins).
+What makes the ESP32 brake, and what a laptop can and can't do: [ESP32 safety](esp32-safety.md).
 
 **Status:** written 7 Nov. Nothing here has run on the car. The link check is tested on
 made-up recordings only.
