@@ -83,8 +83,11 @@ ros2 run aav_legacy steering_limits --left 3420 --centre 1890 --right 480 --left
 | sub, `speed_loop.mode: pi` only | `/vehicle/odom` | nav_msgs/Odometry: the wheel speed it closes on |
 | pub | `/system/source` (latched, REAL) | aav_interfaces/DataSource |
 | pub | `/safety/legacy_uart_bridge/lock` (latched, and again at 5 Hz) | std_msgs/Bool |
+| pub | `/control/car/link_frame` (`link_frame_rate_hz`, default 10; every frame version) | aav_interfaces/LinkFrame: what really went out, decoded from the bytes written; `written` and `write_errors` count every frame |
 | pub, `uplink` only | `/vehicle/status` (10 Hz) | aav_interfaces/VehicleStatus |
 | pub, `uplink` only | `/vehicle/steering`, `/vehicle/brake` | aav_interfaces/ActuatorState |
+| pub, `uplink` only | `/vehicle/throttle` | aav_interfaces/ActuatorState: command is the uplink's `throttle_out`, before the firmware's ramp; measured is NaN, as no sensor reads the throttle |
+| pub, `uplink` only | `/vehicle/esp32/uplink_health` (1 Hz) | aav_interfaces/UplinkHealth: fresh, and the frames, lost and bad counted |
 | pub, `uplink` only | `/vehicle/rc` | aav_interfaces/RcSticks |
 | pub, `uplink` only | `/vehicle/steering_actuator/raw`, `/vehicle/brake_actuator/raw` (50 Hz) | aav_interfaces/ActuatorRaw: counts, not converted; the calibration state |
 | pub, `uplink` only | `/vehicle/steering_actuator/calibration` | std_msgs/String: one line, what the calibration does and why |
@@ -103,6 +106,7 @@ ros2 run aav_legacy steering_limits --left 3420 --centre 1890 --right 480 --left
 | bridge | `steering_calibration` | `none`; `stands` or `bench` only with the hardware lead | |
 | bridge | `allow_programs_without_timeout` | false; true only on a supervised stand | |
 | bridge | `uplink`, `uplink_timeout` | false, 0.2 | s |
+| bridge | `link_frame_rate_hz` | 10.0 (0.0: no samples; the counts still run) | Hz |
 | bridge | `max_steering_angle` | from `vehicle.yaml` | rad |
 | bridge | `steering_sign` | -1.0 (TODO check) | |
 | bridge | `full_throttle_speed`, `stop_speed` | 3.0, 0.05 | m/s |
@@ -131,7 +135,8 @@ and `aav_rc`'s `rc_driver` beside the bridge.
 | `legacy_protocol.py` | no | the frames: `pack_frame` (v1, 13 bytes), `pack_frame_v2` (17 bytes), `pack_frame_v3` (20 bytes), `unpack_uplink` (35 or 40 bytes), `UplinkParser`, `to_legacy`, `from_pedals`, `stop_command`, `EncoderSpeed` |
 | `uart_relay.py` | no | `Relay`: what to write each tick; `programs_locked`: the no-timeout lock |
 | `speed_control.py` | no | `SpeedControl`: feed-forward from ego's speed profile plus PI on the wheel speed, out as throttle or brake; the smooth stop |
-| `uplink_reader.py` | no | `UplinkReader`, `status_fields`, `steering_state`, `brake_state`, `rc_fields`, `raw_fields`, `calibration_line` |
+| `uplink_reader.py` | no | `UplinkReader`, `status_fields`, `steering_state`, `throttle_state`, `brake_state`, `rc_fields`, `raw_fields`, `calibration_line`, `health_fields` |
+| `link_report.py` | no | `LinkReport`: counts every frame written, and when a sample is due; `frame_fields`: a written frame's values, decoded from its bytes |
 | `steering_limits.py` | no | `compute`: the steering actuator's limits from its marked ends and centre; the `steering_limits` command. The hardware panel has a Rust twin (panel-core); both test against `test/steering_limits_vectors.json` |
 
 ## Invariants
@@ -150,6 +155,9 @@ and `aav_rc`'s `rc_driver` beside the bridge.
 - `encoder_udp` stops publishing after `timeout_s` of silence, rather than say 0 m/s.
 - Never run `encoder_udp` where the `spine` part runs: two `/vehicle/odom` publishers
   stop the output mux.
+- `/control/car/link_frame` reports the bytes written, not what the relay meant. A failed or
+  short write never counts as written. Reporting can't stop the frames. `written` means the
+  kernel took the bytes: only the ESP32's own count says they arrived.
 - The logic modules have no ROS imports.
 
 ## Side Effects

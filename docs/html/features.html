@@ -76,6 +76,7 @@
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
+<a href="hardware-debug.html">Hardware debug</a>
 <a href="learn-state-space.html">Learn: state space</a>
 <a href="vehicle-model.html">The car as a linear model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
@@ -1167,6 +1168,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Ben, 1 Nov: "If we do enough tests we should be able to figure out the driving characteristics of the car and get more accurate with every pass": each test says what to measure, what it fits and when the error is small enough to stop, and the lidar records the lot's map meanwhile</td>
 <td>Ben</td>
 <td>2026-11-01</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="hardware-debug.html">Link check</a> (<code>pixi run link-check</code>; the bridge's <code>/control/car/link_frame</code>, <code>/vehicle/esp32/uplink_health</code>, <code>/vehicle/throttle</code>)</td>
+<td>The hardware debug plan (7 Nov) asks whether the Pi passes its messages to the ESP32 correctly. The bridge reports what it really wrote, decoded from the bytes, and counts every frame; the check sets those counts against the ESP32's (<code>frames</code>, <code>bad</code>, <code>skipped</code>), knowing a frame by its counter and check byte, never the counter alone. A parked car is NOT TESTED, never a PASS</td>
+<td>Ben</td>
+<td>2026-11-07</td>
 <td>built</td>
 </tr>
 <tr>

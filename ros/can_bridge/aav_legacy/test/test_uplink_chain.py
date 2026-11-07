@@ -20,7 +20,8 @@ import time
 import pytest
 
 try:
-    from aav_interfaces.msg import ActuatorState, RcSticks, VehicleStatus
+    from aav_interfaces.msg import (ActuatorState, LinkFrame, RcSticks, UplinkHealth,
+                                    VehicleStatus)
     from aav_legacy.legacy_protocol import (MODE_COMPUTER, pack_uplink, SWITCH_COMPUTER,
                                             SWITCH_RC_VIA_ROS, Uplink)
     from aav_legacy.legacy_uart_bridge import LegacyUartBridge
@@ -59,16 +60,21 @@ class Run:
         self.nodes = [LegacyUartBridge(), RcDriver()]
         self.test = rclpy.create_node('uplink_test')
         self.nodes.append(self.test)
-        self.got = {'status': [], 'rc': [], 'steering': [], 'cmd': []}
+        self.got = {'status': [], 'rc': [], 'steering': [], 'cmd': [], 'link': [],
+                    'health': [], 'throttle': []}
         for kind, msg, topic in (('status', VehicleStatus, '/vehicle/status'),
                                  ('rc', RcSticks, '/vehicle/rc'),
                                  ('steering', ActuatorState, '/vehicle/steering'),
-                                 ('cmd', TwistStamped, '/drivers/rc/cmd_vel')):
+                                 ('cmd', TwistStamped, '/drivers/rc/cmd_vel'),
+                                 ('link', LinkFrame, '/control/car/link_frame'),
+                                 ('health', UplinkHealth, '/vehicle/esp32/uplink_health'),
+                                 ('throttle', ActuatorState, '/vehicle/throttle')):
             self.test.create_subscription(
                 msg, topic, lambda m, k=kind: self.got[k].append((time.monotonic(), m)), 100)
         for n in self.nodes:
             self.executor.add_node(n)
         self.sequence = 0
+        self.wrote = b''                            # every byte the bridge wrote
 
     def spin(self, seconds, switch=None, **sticks):
         """Spin for this long; the ESP32 sends an uplink frame every 20 ms if `switch`."""
@@ -84,8 +90,11 @@ class Run:
                 next_frame += 0.02
             self.executor.spin_once(timeout_sec=0.005)
             try:
-                while os.read(self.master, 4096):   # drain the bridge's frames
-                    pass
+                while True:                         # drain the bridge's frames
+                    data = os.read(self.master, 4096)
+                    if not data:
+                        break
+                    self.wrote += data
             except BlockingIOError:
                 pass
 
@@ -148,7 +157,28 @@ def test_quiet_uplink_on_rc_via_ros_holds_a_stop(run):
     assert all(c.twist.linear.x == 0.0 and c.twist.angular.z == 0.0 for c in late)
 
 
+def test_link_frames_health_and_throttle(run):
+    run.spin(2.0, SWITCH_RC_VIA_ROS)
+    links = [m for _, m in run.got['link']]
+    assert 12 <= len(links) <= 26                       # 10 Hz, over 2 s
+    last = links[-1]
+    # No command: stop frames, version 2, counted. The sample is what really went out.
+    assert (last.version, last.armed, last.write_errors) == (2, False, 0)
+    assert last.accel == pytest.approx(-1.0) and last.speed == 0.0
+    frames = run.wrote.count(b'\xa5\x02')                # every frame the test drained
+    assert last.written <= frames + 1 and last.written >= 0.8 * frames
+    assert last.check in run.wrote
+    health = [m for _, m in run.got['health']]
+    assert 1 <= len(health) <= 3                        # 1 Hz
+    assert health[-1].fresh and health[-1].frames > 50 and health[-1].bad == 0
+    throttle = [m for _, m in run.got['throttle']]
+    assert throttle and throttle[-1].command == pytest.approx(0.2)
+    assert math.isnan(throttle[-1].measured)
+
+
 @pytest.mark.parametrize('run', [{'uplink_on': False}], indirect=True)
 def test_without_the_uplink_the_bridge_reads_nothing_back(run):
     run.spin(2.0, SWITCH_RC_VIA_ROS, throttle=1.0)
     assert run.got['status'] == [] and run.got['rc'] == [] and run.got['cmd'] == []
+    assert run.got['health'] == [] and run.got['throttle'] == []
+    assert run.got['link']                              # what it writes: always reported
