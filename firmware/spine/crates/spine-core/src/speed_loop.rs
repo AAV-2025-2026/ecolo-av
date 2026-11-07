@@ -270,6 +270,8 @@ pub struct Drive {
     pub reverse: bool,
 }
 
+// Clone: a car model's prediction (car-model, beside aav_description) runs a copy ahead.
+#[derive(Debug, Clone)]
 pub struct SpeedLoop {
     cfg: SpeedLoopConfig,
     integral: f32,

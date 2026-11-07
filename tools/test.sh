@@ -44,6 +44,8 @@ if command -v cargo >/dev/null; then
   (cd ros/perception/aav_radar_clusters && cargo test -q --locked -p radar-clustering)
   echo "== ros/can_bridge/aav_spine_bridge: the Rust CAN bridge's logic, the shared CAN vectors"
   (cd ros/can_bridge/aav_spine_bridge && cargo test -q --locked -p spine-bridge)
+  echo "== ros/bringup/aav_description/car-model: the car model's Rust twin, the shared vectors"
+  (cd ros/bringup/aav_description/car-model && cargo test -q --locked)
   echo "== ros/localization/aav_ndt: NDT's maths, the filters, LOST; the design's checks"
   (cd ros/localization/aav_ndt && cargo test -q --locked -p ndt-core)
   # Only the logic: the window (raylib) needs a screen's libraries, and colcon builds it.

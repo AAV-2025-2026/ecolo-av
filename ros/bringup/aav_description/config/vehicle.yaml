@@ -68,7 +68,8 @@ vehicle:
 
 
 
-# How the car answers its commands: the actuator model in Gazebo.
+# How the car answers its commands: the car model (aav_description car_model.py and its
+# Rust twin car-model/), read by ego (its lead and trace) and Gazebo.
 # Units: m/s^2, s, rad, 1/s; throttle and brake 0..1.
 #
 # These values are still guesses and must be measured on the real car.

@@ -92,6 +92,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Body model: mass and curve speed | ego knows the car weighs about 181 kg, so it slows for tight turns and heavy loads | Ben | 2026-10-22 | sim |
 | Jerk limit | A smoother start for the people in the car; braking is never softened | Ben | 2026-10-22 | sim |
 | [Linear model of the car](vehicle-model.md) (`vehicle_model.py`) | Transfer functions and state space, to tune the loops and write the report in SYSC 3600's terms | Ben | 2026-10-24 | built |
+| [One car model](car-model.md) (`aav_description` `car_model.py`, its Rust twin `car-model`): actuator lags, dead times, the steering motor and the bicycle; `step` and `predict` | Ben, 7 Nov: "we really want the ego to have a mathematical model for steering, braking and acceleration": ego, the simulators and the Rust drivers share one model, Python and Rust checked against the same vectors | Ben | 2026-11-07 | built |
 
 ## Safety
 
@@ -153,7 +154,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Feature | Why | Who | Date | Status |
 |---|---|---|---|---|
 | [Gazebo road world](simulation.md) | Lane lines, a stop sign, an obstacle, and the car's camera, radar and roof lidar, to test the whole graph | Ben | 2026-10-11 | sim |
-| Actuator model | Lag and limits between ego and Gazebo, so the simulated car answers like a real one | Ben | 2026-10-15 | sim |
+| Actuator model | Lag and limits between ego and Gazebo, so the simulated car answers like a real one; since 7 Nov it is the shared car model (`aav_description` `car_model.py`), so ego predicts with the same car Gazebo drives | Ben | 2026-10-15 | sim |
 | [Bench mode](bench.md) (`aav_bench`, `aav_spine_sim`) | The car's own software on one laptop, with the spine's logic and pretend sensors | Ben | 2026-10-10 | sim |
 | Bench GPS that drifts (`aav_bench` `models.GpsError`) | A real receiver's error wanders slowly; fresh noise on every fix made Nav2 weave in a way the car never would (N7) | Ben | 2026-10-29 | built |
 | The spine in the loop (`sim spine:=true`) | Gazebo drives through the spine's real logic, so its stops and e-stops get tested | Ben | 2026-10-15 | sim |
