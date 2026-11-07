@@ -85,7 +85,7 @@ use esp_hal::time::Rate;
 use esp_hal::timer::timg::{MwdtStage, TimerGroup};
 use esp_hal::uart::{self, UartRx};
 use log::{info, warn};
-use spine_board::{Board, Calibration, CanFrame, Devices, SpineBoard, WheelCount};
+use spine_board::{Board, Calibration, CanFrame, Devices, SpineBoard, TickTiming, WheelCount};
 #[cfg(feature = "qemu")]
 use spine_board::{DeviceTargets, StandInBus};
 use spine_core::protocol::Mode;
@@ -118,6 +118,11 @@ const IDLE_BRAKE: f32 = 1.0;
 
 /// The status line on the USB cable, as often as the C++'s `publishStatus()`.
 const STATUS_EVERY_TICKS: u32 = 20;
+
+/// The tick's timing on the USB cable: once a second, between two status lines, so it
+/// doesn't lengthen their burst.
+const TIMING_EVERY_TICKS: u32 = 100;
+const TIMING_AT_TICK: u32 = 50;
 
 /// The status LED blinks slowly while commands come in, fast while they don't.
 const BLINK_OK_TICKS: u32 = 50;
@@ -447,10 +452,12 @@ async fn main(_spawner: Spawner) -> ! {
 
     let mut pace = Pace::new();
     let mut ticks: u32 = 0;
+    let mut timing = TickTiming::new(TICK.as_micros() as u32);
     let mut last: Option<Summary> = None;
     #[cfg(feature = "qemu")]
     let mut last_devices = DeviceTargets::default();
     loop {
+        timing.tick(Instant::now().duration_since_epoch().as_micros());
         let out = spine.tick();
         let now = now_ms();
         let board = spine.board();
@@ -473,6 +480,9 @@ async fn main(_spawner: Spawner) -> ! {
             fsm_line(now, &spine.state());
             #[cfg(feature = "legacy-uart")]
             link_line(now, &spine.link().stats());
+        }
+        if ticks % TIMING_EVERY_TICKS == TIMING_AT_TICK {
+            timing_line(now, &timing);
         }
         #[cfg(feature = "qemu")]
         {
@@ -533,6 +543,17 @@ fn link_line(now: u32, s: &spine_board::LinkStats) {
         s.counter.map_or(-1, i32::from),
         s.uplinks,
         s.uplink_errors
+    );
+}
+
+/// The tick's timing since boot: the longest gap between ticks, and the ticks that came
+/// more than 10 ms late. The baseline for the timing test (README.md).
+fn timing_line(now: u32, t: &TickTiming) {
+    info!(
+        "TICK t={} worst_gap_us={} overruns={}",
+        now,
+        t.worst_gap_us(),
+        t.overruns()
     );
 }
 

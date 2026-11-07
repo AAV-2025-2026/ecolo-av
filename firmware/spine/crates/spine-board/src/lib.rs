@@ -25,6 +25,7 @@
 //! | [`wheel`] | the speed, from the wheel encoder's counter; two spoke sensors, counted |
 //! | [`spine_board`] | the loop: [`SpineBoard`] |
 //! | [`stand_in`] | stand-in devices on a bus, for a board with none wired (QEMU) |
+//! | [`timing`] | the longest gap between ticks, and how many came late |
 //!
 //! A board crate, in outline:
 //!
@@ -52,6 +53,7 @@ pub mod link;
 mod rig;
 pub mod spine_board;
 pub mod stand_in;
+pub mod timing;
 pub mod wheel;
 
 pub use actuators::{Actuators, Devices, Positions, Readings};
@@ -62,4 +64,5 @@ pub use link::{
 };
 pub use spine_board::SpineBoard;
 pub use stand_in::{DeviceTargets, StandInBus};
+pub use timing::TickTiming;
 pub use wheel::{SpokeSensors, WheelSpeed};

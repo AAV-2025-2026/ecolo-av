@@ -74,6 +74,7 @@ The order of the writes, every tick:
 | `LegacyLink::new(uart, cal, version)`, `with_uplink(uart, tx, cal, version)` | the UART link, without or with the `legacy-link` uplink status frame every `UPLINK_PERIOD_MS` (20 ms) on TX; `NoUplink` sends nothing. `stats()` gives its `LinkStats`; `uplink_frame(&report, seq)` builds one uplink frame |
 | `Report` | one tick as the spine saw it (outputs, RC, positions), handed to the link after each tick |
 | `Positions`, `Readings` | where the Jrks are (in radians and 0..1, and raw in counts: `steering_counts`, `brake_counts`); what `Actuators::read()` found |
+| `TickTiming` | the longest gap between ticks since boot, and the ticks over 10 ms late: the timing test's baseline |
 | `StandInBus`, `DeviceTargets` | stand-in devices on an I2C bus for a board with none wired (the ESP32 in QEMU); not for the car |
 
 It depends on `spine-core`, `aav-inputs`, `wheel-encoder`, `legacy-link`, `jrk-g2`,
