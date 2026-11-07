@@ -22,6 +22,9 @@ Rust. It lets the Rust ESP32 program be a drop-in for the C++.
 | `Frame::targets` | the steering and brake Jrk targets, and the DAC (`Cut`, `Idle`, `Drive`) | the rest of `handleROS2Messages()`, with its `f32` maths |
 | `Targets`, `Throttle` | the C++'s three outputs; the DAC as `Cut`, `Idle` or `Drive { code, reverse }` | |
 | `STEER_CENTRE`, `BRAKE_RELEASED`, `BRAKE_FULL`, `DAC_CAP` | 1950, 400, 3500, 700 | `JRK_CENTER`, `JRK_MIN`, `JRK_MAX`, `DAC_MAX_CAP` |
+| `DacRamp::new()`, `toward(target)`, `cut()`, `code()` | the C++'s DAC ramp: each call at most `ACCEL_STEP` (6) up or `DECEL_STEP` (12) down, capped at `DAC_CAP`; `cut` drops it to 0 (a brake demand). For `spine-board`'s `LegacyLink::with_cpp_ramp` (7 Nov) | `writeDACRamped()`, `ACCEL_STEP`, `DECEL_STEP` |
+| `STEER_RIGHT_PER_LEFT` | 1950 / 1550: the C++'s right turns are this much stronger than its left (RC and frames) | `handleRCMode()`, `handleROS2Messages()` |
+| `FRAME_HZ` | 50: the Motor-Pi's frames a second (`legacy.yaml`), for the `CONFIG` line | |
 | `FrameError` | why a frame was turned down: `Checksum`, `OutOfRange`, `Sync`, `Version`, `Flags`, `Field` | |
 | `BAUD`, `FRAME_LEN` | 115200, 13 | |
 

@@ -12,8 +12,9 @@
 #        tools/esp32.sh walk [port] [args]  walk me through it: the whole first flash, one step
 #                                      at a time, shown and spoken (tools/esp32_walk.py;
 #                                      --dry-run runs nothing, --quiet no speech)
-#        tools/esp32.sh check          build both links (and version 1 frames), the JSON log and the WiFi
-#                                      status, with clippy; "skipped" without the toolchain
+#        tools/esp32.sh check          build both links (and version 1 frames), the JSON log, the WiFi
+#                                      status and update, the C++'s behaviours, with clippy;
+#                                      "skipped" without the toolchain
 #        tools/esp32.sh qemu-tools     download Espressif's QEMU into vendor/qemu (once; macOS arm64)
 #        tools/esp32.sh qemu-check [args]  build with --features qemu,uplink, boot it in QEMU, and
 #                                      check it brakes when the Motor-Pi's frames stop, its
@@ -221,8 +222,25 @@ case "${1:-}" in
     AAV_WIFI_SECRETS=$BOARD/src/wifi_secrets.rs.example \
       cargo clippy -q --release --locked --features json-log,wifi-status \
       --target-dir target/wifi -- -D warnings
+    # The WiFi with the text log (its /log and scan lines), and the update over WiFi: the
+    # same made-up credentials, whose update password the board always refuses.
+    AAV_WIFI_SECRETS=$BOARD/src/wifi_secrets.rs.example \
+      cargo clippy -q --release --locked --features wifi-status \
+      --target-dir target/wifi -- -D warnings
+    AAV_WIFI_SECRETS=$BOARD/src/wifi_secrets.rs.example \
+      cargo clippy -q --release --locked --features json-log,wifi-update \
+      --target-dir target/wifi -- -D warnings
+    # The 2025-26 C++'s behaviours (docs/esp32-cpp-parity.md): all three on the UART link;
+    # the two that aren't the UART's on CAN.
+    cargo clippy -q --release --locked --features cpp-parity --target-dir target/cpp -- -D warnings
+    cargo clippy -q --release --locked --no-default-features \
+      --features can,estop-input,cpp-stop-centre,cpp-rc-steering --target-dir target/can -- -D warnings
     cargo build -q --release --locked
-    echo "builds: the Motor-Pi UART link (version 2, the default; version 1; with the uplink), CAN, the QEMU builds, the JSON log and the WiFi status"
+    # Clippy never links: build the biggest RAM user too, so statics past the end of DRAM
+    # ("cannot move location counter backwards") fail here, not on the bench.
+    AAV_WIFI_SECRETS=$BOARD/src/wifi_secrets.rs.example \
+      cargo build -q --release --locked --features json-log,wifi-update --target-dir target/wifi
+    echo "builds: the Motor-Pi UART link (version 2, the default; version 1; with the uplink), CAN, the QEMU builds, the JSON log, the WiFi status and update, and the C++'s behaviours"
     ;;
   *)
     sed -n '2,22p' "$0" >&2

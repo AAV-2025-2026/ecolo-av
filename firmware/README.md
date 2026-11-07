@@ -16,7 +16,7 @@ ROS (Orin) ──CAN (aav.dbc)── spine board ──I2C── Jrks (steer, br
 | Folder | What it is |
 |---|---|
 | [can](./can/README.md) | **the CAN contract**: `aav.dbc` (six frames, 500 kbit/s, CRC-8 and rolling counters) and the generator for the shared test vectors |
-| [spine](./spine/README.md) | the Rust workspace: 13 crates (logic like `spine-core`, drivers against `embedded-hal` 1.0) and four board programs |
+| [spine](./spine/README.md) | the Rust workspace: 15 crates (logic like `spine-core`, drivers against `embedded-hal` 1.0) and four board programs |
 | [legacy](./legacy/README.md) | the 2025-26 C++ ESP32 board that drives the car today; replaced by `spine/boards/esp32-umod` |
 | [udp](./udp/README.md) | hand-written examples of the wheel encoder's 4-byte UDP packet, a contract shared by Rust and Python |
 

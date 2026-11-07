@@ -137,6 +137,8 @@ PAGES = [
     ('esp32-bench.md', 'ESP32 first flash', 'The Rust ESP32 on the bench: flash, check, undo'),
     ('esp32-safety.md', 'ESP32 safety rules',
      'How the ESP32 boots, what lets it drive, what makes it brake'),
+    ('esp32-cpp-parity.md', 'ESP32 C++ parity',
+     'Every behaviour of the C++ ESP32, and where the Rust has it'),
     ('platforms.md', 'Platforms', 'Ubuntu, the Orin and Pis, networking'),
     ('bandwidth.md', 'Bandwidth', 'How much data each sensor sends, and which wires have room'),
     ('car-install.md', 'From a USB stick', 'Our Jazzy on the car offline, no sudo: the kit'),

@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">47 min read · 14 sections</div></header>
+<div class="meta">48 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -91,6 +91,7 @@
 <a href="rust-firmware.html">Rust firmware</a>
 <a href="esp32-bench.html">ESP32 first flash</a>
 <a href="esp32-safety.html">ESP32 safety rules</a>
+<a href="esp32-cpp-parity.html">ESP32 C++ parity</a>
 <a href="platforms.html">Platforms</a>
 <a href="bandwidth.html">Bandwidth</a>
 <a href="car-install.html">From a USB stick</a>
@@ -849,7 +850,21 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 </tr>
 <tr>
 <td>ESP32 status lines (<code>json-log</code>, <code>wifi-status</code>, <code>status-lines</code>)</td>
-<td>Ben, 7 Nov: the Rust does the C++'s WiFi jobs, with JSON instead of streaming text and a way to pause, so we can see whether the Pi passes its messages to the ESP32 correctly. The <code>firmware/status</code> lines on the USB cable, and, off by default and read only, over WiFi: a page with graphs, <code>/status.json</code>, <code>/scan</code>, a WebSocket; the tick's worst gap and late ticks for the timing test; <code>tools/esp32_status_sim.py</code> to try the page without a board. Later on 7 Nov (Ben: "That first step is scary"): the board judges the Pi link itself (OK, NO FRAMES, STALE, COUNTER FROZEN, BAD FRAMES), says its build and numbers (<code>config</code>) and which I2C devices answered at boot (<code>devices</code>), a <code>health</code> line and <code>/health</code>, <code>/config</code>, a banner on the page; and <code>pixi run esp first-check</code>, the gate after the first flash: SAFE TO GO ON or STOP</td>
+<td>Ben, 7 Nov: the Rust does the C++'s WiFi jobs, with JSON instead of streaming text and a way to pause, so we can see whether the Pi passes its messages to the ESP32 correctly. The <code>firmware/status</code> lines on the USB cable, and, off by default and read only, over WiFi: a page with graphs, <code>/status.json</code>, <code>/scan</code>, a WebSocket; the tick's worst gap and late ticks for the timing test; <code>tools/esp32_status_sim.py</code> to try the page without a board. Later on 7 Nov (Ben: "That first step is scary"): the board judges the Pi link itself (OK, NO FRAMES, STALE, COUNTER FROZEN, BAD FRAMES), says its build and numbers (<code>config</code>) and which I2C devices answered at boot (<code>devices</code>), a <code>health</code> line and <code>/health</code>, <code>/config</code>, a banner on the page; and <code>pixi run esp first-check</code>, the gate after the first flash: SAFE TO GO ON or STOP. Later again (Ben: "worth knowing its settings including steering limits and speed limits and braking pressure limits, communication rates"): the <code>config</code> line and the text <code>CONFIG</code> line state every setting, each from the constant the code runs with: steering, speed and throttle caps, brake positions, timeouts, rates (<code>none</code> when unknown); the long text line goes out a chunk a tick</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="esp32-cpp-parity.html">ESP32: every C++ behaviour</a> (<code>cpp-stop-centre</code>, <code>cpp-rc-steering</code>, <code>cpp-throttle-ramp</code>, <code>cpp-parity</code>)</td>
+<td>Ben, 7 Nov: "we should have all the features from c++ version at a minimum … We don't know why they made their choice so it's best to assume it was for good reasons". A table of every C++ behaviour and where the Rust has it; the C++'s log lines (boot, <code>STATUS:</code>, faults, Jrk errors, scan names, <code>/status</code>, <code>/log</code>) in the default build; its three ways of moving the car that differ from ours behind features, off by default, to compare on the bench</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
+<td>ESP32 firmware update over WiFi (<code>wifi-update</code>, <code>app-update</code>)</td>
+<td>The C++ had one (<code>/update</code>), for anyone at any time; ours only while the car is parked, with a password, for a checked image of this program, switching only after a full write and read-back. Off by default, never in the car-day build</td>
 <td>Ben</td>
 <td>2026-11-07</td>
 <td>built</td>

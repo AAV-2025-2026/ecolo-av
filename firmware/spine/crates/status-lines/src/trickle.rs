@@ -1,6 +1,23 @@
 //! Lines out a slow serial port, a few bytes a tick, so writing never blocks the tick.
 
 use crate::{Line, TooLong, MAX_LINE};
+use core::fmt::{self, Display, Write};
+
+/// `fmt::Write` into a slot; an error once it is full.
+struct SlotWriter<'b> {
+    buf: &'b mut [u8],
+    len: usize,
+}
+
+impl Write for SlotWriter<'_> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        let end = self.len.checked_add(s.len()).ok_or(fmt::Error)?;
+        let dest = self.buf.get_mut(self.len..end).ok_or(fmt::Error)?;
+        dest.copy_from_slice(s.as_bytes());
+        self.len = end;
+        Ok(())
+    }
+}
 
 /// A queue of lines for a serial log, handed out a chunk at a time.
 ///
@@ -54,16 +71,28 @@ impl<const SLOTS: usize, const N: usize> Trickle<SLOTS, N> {
 
     /// Queue `line`, with a newline.
     pub fn push(&mut self, line: &Line<'_>) -> Result<(), Dropped> {
+        self.push_text(line)
+    }
+
+    /// Queue any one line of text (a text log line, say), with a newline. It must hold no
+    /// newline of its own; one too long for a slot is dropped whole, as with [`push`].
+    ///
+    /// [`push`]: Trickle::push
+    pub fn push_text(&mut self, text: &impl Display) -> Result<(), Dropped> {
         if self.queued == SLOTS || N == 0 {
             self.dropped = self.dropped.saturating_add(1);
             return Err(Dropped);
         }
         let slot = &mut self.slots[(self.head + self.queued) % SLOTS];
-        let Ok(text) = line.write_to(&mut slot.buf[..N - 1]) else {
+        let mut w = SlotWriter {
+            buf: &mut slot.buf[..N - 1],
+            len: 0,
+        };
+        if write!(w, "{text}").is_err() {
             self.dropped = self.dropped.saturating_add(1);
             return Err(Dropped);
-        };
-        let len = text.len();
+        }
+        let len = w.len;
         slot.buf[len] = b'\n';
         slot.len = len + 1;
         self.queued += 1;
@@ -180,6 +209,17 @@ mod tests {
         assert_eq!(t.push(&event(1)), Err(Dropped));
         assert!(t.is_empty());
         assert_eq!(t.dropped(), 1);
+    }
+
+    #[test]
+    fn a_text_line_goes_out_whole_like_a_status_line() {
+        let mut t: Trickle<2, 64> = Trickle::new();
+        t.push_text(&format_args!("CONFIG t={} a={}", 5, 1.5))
+            .unwrap();
+        assert_eq!(drain(&mut t, 7).concat(), "CONFIG t=5 a=1.5\n");
+        let long = "x".repeat(64);
+        assert_eq!(t.push_text(&long), Err(Dropped));
+        assert_eq!((t.dropped(), t.is_empty()), (1, true));
     }
 
     #[test]

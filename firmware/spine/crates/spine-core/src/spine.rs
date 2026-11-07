@@ -66,6 +66,28 @@ pub mod faults {
 
     /// Faults that stop the car and latch it, like a command timeout.
     pub const STOP: u16 = STEERING_DRIVER | BRAKE_DRIVER | THROTTLE_DAC | WHEEL_ENCODER;
+
+    /// Every bit, with its name as `VehicleStatus.FAULT_*` has it, lowest first.
+    pub const NAMES: [(u16, &str); 10] = [
+        (CMD_TIMEOUT, "CMD_TIMEOUT"),
+        (BAD_CHECKSUM, "BAD_CHECKSUM"),
+        (BAD_COUNTER, "BAD_COUNTER"),
+        (STEERING_DRIVER, "STEERING_DRIVER"),
+        (BRAKE_DRIVER, "BRAKE_DRIVER"),
+        (THROTTLE_DAC, "THROTTLE_DAC"),
+        (WHEEL_ENCODER, "WHEEL_ENCODER"),
+        (CAN_BUS, "CAN_BUS"),
+        (RC_SIGNAL_LOST, "RC_SIGNAL_LOST"),
+        (OVERSPEED, "OVERSPEED"),
+    ];
+
+    /// The names of the bits set in `bits`, lowest first. A bit with no name is skipped.
+    pub fn names(bits: u16) -> impl Iterator<Item = &'static str> {
+        NAMES
+            .into_iter()
+            .filter(move |(bit, _)| bits & bit != 0)
+            .map(|(_, name)| name)
+    }
 }
 
 // Three choices still open with the team (docs/firmware.md, "Still to decide"). Each is one
@@ -197,6 +219,36 @@ impl Default for SpineConfig {
             rc_gear_brake: RC_GEAR_BRAKE,
             speed_loop: SpeedLoopConfig::default(),
             speed_feedback: SpeedFeedback::Wheel,
+        }
+    }
+}
+
+impl SpineConfig {
+    /// The most throttle (0..1) an open-loop command (the UART link's [`DirectCmd`]) may
+    /// have, forward or in reverse, with no wheel speed on the board: the throttle that the
+    /// open loop says gives `max_speed` (or `max_reverse_speed`). `None` with a wheel speed:
+    /// then the throttle is cut while the car is at or over the limit instead.
+    ///
+    /// The spine caps each command with this; the board's settings line reports it.
+    pub fn open_loop_throttle_cap(&self, reverse: bool) -> Option<f32> {
+        let limit = if reverse {
+            self.max_reverse_speed
+        } else {
+            self.max_speed
+        };
+        match self.speed_feedback {
+            SpeedFeedback::None { .. } => Some(self.open_loop_cap(limit)),
+            SpeedFeedback::Wheel => None,
+        }
+    }
+
+    /// `limit / full_throttle_speed`, 0..1; 0 with no map from throttle to speed.
+    fn open_loop_cap(&self, limit: f32) -> f32 {
+        match self.speed_feedback {
+            SpeedFeedback::None {
+                full_throttle_speed,
+            } if full_throttle_speed > 0.0 => (limit / full_throttle_speed).clamp(0.0, 1.0),
+            _ => 0.0,
         }
     }
 }
@@ -858,11 +910,7 @@ impl Spine {
     /// The most throttle an open-loop command may have to stay under `limit` (0..1).
     fn throttle_cap(&self, limit: f32) -> f32 {
         match self.cfg.speed_feedback {
-            SpeedFeedback::None {
-                full_throttle_speed,
-            } if full_throttle_speed > 0.0 => (limit / full_throttle_speed).clamp(0.0, 1.0),
-            // No map from throttle to speed: no throttle at all.
-            SpeedFeedback::None { .. } => 0.0,
+            SpeedFeedback::None { .. } => self.cfg.open_loop_cap(limit),
             SpeedFeedback::Wheel if self.speed.abs() >= limit => 0.0,
             SpeedFeedback::Wheel => 1.0,
         }
@@ -1596,6 +1644,56 @@ mod tests {
             },
             ..SpineConfig::default()
         }
+    }
+
+    #[test]
+    fn the_open_loop_throttle_cap_is_the_limit_over_full_throttle_speed() {
+        let c = open_loop_config();
+        assert_eq!(c.open_loop_throttle_cap(false), Some(MAX_SPEED / 3.0));
+        assert_eq!(
+            c.open_loop_throttle_cap(true),
+            Some(MAX_REVERSE_SPEED / 3.0)
+        );
+        assert_eq!(SpineConfig::default().open_loop_throttle_cap(false), None);
+        let no_map = SpineConfig {
+            speed_feedback: SpeedFeedback::None {
+                full_throttle_speed: 0.0,
+            },
+            ..c
+        };
+        assert_eq!(no_map.open_loop_throttle_cap(false), Some(0.0));
+        // The spine caps a full-throttle direct command at exactly this.
+        let mut spine = Spine::new(c);
+        let cmd = |stop| DirectCmd {
+            throttle: 1.0,
+            reverse: false,
+            brake: 0.0,
+            steering_angle: 0.0,
+            stop,
+        };
+        for (t, stop) in [(0, true), (10, false)] {
+            spine.step(&Inputs {
+                now_ms: t,
+                direct_cmd: Some(cmd(stop)),
+                ..Inputs::default()
+            });
+        }
+        let out = spine.step(&Inputs {
+            now_ms: 20,
+            direct_cmd: Some(cmd(false)),
+            ..Inputs::default()
+        });
+        assert_eq!(out.throttle, c.open_loop_throttle_cap(false).unwrap());
+    }
+
+    #[test]
+    fn fault_names_are_the_bits_set_lowest_first() {
+        let names: std::vec::Vec<_> =
+            faults::names(faults::RC_SIGNAL_LOST | faults::CMD_TIMEOUT | 0x8000).collect();
+        assert_eq!(names, ["CMD_TIMEOUT", "RC_SIGNAL_LOST"]);
+        assert_eq!(faults::names(0).count(), 0);
+        let all = faults::NAMES.iter().fold(0, |bits, (bit, _)| bits | bit);
+        assert_eq!(all, 0x03FF, "every bit has one name");
     }
 
     #[test]

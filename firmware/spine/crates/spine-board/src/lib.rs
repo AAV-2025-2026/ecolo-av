@@ -29,6 +29,7 @@
 //! | [`scan`] | which I2C addresses answer, a few a tick, only while not armed |
 //! | [`probe`] | which of the four devices answer at boot, and each Jrk's feedback mode: read only |
 //! | [`health`] | the Pi link's verdict: OK, no frames, stale, the counter frozen, bad frames |
+//! | [`cpp_log`] | the 2025-26 C++'s log lines in its words: boot, `STATUS:`, faults, Jrk errors, scan labels |
 //!
 //! A board crate, in outline:
 //!
@@ -51,6 +52,7 @@
 pub mod actuators;
 pub mod board;
 pub mod calibration;
+pub mod cpp_log;
 pub mod health;
 pub mod link;
 pub mod probe;
@@ -66,6 +68,8 @@ pub use actuators::{Actuators, Devices, Positions, Readings};
 pub use board::{Board, CanFrame, WheelCount};
 pub use calibration::Calibration;
 pub use health::{LinkHealth, LinkReport, LinkVerdict, BAD_WINDOW_MS};
+/// A Jrk's error flags, as `Actuators::jrk_errors` gives them.
+pub use jrk_g2::ErrorFlags;
 pub use link::{
     CanLink, CommandLink, FrameVersion, LastFrame, LegacyLink, LinkStats, NoUplink, Report,
     UPLINK_PERIOD_MS,

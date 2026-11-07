@@ -34,11 +34,12 @@ use json::{Float, Text};
 /// The contract's schema number (`firmware/status/README.md`).
 pub const SCHEMA: u32 = 1;
 
-/// A buffer this long holds any line this crate writes, with a little to spare: the
-/// longest status line, every number at its widest, is 783 bytes (a test checks). The
-/// strings in the heartbeat, the event, the health, the config and the device lines are
-/// the caller's; keep them short.
-pub const MAX_LINE: usize = 832;
+/// A buffer this long holds any line this crate writes, with room to spare: the longest
+/// status line, every number at its widest, is 783 bytes, and the config line, every
+/// number at its widest with 160 bytes of build, features and names, under 1400 (tests
+/// check both). The strings in the heartbeat, the event, the health, the config and the
+/// device lines are the caller's; keep them short.
+pub const MAX_LINE: usize = 1408;
 
 /// How many RC channels a status line carries at most.
 pub const MAX_CHANNELS: usize = 14;
@@ -231,6 +232,107 @@ pub struct Config<'a> {
     pub brake: BrakeLimits,
     pub throttle_full_code: u16,
     pub last_reset: &'a str,
+    /// The rest of the steering's settings, written inside `steering` after `max`.
+    pub steering_more: SteeringSettings<'a>,
+    /// The rest of the brake's settings, written inside `brake` after `full`.
+    pub brake_more: BrakeSettings<'a>,
+    /// The speed limits and the throttle caps (`speed`).
+    pub speed: SpeedSettings,
+    /// How long before each lost input stops the car (`timeouts`).
+    pub timeouts: Timeouts,
+    /// How fast the board talks to the Pi, the RC receiver and the devices (`rates`).
+    pub rates: Rates,
+}
+
+/// The steering's settings beyond its three targets.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SteeringSettings<'a> {
+    /// Jrk target counts a radian: radians to counts.
+    pub counts_per_rad: f32,
+    /// The spine's steering limit, either way (rad).
+    pub max_angle_rad: f32,
+    /// The fastest the spine moves the steering (rad/s).
+    pub rate_rad_s: f32,
+    /// The steering calibration's jog and return rate (counts/s); `None` without it (CAN).
+    pub cal_rate: Option<f32>,
+    /// The calibration ends after this long with no fresh frame asking (ms).
+    pub cal_timeout_ms: Option<u32>,
+    /// What the steering does when the spine stops the car: `hold` or `centre`.
+    pub on_stop: &'a str,
+}
+
+/// The brake's settings beyond released and full, each 0..1.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct BrakeSettings<'a> {
+    /// On every stop the spine makes.
+    pub stop: f32,
+    /// While the car comes back under the speed limit.
+    pub overspeed: f32,
+    /// RC direct, throttle stick at zero: this brake for `rc_stop_ms`, then `stop`.
+    pub rc_stop: f32,
+    pub rc_stop_ms: u32,
+    /// The RC gear switch's brake position: `full_brake` or `speed_zero`.
+    pub rc_gear: &'a str,
+}
+
+/// The speed limits, and the throttle they allow.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct SpeedSettings {
+    /// The fastest forward and backward, whoever drives (m/s).
+    pub max_forward: f32,
+    pub max_reverse: f32,
+    /// The highest DAC code an open-loop command can get, forward and in reverse: the
+    /// limit over `full_throttle_speed`. `None` with a wheel speed (the throttle is cut at
+    /// the limit instead).
+    pub cap_code: Option<u16>,
+    pub reverse_cap_code: Option<u16>,
+    /// The DAC code the UART frame's speed 1.0 is scaled to (the C++'s `DAC_MAX_CAP`);
+    /// `None` on CAN.
+    pub frame_dac_cap: Option<u16>,
+    /// The fastest the DAC code may rise (codes/s); it falls at once.
+    pub rise_per_s: u16,
+    /// The speed loop's speeding-up and slowing-down caps (m/s²).
+    pub max_accel: f32,
+    pub max_decel: f32,
+    /// Measured this far over the limit trips the overspeed rule (m/s).
+    pub overspeed_margin: f32,
+}
+
+/// How long each input may go quiet before the spine stops the car (ms). The command
+/// timeout and the watchdog are `cmd_timeout_ms` and `watchdog_ms`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Timeouts {
+    /// No good iBUS frame for this long: the RC is lost.
+    pub rc_lost_ms: u32,
+    /// No wheel speed for this long, once one came.
+    pub speed_lost_ms: u32,
+    /// Still over the limit this long after tripping: a hard stop.
+    pub overspeed_ms: u32,
+    /// The e-stop input must read closed this long to release.
+    pub estop_release_ms: u32,
+    /// Bad frames this recent make the Pi link's verdict `bad_frames`; `None` on CAN.
+    pub bad_frames_ms: Option<u32>,
+}
+
+/// How fast the board talks to each thing. The tick and the I2C bus are `tick_ms` and
+/// `i2c_khz`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Rates {
+    /// The Motor-Pi's UART; `None` on CAN.
+    pub uart_baud: Option<u32>,
+    /// The frames a second the Motor-Pi sends; `None` on CAN.
+    pub frame_hz: Option<u32>,
+    /// The uplink's period; `None` without one.
+    pub uplink_ms: Option<u32>,
+    /// The CAN bus; `None` on the UART link.
+    pub can_kbit: Option<u32>,
+    /// The RC receiver's iBUS.
+    pub ibus_baud: u32,
+    /// How often each Jrk and the DAC get their target.
+    pub jrk_write_ms: u32,
+    pub dac_write_ms: u32,
+    /// How often a status line is written.
+    pub status_ms: u32,
 }
 
 /// The four I2C devices' addresses.
@@ -556,16 +658,200 @@ impl Display for Config<'_> {
             r#","addresses":{{"steering":{},"brake":{},"dac":{},"expander":{}}}"#,
             a.steering, a.brake, a.dac, a.expander
         )?;
+        let (sm, bm) = (&self.steering_more, &self.brake_more);
         write!(
             f,
-            r#","steering":{{"min":{},"centre":{},"max":{}}},"brake":{{"released":{},"full":{}}}"#,
-            s.min, s.centre, s.max, b.released, b.full
+            r#","steering":{{"min":{},"centre":{},"max":{},"counts_per_rad":{},"max_angle_rad":{},"rate_rad_s":{},"cal_rate":"#,
+            s.min,
+            s.centre,
+            s.max,
+            Float(sm.counts_per_rad),
+            Float(sm.max_angle_rad),
+            Float(sm.rate_rad_s)
+        )?;
+        json::option(f, sm.cal_rate.map(Float))?;
+        f.write_str(r#","cal_timeout_ms":"#)?;
+        json::option(f, sm.cal_timeout_ms)?;
+        write!(
+            f,
+            r#","on_stop":{}}},"brake":{{"released":{},"full":{},"stop":{},"overspeed":{},"rc_stop":{},"rc_stop_ms":{},"rc_gear":{}}}"#,
+            Text(sm.on_stop),
+            b.released,
+            b.full,
+            Float(bm.stop),
+            Float(bm.overspeed),
+            Float(bm.rc_stop),
+            bm.rc_stop_ms,
+            Text(bm.rc_gear)
         )?;
         write!(
             f,
             r#","throttle_full_code":{},"last_reset":{}"#,
             self.throttle_full_code,
             Text(self.last_reset)
+        )?;
+        let sp = &self.speed;
+        write!(
+            f,
+            r#","speed":{{"max_forward":{},"max_reverse":{},"cap_code":"#,
+            Float(sp.max_forward),
+            Float(sp.max_reverse)
+        )?;
+        json::option(f, sp.cap_code)?;
+        f.write_str(r#","reverse_cap_code":"#)?;
+        json::option(f, sp.reverse_cap_code)?;
+        f.write_str(r#","frame_dac_cap":"#)?;
+        json::option(f, sp.frame_dac_cap)?;
+        write!(
+            f,
+            r#","rise_per_s":{},"max_accel":{},"max_decel":{},"overspeed_margin":{}}}"#,
+            sp.rise_per_s,
+            Float(sp.max_accel),
+            Float(sp.max_decel),
+            Float(sp.overspeed_margin)
+        )?;
+        let t = &self.timeouts;
+        write!(
+            f,
+            r#","timeouts":{{"rc_lost_ms":{},"speed_lost_ms":{},"overspeed_ms":{},"estop_release_ms":{},"bad_frames_ms":"#,
+            t.rc_lost_ms, t.speed_lost_ms, t.overspeed_ms, t.estop_release_ms
+        )?;
+        json::option(f, t.bad_frames_ms)?;
+        let r = &self.rates;
+        f.write_str(r#"},"rates":{"uart_baud":"#)?;
+        json::option(f, r.uart_baud)?;
+        f.write_str(r#","frame_hz":"#)?;
+        json::option(f, r.frame_hz)?;
+        f.write_str(r#","uplink_ms":"#)?;
+        json::option(f, r.uplink_ms)?;
+        f.write_str(r#","can_kbit":"#)?;
+        json::option(f, r.can_kbit)?;
+        write!(
+            f,
+            r#","ibus_baud":{},"jrk_write_ms":{},"dac_write_ms":{},"status_ms":{}}}"#,
+            r.ibus_baud, r.jrk_write_ms, r.dac_write_ms, r.status_ms
+        )
+    }
+}
+
+impl<'a> Config<'a> {
+    /// The text form of this line, for the USB cable's text log (`CONFIG t=… …`), `now_ms`
+    /// after boot. Its first keys, up to `last_reset`, are the ones the first check has
+    /// always read; the rest follow in the JSON line's order. An unknown value is `none`
+    /// (JSON's `null`), never 0: `frame=none` on CAN, `i2c_khz=none` with QEMU's stand-ins.
+    pub fn text(&self, now_ms: u32) -> ConfigText<'_, 'a> {
+        ConfigText {
+            config: self,
+            now_ms,
+        }
+    }
+}
+
+/// [`Config::text`]: one line, `CONFIG t=… key=value …`, without a newline.
+#[derive(Debug, Clone, Copy)]
+pub struct ConfigText<'c, 'a> {
+    config: &'c Config<'a>,
+    now_ms: u32,
+}
+
+/// A number in a text line, or `none`.
+struct Maybe<T>(Option<T>);
+
+impl<T: Display> Display for Maybe<T> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match &self.0 {
+            Some(v) => v.fmt(f),
+            None => f.write_str("none"),
+        }
+    }
+}
+
+impl Display for ConfigText<'_, '_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let c = self.config;
+        let a = &c.addresses;
+        write!(
+            f,
+            "CONFIG t={} build={} features={} version={} link={} frame={} tick_ms={} watchdog_ms={} cmd_timeout_ms={} idle_brake={:.2} full_throttle_speed={:.2} i2c_khz={} steering_jrk={:#04x} brake_jrk={:#04x} dac={:#04x} expander={:#04x} steer_min={} steer_centre={} steer_max={} brake_released={} brake_full={} throttle_full_code={} last_reset={}",
+            self.now_ms,
+            c.build,
+            c.features,
+            c.version,
+            c.link,
+            Maybe(c.frame_version),
+            c.tick_ms,
+            c.watchdog_ms,
+            c.cmd_timeout_ms,
+            c.idle_brake,
+            c.full_throttle_speed,
+            Maybe(c.i2c_khz),
+            a.steering,
+            a.brake,
+            a.dac,
+            a.expander,
+            c.steering.min,
+            c.steering.centre,
+            c.steering.max,
+            c.brake.released,
+            c.brake.full,
+            c.throttle_full_code,
+            c.last_reset
+        )?;
+        let (s, b, sp, t, r) = (
+            &c.steering_more,
+            &c.brake_more,
+            &c.speed,
+            &c.timeouts,
+            &c.rates,
+        );
+        write!(
+            f,
+            " steer_counts_per_rad={:.1} steer_max_rad={:.3} steer_rate_rad_s={:.2} steer_cal_rate={} steer_cal_timeout_ms={} steer_on_stop={}",
+            s.counts_per_rad,
+            s.max_angle_rad,
+            s.rate_rad_s,
+            Maybe(s.cal_rate),
+            Maybe(s.cal_timeout_ms),
+            s.on_stop
+        )?;
+        write!(
+            f,
+            " brake_stop={:.2} brake_overspeed={:.2} brake_rc_stop={:.2} rc_stop_ms={} rc_gear={}",
+            b.stop, b.overspeed, b.rc_stop, b.rc_stop_ms, b.rc_gear
+        )?;
+        write!(
+            f,
+            " max_speed={:.2} max_reverse_speed={:.2} throttle_cap_code={} reverse_cap_code={} frame_dac_cap={} dac_rise_per_s={} max_accel={:.2} max_decel={:.2} overspeed_margin={:.2}",
+            sp.max_forward,
+            sp.max_reverse,
+            Maybe(sp.cap_code),
+            Maybe(sp.reverse_cap_code),
+            Maybe(sp.frame_dac_cap),
+            sp.rise_per_s,
+            sp.max_accel,
+            sp.max_decel,
+            sp.overspeed_margin
+        )?;
+        write!(
+            f,
+            " rc_lost_ms={} speed_lost_ms={} overspeed_ms={} estop_release_ms={} bad_frames_ms={}",
+            t.rc_lost_ms,
+            t.speed_lost_ms,
+            t.overspeed_ms,
+            t.estop_release_ms,
+            Maybe(t.bad_frames_ms)
+        )?;
+        write!(
+            f,
+            " uart_baud={} frame_hz={} uplink_ms={} can_kbit={} ibus_baud={} jrk_write_ms={} dac_write_ms={} status_ms={}",
+            Maybe(r.uart_baud),
+            Maybe(r.frame_hz),
+            Maybe(r.uplink_ms),
+            Maybe(r.can_kbit),
+            r.ibus_baud,
+            r.jrk_write_ms,
+            r.dac_write_ms,
+            r.status_ms
         )
     }
 }
@@ -642,6 +928,19 @@ impl<const N: usize> LineBuf<N> {
         self.len = 0;
         let len = line.write_to(&mut self.buf)?.len();
         self.len = len;
+        Ok(())
+    }
+
+    /// Replace what it holds with any one line of text (a text log line). On [`TooLong`]
+    /// it holds nothing.
+    pub fn set_text(&mut self, text: &impl Display) -> Result<(), TooLong> {
+        self.len = 0;
+        let mut w = SliceWriter {
+            buf: &mut self.buf,
+            len: 0,
+        };
+        write!(w, "{text}").map_err(|_| TooLong)?;
+        self.len = w.len;
         Ok(())
     }
 
