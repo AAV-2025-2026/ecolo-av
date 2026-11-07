@@ -245,6 +245,7 @@ def launch_setup(context):
                           'wheel_radius': float(v['wheel_diameter']) / 2.0,
                           'actuator_model': flag(context, 'actuator_model'),
                           'speed_loop': LaunchConfiguration('speed_loop').perform(context),
+                          'lag_scale': float(LaunchConfiguration('lag_scale').perform(context)),
                           'spine': spine, 'esp32': esp32}, sim_time]),
         # Each sensor in a process of its own, as on the car: none waits behind another.
         Node(package='aav_gazebo', executable='gazebo_imu', name='gazebo_imu',
@@ -335,6 +336,9 @@ def generate_launch_description():
                               description="the speed loop's profile: default (today's gains)"
                                           ', smooth (TODO 27) or lqi (TODO 3); in '
                                           'the actuator model, or spine_sim with spine:=true'),
+        DeclareLaunchArgument('lag_scale', default_value='1.0',
+                              description="the actuator model's throttle, brake and steering "
+                                          'lags times this (a robustness test)'),
         DeclareLaunchArgument('faults', default_value='false',
                               description='true: the front left picture goes through '
                                           'gazebo_adapter, so fault.camera can freeze it'),

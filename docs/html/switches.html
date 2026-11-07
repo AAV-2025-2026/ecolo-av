@@ -7,7 +7,7 @@
 <!-- Generated from docs/switches.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Switches: what you can swap in the simulated car</h1>
-<div class="meta">8 min read · 6 sections</div></header>
+<div class="meta">9 min read · 6 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -209,6 +209,11 @@ the U-turn. The real car takes only <code>hybrid</code> or <code>lattice</code> 
 <td>ours: MPC that plans the speed too</td>
 <td>10 of 12</td>
 </tr>
+<tr>
+<td><code>tracker:=mpc_lag</code></td>
+<td>ours: MPC that knows the car is late, and plans for it (7 Nov)</td>
+<td><a href="trials.html#lag-aware-mpc-7-nov-mpc_lag">see trials</a></td>
+</tr>
 </tbody>
 </table></div>
 <p>Our trackers drive forward only: give them <code>reversing:=false</code> (the menu does).
@@ -288,6 +293,9 @@ KISS-ICP needs its own environment once: <code>pixi install --locked -e kiss</co
 </tr>
 </tbody>
 </table></div>
+<p><code>tracker:=mpc_lag</code> predicts the speed loop it is told about: <code>default</code> or <code>smooth</code> (its
+<code>mpc_lag.speed_loop</code> setting in <code>track.yaml</code>; it doesn't follow <code>speed_loop:=</code> on its own,
+and doesn't model <code>lqi</code> yet).</p>
 </section>
 <section class="card"><h2 id="the-world-and-the-rest">The world and the rest</h2>
 <div class="table-wrap"><table>
@@ -309,6 +317,10 @@ KISS-ICP needs its own environment once: <code>pixi install --locked -e kiss</co
 <tr>
 <td><code>sim_speed:=3</code></td>
 <td>a top speed above the car's 1 m/s, in Gazebo only</td>
+</tr>
+<tr>
+<td><code>lag_scale:=2</code></td>
+<td>the car's throttle, brake and steering lags twice what <code>vehicle.yaml</code> says; every driver still reads <code>vehicle.yaml</code> (a robustness test, Gazebo only)</td>
 </tr>
 <tr>
 <td><code>geofence:=false</code></td>

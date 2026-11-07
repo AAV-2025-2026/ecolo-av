@@ -133,6 +133,9 @@ bench's argument names:
                       (docs/ghost-obstacles.md)
   actuator_model:=false  the old instant car instead of the actuator model (gazebo_adapter;
                       vehicle.yaml's actuators:), to compare the two
+  lag_scale:=2        the actuator model's throttle, brake and steering lags twice
+                      vehicle.yaml's, while every driver still reads vehicle.yaml: how a
+                      follower copes with a car slower than it was told (1.0: as written)
 
 The empty and test_lot worlds render nothing, so they run headless anywhere, and the
 camera's parts need world:=road. Every node runs on simulated time.
@@ -238,6 +241,7 @@ def launch_setup(context):
                 obstacle=arg('obstacle'), start_x=start_x, start_y=start_y, start_yaw=start_yaw,
                 lidar=arg('lidar'), radar=arg('radar'), chase_camera=arg('chase_camera'),
                 actuator_model=arg('actuator_model'), speed_loop=arg('speed_loop'),
+                lag_scale=arg('lag_scale'),
                 faults=flag['faults'],
                 spine=arg('spine'), arm=arg('arm'), bridge=arg('bridge'),
                 esp32=arg('esp32'), esp32_loop=arg('esp32_loop')),
@@ -428,6 +432,9 @@ def generate_launch_description():
         DeclareLaunchArgument('actuator_model', default_value='true',
                               description="the actuators as vehicle.yaml's actuators: say; "
                                           "false: Gazebo's old instant car"),
+        DeclareLaunchArgument('lag_scale', default_value='1.0',
+                              description="the actuator model's lags times this (a "
+                                          'robustness test; the drivers keep vehicle.yaml)'),
         DeclareLaunchArgument('speed_loop', default_value='default',
                               description="the speed loop's profile: default (today's gains)"
                                           ', smooth (TODO 27) or lqi (TODO 3)'),
