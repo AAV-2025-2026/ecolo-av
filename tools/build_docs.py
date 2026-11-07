@@ -116,6 +116,8 @@ PAGES = [
     ('carla.md', 'CARLA', "Photo-real towns and Carleton's streets: UE5 vs UE4, the twin"),
     ('bench.md', 'Bench mode', "The car's software on one computer, with stand-ins"),
     ('actuator-tests.md', 'Actuator tests', 'Measure how the car moves: on stands, in a lot'),
+    ('hardware-debug.md', 'Hardware debug',
+     "One part at a time: the parts, by hand through the Pi, ego's messages; the link check"),
     ('learn-state-space.md', 'Learn: state space',
      'From a drawing to a car simulator: matrices, poles, Bode, roll'),
     ('vehicle-model.md', 'The car as a linear model',
