@@ -138,9 +138,11 @@ Each lands outside git, checksum pinned where the script says.
 |---|---|---|
 | `pico.sh` | our Rust Pico 2 boards: install probe-rs, build the UF2, flash through a probe | `pico <spine, wheel, sentinel> <tools, build, flash>` |
 | `elf2uf2.py` | a Pico 2 program into a UF2 file | (pico.sh build) |
-| `esp32.sh` | the ESP32 board's Rust: tools, build, flash, check, QEMU, the first check | `esp <tools, build, flash, first-check, qemu-tools, qemu-check>` |
+| `esp32.sh` | the ESP32 board's Rust: tools, build, flash, check, QEMU, the first check, the guided walk | `esp <tools, build, flash, first-check, walk, qemu-tools, qemu-check>` |
 | `esp32_qemu.py` | the ESP32 firmware in QEMU: heartbeat, uplink, RC modes; `--idle` boots it and only records its log | (`esp qemu-check`, `esp first-check --qemu`) |
 | `esp32_first_check.py` | after the first flash: reads the ESP32's log on the USB cable for 30 s (or `--file`), text or JSON, and prints PASS/FAIL per check, then SAFE TO GO ON or STOP. Only reads | `esp first-check [port]` |
+| `esp32_walk.py` | walk me through it: the whole first flash (`docs/esp32-bench.md`), one step at a time, bold and spoken (`say`; `--quiet`): the copy of the C++, the build, the flash once `flash` is typed, the first check row by row, the checks on stands, the roll back; a record in `bench-logs/`. `--dry-run` runs nothing | `esp walk [port]` |
+| `esp32_walk_steps.py` | its steps, answers and spoken sentences (no hardware: tested in `tests/`) | - |
 | `esp32_status_sim.py` | a pretend ESP32 with `wifi-status` on 127.0.0.1:8765: its page, `/status.json`, `/health`, `/config`, `/scan` and the WebSocket of status lines (`firmware/status`), moving; read only, standard library | - |
 | `legacy_firmware.sh` | today's C++ ESP32 firmware, with PlatformIO | `-e firmware legacy-esp32` |
 
@@ -212,7 +214,8 @@ Each lands outside git, checksum pinned where the script says.
 | `build_docs.py`, `graph_picture.py`, `vehicle_model.py`, `state_space_demo.py`, `measure_map.py` | write `docs/html/`, `docs/img/` (`measure_map.py` also its table in `docs/measure-the-car.md`) |
 | `make_stop_sign.py`, `make_map.py` | write the stop sign's files in `ros/sim/aav_gazebo/models/`; a map's PGM and YAML |
 | `record.sh` | writes `bags/` |
-| `esp32.sh flash`, `pico.sh <board> flash`, `legacy_firmware.sh -t upload` | write a board's flash (bench only) |
+| `esp32.sh flash`, `esp32.sh walk` (once `flash` is typed), `pico.sh <board> flash`, `legacy_firmware.sh -t upload` | write a board's flash (bench only) |
+| `esp32_walk.py` | writes `bench-logs/`: the record, the first check's log, the copy of the C++ (a secret inside) |
 | `legacy_firmware.sh` | with no `src/secrets.h`, copies `secrets.h.example` there (placeholders, untracked) |
 | `car_install.sh`, `car_screens_install.sh` | write `~/aav-jazzy`, `~/.config` on a car computer |
 | `car_setup.sh --apply` | sudo: apt upgrades, chrony, udev, netplan, linger; `~/aav-backup`, `~/.config` on a car computer |
