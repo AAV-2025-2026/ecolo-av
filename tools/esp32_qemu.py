@@ -88,6 +88,7 @@ ECHO_WINDOW = 0.5           # s: an echo must be a counter sent this recently
 SWITCH = {'computer': 1000, 'via_ros': 1500, 'direct': 2000}
 FULL_STICK = 1000           # the throttle stick (CH3) all the way: below the middle is go
 FORWARD = 1000              # the gear switch (CH5) on forward
+GEAR_BRAKE = 1500           # the gear switch on brake: between 1200 and 1800
 IBUS_PERIOD = 0.007         # s: a FlySky receiver sends a frame about every 7 ms
 
 RATE_HZ = 50.0              # legacy_uart_bridge's rate_hz
@@ -395,12 +396,12 @@ def ibus_frame(channels: List[int]) -> bytes:
     return body + struct.pack('<H', (0xFFFF - sum(body)) & 0xFFFF)
 
 
-def rc_channels(switch: str, throttle: int = FULL_STICK) -> List[int]:
-    """Return the 14 channels: the mode switch (CH6) at `switch`, the throttle as given."""
+def rc_channels(switch: str, throttle: int = FULL_STICK, gear: int = FORWARD) -> List[int]:
+    """Return the 14 channels: the mode switch (CH6), the throttle, the gear (CH5)."""
     ch = [1500] * 14
     ch[5] = SWITCH[switch]
     ch[2] = throttle
-    ch[4] = FORWARD
+    ch[4] = gear
     return ch
 
 
@@ -747,6 +748,10 @@ def rc_run(fw: Firmware, orin: Orin, mapping: LegacyMapping) -> List[RcPhase]:
     fw.ibus.send(rc_channels('via_ros'))
     phase('via_ros_still', still, 1.0)          # also the arming stop
     phase('via_ros_drive', drive, 1.0)
+    # RC direct holds after any stop, power-up too, until a person clears it: the stick
+    # at zero, the gear switch on brake (spine-core's rc_hold).
+    fw.ibus.send(rc_channels('direct', throttle=1500, gear=GEAR_BRAKE))
+    fw.send_for(still, 0.3, orin.frames(still))
     fw.ibus.send(rc_channels('direct'))
     phase('direct', still, 1.0)
     phase('direct_lost', still, 0.6, rc_stop=fw.ibus.send(None))

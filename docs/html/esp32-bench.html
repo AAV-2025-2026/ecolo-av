@@ -846,7 +846,7 @@ roll back.</p>
 <tr>
 <td>1</td>
 <td>Power on, nothing else</td>
-<td>brake pulled (3500), steering centred (1950), DAC 0 V. Log: <code>STATUS t=… mode=Manual … faults=0x0000</code> (0x0100 with the transmitter off). Status LED blinks fast</td>
+<td>brake pulled (3500), steering centred (1950), DAC 0 V. Log: <code>STATUS t=… mode=Manual … faults=0x0000</code>. Status LED blinks fast</td>
 </tr>
 <tr>
 <td>2</td>
@@ -905,8 +905,8 @@ roll back.</p>
 </tr>
 <tr>
 <td>10</td>
-<td>RC override switch on, gear forward, a little throttle</td>
-<td><code>mode=Rc</code>, blue LED, wheels turn; ROS commands ignored</td>
+<td>RC override switch on. <strong>First the throttle stick at zero and the gear on brake</strong> (RC direct waits for this after power-up and after any stop), then gear forward, a little throttle</td>
+<td><code>mode=Rc</code>, blue LED, wheels turn; ROS commands ignored. Without the first step: nothing moves, as it should</td>
 </tr>
 <tr>
 <td>11</td>
@@ -1020,7 +1020,7 @@ the ground; checks 1 to 14 passed first.</p>
 </tr>
 <tr>
 <td>R6</td>
-<td>CH6 <strong>high</strong> (RC direct)</td>
+<td>CH6 <strong>high</strong> (RC direct); stick at zero and gear on brake first</td>
 <td><code>/vehicle/status</code> mode 1; the ESP32 drives from the sticks, as check 10; ROS can't</td>
 </tr>
 <tr>

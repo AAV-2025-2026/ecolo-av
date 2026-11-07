@@ -553,7 +553,10 @@ impl Spine {
         if overspeed_expired {
             self.latch.trip_overspeed();
         }
-        if rc_lost || speed_lost || overspeed_expired {
+        // Any stop holds RC direct until a person clears it (stick at zero, the gear switch
+        // on brake): an e-stop or a driver fault clearing with the stick still pushed must
+        // not drive the car again by itself.
+        if estop || driver_fault || rc_lost || speed_lost || overspeed_expired {
             self.rc_hold = true;
         } else if self.overspeed == Overspeed::Clear
             && i.rc
@@ -2373,6 +2376,48 @@ mod tests {
             car.tick(moving);
         }
         assert!(car.tick(moving).throttle > 0.0);
+    }
+
+    #[test]
+    fn rc_direct_waits_for_a_person_after_an_estop_or_a_driver_fault_clears() {
+        // The stick still pushed when the stop goes away must not drive the car again
+        // by itself: the same rule as a lost signal (rc_hold).
+        let moving = Inputs {
+            rc: Some(rc_direct(0.5, false)),
+            ..Default::default()
+        };
+        for stop in [
+            Inputs {
+                hw_estop: true,
+                ..moving
+            },
+            Inputs {
+                driver_faults: faults::BRAKE_DRIVER,
+                ..moving
+            },
+        ] {
+            let mut car = Car::with_config(open_loop_config());
+            for _ in 0..20 {
+                car.tick(moving);
+            }
+            assert!(car.tick(moving).throttle > 0.0);
+            let out = car.tick(stop);
+            assert_eq!(out.throttle, 0.0);
+            // The stop gone, the stick still pushed: stays stopped.
+            for _ in 0..50 {
+                let out = car.tick(moving);
+                assert_eq!((out.throttle, out.brake), (0.0, 1.0), "{stop:?}");
+            }
+            // Stick at zero and the gear switch on brake: cleared, it drives again.
+            car.tick(Inputs {
+                rc: Some(rc_direct(0.0, true)),
+                ..Default::default()
+            });
+            for _ in 0..20 {
+                car.tick(moving);
+            }
+            assert!(car.tick(moving).throttle > 0.0, "{stop:?}");
+        }
     }
 
     #[test]

@@ -104,7 +104,7 @@ The same as Computer, plus:
 |---|---|
 | RC signal healthy | the Motor Pi, the Orin, any frame |
 | No e-stop, no driver fault | arming |
-| After a lost RC: signal back, throttle stick at zero, gear switch on brake | |
+| After any stop, and after power-up: signal back, throttle stick at zero, gear switch on brake (7 Nov) | |
 
 | Stick and gear | Brake |
 |---|---|
@@ -126,7 +126,7 @@ The same as Computer, plus:
 | Wheel speed lost (300 ms) | only once a frame has sent one | brake full, fault 64 | yes | |
 | Over 1.25 m/s (0.75 back) | at once | throttle 0, brake 0.5 until under 1.0 | no | by itself |
 | Still over the limit 2 s later | 2 s | brake full, fault 512 | yes | |
-| Driver fault (a Jrk, the DAC, the expander) | that tick | brake full, fault 8, 16 or 32 | computer: yes. RC direct: **no** | |
+| Driver fault (a Jrk, the DAC, the expander) | that tick | brake full, fault 8, 16 or 32 | yes | computer: stop, drive. RC direct: stick zero + gear on brake |
 | E-stop flag (`/safety/estop`) | the next frame, whatever its counter | brake full | yes | a new counter with the flag clear, then stop, drive |
 
 !!! note "The speed rules are off on the car"
@@ -235,8 +235,8 @@ joystick is for stands only.
 
 | # | Question | For | Recommendation |
 |---|---|---|---|
-| 1 | **RC direct drives again at once after an e-stop or a driver fault clears**, with the stick still pushed. Only a lost RC or speed latches it | Arsh | latch RC direct (`rc_hold`) on an e-stop and a driver fault too |
-| 2 | RC direct drives straight after power-up or a watchdog reset, with no deliberate step | Arsh, Ben | boot with RC direct held: stick at zero and gear on brake first |
+| 1 | ✅ **Fixed 7 Nov:** RC direct drove again at once after an e-stop or a driver fault cleared, with the stick still pushed. Now any stop holds it (`rc_hold`) until the stick is at zero and the gear on brake. Test `rc_direct_waits_for_a_person_after_an_estop_or_a_driver_fault_clears` | Arsh to review | done |
+| 2 | ✅ **Fixed 7 Nov, by the same change:** the board starts with its e-stop input on, so after power-up or a reset RC direct waits for the stick at zero and the gear on brake | Arsh to review | done |
 | 3 | What does the receiver send when the transmitter is off (its failsafe, Q7)? If it keeps sending, the ESP32 never sees a lost RC | hardware lead | test bench check 11; set the failsafe to throttle zero and gear on brake |
 | 4 | The transmitter off on Computer can't stop the car | Ben | the Kar-Tech stop is the stop; never count on the transmitter |
 | 5 | No wheel speed to the ESP32, so no overspeed check | Arsh | send version 4 frames once a rear-wheel speed exists (TODO 49b); keep `max_speed:=0.3` until then |
@@ -271,7 +271,7 @@ joystick is for stands only.
 | Wheel speed rules off until a speed comes | `spine.rs:433-455` | `a_link_that_never_sends_a_speed_leaves_the_rules_off` |
 | Overspeed: 1.25 m/s, 0.5 brake, 2 s | `spine.rs:189-190`, `fsm.rs:181`, `spine.rs:540-555` | `overspeed_cuts_the_throttle_and_brakes_until_under_the_limit_then_drives_on`; `an_overspeed_that_holds_steady_for_two_seconds_is_a_hard_stop_and_latches` |
 | Driver fault stops; latches the computer | `spine.rs:532-535` | `driver_fault_stops_and_needs_rearm`; `driver_fault_stops_rc_too` |
-| Open question 1: RC direct resumes after a fault or e-stop clears | `spine.rs:556-563` (`rc_hold` not set), `spine.rs:657` | a scratch test on 7 Nov (not committed): throttle back the next tick |
+| Open questions 1 and 2, fixed: any stop holds RC direct | `spine.rs` (`rc_hold` set on an e-stop and a driver fault too) | `rc_direct_waits_for_a_person_after_an_estop_or_a_driver_fault_clears`; the board's `rc_drives_without_the_computer`; QEMU's `direct` |
 | The board's link verdict (OK, STALE, COUNTER FROZEN) | `health.rs:6-12` | `frames_with_a_frozen_counter_say_counter_frozen` |
 | The counter: +1 per command, only while OPEN | `ros/io_mux/aav_io_mux/aav_io_mux/output_mux.py:109-112` | `test_heartbeat.py`: `test_it_counts_each_command_and_wraps_in_a_byte`, `test_it_never_moves_by_itself` |
 | The bridge leaves 5 stop frames as it ends | `legacy_uart_bridge.py:350-358` | |

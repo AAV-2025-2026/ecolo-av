@@ -406,6 +406,12 @@ mod loop_tests {
     fn rc_drives_without_the_computer() {
         let mut rig = Rig::new();
         rig.ticks(6);
+        // After power-up a person clears RC direct first: the stick at zero, the gear
+        // switch on brake. Until then it holds (spine-core's rc_hold).
+        for _ in 0..3 {
+            rig.rc(true, 1500, 1500, 1500);
+            rig.tick();
+        }
         let mut out = rig.tick();
         for _ in 0..30 {
             rig.rc(true, 1000, 1500, 1000); // override on, full throttle, forward
@@ -818,6 +824,8 @@ mod uplink_loop_tests {
         receiver: FakeUart,
         uplink: FakeTx,
         counter: u8,
+        /// The gear switch's channel: 1000 forward, 1500 brake.
+        gear: u16,
     }
 
     impl Rig {
@@ -856,6 +864,7 @@ mod uplink_loop_tests {
                 receiver,
                 uplink,
                 counter: 0,
+                gear: 1000,
             }
         }
 
@@ -864,7 +873,7 @@ mod uplink_loop_tests {
             let mut ch = [1500; ibus::CHANNELS];
             ch[5] = switch;
             ch[2] = throttle;
-            ch[4] = 1000; // forward
+            ch[4] = self.gear; // forward, unless a test puts it on brake
             self.receiver
                 .0
                 .borrow_mut()
@@ -968,6 +977,11 @@ mod uplink_loop_tests {
     fn rc_direct_drives_from_the_sticks_whatever_the_frames_say() {
         let mut rig = Rig::new();
         rig.steps(5, 0.0, -0.3, Some((VIA_ROS, FULL)));
+        // After power-up a person clears RC direct first: the stick at zero (1500), the
+        // gear switch on brake. Until then it holds (spine-core's rc_hold).
+        rig.gear = 1500;
+        rig.steps(5, 0.0, -0.3, Some((DIRECT, 1500)));
+        rig.gear = 1000;
         let out = rig.steps(100, 0.0, -0.3, Some((DIRECT, FULL)));
         assert_eq!(out.mode, Mode::Rc);
         assert!(rig.dac() > 0);

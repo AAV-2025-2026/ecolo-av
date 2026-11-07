@@ -345,7 +345,7 @@ by themselves once ROS runs. After any timeout: the same, from step 3.</p>
 <td>arming</td>
 </tr>
 <tr>
-<td>After a lost RC: signal back, throttle stick at zero, gear switch on brake</td>
+<td>After any stop, and after power-up: signal back, throttle stick at zero, gear switch on brake (7 Nov)</td>
 <td></td>
 </tr>
 </tbody>
@@ -459,8 +459,8 @@ by themselves once ROS runs. After any timeout: the same, from step 3.</p>
 <td>Driver fault (a Jrk, the DAC, the expander)</td>
 <td>that tick</td>
 <td>brake full, fault 8, 16 or 32</td>
-<td>computer: yes. RC direct: <strong>no</strong></td>
-<td></td>
+<td>yes</td>
+<td>computer: stop, drive. RC direct: stick zero + gear on brake</td>
 </tr>
 <tr>
 <td>E-stop flag (<code>/safety/estop</code>)</td>
@@ -766,15 +766,15 @@ joystick is for stands only.</p>
 <tbody>
 <tr>
 <td>1</td>
-<td><strong>RC direct drives again at once after an e-stop or a driver fault clears</strong>, with the stick still pushed. Only a lost RC or speed latches it</td>
-<td>Arsh</td>
-<td>latch RC direct (<code>rc_hold</code>) on an e-stop and a driver fault too</td>
+<td>✅ <strong>Fixed 7 Nov:</strong> RC direct drove again at once after an e-stop or a driver fault cleared, with the stick still pushed. Now any stop holds it (<code>rc_hold</code>) until the stick is at zero and the gear on brake. Test <code>rc_direct_waits_for_a_person_after_an_estop_or_a_driver_fault_clears</code></td>
+<td>Arsh to review</td>
+<td>done</td>
 </tr>
 <tr>
 <td>2</td>
-<td>RC direct drives straight after power-up or a watchdog reset, with no deliberate step</td>
-<td>Arsh, Ben</td>
-<td>boot with RC direct held: stick at zero and gear on brake first</td>
+<td>✅ <strong>Fixed 7 Nov, by the same change:</strong> the board starts with its e-stop input on, so after power-up or a reset RC direct waits for the stick at zero and the gear on brake</td>
+<td>Arsh to review</td>
+<td>done</td>
 </tr>
 <tr>
 <td>3</td>
@@ -925,9 +925,9 @@ joystick is for stands only.</p>
 <td><code>driver_fault_stops_and_needs_rearm</code>; <code>driver_fault_stops_rc_too</code></td>
 </tr>
 <tr>
-<td>Open question 1: RC direct resumes after a fault or e-stop clears</td>
-<td><code>spine.rs:556-563</code> (<code>rc_hold</code> not set), <code>spine.rs:657</code></td>
-<td>a scratch test on 7 Nov (not committed): throttle back the next tick</td>
+<td>Open questions 1 and 2, fixed: any stop holds RC direct</td>
+<td><code>spine.rs</code> (<code>rc_hold</code> set on an e-stop and a driver fault too)</td>
+<td><code>rc_direct_waits_for_a_person_after_an_estop_or_a_driver_fault_clears</code>; the board's <code>rc_drives_without_the_computer</code>; QEMU's <code>direct</code></td>
 </tr>
 <tr>
 <td>The board's link verdict (OK, STALE, COUNTER FROZEN)</td>

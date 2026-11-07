@@ -269,7 +269,7 @@ roll back.
 
 | # | Do | Expect |
 |---|---|---|
-| 1 | Power on, nothing else | brake pulled (3500), steering centred (1950), DAC 0 V. Log: `STATUS t=… mode=Manual … faults=0x0000` (0x0100 with the transmitter off). Status LED blinks fast |
+| 1 | Power on, nothing else | brake pulled (3500), steering centred (1950), DAC 0 V. Log: `STATUS t=… mode=Manual … faults=0x0000`. Status LED blinks fast |
 | 2 | Unplug a Jrk's I2C, then plug it back | the red LED and a fault bit (8 steering, 16 brake) while it is out |
 | 3 | Start the Motor-Pi's bridge (`frame_version: 2`), with ego stale | the bridge sends stop frames: brake stays full. `LINK` shows `frames=` rising, `bad=0`, `counter=` still. `HEALTH link=ok` with the Orin's mux running, `link=counter_frozen` without |
 | 4 | Drive slowly from ROS (keyboard or joystick, 0.3 m/s) | `mode=Computer`, green LED, brake lets go (400), the DAC rises smoothly (600 codes a second at most), the wheels turn **forward** |
@@ -281,7 +281,7 @@ roll back.
 | 9a | While driving, stop the Orin's output mux (or unplug the Orin's network), the bridge still running | within 0.2 s: brake full, throttle 0, `faults` has 1, though `LINK frames=` still rises; `repeats=` rises instead. The heartbeat (TODO 50) |
 | 9b | Bring the Orin back | stays braked until ego stands still (a stop with a new counter), then drives |
 | 9c | `/safety/estop` true while driving | `estop=true` at once, brake full |
-| 10 | RC override switch on, gear forward, a little throttle | `mode=Rc`, blue LED, wheels turn; ROS commands ignored |
+| 10 | RC override switch on. **First the throttle stick at zero and the gear on brake** (RC direct waits for this after power-up and after any stop), then gear forward, a little throttle | `mode=Rc`, blue LED, wheels turn; ROS commands ignored. Without the first step: nothing moves, as it should |
 | 11 | RC: switch the transmitter off | within 0.1 s: brake full, `faults` has 256 (RC lost) |
 | 12 | RC override off | back to the computer, or Manual |
 | 13 | The red e-stop button | the car stops by itself, as today |
@@ -313,7 +313,7 @@ the ground; checks 1 to 14 passed first.
 | R3 | A little throttle, gear forward | the wheels turn, **through ego**: its speed and steering-rate limits; `/vehicle/status` mode 2 |
 | R4 | Steer with the stick while rolling | the wheels steer (standing still they don't: the bicycle model) |
 | R5 | Transmitter off while on RC via ROS | within 0.1 s: brake full, faults 256; stays braked when it comes back, until the stick is centred (a stop), then drives |
-| R6 | CH6 **high** (RC direct) | `/vehicle/status` mode 1; the ESP32 drives from the sticks, as check 10; ROS can't |
+| R6 | CH6 **high** (RC direct); stick at zero and gear on brake first | `/vehicle/status` mode 1; the ESP32 drives from the sticks, as check 10; ROS can't |
 | R7 | Transmitter off while on RC direct | as check 11: brake full, faults 256 |
 | R8 | Stop the bridge while on RC via ROS | the heartbeat stops: brake full within 0.2 s (fault 1). RC direct still works: the fallback |
 
