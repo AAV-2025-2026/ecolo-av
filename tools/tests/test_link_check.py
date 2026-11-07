@@ -255,3 +255,22 @@ def test_a_bag_and_the_esp32_lines(tmp_path, capsys):
     out = capsys.readouterr().out
     assert out.startswith('Link check: PASS') and 'uplink frames, none lost' in out
     assert lc.main([uri]) == 3                                     # no ESP32: NOT TESTED
+
+
+def test_todays_text_log_gives_counts_but_no_verdict():
+    tail = ' repeats=0 counter=3 uplinks=0 uplink_errors=0\n'
+    log = ('LINK t=1000 frames=10 bad=0 skipped=2' + tail + 'FSM t=1000 lifecycle=Run\n'
+           'LINK t=2000 frames=60 bad=1 skipped=2' + tail)
+    lines, notes = lc.esp32_lines(log)
+    assert [line['frames'] for line in lines] == [10, 60] and 'text LINK' in notes[0]
+    samples, _ = drive()
+    hop = lc.check(samples, lines)['hops'][1]
+    assert hop['verdict'] == lc.NOT_TESTED
+    assert 'frames +50, bad +1' in hop['reasons'][1]
+
+
+def test_json_lines_win_over_the_text_log():
+    text = ('LINK t=1 frames=1 bad=0 skipped=0 repeats=0 counter=1 uplinks=0 uplink_errors=0\n'
+            + GOLDEN.read_text(encoding='utf-8'))
+    lines, notes = lc.esp32_lines(text)
+    assert len(lines) == 2 and notes == []

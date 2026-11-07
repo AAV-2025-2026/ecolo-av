@@ -12,7 +12,9 @@ wrote against what the ESP32 says it received, over the same stretch of frames:
   the Pi      /control/car/link_frame (legacy_uart_bridge, aav_interfaces/LinkFrame): a
               sample of the frames written, each with `written`, the count of every frame
   the ESP32   its status lines (firmware/status/README.md, `"t":"status"`): `rx` (the last
-              good frame: counter, check, values) and `link` (frames, bad, skipped)
+              good frame: counter, check, values) and `link` (frames, bad, skipped).
+              Today's Rust writes only text (`LINK t=... frames=... bad=...`): read too,
+              but with no frame to match, the ESP32 hop stays NOT TESTED
   the uplink  /vehicle/esp32/uplink_health, if recorded: reported, but not in the verdict
 
 How a frame is known: by its counter AND its check byte, never by the counter alone. Stop
@@ -43,6 +45,7 @@ Exit status: 0 PASS, 1 FAIL, 3 NOT TESTED, 2 a usage error.
 import argparse
 import json
 import os
+import re
 import sys
 
 PASS, FAIL, NOT_TESTED = 'PASS', 'FAIL', 'NOT TESTED'
@@ -63,16 +66,28 @@ def pi_sample(version, counter, check, steering, speed, accel, written, write_er
             'written': int(written), 'write_errors': int(write_errors)}
 
 
+LINK_TEXT = re.compile(r'LINK t=(\d+) frames=(\d+) bad=(\d+) skipped=(\d+)')
+
+
 def esp32_lines(text):
     """
-    Return (status lines, notes) from the ESP32's JSON lines.
+    Return (status lines, notes) from the ESP32's log: its JSON lines, or else its text.
 
-    Other lines (the text log, `hb`, `event`) are passed over. A status line of another
-    schema can't be read: it is counted in the notes, and its values treated as unknown.
+    JSON status lines (firmware/status/README.md) carry the last frame, so frames can be
+    matched. Other JSON (`hb`, `event`) is passed over; a status line of another schema
+    can't be read, and is counted in the notes. With no JSON status line at all, today's
+    text lines (`LINK t=... frames=... bad=... skipped=...`) give the counts alone, with
+    no frame to match: the counts can't then be set against the Pi's.
     """
-    out, other_schema, not_json = [], 0, 0
+    out, text_lines, other_schema, not_json = [], [], 0, 0
     for raw in text.splitlines():
         raw = raw.strip()
+        match = LINK_TEXT.search(raw)
+        if match:
+            t, frames, bad, skipped = (int(g) for g in match.groups())
+            text_lines.append({'seq': None, 'up_ms': t, 'frames': frames, 'bad': bad,
+                               'skipped': skipped, 'rx': None})
+            continue
         if not raw.startswith('{'):
             continue
         try:
@@ -97,6 +112,9 @@ def esp32_lines(text):
                             'speed': rx.get('speed'), 'accel': rx.get('accel')}
         out.append(status)
     notes = []
+    if not out and text_lines:
+        out = text_lines
+        notes.append(f'{len(text_lines)} text LINK lines only: counts, but no frame to match')
     if other_schema:
         notes.append(f'{other_schema} status lines of a schema other than {SCHEMA}: not read')
     if not_json:
@@ -214,8 +232,15 @@ def check_esp32(samples, lines):
                           f'{values(p)}, the ESP32 read {values(e)}. A good frame that '
                           'differs: a pairing or reporting bug, not the wire'], found
     if len(found) < 2:
-        return NOT_TESTED, [f'{len(found)} frames seen by both sides (counter + check): '
-                            'were the two recordings at the same time?'], found
+        why = [f'{len(found)} frames seen by both sides (counter + check): '
+               + ('the ESP32 log has no frames (text LINK lines, or no rx)'
+                  if not any(line['rx'] for line in lines)
+                  else 'were the two recordings at the same time?')]
+        bad = lines[-1]['bad'] - lines[0]['bad']
+        skipped = lines[-1]['skipped'] - lines[0]['skipped']
+        why.append(f"over the whole ESP32 log: frames +{lines[-1]['frames'] - lines[0]['frames']}"
+                   f', bad +{bad}, skipped +{skipped} (a start-up may skip a few bytes)')
+        return NOT_TESTED, why, found
     if len({values(a['pi']) for a in found}) < 2:
         return NOT_TESTED, ['every frame both sides saw had the same values: '
                             'nothing changing was compared'], found
