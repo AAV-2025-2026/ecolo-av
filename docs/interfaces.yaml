@@ -366,7 +366,7 @@ topics:
     note: Measured front steering joint angles, merged into /joint_states.
   /joint_states:
     type: sensor_msgs/msg/JointState
-    pub: [joint_state_publisher, gz_bridge]
+    pub: [joint_state_publisher, gz_bridge, simulator]
     sub: [robot_state_publisher]
     live: [turtle, sim, car, replay, bench]
   /can/tx:
@@ -495,7 +495,7 @@ topics:
   /sensors/lidar/points:
     type: sensor_msgs/msg/PointCloud2
     drop_in: {min_hz: 9, max_hz: 12, frame: lidar_link, reliable: true}
-    pub: [lidar_cloud, gz_lidar_bridge, carla_adapter]
+    pub: [lidar_cloud, gz_lidar_bridge, carla_adapter, simulator]
     sub: [lidar_scan, voxels, debug_hud, ndt, kiss_icp, actuator_test, hw_panel]
     live: [road, car]
     note: On the car, the roof Velodyne VLP-16 through the stock velodyne_pointcloud (lidar_cloud, its factory calibration VLP16db.yaml), in lidar_link, 10 Hz, 0.9-100 m, unorganised - rays that hit nothing are left out; fields x, y, z, intensity, ring, time. car.launch.py runs it where the machine file has the lidar part (orin, all); lidar:=false turns it off everywhere. In Gazebo, a generic 16-beam roof lidar (like a VLP-16) in lidar_link, 10 Hz, 1800 x 16 points, 0.5-100 m, inf where a ray hit nothing. Reliable (about 0.9 MB a cloud). On by default in the road and test_lot worlds (lidar:=false turns it off). Its one reader for Nav2 is lidar_scan (navigation.launch.py lidar:=true), which flattens it into /sensors/lidar/scan; or, in the voxels trial (voxels:=true), voxels, which cuts it into cubes (/perception/voxels/cubes).
@@ -619,10 +619,10 @@ topics:
   # --- Gazebo's road world: the simulator's own ---
   /vehicle/sim/truth:
     type: nav_msgs/msg/Odometry
-    pub: [gz_bridge]
+    pub: [gz_bridge, simulator]
     sub: [gazebo_gps, debug_hud]
     live: [sim]
-    note: Where the Gazebo car really is (map frame - the world's origin is the datum - 50 Hz), like the bench's /vehicle/bench/truth. Only the stand-ins read it - gazebo_gps, for the receiver's velocity (/sensors/gps/fix_velocity), never for a position; tools/sim_check.py compares it with /localization/odom/global. Gazebo's other topics (/gazebo/odom, imu, navsat, cmd_vel, radar/points) only link the bridges, gazebo_adapter and the sensor nodes (gazebo_imu, gazebo_gps, gazebo_radar, gazebo_camera - one process per sensor, as on the car).
+    note: Where the Gazebo car really is (map frame - the world's origin is the datum - 50 Hz), like the bench's /vehicle/bench/truth. Only the stand-ins read it - gazebo_gps, for the receiver's velocity (/sensors/gps/fix_velocity), never for a position; tools/sim_check.py compares it with /localization/odom/global. Gazebo's other topics (/gazebo/odom, imu, navsat, cmd_vel, radar/points) only link the bridges, gazebo_adapter and the sensor nodes (gazebo_imu, gazebo_gps, gazebo_radar, gazebo_camera - one process per sensor, as on the car). With simulator:=own, our own Rust simulator (aav_simulator's node simulator) publishes every one of those Gazebo topics itself, in place of gz sim and its bridges, and the same nodes read them.
   /vehicle/sim/chase_camera/image_raw:
     type: sensor_msgs/msg/Image
     pub: [gz_chase_bridge]
@@ -844,10 +844,10 @@ topics:
     live: [turtle, sim, car, replay, bench]
   /clock:
     type: rosgraph_msgs/msg/Clock
-    pub: [gz_bridge, carla_adapter]
+    pub: [gz_bridge, carla_adapter, simulator]
     sub: []
     live: [sim, replay]
-    note: Simulation time; every node runs with use_sim_time:=true in sim and replay.
+    note: Simulation time; every node runs with use_sim_time:=true in sim and replay. Gazebo publishes it every physics step (1 kHz, unthrottled); our own simulator (aav_simulator, simulator:=own) does the same.
   /diagnostics:
     type: diagnostic_msgs/msg/DiagnosticArray
     pub: [twist_mux, ekf_local, ekf_global, sensor_watchdog, camera_stream_front_left, camera_stream_front_right, localization_health]
@@ -894,6 +894,14 @@ services:
     type: std_srvs/srv/Trigger
     server: street_router
     note: A person sends street_router's newest route to Nav2, as a /follow_gps_waypoints goal. Nothing goes to Nav2 without it (unless follow_at_once is set). Nav2, twist_mux, ego and the spine stay in charge.
+  /vehicle/sim/spawn_entity:
+    type: simulation_interfaces/srv/SpawnEntity
+    server: simulator
+    note: Our own simulator (aav_simulator, simulator:=own) - put a model in the world while it runs, as Gazebo's create service does - uri an SDF model file or model://name, initial_pose in the map frame (x, y and yaw). The ROS standard simulation interface (simulation_interfaces). Its lidar and radar see the model from the next step, and the car stops at it. tools/sim_check.py places its box and post with it. Sim only.
+  /vehicle/sim/delete_entity:
+    type: simulation_interfaces/srv/DeleteEntity
+    server: simulator
+    note: Take a model placed with /vehicle/sim/spawn_entity (or the launch's obstacle:=true) away again. Sim only.
   /track/set_parameters:
     type: rcl_interfaces/srv/SetParameters
     server: track

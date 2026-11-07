@@ -1,0 +1,19 @@
+[workspace]
+resolver = "2"
+# sim-core: the simulator with no ROS and no Bevy: the world, the car, the sensors.
+#   cargo test -p sim-core
+# sim-node: the ROS node (rclrs), binary `simulator`. colcon builds it through CMakeLists.txt.
+members = ["crates/sim-core", "crates/sim-node"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "TODO"
+publish = false
+
+# The ray casting is the hot loop: optimise it even in a test build.
+[profile.dev.package.sim-core]
+opt-level = 3
+
+[profile.test.package.sim-core]
+opt-level = 3

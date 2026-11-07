@@ -64,6 +64,15 @@ def test_the_road_and_lot_worlds_render_sensors():
     assert renders('test_lot')
 
 
+def test_only_gazebo_renders_cameras_today():
+    road = worlds.world_file(str(PACKAGE), 'road')
+    assert worlds.DEFAULT_SIMULATOR == 'gazebo'
+    assert worlds.has_cameras(road, 'gazebo')
+    assert not worlds.has_cameras(road, 'own')
+    with pytest.raises(ValueError, match='simulator:=unity'):
+        worlds.check_simulator('unity')
+
+
 def test_every_world_is_named_aav_and_sits_on_the_datum():
     navsat = SRC / 'localization' / 'aav_localization' / 'config' / 'navsat.yaml'
     lat, lon, _ = yaml.safe_load(navsat.read_text())['navsat_transform']['ros__parameters'][
