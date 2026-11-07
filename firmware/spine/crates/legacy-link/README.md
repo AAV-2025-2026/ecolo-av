@@ -69,6 +69,7 @@ brakes) rather than misread it. `ParserV3` reads version 2 frames too, so the Or
 |---|---|
 | `FrameV3::encode`, `FrameV3::decode` | 20 bytes ↔ the version 2 fields and a `CalRequest` (`Off`, `Limp`, `Jog(counts)`); an unknown mode, a target with limp, or one past 4095 is `Field` |
 | `ParserV3::new`, `ParserV3::push` | versions 2 and 3, told apart by byte 1; any other version is `Version` at once |
+| `ParserV3::last_accepted` | the version byte and the CRC (`Accepted`) of the last frame it gave back whole: for a status line (`firmware/status`) |
 | `SteerCal` | the rules (below), one tick at a time: `take` a fresh frame's `Ask`, `step` with the tick's `Situation`, get a `SteeringDrive` (`Spine`, `MotorOff`, `Target(counts)`) |
 | `CalState`, `Refusal` | what it does, for the uplink: `Off`, `Limp`, `Jog`, `Hold`, `Return`, `Refused(why)` |
 | `CAL_RATE`, `CAL_TIMEOUT_MS`, `COUNTS_MAX` | 300 counts a second, 100 ms, 4095 |

@@ -60,7 +60,8 @@ pub use actuators::{Actuators, Devices, Positions, Readings};
 pub use board::{Board, CanFrame, WheelCount};
 pub use calibration::Calibration;
 pub use link::{
-    CanLink, CommandLink, FrameVersion, LegacyLink, LinkStats, NoUplink, Report, UPLINK_PERIOD_MS,
+    CanLink, CommandLink, FrameVersion, LastFrame, LegacyLink, LinkStats, NoUplink, Report,
+    UPLINK_PERIOD_MS,
 };
 pub use spine_board::SpineBoard;
 pub use stand_in::{DeviceTargets, StandInBus};
