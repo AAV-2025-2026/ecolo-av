@@ -7,7 +7,7 @@
 <!-- Generated from docs/esp32-bench.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>First flash on the bench: the Rust ESP32</h1>
-<div class="meta">16 min read · 8 sections</div></header>
+<div class="meta">19 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -100,7 +100,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#before-the-board-the-emulator">Before the board: the emulator</a><a href="#what-you-need">What you need</a><a href="#1-build-and-save-the-c-first">1. Build, and save the C++ first</a><a href="#2-flash">2. Flash</a><a href="#3-checks-wheels-off-the-ground">3. Checks, wheels off the ground</a><a href="#the-uplink-and-the-rc-modes-on-the-bench">The uplink and the RC modes, on the bench</a><a href="#4-roll-back-to-the-c">4. Roll back to the C++</a><a href="#after-the-bench">After the bench</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#before-the-board-the-emulator">Before the board: the emulator</a><a href="#what-you-need">What you need</a><a href="#1-build-and-save-the-c-first">1. Build, and save the C++ first</a><a href="#2-flash">2. Flash</a><a href="#2a-the-first-check-the-gate">2a. The first check: the gate</a><a href="#3-checks-wheels-off-the-ground">3. Checks, wheels off the ground</a><a href="#the-uplink-and-the-rc-modes-on-the-bench">The uplink and the RC modes, on the bench</a><a href="#4-roll-back-to-the-c">4. Roll back to the C++</a><a href="#after-the-bench">After the bench</a></nav>
 <div class="lead"><p>The plan for the first time the Rust program (<code>firmware/spine/boards/esp32-umod</code>) goes onto
 the car's ESP32 control board. Do it with Ben, <strong>wheels off the ground</strong>, with the C++
 ready to go back on. What the program is: <a href="rust-firmware.html">Rust firmware</a>.</p>
@@ -586,14 +586,173 @@ over each run they agreed to 0.1 %.</p>
 <tr>
 <td>3</td>
 <td>read the first lines</td>
-<td><code>spine-esp32-umod 0.1.0, link: Motor-Pi UART, version 2 frames (the Orin's heartbeat); the last reset: …</code></td>
+<td><code>spine-esp32-umod 0.1.0, link: Motor-Pi UART, version 2 frames (the Orin's heartbeat); the last reset: …</code>, then <code>CONFIG …</code> and <code>DEVICES 4/4 answered …</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>leave the monitor: <strong>Ctrl-C</strong></td>
+<td>the port is free for the first check</td>
 </tr>
 </tbody>
 </table></div>
 <p>If it won't connect: hold the board's BOOT button while it starts flashing.</p>
 </section>
+<section class="card"><h2 id="2a-the-first-check-the-gate">2a. The first check: the gate</h2>
+<p>Before any check below, let the board judge itself. Pi's bridge <strong>off</strong>, RC transmitter
+on, nothing else.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Command</th>
+<th>Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>pixi run esp first-check</code> (or <code>pixi run esp first-check /dev/cu.usbserial-…</code>)</td>
+<td>it reads the log for 30 s; it sends nothing</td>
+</tr>
+<tr>
+<td>2</td>
+<td>read the last line</td>
+<td><code>SAFE TO GO ON to the next step</code>: go to 3. <code>STOP: &lt;check&gt;, roll back</code>: section 4</td>
+</tr>
+</tbody>
+</table></div>
+<p>Opening the port can restart the board (its reset wiring): that is fine, the check sees
+the boot. <code>--save board.log</code> keeps what it read; <code>--pi on</code> once the bridge runs (then the
+link must say OK); <code>--json</code> for a machine.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>PASS when</th>
+<th>If not</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Build</td>
+<td>the commit in the <code>CONFIG</code> line is this checkout's</td>
+<td>flash again</td>
+</tr>
+<tr>
+<td>Features</td>
+<td><code>legacy-uart</code> (<code>json-log</code>, <code>wifi-status</code> allowed), never <code>qemu</code></td>
+<td>build the right one</td>
+</tr>
+<tr>
+<td>Last reset</td>
+<td>a power-on</td>
+<td>a watchdog (a tick hung), a panic, a brown-out: roll back</td>
+</tr>
+<tr>
+<td>Devices</td>
+<td>all four answered at boot: steering Jrk 0x05, brake Jrk 0x04, DAC 0x0C, expander 0x20; each Jrk's feedback mode</td>
+<td>a wire, a power, an address</td>
+</tr>
+<tr>
+<td>Brake</td>
+<td>at <code>IDLE_BRAKE</code> (1.0: full on)</td>
+<td>roll back</td>
+</tr>
+<tr>
+<td>Throttle</td>
+<td>0</td>
+<td><strong>e-stop</strong>, roll back</td>
+</tr>
+<tr>
+<td>Steering</td>
+<td>centred (1950)</td>
+<td>roll back</td>
+</tr>
+<tr>
+<td>Mode</td>
+<td>stopped, not armed, latched</td>
+<td>roll back</td>
+</tr>
+<tr>
+<td>Faults</td>
+<td>none, or only 1 (command timeout) and 256 (RC lost: the transmitter is off)</td>
+<td>the fault names the device</td>
+</tr>
+<tr>
+<td>Tick</td>
+<td>the worst gap under 50 ms, half the watchdog</td>
+<td>roll back</td>
+</tr>
+<tr>
+<td>Restarts</td>
+<td>none in the 30 s</td>
+<td>roll back</td>
+</tr>
+<tr>
+<td>Pi link</td>
+<td>INFO only: says what the board sees. NO FRAMES is right with the bridge off</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>The Pi link, judged on the board by the spine's own 100 ms rule (<code>spine_board::LinkHealth</code>):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>The board says</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OK</td>
+<td>frames with the Orin's counter moving</td>
+</tr>
+<tr>
+<td>NO FRAMES</td>
+<td>nothing yet: the bridge is off, or the cable</td>
+</tr>
+<tr>
+<td>STALE</td>
+<td>frames came, then stopped</td>
+</tr>
+<tr>
+<td>COUNTER FROZEN</td>
+<td>the Pi sends, the Orin's counter doesn't move: is the output mux running?</td>
+</tr>
+<tr>
+<td>BAD FRAMES</td>
+<td>bad frames or stray bytes in the last 3 s: the cable, or <code>frame_version</code> (2 for this build)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The board also says it once a second on the cable (<code>HEALTH link=… age_ms=… counter_moving=…
+devices=4/4 faults=…</code>), and with <code>wifi-status</code> at <code>/health</code> and in big words on its page.</p>
+<p>The QEMU build, booted idle (<code>pixi run esp first-check --qemu</code>, 7 Nov, Ben's Mac):</p>
+<pre class="highlight"><code class="language-text">Check       Result  What it saw
+----------  ------  -----------
+Log         PASS    245 lines, text form
+Build       PASS    216ca6b
+Features    PASS    legacy-uart,qemu,uplink
+Last reset  PASS    power-on
+Devices     PASS    4/4: steering 0x05 answered, feedback analog; brake 0x04 answered, ...
+Brake       PASS    1.00 (IDLE_BRAKE 1.0)
+Throttle    PASS    0 in every line
+Steering    PASS    centred
+Mode        PASS    stopped, not armed, latched
+Faults      PASS    0x0000
+Tick        PASS    worst gap 10.1 ms (under 50); 0 late ticks in the window
+Restarts    PASS    none in the window
+Pi link     INFO    NO FRAMES: right while the Pi's bridge is off
+
+SAFE TO GO ON to the next step</code></pre>
+<p><span class="badge b-untested">untested</span> Not run on a board yet. On the board, the text log's own prints wait on the
+UART, so the tick may come late now and then (<code>Late ticks</code>, INFO); the timing test in the
+board's README measures it.</p>
+</section>
 <section class="card"><h2 id="3-checks-wheels-off-the-ground">3. Checks, wheels off the ground</h2>
-<p>Do them in order. Stop at the first one that fails, and roll back.</p>
+<p>Only after 2a said SAFE TO GO ON. Do them in order. Stop at the first one that fails, and
+roll back.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -606,7 +765,7 @@ over each run they agreed to 0.1 %.</p>
 <tr>
 <td>1</td>
 <td>Power on, nothing else</td>
-<td>brake pulled (3500), steering centred (1950), DAC 0 V. Log: <code>STATUS t=… mode=Manual … faults=0x0000</code>. Status LED blinks fast</td>
+<td>brake pulled (3500), steering centred (1950), DAC 0 V. Log: <code>STATUS t=… mode=Manual … faults=0x0000</code> (0x0100 with the transmitter off). Status LED blinks fast</td>
 </tr>
 <tr>
 <td>2</td>
@@ -616,7 +775,7 @@ over each run they agreed to 0.1 %.</p>
 <tr>
 <td>3</td>
 <td>Start the Motor-Pi's bridge (<code>frame_version: 2</code>), with ego stale</td>
-<td>the bridge sends stop frames: brake stays full. <code>LINK</code> shows <code>frames=</code> rising, <code>bad=0</code>, <code>counter=</code> still</td>
+<td>the bridge sends stop frames: brake stays full. <code>LINK</code> shows <code>frames=</code> rising, <code>bad=0</code>, <code>counter=</code> still. <code>HEALTH link=ok</code> with the Orin's mux running, <code>link=counter_frozen</code> without</td>
 </tr>
 <tr>
 <td>4</td>

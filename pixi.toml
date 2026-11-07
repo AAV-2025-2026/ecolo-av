@@ -78,7 +78,7 @@ car-day-build = { cmd = "tools/car_day_build.sh", description = "Before car day:
 diffusion = { cmd = "tools/diffusion.sh", description = "The diffusion planner trial's data and model: pixi run diffusion data (the lattice's paths on random maps, no Gazebo), train (the model, its guard score, models/diffusion/planner.onnx; needs pixi install --locked -e learn), score" }
 get = { cmd = "tools/get.sh", description = "Download what git doesn't keep: pixi run get vendor (ROS source, 560 MB), models, mediamtx, places, street-map, carla-osm, routes, or all" }
 pico = { cmd = "tools/pico.sh", description = "Our Rust Pico 2 boards: pixi run pico <spine|wheel|sentinel> <tools|build|flash>. tools: probe-rs (once); build: the .uf2 to drag on; flash: through a debug probe, then its logs" }
-esp = { cmd = "tools/esp32.sh", description = "The Rust firmware for today's ESP32 control board: pixi run esp tools (Espressif's Rust, once), build, flash (on the USB cable, bench only), qemu-tools (QEMU, once), qemu-check (it brakes when the heartbeat stops; docs/esp32-bench.md)" }
+esp = { cmd = "tools/esp32.sh", description = "The Rust firmware for today's ESP32 control board: pixi run esp tools (Espressif's Rust, once), build, flash (on the USB cable, bench only), qemu-tools (QEMU, once), qemu-check (it brakes when the heartbeat stops; docs/esp32-bench.md), first-check [port] (right after a flash: SAFE TO GO ON or STOP; --qemu on the QEMU build)" }
 
 [dependencies]
 ros-jazzy-desktop = ">=0.11.0,<0.12"

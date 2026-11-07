@@ -30,7 +30,7 @@ is tested on a laptop, without a board. The board programs are in `boards/`:
 | [`mcp2515`](./crates/mcp2515/README.md) | the CAN controller a Pico 2 needs, over SPI: bit timing from the crystal, filters, send, receive, error state | 34 |
 | [`ibus`](./crates/ibus/README.md) | the FlySky RC receiver's iBUS frames | 25 |
 | [`spine-board`](./crates/spine-board/README.md) | the glue: spine-core's outputs to the devices, the devices to its inputs, the `Board` trait a board program implements, and the `CommandLink` trait: CAN or the UART; the tick's timing; what a status line needs; an I2C bus scan; the Pi link's verdict and the boot device check | 109 |
-| [`status-lines`](./crates/status-lines/README.md) (7 Nov) | the ESP32's JSON status lines (`firmware/status`): `hb`, `status`, `event`, into a fixed buffer, byte for byte as `golden.jsonl`; a few bytes a tick to a slow log | 14 |
+| [`status-lines`](./crates/status-lines/README.md) (7 Nov) | the ESP32's JSON status lines (`firmware/status`): `hb`, `status`, `event`, `health`, `config`, `devices`, into a fixed buffer, byte for byte as `golden.jsonl`; a few bytes a tick to a slow log | 16 |
 | [`wheel-encoder`](./crates/wheel-encoder/README.md) (15 Oct) | two spoke sensors, counted the 2025-26 way (the spine and the wheel encoder share it), and the wheel encoder's UDP packet | 12 |
 | [`sentinel`](./crates/sentinel/README.md) (15 Oct) | the status display's logic: its I2C packet, its 13 LCD pages, the knob, the beeps, the matrix | 40 |
 | [`hd44780`](./crates/hd44780/README.md) (15 Oct) | the sentinel's 16x2 character LCD, on six GPIO pins | 5 |

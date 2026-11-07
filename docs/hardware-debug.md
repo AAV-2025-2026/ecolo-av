@@ -155,4 +155,4 @@ pushed by hand. How to release the brake unpowered: the hardware lead's call.
 | Which computer and network runs `hw_panel` on the day | Ben (recommended: a wired laptop) |
 | The return wire, GPIO17 to the Pi's RX (H9) | the hardware lead |
 | How to keep the counter moving while layer 1 stands still | untested |
-| The JSON status lines in the Rust firmware | not built |
+| The JSON status lines in the Rust firmware, the Pi link's verdict, `/health` | built, not flashed: `firmware/status`, `pixi run esp first-check` ([first flash](esp32-bench.md#2a-the-first-check-the-gate)) |

@@ -138,9 +138,10 @@ Each lands outside git, checksum pinned where the script says.
 |---|---|---|
 | `pico.sh` | our Rust Pico 2 boards: install probe-rs, build the UF2, flash through a probe | `pico <spine, wheel, sentinel> <tools, build, flash>` |
 | `elf2uf2.py` | a Pico 2 program into a UF2 file | (pico.sh build) |
-| `esp32.sh` | the ESP32 board's Rust: tools, build, flash, check, QEMU | `esp <tools, build, flash, qemu-tools, qemu-check>` |
-| `esp32_qemu.py` | the ESP32 firmware in QEMU: heartbeat, uplink, RC modes | (`esp qemu-check`) |
-| `esp32_status_sim.py` | a pretend ESP32 with `wifi-status` on 127.0.0.1:8765: its page, `/status.json`, `/scan` and the WebSocket of status lines (`firmware/status`), moving; read only, standard library | - |
+| `esp32.sh` | the ESP32 board's Rust: tools, build, flash, check, QEMU, the first check | `esp <tools, build, flash, first-check, qemu-tools, qemu-check>` |
+| `esp32_qemu.py` | the ESP32 firmware in QEMU: heartbeat, uplink, RC modes; `--idle` boots it and only records its log | (`esp qemu-check`, `esp first-check --qemu`) |
+| `esp32_first_check.py` | after the first flash: reads the ESP32's log on the USB cable for 30 s (or `--file`), text or JSON, and prints PASS/FAIL per check, then SAFE TO GO ON or STOP. Only reads | `esp first-check [port]` |
+| `esp32_status_sim.py` | a pretend ESP32 with `wifi-status` on 127.0.0.1:8765: its page, `/status.json`, `/health`, `/config`, `/scan` and the WebSocket of status lines (`firmware/status`), moving; read only, standard library | - |
 | `legacy_firmware.sh` | today's C++ ESP32 firmware, with PlatformIO | `-e firmware legacy-esp32` |
 
 ### Data and analysis

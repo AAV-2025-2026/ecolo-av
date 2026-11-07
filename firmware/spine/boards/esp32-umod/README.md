@@ -21,7 +21,16 @@ It only moves pins: the deciding is in `spine-core`, the devices in `spine-board
 | RC override | iBUS on GPIO32 |
 | Speed | none on this board: open loop |
 | Watchdog | TIMG1, 100 ms |
-| Log | the USB cable: a `STATUS` line every 200 ms, an event line at each change, an `FSM` line with the five state regions (`spine_core::fsm`) and a `LINK` line with the frame counts, with each `STATUS`; a `TICK` line once a second: the worst gap between ticks and the overruns, the timing test's baseline. With `json-log`: the JSON status lines instead (`firmware/status`) |
+| Log | the USB cable: a `STATUS` line every 200 ms, an event line at each change, an `FSM` line with the five state regions (`spine_core::fsm`) and a `LINK` line with the frame counts, with each `STATUS`; once a second a `TICK` line (the worst gap between ticks and the overruns, the timing test's baseline) and a `HEALTH` line (below); at boot and every 10 s a `CONFIG` and a `DEVICES` line (below). With `json-log`: the JSON status lines instead (`firmware/status`), after the boot's text `CONFIG` and `DEVICES` |
+| First look | after `init`, before the first tick: each of the four I2C devices probed (no data), and each Jrk's feedback mode read (a RAM setting; never its errors, which a read clears). Read only, about 1 ms, the car already safe |
+
+The lines `pixi run esp first-check` reads (`docs/esp32-bench.md`, 2a):
+
+| Line | Says |
+|---|---|
+| `CONFIG t=… build=… features=… link=uart frame=2 tick_ms=10 watchdog_ms=100 cmd_timeout_ms=100 idle_brake=1.00 full_throttle_speed=3.00 i2c_khz=100 steering_jrk=0x05 … steer_centre=1950 … brake_full=3500 … last_reset=ChipPowerOn` | the build and the numbers it runs with |
+| `DEVICES 4/4 answered t=… steering=0x05,answered,analog brake=0x04,answered,analog dac=0x0c,answered expander=0x20,answered` | which devices answered at boot; a Jrk's feedback mode, or `unknown` |
+| `HEALTH t=… link=ok age_ms=12 counter_moving=yes frames=… bad=… skipped=… repeats=… devices=4/4 faults=0x0000 mode=Manual armed=false` | the Pi link's verdict (`ok`, `no_frames`, `stale`, `counter_frozen`, `bad_frames`; `can` on CAN), judged on the board by the 100 ms rule |
 
 The pin map is `src/pins.rs` (and `docs/rust-firmware.md`).
 
@@ -47,8 +56,8 @@ The direction output is pin P00 of the PCA9555, not an ESP32 pin.
 | `can` | the KEFC plan: `firmware/can/aav.dbc`. Its pins are unknown: see `src/pins.rs` |
 | `estop-input` | the e-stop's spare contact on GPIO27, once wired (Q6) |
 | `qemu` | runs in Espressif's QEMU, never on the car: stand-in I2C devices, a busy-wait tick |
-| `json-log` | the JSON status lines (`firmware/status`: `hb`, `status` 5 a second, `event`) on the USB cable in place of the text lines, 96 bytes a tick so the print never waits |
-| `wifi-status` | **off by default; read only.** Joins a WiFi and serves the status page, `/status.json`, `/scan` and a WebSocket of the status lines (10 a second). Below: "WiFi status". Not with `qemu` |
+| `json-log` | the JSON status lines (`firmware/status`: `hb`, `status` 5 a second, `event`, `health` once a second, `config` and `devices` every 10 s) on the USB cable in place of the text lines, 96 bytes a tick so the print never waits |
+| `wifi-status` | **off by default; read only.** Joins a WiFi and serves the status page, `/status.json`, `/health`, `/config`, `/scan` and a WebSocket of the status lines (10 a second). Below: "WiFi status". Not with `qemu` |
 
 | File | What |
 |---|---|
@@ -105,8 +114,13 @@ The direction output is pin P00 of the PCA9555, not an ESP32 pin.
 pixi run esp tools        # once: Espressif's Rust, espup, espflash (needs rustup)
 pixi run esp build        # or: --no-default-features --features can
 pixi run esp qemu-check   # in QEMU: it brakes within 0.2 s when the heartbeat stops
+pixi run esp first-check --qemu   # the first check on the QEMU build, booted idle
 pixi run esp flash        # bench only, wheels off the ground: docs/esp32-bench.md
+pixi run esp first-check  # right after the flash: SAFE TO GO ON or STOP (only reads)
 ```
+
+`tools/esp32_first_check.py`'s tests (`tools/tests/test_esp32_first_check.py`) read made-up
+logs, both forms, and two recorded in QEMU on 7 Nov (text and `json-log`).
 
 It is a workspace of its own: it builds only for `xtensa-esp32-none-elf`, with the `esp`
 toolchain (`rust-toolchain.toml`). `tools/test.sh` runs `tools/esp32.sh check` and the
@@ -139,8 +153,10 @@ Read only, off by default, **never flashed yet**. The plan's step 8
 
 | Path, port 80 | Gives |
 |---|---|
-| `/` | `page.html`: steering, brake and throttle graphs (asked, position, low to high), pause, a window, a line filter |
+| `/` | `page.html`: a big banner, "Pi link: OK" (green), "NO FRAMES", "COUNTER FROZEN: is the mux running?", "BAD FRAMES"; the devices at boot; steering, brake and throttle graphs (asked, position, low to high), pause, a window, a line filter |
 | `/status.json` | the latest `status` line (`{}` before the first) |
+| `/health` | the latest `health` line: the link's verdict, the age of its last frame, the counter moving, frames, bad, skipped, the devices, the faults, the uptime, the last reset, the build |
+| `/config` | the latest `config` line: the build, its features, the numbers it runs with |
 | `/scan` | starts an I2C scan if none is going; `{"scan":"running","found":[4,5]}`. It waits while armed or driving |
 | `/ws` | a WebSocket: every line, as text; two clients at most; a slow one loses lines |
 

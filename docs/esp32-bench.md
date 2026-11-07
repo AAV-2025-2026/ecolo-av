@@ -162,19 +162,89 @@ over each run they agreed to 0.1 %.
 |---|---|---|
 | 1 | `vendor/cargo-tools/bin/espflash list-ports` | the board's port (a Mac: `/dev/cu.usbserial-…`) |
 | 2 | `pixi run esp flash` (add `--port <port>` if asked) | it flashes, resets, and shows the log |
-| 3 | read the first lines | `spine-esp32-umod 0.1.0, link: Motor-Pi UART, version 2 frames (the Orin's heartbeat); the last reset: …` |
+| 3 | read the first lines | `spine-esp32-umod 0.1.0, link: Motor-Pi UART, version 2 frames (the Orin's heartbeat); the last reset: …`, then `CONFIG …` and `DEVICES 4/4 answered …` |
+| 4 | leave the monitor: **Ctrl-C** | the port is free for the first check |
 
 If it won't connect: hold the board's BOOT button while it starts flashing.
 
+## 2a. The first check: the gate
+
+Before any check below, let the board judge itself. Pi's bridge **off**, RC transmitter
+on, nothing else.
+
+| Step | Command | Check |
+|---|---|---|
+| 1 | `pixi run esp first-check` (or `pixi run esp first-check /dev/cu.usbserial-…`) | it reads the log for 30 s; it sends nothing |
+| 2 | read the last line | `SAFE TO GO ON to the next step`: go to 3. `STOP: <check>, roll back`: section 4 |
+
+Opening the port can restart the board (its reset wiring): that is fine, the check sees
+the boot. `--save board.log` keeps what it read; `--pi on` once the bridge runs (then the
+link must say OK); `--json` for a machine.
+
+| Check | PASS when | If not |
+|---|---|---|
+| Build | the commit in the `CONFIG` line is this checkout's | flash again |
+| Features | `legacy-uart` (`json-log`, `wifi-status` allowed), never `qemu` | build the right one |
+| Last reset | a power-on | a watchdog (a tick hung), a panic, a brown-out: roll back |
+| Devices | all four answered at boot: steering Jrk 0x05, brake Jrk 0x04, DAC 0x0C, expander 0x20; each Jrk's feedback mode | a wire, a power, an address |
+| Brake | at `IDLE_BRAKE` (1.0: full on) | roll back |
+| Throttle | 0 | **e-stop**, roll back |
+| Steering | centred (1950) | roll back |
+| Mode | stopped, not armed, latched | roll back |
+| Faults | none, or only 1 (command timeout) and 256 (RC lost: the transmitter is off) | the fault names the device |
+| Tick | the worst gap under 50 ms, half the watchdog | roll back |
+| Restarts | none in the 30 s | roll back |
+| Pi link | INFO only: says what the board sees. NO FRAMES is right with the bridge off | |
+
+The Pi link, judged on the board by the spine's own 100 ms rule (`spine_board::LinkHealth`):
+
+| The board says | Means |
+|---|---|
+| OK | frames with the Orin's counter moving |
+| NO FRAMES | nothing yet: the bridge is off, or the cable |
+| STALE | frames came, then stopped |
+| COUNTER FROZEN | the Pi sends, the Orin's counter doesn't move: is the output mux running? |
+| BAD FRAMES | bad frames or stray bytes in the last 3 s: the cable, or `frame_version` (2 for this build) |
+
+The board also says it once a second on the cable (`HEALTH link=… age_ms=… counter_moving=…
+devices=4/4 faults=…`), and with `wifi-status` at `/health` and in big words on its page.
+
+The QEMU build, booted idle (`pixi run esp first-check --qemu`, 7 Nov, Ben's Mac):
+
+```text
+Check       Result  What it saw
+----------  ------  -----------
+Log         PASS    245 lines, text form
+Build       PASS    216ca6b
+Features    PASS    legacy-uart,qemu,uplink
+Last reset  PASS    power-on
+Devices     PASS    4/4: steering 0x05 answered, feedback analog; brake 0x04 answered, ...
+Brake       PASS    1.00 (IDLE_BRAKE 1.0)
+Throttle    PASS    0 in every line
+Steering    PASS    centred
+Mode        PASS    stopped, not armed, latched
+Faults      PASS    0x0000
+Tick        PASS    worst gap 10.1 ms (under 50); 0 late ticks in the window
+Restarts    PASS    none in the window
+Pi link     INFO    NO FRAMES: right while the Pi's bridge is off
+
+SAFE TO GO ON to the next step
+```
+
+[[untested]] Not run on a board yet. On the board, the text log's own prints wait on the
+UART, so the tick may come late now and then (`Late ticks`, INFO); the timing test in the
+board's README measures it.
+
 ## 3. Checks, wheels off the ground
 
-Do them in order. Stop at the first one that fails, and roll back.
+Only after 2a said SAFE TO GO ON. Do them in order. Stop at the first one that fails, and
+roll back.
 
 | # | Do | Expect |
 |---|---|---|
-| 1 | Power on, nothing else | brake pulled (3500), steering centred (1950), DAC 0 V. Log: `STATUS t=… mode=Manual … faults=0x0000`. Status LED blinks fast |
+| 1 | Power on, nothing else | brake pulled (3500), steering centred (1950), DAC 0 V. Log: `STATUS t=… mode=Manual … faults=0x0000` (0x0100 with the transmitter off). Status LED blinks fast |
 | 2 | Unplug a Jrk's I2C, then plug it back | the red LED and a fault bit (8 steering, 16 brake) while it is out |
-| 3 | Start the Motor-Pi's bridge (`frame_version: 2`), with ego stale | the bridge sends stop frames: brake stays full. `LINK` shows `frames=` rising, `bad=0`, `counter=` still |
+| 3 | Start the Motor-Pi's bridge (`frame_version: 2`), with ego stale | the bridge sends stop frames: brake stays full. `LINK` shows `frames=` rising, `bad=0`, `counter=` still. `HEALTH link=ok` with the Orin's mux running, `link=counter_frozen` without |
 | 4 | Drive slowly from ROS (keyboard or joystick, 0.3 m/s) | `mode=Computer`, green LED, brake lets go (400), the DAC rises smoothly (600 codes a second at most), the wheels turn **forward** |
 | 5 | Steer left from ROS | the wheels turn **left**. If right: the steering sign (Q2), in `legacy.yaml` |
 | 6 | Stop from ROS | throttle 0; the bridge's hold brake: target 1050, as the C++ gave it |
