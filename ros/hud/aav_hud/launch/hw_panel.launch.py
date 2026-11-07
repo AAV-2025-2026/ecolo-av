@@ -3,6 +3,7 @@ The hardware panel (aav_hud): one window, which is also the ROS node `hw_panel`.
 
   ros2 launch aav_hud hw_panel.launch.py
   ros2 launch aav_hud hw_panel.launch.py stands:=true fullscreen:=true monitor:=1
+  ros2 launch aav_hud hw_panel.launch.py esp32:=ws://192.168.4.1:81/
 
 Every sensor's number straight from its own node, and very simple buttons for the
 actuators: Speed +/-, the steering arrows, CENTRE, STOP, GO held to drive (Space), and
@@ -11,7 +12,8 @@ speed buttons work only on SIM and BENCH, never the real car on the ground, and 
 (stands:=true) only once a driven-wheel speed exists (TODO 49b).
 
 Topic names, steps and caps: config/hw_panel.yaml. The car: aav_description's
-vehicle.yaml. monitor: as in hud.launch.py, by name or number. It needs a screen.
+vehicle.yaml. monitor: as in hud.launch.py, by name or number. esp32: the ESP32's
+WebSocket, read only, for the GRAPHS page (its JSON status lines). It needs a screen.
 Design: docs/designs/2026-10-29_two-screens.md.
 """
 
@@ -35,6 +37,9 @@ def panel_node(context):
     monitor = LaunchConfiguration('monitor').perform(context).strip()
     if monitor:
         arguments += ['--monitor', monitor]
+    esp32 = LaunchConfiguration('esp32').perform(context).strip()
+    if esp32:
+        arguments += ['--esp32', esp32]
     return [Node(
         package='aav_hud',
         executable='hw_panel',
@@ -57,5 +62,9 @@ def generate_launch_description():
         DeclareLaunchArgument('monitor', default_value='',
                               description='The monitor, by name or number; '
                                           'empty: wherever the desktop puts it'),
+        DeclareLaunchArgument('esp32', default_value='',
+                              description="The ESP32's WebSocket for its status lines, "
+                                          'such as ws://192.168.4.1:81/ (read only); '
+                                          'empty: not read'),
         OpaqueFunction(function=panel_node),
     ])

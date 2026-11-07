@@ -101,6 +101,18 @@ impl ParserV2 {
 pub struct ParserV3 {
     buf: [u8; FRAME_V3_LEN],
     len: usize,
+    last: Option<Accepted>,
+}
+
+/// What [`ParserV3`] knew of the last frame it gave back whole, beyond its fields: its
+/// version byte and its last byte, the CRC. Together with the counter they tell one
+/// frame from another in a status line (`firmware/status/README.md`: `rx`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Accepted {
+    /// 2 or 3.
+    pub version: u8,
+    /// The frame's last byte: its CRC-8.
+    pub check: u8,
 }
 
 impl ParserV3 {
@@ -108,7 +120,14 @@ impl ParserV3 {
         ParserV3 {
             buf: [0; FRAME_V3_LEN],
             len: 0,
+            last: None,
         }
+    }
+
+    /// The version and CRC of the last frame [`ParserV3::push`] gave back as `Ok`;
+    /// `None` before the first.
+    pub fn last_accepted(&self) -> Option<Accepted> {
+        self.last
     }
 
     /// One byte. Returns a frame, a frame turned down, or nothing yet.
@@ -141,6 +160,10 @@ impl ParserV3 {
             _ => FrameV3::decode(&self.buf),
         };
         if result.is_ok() {
+            self.last = Some(Accepted {
+                version: self.buf[1],
+                check: self.buf[want - 1],
+            });
             self.drop_front(want);
         } else {
             self.restart(want);
@@ -427,5 +450,32 @@ mod v3_tests {
             })
             .collect();
         assert!(feed(&mut p, &v1).0.is_empty());
+    }
+
+    #[test]
+    fn it_remembers_the_version_and_crc_of_the_last_good_frame() {
+        let mut p = ParserV3::new();
+        assert_eq!(p.last_accepted(), None);
+        let three = frame(1, CalRequest::Off).encode();
+        feed(&mut p, &three);
+        assert_eq!(
+            p.last_accepted(),
+            Some(Accepted {
+                version: 3,
+                check: three[19]
+            })
+        );
+        let two = v2(2).encode();
+        feed(&mut p, &two);
+        let want = Some(Accepted {
+            version: 2,
+            check: two[16],
+        });
+        assert_eq!(p.last_accepted(), want);
+        // A bad frame leaves it as it was.
+        let mut bad = frame(3, CalRequest::Off).encode();
+        bad[19] ^= 1;
+        feed(&mut p, &bad);
+        assert_eq!(p.last_accepted(), want);
     }
 }

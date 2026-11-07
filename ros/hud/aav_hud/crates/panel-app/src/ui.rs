@@ -15,9 +15,10 @@
 //! +--------------------------------------------------------------+
 //! ```
 //!
-//! Two pages, by the tabs or Tab: DRIVE (above) and STEERING CALIBRATION
+//! Three pages, by the tabs or Tab: DRIVE (above), STEERING CALIBRATION
 //! ([`calibration`]: find the steering actuator's ends and centre, the limits, the
-//! lock-to-lock check).
+//! lock-to-lock check) and GRAPHS ([`graphs`]: what the Pi wrote and the ESP32 got, hop
+//! by hop, over 60 s).
 //!
 //! Every colour comes from the theme (`hud_core::theme`, `theme:` in
 //! config/hw_panel.yaml), as the HUD's: the pills, the buttons, the E-STOP's red. In
@@ -26,8 +27,9 @@
 //! (`hud_app::paint::faint_car`).
 
 mod calibration;
+mod graphs;
 
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use hud_app::paint::{self, ToColor};
 use hud_core::{
@@ -37,8 +39,9 @@ use hud_core::{
 };
 use panel_core::{
     buttons::{Buttons, Press},
-    calibration::{CalPage, CalPress, NotReady},
+    calibration::{Allowance, CalPage, CalPress},
     gate::Gate,
+    graphs::Freezer,
     state::{PanelState, Row},
     steering_limits::Mark,
 };
@@ -62,6 +65,7 @@ const CAR_FROM: f32 = 0.6;
 pub enum Page {
     Drive,
     Calibration,
+    Graphs,
 }
 
 impl Page {
@@ -69,14 +73,18 @@ impl Page {
         match self {
             Self::Drive => "DRIVE",
             Self::Calibration => "STEERING CAL",
+            Self::Graphs => "GRAPHS",
         }
     }
 
-    /// The other page (Tab).
-    pub fn other(self) -> Self {
+    pub const ALL: [Page; 3] = [Page::Drive, Page::Calibration, Page::Graphs];
+
+    /// The next page (Tab).
+    pub fn next(self) -> Self {
         match self {
             Self::Drive => Self::Calibration,
-            Self::Calibration => Self::Drive,
+            Self::Calibration => Self::Graphs,
+            Self::Graphs => Self::Drive,
         }
     }
 }
@@ -94,6 +102,8 @@ pub enum Button {
     Cal(CalPress),
     /// The calibration page: write the result to a file.
     Save,
+    /// The graphs page: freeze them, or go live again.
+    Freeze,
 }
 
 impl Button {
@@ -110,7 +120,9 @@ impl Button {
             Self::Cal(CalPress::Mark(Mark::Right)) => "MARK RIGHT",
             Self::Cal(CalPress::ClearMarks) => "CLEAR MARKS",
             Self::Cal(CalPress::Check) => "LOCK-TO-LOCK CHECK",
+            Self::Cal(CalPress::ConfirmStill) => "ON STANDS, STILL",
             Self::Save => "SAVE",
+            Self::Freeze => "FREEZE (P)",
             Self::Press(Press::SpeedUp) => "SPEED +",
             Self::Press(Press::SpeedDown) => "SPEED -",
             Self::Press(Press::Left) => "< LEFT",
@@ -129,15 +141,16 @@ pub fn layout(w: f32, page: Page) -> Vec<(Button, Rectangle)> {
         Button::Estop,
         Rectangle::new(w - MARGIN - 240.0, 14.0, 240.0, 84.0),
     )];
-    let tab_w = 170.0;
-    let tab_x = w - MARGIN - 240.0 - 16.0 - 2.0 * tab_w - 8.0;
-    for (i, p) in [Page::Drive, Page::Calibration].into_iter().enumerate() {
+    let tab_w = 160.0;
+    let tab_x = w - MARGIN - 240.0 - 16.0 - 3.0 * tab_w - 16.0;
+    for (i, p) in Page::ALL.into_iter().enumerate() {
         let x = tab_x + i as f32 * (tab_w + 8.0);
         buttons.push((Button::Tab(p), Rectangle::new(x, 58.0, tab_w, 36.0)));
     }
     match page {
         Page::Drive => buttons.extend(drive_layout(w)),
         Page::Calibration => buttons.extend(calibration::layout(w)),
+        Page::Graphs => buttons.extend(graphs::layout(w)),
     }
     buttons
 }
@@ -218,12 +231,16 @@ pub struct Frame<'a> {
     pub stands: bool,
     pub page: Page,
     pub cal: &'a CalPage,
-    /// Why the calibration page may not ask now (empty: allowed).
-    pub cal_ready: &'a [NotReady],
+    /// Whether the software allows the calibration page to ask now, and on what.
+    pub cal_allowance: &'a Allowance,
     /// The calibration result's file, once saved.
     pub saved: Option<&'a str>,
     /// The little robot drives across the bottom lane: the keys line steps aside.
     pub hide_keys: bool,
+    /// The graphs page's FREEZE.
+    pub freezer: &'a Freezer,
+    /// A topic this quiet is STALE (the hops too).
+    pub stale_after: Duration,
 }
 
 /// The little robot's room (the easter egg): where nothing else is drawn this frame.
@@ -347,11 +364,15 @@ impl Ui {
             self.text(d, &banner, MARGIN, 62.0, 18.0, t.not_real_text);
         }
 
-        for &(b, r) in buttons.iter().take(3) {
+        // The E-STOP and the tabs, on every page.
+        let header = 1 + Page::ALL.len();
+        for &(b, r) in buttons.iter().take(header) {
             self.button(d, b, r, f, true);
         }
-        if f.page == Page::Calibration {
-            return self.draw_calibration(d, state, f, &buttons[3..]);
+        match f.page {
+            Page::Calibration => return self.draw_calibration(d, state, f, &buttons[header..]),
+            Page::Graphs => return self.draw_graphs(d, state, f, &buttons[header..]),
+            Page::Drive => {}
         }
 
         // Where the speed buttons may drive.
@@ -385,7 +406,7 @@ impl Ui {
             self.text(d, caption, x, 146.0, 17.0, t.caption);
         }
 
-        for &(b, r) in &buttons[3..] {
+        for &(b, r) in &buttons[header..] {
             let enabled = match b {
                 Button::Press(Press::Stop | Press::Centre) => true,
                 Button::Go | Button::Press(_) => speed_on,
@@ -505,7 +526,7 @@ impl Ui {
             y += row_h;
         }
         let keys = "keys: Space held = GO   Up/+ Down/- speed   Left Right steer   C centre   \
-                    S stop   E e-stop   Tab steering calibration   F11 full screen";
+                    S stop   E e-stop   Tab next page   F11 full screen";
         let keys = fit(&self.font, keys, w - 2.0 * MARGIN, 15.0);
         if !f.hide_keys {
             self.text(d, &keys, MARGIN, h - 26.0, 15.0, t.dim);
@@ -565,7 +586,9 @@ impl Ui {
         let t = self.theme;
         let down = f.held == Some(b)
             || (b == Button::Go && f.buttons.is_driving())
-            || b == Button::Tab(f.page);
+            || b == Button::Tab(f.page)
+            || (b == Button::Cal(CalPress::ConfirmStill) && f.cal.still_confirmed())
+            || (b == Button::Freeze && f.freezer.frozen().is_some());
         let (fill, ink) = match (b, enabled, down) {
             (Button::Estop, _, true) => (t.stop_fill_alt, t.stop_ink),
             (Button::Estop, _, false) => (t.stop_fill, t.stop_ink),
@@ -581,7 +604,7 @@ impl Ui {
         let size = match b {
             Button::Estop => 34.0,
             Button::Tab(_) => 18.0,
-            Button::Cal(_) | Button::Save => 21.0,
+            Button::Cal(_) | Button::Save | Button::Freeze => 21.0,
             _ => 26.0,
         };
         let label = b.label();
@@ -650,7 +673,7 @@ mod tests {
 
     #[test]
     fn the_buttons_never_overlap() {
-        for page in [Page::Drive, Page::Calibration] {
+        for page in Page::ALL {
             for w in [1100.0, 1280.0, 1920.0] {
                 let buttons = layout(w, page);
                 for (i, (a, ra)) in buttons.iter().enumerate() {
@@ -664,7 +687,7 @@ mod tests {
                 }
             }
         }
-        assert_eq!(layout(1280.0, Page::Drive).len(), 10);
+        assert_eq!(layout(1280.0, Page::Drive).len(), 11);
     }
 
     #[test]
@@ -692,6 +715,7 @@ mod tests {
         let room = Room::new(1280.0, 860.0, 850.0, 800.0, &wide);
         assert_eq!(room.corner, None);
         assert_eq!(room.lane, None);
-        assert_eq!(layout(1280.0, Page::Calibration).len(), 3 + 11);
+        assert_eq!(layout(1280.0, Page::Calibration).len(), 4 + 12);
+        assert_eq!(layout(1280.0, Page::Graphs).len(), 4 + 1);
     }
 }

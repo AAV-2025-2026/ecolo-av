@@ -37,6 +37,9 @@ pub enum Off {
     OnTheGround,
     /// The real car on stands, refused by the preflight's rules.
     Refused(Refusal),
+    /// The real car on stands with no wheel speed seen (none, stale or NaN): the
+    /// throttle goes only where its effect is measured.
+    NoWheelSpeed,
 }
 
 impl fmt::Display for Off {
@@ -52,6 +55,10 @@ impl fmt::Display for Off {
                  and the car on stands (--stands) once TODO 49b is answered",
             ),
             Self::Refused(r) => write!(f, "on stands: {r}"),
+            Self::NoWheelSpeed => f.write_str(
+                "on stands: no wheel speed is seen (/vehicle/status: none, stale or NaN), so \
+                 the throttle stays off; steering and brake don't need GO",
+            ),
         }
     }
 }
@@ -68,6 +75,8 @@ pub struct Situation<'a> {
     pub no_timeout_lock: Option<bool>,
     /// The legacy bridge's `speed_loop.mode`, if known (the panel doesn't read it yet).
     pub speed_loop_mode: Option<&'a str>,
+    /// A wheel speed is measured now (fresh, a number; NaN is not).
+    pub speed_seen: bool,
 }
 
 /// The caps, from the settings.
@@ -97,6 +106,7 @@ pub fn gate(s: &Situation<'_>, caps: Caps) -> Gate {
             s.no_timeout_lock,
             s.speed_loop_mode,
         ) {
+            Ok(()) if !s.speed_seen => Gate::Off(Off::NoWheelSpeed),
             Ok(()) => on(caps.stands, true),
             Err(r) => Gate::Off(Off::Refused(r)),
         },
@@ -119,6 +129,7 @@ mod tests {
             speed_wheels: wheels,
             no_timeout_lock: Some(false),
             speed_loop_mode: None,
+            speed_seen: true,
         }
     }
 
@@ -170,6 +181,14 @@ mod tests {
                 watch_unseen: true
             }
         );
+        // Every rule passes, but no speed is seen (NaN, or none): the throttle stays off.
+        let mut blind = situation(Kind::Real, true, Some(&rear));
+        blind.speed_seen = false;
+        assert_eq!(gate(&blind, CAPS), Gate::Off(Off::NoWheelSpeed));
+        // Gazebo and the bench don't need it: their speed is the simulator's.
+        let mut sim = situation(Kind::Sim, true, None);
+        sim.speed_seen = false;
+        assert!(matches!(gate(&sim, CAPS), Gate::On { .. }));
         let mut locked = situation(Kind::Real, true, Some(&rear));
         locked.no_timeout_lock = Some(true);
         assert!(matches!(

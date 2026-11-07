@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hardware debug: one part at a time · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/hardware-debug.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Hardware debug: one part at a time</h1>
+<div class="meta">9 min read · 7 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="release-0.2.html">The 0.2 guide</a>
+<a href="whats-new.html">What&#x27;s new</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-day.html">Car day</a>
+<a href="car-setup.html">Car setup</a>
+<a href="tests.html">Every test</a>
+<a href="know-the-car.html">Know the car</a>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<span class="sep">Learn:</span>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-speed.html">Learn: speed</a>
+<a href="learn-lidar.html">Learn: lidar</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<span class="sep">Reference:</span>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="path-followers.html">Path followers</a>
+<a href="switches.html">Switches</a>
+<a href="trials.html">Trials</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a class="here" href="hardware-debug.html">Hardware debug</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="geofence.html">The geofence</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#the-three-layers">The three layers</a><a href="#before-any-layer">Before any layer</a><a href="#layer-1-the-parts">Layer 1: the parts</a><a href="#layer-2-by-hand-through-the-pi">Layer 2: by hand, through the Pi</a><a href="#layer-3-egos-messages">Layer 3: ego&#x27;s messages</a><a href="#the-rollout-sheet-the-wheels-size">The rollout sheet (the wheel&#x27;s size)</a><a href="#open">Open</a></nav>
+<div class="lead"><p><strong>The aim:</strong> see whether the Motor Pi passes its messages to the ESP32 correctly, and take
+the car's measurements, one part at a time. The plan and its two reviews:
+<code>docs/designs/2026-11-07_esp32-debug-link_brief.md</code> ("The plan now" wins).</p>
+<p><strong>Status:</strong> written 7 Nov. Nothing here has run on the car. The link check is tested on
+made-up recordings only.</p></div>
+<section class="card"><h2 id="the-three-layers">The three layers</h2>
+<pre class="highlight"><code class="language-text"> Layer 1  PARTS   the calibration page ─► Pi ─► ESP32 ─► steering Jrk      (lock to lock, small steps)
+ Layer 2  HAND    joystick ─► ego ─► mux ─► Pi ─► ESP32 ─► Jrks and DAC    (all on the Pi, auto-brake kept)
+ Layer 3  EGO     programs ─► ego (Orin) ─► mux ─► Pi ─► ESP32             (what ego asks, what went out)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>For</th>
+<th>Proves</th>
+<th>Needs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>The steering's ends and centre, by the hardware panel</td>
+<td>the steering Jrk moves where it's told, and reports it</td>
+<td>Rust, the uplink wire (H9), link version 3</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Driving by hand, on stands</td>
+<td>the Pi's frames reach the ESP32: <code>pixi run link-check</code></td>
+<td>Rust, link version 2</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Debugging ego's messages</td>
+<td>what ego asked is what the Pi wrote</td>
+<td>layer 2 passed, the Orin</td>
+</tr>
+</tbody>
+</table></div>
+<p>The layers are views of the plan's steps, not a strict order. Layer 1 already needs ego and
+an open gate (review 2, B3): the firmware reads a calibration request only from a frame with
+a new counter.</p>
+</section>
+<section class="card"><h2 id="before-any-layer">Before any layer</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>Where</th>
+<th>Done</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>The car on stands, all four wheels off the ground; the Kar-Tech stop in a hand</td>
+<td><a href="car-day.html#session-1-safety-first">car day, A1</a></td>
+<td>☐</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>A USB cable</strong> to the ESP32 and to each Jrk. Check the connector types first</td>
+<td>the hardware lead</td>
+<td>☐</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Each Jrk's current limit, set over USB</strong> in Pololu's Jrk G2 utility (Motor tab), before any sweep or step. Both Jrks: steering and brake</td>
+<td><a href="actuator-tests.html#way-a-pololus-utility-over-usb-car-day">Way A, A4</a></td>
+<td>☐</td>
+</tr>
+<tr>
+<td>4</td>
+<td>The Motor Pi's UART ready: console off, theirs off at boot, ours on</td>
+<td><a href="car-day.html#a7b-the-motor-pis-uart-ready">car day, A7b</a></td>
+<td>☐</td>
+</tr>
+<tr>
+<td>5</td>
+<td>The Rust ESP32 flashed and its checks passed, link version 2</td>
+<td><a href="car-day.html#session-6-the-esp32">car day, A8</a></td>
+<td>☐</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Recording on: <code>~/aav-jazzy/aav.sh tools/record.sh &lt;name&gt;</code></td>
+<td>it keeps <code>/control/car/link_frame</code></td>
+<td>☐</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Current limit (hardware lead)</th>
+<th>Steering Jrk</th>
+<th>Brake Jrk</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Old value</td>
+<td>______</td>
+<td>______</td>
+</tr>
+<tr>
+<td>Set for today</td>
+<td>______</td>
+<td>______</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">Throttle tests need a wheel speed</p>
+<p>The actuator tests refuse a throttle test on the real car while <code>/vehicle/odom</code> can't
+see the driven wheels. Don't work round it. Known bug, not fixed: the hardware panel's
+"is the car moving?" check passes on NaN (review 2, M5). Today's board says NaN, so
+the panel can't be trusted on that point.</p>
+</div>
+</section>
+<section class="card"><h2 id="layer-1-the-parts">Layer 1: the parts</h2>
+<p><strong>The steering, lock to lock, or small steps.</strong> The hardware panel's STEERING CAL page:
+<a href="actuator-tests.html#way-b-the-hardware-panel-rust-firmware">Way B</a>. Limp and mark by hand,
+or HOLD and step 25 counts a press, then the LOCK-TO-LOCK CHECK.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Needs</th>
+<th>Setting</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The Rust with the uplink, H9 confirmed</td>
+<td><code>uplink: true</code></td>
+</tr>
+<tr>
+<td>Link version 3</td>
+<td><code>frame_version: 3</code></td>
+</tr>
+<tr>
+<td>The hardware lead's say-so, this session only</td>
+<td><code>steering_calibration: stands</code>, back to <code>none</code> after</td>
+</tr>
+<tr>
+<td>The Jrk's feedback analog</td>
+<td>Pololu's utility, Feedback tab</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The brake: no page yet.</strong> Use Pololu's utility over USB, and the sheet below. The
+hardware lead rules on hands near the wheels.</p>
+<h3 id="the-brake-sheet">The brake sheet</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Point</th>
+<th>How to find it</th>
+<th>Counts</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Released</td>
+<td>the brake actuator fully back</td>
+<td>______</td>
+<td></td>
+</tr>
+<tr>
+<td>First drag</td>
+<td>a rear wheel turned by hand starts to drag</td>
+<td>______</td>
+<td>hand on the wheel: the hardware lead's call</td>
+</tr>
+<tr>
+<td>Holds</td>
+<td>the wheel won't turn by hand</td>
+<td>______</td>
+<td></td>
+</tr>
+<tr>
+<td>Hardware stop</td>
+<td>the actuator's end; stop before it strains</td>
+<td>______</td>
+<td></td>
+</tr>
+<tr>
+<td>Current limit used</td>
+<td></td>
+<td>______ A</td>
+<td></td>
+</tr>
+<tr>
+<td>Firmware today</td>
+<td>released 400, full 3500</td>
+<td></td>
+<td>the numbers go in <code>calibration.rs</code>, not <code>vehicle.yaml</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>Measured by: ________ · Hardware lead: ________ · Date: ________</code></p>
+</section>
+<section class="card"><h2 id="layer-2-by-hand-through-the-pi">Layer 2: by hand, through the Pi</h2>
+<p><strong>The joystick on the Motor Pi, through ego, all on the Pi</strong> (<code>machine:=motor_pi_alone</code>).
+The auto-brake stays: the ESP32 brakes 100 ms after the heartbeat stops, ego caps the speed
+at 0.3 m/s. No stand-in without these (review 2, B2). The steps: <a href="car-day.html#a9b-the-joystick-on-stands">car day,
+A9b</a>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>You should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Start recording on the Motor Pi: <code>~/aav-jazzy/aav.sh tools/record.sh link</code></td>
+<td>a folder in <code>bags/</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>At the same time, on the laptop with the ESP32's USB cable: <code>vendor/cargo-tools/bin/espflash monitor \| tee esp32.log</code></td>
+<td><code>LINK t=... frames=...</code> lines</td>
+</tr>
+<tr>
+<td>3</td>
+<td>A9b steps 3-5: <strong>move the stick</strong>, steer, stop, a few times, for a minute</td>
+<td>the wheels follow</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Stop both recordings</td>
+<td></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>pixi run link-check bags/&lt;folder&gt; --esp32 esp32.log</code></td>
+<td>PASS, FAIL or NOT TESTED</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Move the stick.</strong> A parked car changes nothing, so the check says NOT TESTED, never PASS.</p>
+<h3 id="what-the-link-check-says">What the link check says</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Says</th>
+<th>Means</th>
+<th>Do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>PASS</strong></td>
+<td>every frame counted: the Pi wrote them, the ESP32 took them, <code>bad</code> and <code>skipped</code> flat</td>
+<td>write down the line "a loss of up to N frames would not show"</td>
+</tr>
+<tr>
+<td><strong>FAIL</strong>: lost</td>
+<td>the ESP32 took fewer frames than the Pi wrote</td>
+<td>the wire, the speed (115200), the console (A7b)</td>
+</tr>
+<tr>
+<td><strong>FAIL</strong>: second writer</td>
+<td>the ESP32 took more frames than the Pi wrote</td>
+<td>theirs still running? A7b step 4</td>
+</tr>
+<tr>
+<td><strong>FAIL</strong>: bad or skipped rose</td>
+<td>frames turned down</td>
+<td><code>frame_version</code> on both ends; noise on the wire</td>
+</tr>
+<tr>
+<td><strong>FAIL</strong>: values differ</td>
+<td>a good frame with other values</td>
+<td>a reporting bug, not the wire: tell Ben</td>
+</tr>
+<tr>
+<td><strong>NOT TESTED</strong></td>
+<td>no data on one side, nothing changing, or no frame both saw</td>
+<td>record again, both at once, moving the stick</td>
+</tr>
+</tbody>
+</table></div>
+<p>How it knows a frame: by its counter <strong>and</strong> its check byte, never the counter alone. It
+samples about one frame in five (<code>link_frame_rate_hz: 10</code>); the counts are the proof.</p>
+<p><strong>Today's firmware writes text only</strong> (<code>LINK</code> lines), with no frame to match. Then the check
+shows the ESP32's counts, but the ESP32 hop stays NOT TESTED until the Rust writes its JSON
+status lines (<code>firmware/status/README.md</code>). Not built yet.</p>
+</section>
+<section class="card"><h2 id="layer-3-egos-messages">Layer 3: ego's messages</h2>
+<p>The Orin runs ego and the mux; the Motor Pi runs only the bridge.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>You should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Layer 2 passed</td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td>The Orin: <code>~/aav-jazzy/aav.sh ros2 launch aav_bringup car.launch.py machine:=orin max_speed:=0.3 gps:=false lidar:=false stands:=true</code> (as A8 step 4); the Motor Pi: <code>~/aav-jazzy/aav.sh car motor_pi</code></td>
+<td>the gate OPEN</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Record on the Orin: <code>~/aav-jazzy/aav.sh tools/record.sh ego</code></td>
+<td></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Drive from the keyboard, or an actuator test on stands</td>
+<td>the wheels follow</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>pixi run link-check bags/&lt;folder&gt; --esp32 esp32.log</code></td>
+<td>as layer 2</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Compare <code>/ego/actuator_cmd</code> (what ego asked) with <code>/control/car/link_frame</code> (what went out) in Foxglove or Lichtblick</td>
+<td>the same moves; the frame's values are -1..1</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>/control/car/actuator_cmd</code> is the mux's output: silent while the gate is shut. Ego's own
+is <code>/ego/actuator_cmd</code> (review 2, M3).</p>
+</section>
+<section class="card"><h2 id="the-rollout-sheet-the-wheels-size">The rollout sheet (the wheel's size)</h2>
+<p>For <code>wheel_diameter</code> in <code>vehicle.yaml</code> (0.36 today, tape-measured). On the ground, power off,
+pushed by hand. How to release the brake unpowered: the hardware lead's call.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Chalk a line on the tyre and the ground, at the bottom of a rear wheel</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Push the car straight until the mark is at the bottom again, <strong>5 turns</strong></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Mark the ground, measure the distance</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Do it three times</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Run</th>
+<th>Turns</th>
+<th>Distance (m)</th>
+<th>Diameter = distance ÷ (turns × 3.1416)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>5</td>
+<td>______</td>
+<td>______</td>
+</tr>
+<tr>
+<td>2</td>
+<td>5</td>
+<td>______</td>
+<td>______</td>
+</tr>
+<tr>
+<td>3</td>
+<td>5</td>
+<td>______</td>
+<td>______</td>
+</tr>
+<tr>
+<td>Mean</td>
+<td></td>
+<td></td>
+<td>______</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>Measured by: ________ · Date: ________ · Tyre pressure: ________</code></p>
+</section>
+<section class="card"><h2 id="open">Open</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Question</th>
+<th>For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Which computer and network runs <code>hw_panel</code> on the day</td>
+<td>Ben (recommended: a wired laptop)</td>
+</tr>
+<tr>
+<td>The return wire, GPIO17 to the Pi's RX (H9)</td>
+<td>the hardware lead</td>
+</tr>
+<tr>
+<td>How to keep the counter moving while layer 1 stands still</td>
+<td>untested</td>
+</tr>
+<tr>
+<td>The JSON status lines in the Rust firmware, the Pi link's verdict, <code>/health</code></td>
+<td>built, not flashed: <code>firmware/status</code>, <code>pixi run esp first-check</code> (<a href="esp32-bench.html#2a-the-first-check-the-gate">first flash</a>)</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="actuator-tests.html"><small>Previous</small>← Actuator tests</a>
+<a class="next" href="learn-state-space.html"><small>Next</small>Learn: state space →</a></nav>
+</main>
+<footer>Source: <code>docs/hardware-debug.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

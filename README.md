@@ -152,6 +152,7 @@ Add `--demo` to any of the four for pretend data: no ROS, no car, no build.
 | `actuator-test` | the actuator tests, on stands and in a lot: `actuator-test --list`. The preflight on stands, every sensor checked: `actuator-test preflight --stands` |
 | `calibrate-camera` | calibrate a streamed camera: `calibrate-camera board` prints the checkerboard |
 | `doctor` | can this computer join the car's ROS network? Says what to fix |
+| `link-check` | did the Motor Pi's frames reach the ESP32? `link-check <bag> --esp32 <file>`: PASS, FAIL or NOT TESTED; a parked car is never a PASS ([docs](docs/hardware-debug.md)) |
 
 ### Before car day
 
@@ -169,7 +170,7 @@ Flashing writes a board: on the bench only.
 | Command | What it does |
 |---|---|
 | `pico` | our Rust Pico 2 boards: `pico <spine, wheel or sentinel> <tools, build or flash>`. `build` makes the UF2 file to drag on; `flash` goes through a debug probe (`tools` installs probe-rs once) |
-| `esp` | the Rust firmware for today's ESP32 board: `esp tools` (once), `esp build`, `esp flash`, `esp qemu-tools` (once), `esp qemu-check` (does it brake within 0.2 s when the heartbeat stops?) |
+| `esp` | the Rust firmware for today's ESP32 board: `esp tools` (once), `esp build`, `esp flash`, `esp qemu-tools` (once), `esp qemu-check` (does it brake within 0.2 s when the heartbeat stops?), `esp first-check [port]` (right after a flash: SAFE TO GO ON or STOP; `--qemu` on the QEMU build) |
 | `-e firmware legacy-esp32` | builds today's C++ ESP32 firmware with PlatformIO (`-t upload` flashes it) |
 
 ### Perception, AI and maps

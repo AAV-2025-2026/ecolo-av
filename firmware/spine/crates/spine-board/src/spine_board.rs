@@ -23,7 +23,7 @@ use crate::wheel::WheelSpeed;
 use aav_inputs::Debouncer;
 use embedded_hal::i2c::I2c;
 use embedded_io::{Read, ReadReady};
-use ibus::{RcMap, Receiver};
+use ibus::{Channels, RcMap, Receiver};
 use spine_core::protocol::{VEHICLE_FEEDBACK_ID, VEHICLE_STATUS_ID};
 use spine_core::{faults, Inputs, Outputs, Spine, SpineConfig};
 
@@ -54,6 +54,9 @@ pub struct SpineBoard<B, I2C, U, L = CanLink> {
     can_fault: u16,
     feedback: Every,
     status: Every,
+    /// The latest tick, and the RC channels it read: for a board's status lines.
+    last_report: Option<Report>,
+    last_channels: Option<Channels>,
 }
 
 impl<B: Board, I2C: I2c, U: Read + ReadReady> SpineBoard<B, I2C, U, CanLink> {
@@ -99,6 +102,8 @@ impl<B: Board, I2C: I2c, U: Read + ReadReady, L: CommandLink> SpineBoard<B, I2C,
             can_fault: 0,
             feedback: Every::new(FEEDBACK_PERIOD_MS),
             status: Every::new(STATUS_PERIOD_MS),
+            last_report: None,
+            last_channels: None,
         }
     }
 
@@ -119,7 +124,8 @@ impl<B: Board, I2C: I2c, U: Read + ReadReady, L: CommandLink> SpineBoard<B, I2C,
         };
         self.link.receive(&mut self.board, &mut inputs);
         self.read_rc(now);
-        inputs.rc = self.rc.channels(now).and_then(|c| self.rc_map.rc_input(&c));
+        self.last_channels = self.rc.channels(now);
+        inputs.rc = self.last_channels.and_then(|c| self.rc_map.rc_input(&c));
         let open = self.board.estop_open();
         self.estop.update(open, now);
         inputs.hw_estop = self.estop.level();
@@ -140,7 +146,19 @@ impl<B: Board, I2C: I2c, U: Read + ReadReady, L: CommandLink> SpineBoard<B, I2C,
             positions: readings.positions,
         };
         self.link.report(&mut self.board, &report);
+        self.last_report = Some(report);
         out
+    }
+
+    /// The latest tick as the spine saw it (outputs, RC, the Jrks' positions); `None`
+    /// before the first. For reporting: it is what the tick already had.
+    pub fn last_report(&self) -> Option<&Report> {
+        self.last_report.as_ref()
+    }
+
+    /// The RC receiver's raw channels at the latest tick; `None` while it is silent.
+    pub fn rc_channels(&self) -> Option<&Channels> {
+        self.last_channels.as_ref()
     }
 
     /// The spine's five state regions after the latest tick (`spine_core::fsm`).
@@ -295,6 +313,22 @@ mod loop_tests {
         assert_eq!(w[3], (EXPANDER, vec![0x02, 0xFF, 0xFF]));
         assert_eq!(w[4], (EXPANDER, vec![0x06, 0x00, 0x00]));
         assert_eq!(w[5], (STEER, set_target(1950).to_vec()));
+    }
+
+    #[test]
+    fn it_keeps_the_latest_tick_and_the_targets_for_reporting() {
+        let mut rig = Rig::new();
+        assert!(rig.sb.last_report().is_none());
+        assert_eq!(rig.sb.actuators().steering_counts(), Some(1950));
+        assert_eq!(rig.sb.actuators().brake_counts(), Some(3500));
+        assert!(rig.sb.rc_channels().is_none());
+        rig.rc(false, 1500, 1600, 1000);
+        let out = rig.tick();
+        let report = *rig.sb.last_report().unwrap();
+        assert_eq!(report.now_ms, 1010);
+        assert_eq!(report.outputs.mode, out.mode);
+        let ch = rig.sb.rc_channels().unwrap();
+        assert_eq!((ch.0[3], ch.0[5]), (1600, 1000));
     }
 
     #[test]

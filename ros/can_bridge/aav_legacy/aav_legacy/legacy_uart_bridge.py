@@ -24,10 +24,17 @@ Publishes   system/source     aav_interfaces/DataSource, latched: the actuators 
                               true with frame_version 1 (no firmware timeout), so
                               twist_mux's no_timeout lock (priority 60) holds every program
                               and only people and the actuator tests drive; false with 2
+            control/car/link_frame  aav_interfaces/LinkFrame, a sample at link_frame_rate_hz
+                              (default 10; 0: off), every frame version: what really
+                              went out, decoded from the bytes written, with counts of
+                              every frame written and every failed write (link_report;
+                              tools/link_check.py compares them with the ESP32's)
             and, only with uplink true (the ESP32's uplink frames on its TX1; TODO 50, 48):
             vehicle/status    aav_interfaces/VehicleStatus, 10 Hz: mode, armed, e-stop, faults
             vehicle/steering  aav_interfaces/ActuatorState: ego's angle, the Jrk's position
             vehicle/brake     aav_interfaces/ActuatorState: the ESP32's brake, the Jrk's
+            vehicle/throttle  aav_interfaces/ActuatorState: the uplink's throttle_out, before
+                              the firmware's ramp; measured NaN, no sensor reads it
             vehicle/rc        aav_interfaces/RcSticks: the RC's mode switch and sticks
                               (rc_driver turns them into /drivers/rc/cmd_vel)
             vehicle/steering_actuator/raw, vehicle/brake_actuator/raw
@@ -36,6 +43,8 @@ Publishes   system/source     aav_interfaces/DataSource, latched: the actuators 
                               calibration state (a version 2 uplink: valid false)
             vehicle/steering_actuator/calibration  std_msgs/String: one line, on each
                               change and at 2 Hz: what the calibration does, and why
+            vehicle/esp32/uplink_health  aav_interfaces/UplinkHealth, 1 Hz: fresh, and the
+                              frames, lost and bad the uplink reader has counted
 Reads       uplink frames on the same serial port (uplink_reader, legacy_protocol), with
             uplink true. Off by default: GPIO17 to the Pi's RX is the hardware lead's to
             confirm, and the firmware needs --features uplink
@@ -72,10 +81,12 @@ only (wheels off the ground, a person at the e-stop).
 
 import signal
 
-from aav_interfaces.msg import (ActuatorRaw, ActuatorState, DataSource, Heartbeat, RcSticks,
-                                SensorSource, SteeringCalibration, VehicleStatus)
+from aav_interfaces.msg import (ActuatorRaw, ActuatorState, DataSource, Heartbeat, LinkFrame,
+                                RcSticks, SensorSource, SteeringCalibration, UplinkHealth,
+                                VehicleStatus)
 from aav_legacy import uplink_reader as ur
 from aav_legacy.legacy_protocol import LegacyMapping
+from aav_legacy.link_report import LinkReport
 from aav_legacy.speed_control import SpeedControl, SpeedControlConfig
 from aav_legacy.uart_relay import programs_locked, Relay
 from ackermann_msgs.msg import AckermannDriveStamped
@@ -129,6 +140,8 @@ class LegacyUartBridge(Node):
         if loop:
             self.create_subscription(Odometry, 'vehicle/odom', self.on_odom, 10)
             self.get_logger().info(f'speed_loop.mode pi: closed on /vehicle/odom, {loop.cfg}')
+        self.link = LinkReport(self.declare_parameter('link_frame_rate_hz', 10.0).value)
+        self.link_pub = self.create_publisher(LinkFrame, 'control/car/link_frame', 10)
         self.serial = None
         self.last_open = None
         self.open_port()
@@ -143,7 +156,11 @@ class LegacyUartBridge(Node):
         if self.uplink:
             self.status_pub = self.create_publisher(VehicleStatus, 'vehicle/status', 10)
             self.steering_pub = self.create_publisher(ActuatorState, 'vehicle/steering', 10)
+            self.throttle_pub = self.create_publisher(ActuatorState, 'vehicle/throttle', 10)
             self.brake_pub = self.create_publisher(ActuatorState, 'vehicle/brake', 10)
+            self.health_pub = self.create_publisher(UplinkHealth, 'vehicle/esp32/uplink_health',
+                                                    10)
+            self.create_timer(1.0, self.publish_health)
             self.rc_pub = self.create_publisher(RcSticks, 'vehicle/rc', 10)
             self.raw_pubs = (
                 self.create_publisher(ActuatorRaw, 'vehicle/steering_actuator/raw', 10),
@@ -168,6 +185,7 @@ class LegacyUartBridge(Node):
                 SensorSource(name=name, topic=topic, source=kind)
                 for name, topic in (('vehicle', '/vehicle/status'),
                                     ('steering', '/vehicle/steering'),
+                                    ('throttle', '/vehicle/throttle'),
                                     ('brake', '/vehicle/brake'), ('rc', '/vehicle/rc'))]
         self.source_pub.publish(announcement)
         # The no-timeout lock: latched for late joiners that ask for it, and sent again at
@@ -242,12 +260,37 @@ class LegacyUartBridge(Node):
             if self.now() - self.last_open >= 1.0:
                 self.open_port()
             return
+        now = self.now()
+        frame = self.relay.frame(now)
         try:
-            self.serial.write(self.relay.frame(self.now()))
+            sent = self.serial.write(frame)
         except (serial.SerialException, OSError) as e:
+            self.link.failed()
             self.get_logger().error(f'serial write failed: {e}; reopening',
                                     throttle_duration_sec=2.0)
             self.close_port()
+            return
+        if not self.link.wrote(frame, sent):
+            self.get_logger().error(f'serial write took {sent} of {len(frame)} bytes',
+                                    throttle_duration_sec=2.0)
+            return
+        if self.link.due(now):
+            self.publish_link_frame(frame)
+
+    def publish_link_frame(self, frame):
+        """Report a frame just written. A report must never stop the frames: log, carry on."""
+        try:
+            msg = LinkFrame(**self.link.fields(frame))
+            msg.header.stamp = self.get_clock().now().to_msg()
+            self.link_pub.publish(msg)
+        except Exception as e:
+            self.get_logger().error(f'link frame not reported: {e}', throttle_duration_sec=2.0)
+
+    def publish_health(self):
+        """Publish the uplink reader's counts (1 Hz)."""
+        msg = UplinkHealth(**ur.health_fields(self.reader, self.now()))
+        msg.header.stamp = self.get_clock().now().to_msg()
+        self.health_pub.publish(msg)
 
     def read_uplink(self):
         """Read the ESP32's uplink frames (100 Hz), and publish each one."""
@@ -280,6 +323,7 @@ class LegacyUartBridge(Node):
         self.rc_pub.publish(rc)
         command = self.relay.cmd[1] if self.relay.fresh(now) else None
         for pub, (cmd, measured) in ((self.steering_pub, ur.steering_state(u, command)),
+                                     (self.throttle_pub, ur.throttle_state(u)),
                                      (self.brake_pub, ur.brake_state(u))):
             msg = ActuatorState(command=float(cmd), measured=float(measured))
             msg.header.stamp = stamp
@@ -307,9 +351,10 @@ class LegacyUartBridge(Node):
         if self.serial is not None:
             try:
                 for _ in range(5):   # leave the car braked
-                    self.serial.write(self.relay.stop_frame())
+                    frame = self.relay.stop_frame()
+                    self.link.wrote(frame, self.serial.write(frame))
             except (serial.SerialException, OSError):
-                pass
+                self.link.failed()
             self.close_port()
         super().destroy_node()
 

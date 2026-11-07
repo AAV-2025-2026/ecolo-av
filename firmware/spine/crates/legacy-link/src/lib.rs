@@ -57,7 +57,7 @@ mod v2;
 mod v3;
 
 pub use frame::{Frame, FrameError, BAUD, FRAME_LEN};
-pub use parser::{Parser, ParserV2, ParserV3};
+pub use parser::{Accepted, Parser, ParserV2, ParserV3};
 pub use steer_cal::{
     Ask, CalRequest, CalState, Refusal, Situation, SteerCal, SteeringDrive, CAL_RATE,
     CAL_TIMEOUT_MS, COUNTS_MAX,

@@ -66,14 +66,6 @@ vehicle:
                             # drive, so on stands only "rear" sees the motor: the preflight
                             # drives the real car only then. TODO 49b, the hardware lead
 
-  centre_of_mass:
-    x: 0.70                 # m ahead of rear axle. GUESS: TODO measure
-    height: 0.55            # m above ground. GUESS: TODO measure
-
-  tyre_grip: 0.7            # g. GUESS: TODO test on real car
-
-  encoder_counts_per_rev: 8 # spokes on encoder wheel
-                            # (Wheel_Encoders wiznet.ino:29)
 
 
 # How the car answers its commands: the actuator model in Gazebo.

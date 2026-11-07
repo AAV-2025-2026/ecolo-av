@@ -99,6 +99,9 @@ pub struct Actuators<I2C> {
     /// Each Jrk's feedback: a position, or not; `None` until it has said.
     steering_feedback: Option<bool>,
     brake_feedback: Option<bool>,
+    /// The last targets sent to each Jrk (or tried), for reporting.
+    steering_counts: Option<u16>,
+    brake_counts: Option<u16>,
 }
 
 impl<I2C: I2c> Actuators<I2C> {
@@ -114,6 +117,8 @@ impl<I2C: I2c> Actuators<I2C> {
             steering: 0.0,
             steering_feedback: None,
             brake_feedback: None,
+            steering_counts: None,
+            brake_counts: None,
         }
     }
 
@@ -223,6 +228,17 @@ impl<I2C: I2c> Actuators<I2C> {
         self.reverse
     }
 
+    /// The last target sent to the steering Jrk, in counts, whether the write worked or
+    /// not; `None` before the first. A "stop motor" (limp) leaves it as it was.
+    pub fn steering_counts(&self) -> Option<u16> {
+        self.steering_counts
+    }
+
+    /// The last target sent to the brake Jrk, in counts, whether the write worked or not.
+    pub fn brake_counts(&self) -> Option<u16> {
+        self.brake_counts
+    }
+
     /// The devices, to read something else from them.
     pub fn devices(&mut self) -> &mut Devices<I2C> {
         &mut self.dev
@@ -288,6 +304,7 @@ impl<I2C: I2c> Actuators<I2C> {
 
     fn write_brake(&mut self, brake: f32) -> u16 {
         let target = self.cal.brake.target(brake);
+        self.brake_counts = Some(target);
         match self.dev.brake.set_target(target) {
             Ok(()) => 0,
             Err(_) => faults::BRAKE_DRIVER,
@@ -302,6 +319,7 @@ impl<I2C: I2c> Actuators<I2C> {
     fn write_steering_target(&mut self, target: u16) -> u16 {
         let s = &self.cal.steering;
         let target = target.clamp(s.min.min(s.max), s.max.max(s.min));
+        self.steering_counts = Some(target);
         match self.dev.steering.set_target(target) {
             Ok(()) => 0,
             Err(_) => faults::STEERING_DRIVER,

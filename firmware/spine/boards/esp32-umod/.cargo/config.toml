@@ -19,6 +19,7 @@ runner = "espflash flash --chip esp32 --monitor"
 [env]
 ESP_LOG = "info"
 
-# Xtensa has no prebuilt core library: build it from source.
+# Xtensa has no prebuilt core library: build it from source. `alloc` is for the radio's
+# heap (wifi-status); a build without it links none of it.
 [unstable]
-build-std = ["core"]
+build-std = ["core", "alloc"]

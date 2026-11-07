@@ -25,6 +25,10 @@
 //! | [`wheel`] | the speed, from the wheel encoder's counter; two spoke sensors, counted |
 //! | [`spine_board`] | the loop: [`SpineBoard`] |
 //! | [`stand_in`] | stand-in devices on a bus, for a board with none wired (QEMU) |
+//! | [`timing`] | the longest gap between ticks, and how many came late |
+//! | [`scan`] | which I2C addresses answer, a few a tick, only while not armed |
+//! | [`probe`] | which of the four devices answer at boot, and each Jrk's feedback mode: read only |
+//! | [`health`] | the Pi link's verdict: OK, no frames, stale, the counter frozen, bad frames |
 //!
 //! A board crate, in outline:
 //!
@@ -47,19 +51,28 @@
 pub mod actuators;
 pub mod board;
 pub mod calibration;
+pub mod health;
 pub mod link;
+pub mod probe;
 #[cfg(test)]
 mod rig;
+pub mod scan;
 pub mod spine_board;
 pub mod stand_in;
+pub mod timing;
 pub mod wheel;
 
 pub use actuators::{Actuators, Devices, Positions, Readings};
 pub use board::{Board, CanFrame, WheelCount};
 pub use calibration::Calibration;
+pub use health::{LinkHealth, LinkReport, LinkVerdict, BAD_WINDOW_MS};
 pub use link::{
-    CanLink, CommandLink, FrameVersion, LegacyLink, LinkStats, NoUplink, Report, UPLINK_PERIOD_MS,
+    CanLink, CommandLink, FrameVersion, LastFrame, LegacyLink, LinkStats, NoUplink, Report,
+    UPLINK_PERIOD_MS,
 };
+pub use probe::{feedback_name, Device, DeviceCheck, Found};
+pub use scan::{BusScan, ScanState};
 pub use spine_board::SpineBoard;
 pub use stand_in::{DeviceTargets, StandInBus};
+pub use timing::TickTiming;
 pub use wheel::{SpokeSensors, WheelSpeed};

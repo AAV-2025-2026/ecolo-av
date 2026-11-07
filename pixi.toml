@@ -57,6 +57,7 @@ check = { cmd = "tools/ros.sh python3 tools/check_graph.py --profile {{ profile 
 drop-in = { cmd = "tools/ros.sh python3 tools/drop_in_check.py", description = "Is what is running a true drop-in? Each stream's rate and frame against docs/interfaces.yaml's drop_in rules, beside a running system. Only listens. [--seconds S] [--measure]" }
 bench-check = { cmd = "tools/ros.sh --local python3 tools/bench_check.py", description = "Start bench mode and test the whole car graph: contract, drive, e-stops (2 min)" }
 sim-check = { cmd = "tools/ros.sh --local python3 tools/sim_check.py", description = "Start Gazebo's road world headless and test the car's whole graph in it: contract, sensors, a drive (2 min); --perception (with -e ml), --obstacle, --lidar-obstacle, --plan-around, --ghost, --faults, --lane add more; --voxels: Nav2 on the lidar's cubes" }
+link-check = { cmd = "tools/ros.sh python3 tools/link_check.py", description = "Did the Motor Pi's frames reach the ESP32? PASS, FAIL or NOT TESTED from a bag (tools/record.sh) and the ESP32's status lines: pixi run link-check <bag> --esp32 <file> (or --live SECONDS). Only reads (docs/hardware-debug.md)" }
 doctor = { cmd = "tools/ros.sh python3 tools/doctor.py", description = "Can this computer join the car's ROS network? Says what to fix" }
 measure = { cmd = "tools/measure.sh", description = "Measure how well it works: pixi run measure controllers (Pure Pursuit vs MPPI in Gazebo), timing (are messages on time?), stream (the camera stream end to end), atob <bags> (score A-to-B runs), bandwidth (every topic's MB/s). Add --help for each one's options" }
 campus = { cmd = "python3 tools/campus_world.py", description = "Carleton for Gazebo, Nav2 and NDT, from OpenStreetMap, into maps/campus/; then pixi run sim world:=campus" }
@@ -77,7 +78,7 @@ car-day-build = { cmd = "tools/car_day_build.sh", description = "Before car day:
 diffusion = { cmd = "tools/diffusion.sh", description = "The diffusion planner trial's data and model: pixi run diffusion data (the lattice's paths on random maps, no Gazebo), train (the model, its guard score, models/diffusion/planner.onnx; needs pixi install --locked -e learn), score" }
 get = { cmd = "tools/get.sh", description = "Download what git doesn't keep: pixi run get vendor (ROS source, 560 MB), models, mediamtx, places, street-map, carla-osm, routes, or all" }
 pico = { cmd = "tools/pico.sh", description = "Our Rust Pico 2 boards: pixi run pico <spine|wheel|sentinel> <tools|build|flash>. tools: probe-rs (once); build: the .uf2 to drag on; flash: through a debug probe, then its logs" }
-esp = { cmd = "tools/esp32.sh", description = "The Rust firmware for today's ESP32 control board: pixi run esp tools (Espressif's Rust, once), build, flash (on the USB cable, bench only), qemu-tools (QEMU, once), qemu-check (it brakes when the heartbeat stops; docs/esp32-bench.md)" }
+esp = { cmd = "tools/esp32.sh", description = "The Rust firmware for today's ESP32 control board: pixi run esp tools (Espressif's Rust, once), build, flash (on the USB cable, bench only), qemu-tools (QEMU, once), qemu-check (it brakes when the heartbeat stops; docs/esp32-bench.md), first-check [port] (right after a flash: SAFE TO GO ON or STOP; --qemu on the QEMU build)" }
 
 [dependencies]
 ros-jazzy-desktop = ">=0.11.0,<0.12"

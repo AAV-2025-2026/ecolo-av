@@ -1,0 +1,10 @@
+[package]
+name = "status-lines"
+description = "The ESP32's JSON status lines (firmware/status): hb, status and event, written into a fixed buffer with no allocation, byte for byte as golden.jsonl."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# no_std, no allocator, no dependencies: core::fmt only.
+[dependencies]

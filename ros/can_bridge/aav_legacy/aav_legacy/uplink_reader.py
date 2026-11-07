@@ -3,8 +3,9 @@ What legacy_uart_bridge reads back from the ESP32: its uplink frames (TODO 50, 4
 
   ESP32 TX1 ──35-byte frames, 50 Hz──> serial port ──> UplinkReader.feed(bytes, now)
                                                           │
-           status_fields / steering_state / brake_state / rc_fields <── the latest frame
-           raw_fields (version 3: the counts), calibration_line
+           status_fields / steering_state / brake_state / throttle_state / rc_fields
+           <── the latest frame
+           raw_fields (version 3: the counts), calibration_line, health_fields (the counts)
 
 Only with the bridge's `uplink: true` and the firmware built with `--features uplink`:
 the wire from the ESP32's GPIO17 to the Pi's RX is the hardware lead's to confirm.
@@ -77,6 +78,22 @@ def steering_state(u: Uplink, command: Optional[float]) -> Tuple[float, float]:
 def brake_state(u: Uplink) -> Tuple[float, float]:
     """Return /vehicle/brake's (command, measured): what the ESP32 drives, the Jrk's."""
     return u.brake_out, known(u.brake_position)
+
+
+def throttle_state(u: Uplink) -> Tuple[float, float]:
+    """
+    Return /vehicle/throttle's (command, measured).
+
+    The command is the uplink's throttle_out: what the firmware asks for before its own
+    ramp, so not yet what the DAC gives. Measured is NaN: no sensor reads the throttle.
+    """
+    return u.throttle_out, NAN
+
+
+def health_fields(reader: UplinkReader, now: float) -> dict:
+    """Return aav_interfaces/UplinkHealth's fields: how the frames are arriving."""
+    return {'fresh': reader.fresh(now), 'frames': reader.frames & 0xFFFFFFFF,
+            'lost': reader.lost & 0xFFFFFFFF, 'bad': reader.bad & 0xFFFFFFFF}
 
 
 def rc_fields(u: Uplink) -> dict:
