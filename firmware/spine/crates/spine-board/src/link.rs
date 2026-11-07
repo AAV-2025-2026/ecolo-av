@@ -130,6 +130,33 @@ pub struct LinkStats {
     pub uplink_errors: u32,
 }
 
+/// The last frame the link took whole: its checksum or CRC passed. For reporting only
+/// (`firmware/status/README.md`: `rx`); it never drives anything.
+///
+/// A version 2 or 3 frame whose values are out of range is still here, as it came: it
+/// was received, and turned down after. Version 1's parser drops such a frame's values.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LastFrame {
+    /// Its version: 1, 2 or 3.
+    pub version: u8,
+    /// The Orin's counter in it; none in version 1.
+    pub counter: Option<u8>,
+    /// Its last byte: version 1's sum, or the CRC-8. With the counter, it tells one frame
+    /// from the next.
+    pub check: u8,
+    /// Steering, speed and accel, as they came.
+    pub values: Frame,
+    /// When it arrived: the tick's clock, in ms.
+    pub at_ms: u32,
+}
+
+impl LastFrame {
+    /// How old it is at `now_ms`.
+    pub fn age_ms(&self, now_ms: u32) -> u32 {
+        now_ms.wrapping_sub(self.at_ms)
+    }
+}
+
 /// No uplink: a link that sends nothing back ([`LegacyLink::new`]).
 #[derive(Debug, Clone, Copy, Default)]
 pub struct NoUplink;
@@ -201,6 +228,7 @@ pub struct LegacyLink<U, T = NoUplink> {
     cal: Calibration,
     last: Option<DirectCmd>,
     stats: LinkStats,
+    last_frame: Option<LastFrame>,
     uplink_due: Every,
     sequence: u8,
     steer_cal: SteerCal,
@@ -237,6 +265,7 @@ impl<U: Read + ReadReady, T: Write> LegacyLink<U, T> {
             cal,
             last: None,
             stats: LinkStats::default(),
+            last_frame: None,
             uplink_due: Every::new(UPLINK_PERIOD_MS),
             sequence: 0,
             steer_cal: SteerCal::new(limits.min.min(limits.max), limits.max.max(limits.min)),
@@ -247,6 +276,11 @@ impl<U: Read + ReadReady, T: Write> LegacyLink<U, T> {
     /// What the link has seen since boot.
     pub fn stats(&self) -> LinkStats {
         self.stats
+    }
+
+    /// The last frame taken whole, if any since boot.
+    pub fn last_frame(&self) -> Option<LastFrame> {
+        self.last_frame
     }
 
     /// The uplink frame for a tick: `sequence`, then what the report says.
@@ -360,6 +394,13 @@ impl<U: Read + ReadReady, T: Write> LegacyLink<U, T> {
             }
         };
         self.stats.frames += 1;
+        self.last_frame = Some(LastFrame {
+            version: 1,
+            counter: None,
+            check: values.encode()[legacy_link::FRAME_LEN - 1],
+            values,
+            at_ms: inputs.now_ms,
+        });
         if let Some(cmd) = self.command_for(values, inputs) {
             self.give(cmd, inputs);
         }
@@ -382,6 +423,17 @@ impl<U: Read + ReadReady, T: Write> LegacyLink<U, T> {
         self.stats.frames += 1;
         self.stats.counter = Some(frame.counter);
         self.frame_estop = frame.flags.estop;
+        if let Decoder::V2 { parser, .. } = &self.decoder {
+            if let Some(accepted) = parser.last_accepted() {
+                self.last_frame = Some(LastFrame {
+                    version: accepted.version,
+                    counter: Some(frame.counter),
+                    check: accepted.check,
+                    values: frame.values,
+                    at_ms: inputs.now_ms,
+                });
+            }
+        }
         // An e-stop is always safe to obey: whatever the counter, and it wins in a tick.
         if frame.flags.estop {
             inputs.estop_cmd = Some(EstopCmd {
@@ -832,5 +884,73 @@ mod tests {
         let inputs = receive(&mut l, &v2(2.0, 0.5, 0.0, 3, true));
         assert!(inputs.bad_frame);
         assert_eq!(targets(&inputs.direct_cmd.unwrap()), (2725, 400, 0));
+    }
+
+    #[test]
+    fn it_keeps_the_last_good_frame_for_the_status_line() {
+        let mut l = link_v2();
+        assert_eq!(l.last_frame(), None);
+        let bytes = v2(-0.1, 0.3, 0.0, 41, true);
+        receive(&mut l, &bytes);
+        let want = LastFrame {
+            version: 2,
+            counter: Some(41),
+            check: bytes[16],
+            values: Frame {
+                steering: -0.1,
+                speed: 0.3,
+                accel: 0.0,
+            },
+            at_ms: 0,
+        };
+        assert_eq!(l.last_frame(), Some(want));
+        assert_eq!(want.age_ms(18), 18);
+        // A bad CRC leaves it; a repeat of the counter replaces it: it was received.
+        let mut bad = v2(0.5, 0.5, 0.0, 42, true);
+        bad[16] ^= 1;
+        receive(&mut l, &bad);
+        assert_eq!(l.last_frame(), Some(want));
+        receive(&mut l, &bytes);
+        // The first frame after boot only sets the heartbeat: a repeat too.
+        assert_eq!(l.stats().repeats, 2);
+        assert_eq!(l.last_frame(), Some(want));
+    }
+
+    #[test]
+    fn version_1_keeps_its_sum_and_no_counter() {
+        let mut l = link();
+        let bytes = frame(0.25, 0.5, 0.0);
+        receive(&mut l, &bytes);
+        let last = l.last_frame().unwrap();
+        assert_eq!(
+            (last.version, last.counter, last.check),
+            (1, None, bytes[12])
+        );
+        assert_eq!(last.values.speed, 0.5);
+    }
+
+    #[test]
+    fn version_3_says_so() {
+        let mut l = link_v2();
+        let bytes = FrameV3 {
+            values: Frame {
+                steering: 0.0,
+                speed: 0.0,
+                accel: -1.0,
+            },
+            counter: 7,
+            flags: legacy_link::Flags {
+                armed: true,
+                estop: false,
+            },
+            calibration: CalRequest::Off,
+        }
+        .encode();
+        receive(&mut l, &bytes);
+        let last = l.last_frame().unwrap();
+        assert_eq!(
+            (last.version, last.counter, last.check),
+            (3, Some(7), bytes[19])
+        );
     }
 }

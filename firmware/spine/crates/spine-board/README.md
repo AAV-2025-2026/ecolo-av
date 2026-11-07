@@ -73,7 +73,12 @@ The order of the writes, every tick:
 | `SpokeSensors::TODAY.update(a, b, now_ms)` | for a board that reads the two spoke sensors itself, every millisecond: the 2025-26 encoder Pico's rule, a count on A's rising edge, backwards if B rose in the 20 ms before. From the `wheel-encoder` crate, re-exported (15 Oct) |
 | `LegacyLink::new(uart, cal, version)`, `with_uplink(uart, tx, cal, version)` | the UART link, without or with the `legacy-link` uplink status frame every `UPLINK_PERIOD_MS` (20 ms) on TX; `NoUplink` sends nothing. `stats()` gives its `LinkStats`; `uplink_frame(&report, seq)` builds one uplink frame |
 | `Report` | one tick as the spine saw it (outputs, RC, positions), handed to the link after each tick |
+| `LegacyLink::last_frame()`, `LastFrame` | the last frame taken whole (its checksum or CRC passed): version, counter, last byte, the three values, when; for the status lines only (`firmware/status`) |
+| `SpineBoard::last_report()`, `rc_channels()` | the latest tick's `Report`, and the RC's raw channels: what a board reports, without reading a device again |
+| `Actuators::steering_counts()`, `brake_counts()` | the last target sent to each Jrk, in counts |
 | `Positions`, `Readings` | where the Jrks are (in radians and 0..1, and raw in counts: `steering_counts`, `brake_counts`); what `Actuators::read()` found |
+| `TickTiming` | the longest gap between ticks since boot, and the ticks over 10 ms late: the timing test's baseline |
+| `BusScan`, `ScanState` | which I2C addresses answer (0x01 to 0x77): `start()`, then `step(&mut i2c, armed, n)` after each tick probes `n` addresses with no data, none while armed; `found()` |
 | `StandInBus`, `DeviceTargets` | stand-in devices on an I2C bus for a board with none wired (the ESP32 in QEMU); not for the car |
 
 It depends on `spine-core`, `aav-inputs`, `wheel-encoder`, `legacy-link`, `jrk-g2`,

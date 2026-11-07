@@ -26,6 +26,14 @@ reader and writer tests against it.
 | `state` | `mode`, `armed`, `estop`, `faults` |
 | `tick` | `worst_gap_us`: the longest gap between ticks since boot. `overruns`: ticks later than 10 ms |
 
+| Value | Can be |
+|---|---|
+| `state.mode` | `stopped`, `rc`, `computer`, `test` |
+| `rc.switch` | `computer`, `via_ros`, `direct`, `no_signal` |
+| `rx.v` | 1, 2 or 3. In version 1, `counter` is `null`: that frame has none |
+| `rx.steer`, `speed`, `accel` | as the frame said; `null` if not a finite number (JSON has no NaN) |
+| `rc.ch` | up to 14 channels; `[]` while the receiver is silent |
+
 ## Invariants
 
 - Every line has `t`, `schema`, `seq` and `up_ms`. A gap in `seq` means lost lines: draw a gap.
@@ -45,3 +53,9 @@ None: a contract and test data.
 ## Verification
 
 Each reader's and writer's own tests read `golden.jsonl`. `tools/test.sh` runs them.
+
+| Who | Side | Test |
+|---|---|---|
+| `firmware/spine/crates/status-lines` | writes (the ESP32) | `cargo test -p status-lines`: each line, byte for byte |
+| `tools/esp32_status_sim.py` | writes (a pretend board, for the page and readers) | `tools/tests/test_esp32_status_sim.py`: the golden lines' fields |
+| `firmware/spine/boards/esp32-umod/page.html` | reads (the WebSocket) | none yet: tried by hand against the sim |

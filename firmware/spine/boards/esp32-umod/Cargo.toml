@@ -35,6 +35,22 @@ qemu = []
 # The e-stop's spare contact on an input pin. Off until it is wired (Q6): an unwired
 # input floats, and would trip and release at random.
 estop-input = []
+# The JSON status lines (firmware/status: hb, status, event) on the USB cable, in place of
+# the text lines, a chunk a tick so the print never waits.
+json-log = []
+# Read only, off by default: join a WiFi as a station and serve, on port 80, a status page
+# (page.html), /status.json, /scan (an I2C scan, a few addresses a tick, only while not
+# armed) and /ws (a WebSocket of the status lines). No command of any kind. The WiFi's
+# name and password come from src/wifi_secrets.rs, which git ignores (README.md). Not
+# with qemu: QEMU has no radio.
+wifi-status = [
+    "dep:esp-radio",
+    "dep:esp-alloc",
+    "esp-rtos/esp-radio",
+    "esp-rtos/esp-alloc",
+    "dep:embassy-net",
+    "dep:picoserve",
+]
 
 [dependencies]
 # Ours: the logic, the glue, the drivers (firmware/spine/crates).
@@ -53,6 +69,14 @@ esp-bootloader-esp-idf = { version = "0.6.0", features = ["esp32"] }
 esp-println = { version = "0.18.0", features = ["esp32", "log-04"] }
 esp-backtrace = { version = "0.20.0", features = ["esp32", "panic-handler", "println"] }
 log = "0.4"
+# The status lines (firmware/status).
+status-lines = { path = "../../crates/status-lines" }
+
+# wifi-status only: the radio, its heap, TCP/IP, and the HTTP and WebSocket server.
+esp-radio = { version = "1.0.0-beta.1", features = ["esp32", "wifi", "unstable", "log-04"], optional = true }
+esp-alloc = { version = "0.11.0", features = ["esp32"], optional = true }
+embassy-net = { version = "0.9.1", features = ["tcp", "dhcpv4", "proto-ipv4", "medium-ethernet"], optional = true }
+picoserve = { version = "0.20.1", features = ["embassy", "ws"], optional = true }
 
 embassy-executor = "0.10.0"
 embassy-time = "0.5.1"
@@ -71,6 +95,10 @@ debug = 2          # symbols for backtraces; they never reach the flash image
 lto = "fat"
 codegen-units = 1
 opt-level = "s"
+
+# The radio's binary blobs need opt-level 2 or 3 (esp-radio's docs).
+[profile.release.package.esp-radio]
+opt-level = 3
 
 [profile.dev]
 opt-level = "s"    # the ESP32 is slow at debug-level code

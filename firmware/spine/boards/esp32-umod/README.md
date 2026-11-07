@@ -21,7 +21,7 @@ It only moves pins: the deciding is in `spine-core`, the devices in `spine-board
 | RC override | iBUS on GPIO32 |
 | Speed | none on this board: open loop |
 | Watchdog | TIMG1, 100 ms |
-| Log | the USB cable: a `STATUS` line every 200 ms, an event line at each change, an `FSM` line with the five state regions (`spine_core::fsm`) and a `LINK` line with the frame counts, with each `STATUS` |
+| Log | the USB cable: a `STATUS` line every 200 ms, an event line at each change, an `FSM` line with the five state regions (`spine_core::fsm`) and a `LINK` line with the frame counts, with each `STATUS`; a `TICK` line once a second: the worst gap between ticks and the overruns, the timing test's baseline. With `json-log`: the JSON status lines instead (`firmware/status`) |
 
 The pin map is `src/pins.rs` (and `docs/rust-firmware.md`).
 
@@ -47,12 +47,19 @@ The direction output is pin P00 of the PCA9555, not an ESP32 pin.
 | `can` | the KEFC plan: `firmware/can/aav.dbc`. Its pins are unknown: see `src/pins.rs` |
 | `estop-input` | the e-stop's spare contact on GPIO27, once wired (Q6) |
 | `qemu` | runs in Espressif's QEMU, never on the car: stand-in I2C devices, a busy-wait tick |
+| `json-log` | the JSON status lines (`firmware/status`: `hb`, `status` 5 a second, `event`) on the USB cable in place of the text lines, 96 bytes a tick so the print never waits |
+| `wifi-status` | **off by default; read only.** Joins a WiFi and serves the status page, `/status.json`, `/scan` and a WebSocket of the status lines (10 a second). Below: "WiFi status". Not with `qemu` |
 
 | File | What |
 |---|---|
 | `src/main.rs` | the settings, the board glue, the loop, the logs |
 | `src/pins.rs` | the pin map, the one list |
 | `src/can.rs` | TWAI (CAN) at 500 kbit/s, 11-bit IDs, bus-off recovery every 1 s |
+| `src/report.rs` | the status lines from what the tick already has (`json-log`, `wifi-status`) |
+| `src/wifi.rs` | the WiFi station, its web server and WebSocket (`wifi-status`) |
+| `page.html` | the status page `wifi-status` serves: graphs of steering, brake and throttle |
+| `src/wifi_secrets.rs.example` | copy it to `src/wifi_secrets.rs` (git ignores it) for `wifi-status` |
+| `build.rs` | the build's commit and features for the `hb` line; the WiFi credentials' copy |
 | `rust-toolchain.toml` | the `esp` toolchain |
 
 ## Invariants
@@ -70,6 +77,16 @@ The direction output is pin P00 of the PCA9555, not an ESP32 pin.
 - The CAN IDs are `firmware/can/aav.dbc`'s, through `spine_core::protocol`.
 - Pins live here and in `docs/rust-firmware.md`: change both together. ROS never sees one.
 - Leave `estop-input` off until it is wired: a floating input would trip at random.
+- **Reporting never steers.** `json-log` and `wifi-status` only read what the tick already
+  has; they read no device for it (reading a Jrk's errors clears them) and change no input.
+- **`wifi-status` is read only:** no path takes a command, a setting or a firmware update.
+  It is off by default, and the car-day build (`tools/car_day_build.sh`) leaves it off.
+- **The tick never waits on the WiFi**: lines are handed over without waiting, and a slow
+  reader loses lines (a gap in `seq`), never time. The timing test below is the proof.
+- **The WiFi's password is never in git, a log or a line.** It lives only in
+  `src/wifi_secrets.rs` (git ignores it) and in the build's `target/` copy. A `wifi-status`
+  ELF holds it: never publish one. The inherited repos' old passwords are public: never
+  reuse one (Q34).
 
 ## Side Effects
 
@@ -79,6 +96,8 @@ The direction output is pin P00 of the PCA9555, not an ESP32 pin.
 - With `can`: sends and receives on the CAN bus through TWAI.
 - Writes logs to UART0 (the USB cable); drives the four LEDs.
 - The hardware watchdog resets the chip if a tick hangs.
+- With `wifi-status`: the radio, as a WiFi station; a web server on port 80; with `/scan`,
+  zero-length I2C writes to 0x01 to 0x77, 4 a tick, only while stopped and not armed.
 
 ## Verification
 
@@ -92,11 +111,11 @@ pixi run esp flash        # bench only, wheels off the ground: docs/esp32-bench.
 It is a workspace of its own: it builds only for `xtensa-esp32-none-elf`, with the `esp`
 toolchain (`rust-toolchain.toml`). `tools/test.sh` runs `tools/esp32.sh check` and the
 QEMU check, where that toolchain is installed. The check runs `cargo fmt`, one build, and
-clippy on six feature mixes:
+clippy on eight feature mixes:
 
 | Checked | Never checked |
 |---|---|
-| the default; `can,estop-input`; `qemu`; `link-v1`; `uplink`; `qemu,uplink` | `link-v1` with `uplink`; `can` without `estop-input`; `estop-input` on the UART link |
+| the default; `can,estop-input`; `qemu`; `link-v1`; `uplink`; `qemu,uplink`; `json-log`; `json-log,wifi-status` (with the example's made-up credentials) | `link-v1` with `uplink`; `can` without `estop-input`; `estop-input` on the UART link; `json-log` in QEMU (tried by hand, 7 Nov) |
 
 The logic is tested on a laptop: `cd firmware/spine && cargo test`.
 
@@ -112,3 +131,57 @@ In `src/main.rs`:
 | `IDLE_BRAKE` | 1.0 | the C++ kept the brake on while nobody drives; Ben decides |
 
 What differs from the C++, and what Ben must decide: `docs/rust-firmware.md`.
+
+## WiFi status (`wifi-status`)
+
+Read only, off by default, **never flashed yet**. The plan's step 8
+(`docs/designs/2026-11-07_esp32-debug-link_brief.md`): only after the timing test below.
+
+| Path, port 80 | Gives |
+|---|---|
+| `/` | `page.html`: steering, brake and throttle graphs (asked, position, low to high), pause, a window, a line filter |
+| `/status.json` | the latest `status` line (`{}` before the first) |
+| `/scan` | starts an I2C scan if none is going; `{"scan":"running","found":[4,5]}`. It waits while armed or driving |
+| `/ws` | a WebSocket: every line, as text; two clients at most; a slow one loses lines |
+
+### Set it up
+
+1. Ask the hardware lead for the bench WiFi's name and password. Never use the ones in the
+   inherited repos (Q34).
+2. `cp src/wifi_secrets.rs.example src/wifi_secrets.rs`, and put them there. Git ignores
+   that file. Without it the build stops with a `compile_error!` that says this.
+3. `pixi run esp build --features wifi-status` (add `json-log` to see the lines on the cable
+   too). Never share that ELF: it holds the password.
+4. Try the page first without a board: `python3 tools/esp32_status_sim.py`, then open
+   <http://127.0.0.1:8765/>. On the board: `http://<its address>/` (its log says it).
+
+### Sizes (7 Nov, built, not flashed)
+
+| Build | App image | RAM, static |
+|---|---|---|
+| default | 143 KB | 197 KB (data 8.6 KB + bss 188 KB) |
+| `json-log` | 150 KB | 197 KB |
+| `wifi-status` | 736 KB of the 4 MB partition | 197 KB (data 17.5 KB + bss 179 KB, with the radio's 72 KB heap) |
+
+The crates: `esp-radio` 1.0.0-beta.1 (WiFi), `esp-alloc` 0.11 (its heap), `embassy-net`
+0.9.1, `picoserve` 0.20.1 (HTTP and WebSocket). They resolve with esp-hal 1.2.2 and
+esp-rtos 0.4.0 as they are; `build-std` builds `alloc` too.
+
+## Bench test: the tick's timing with the radio
+
+The radio shares the chip with the tick. These steps measure whether it costs the tick
+time. Wheels off the ground, the hardware lead there (`docs/esp32-bench.md`). Read
+`worst_gap_us` and `overruns` (the `TICK` text line, or `tick` in a `status` line); write
+each row down.
+
+| # | Build and state | Watch for | Pass |
+|---|---|---|---|
+| 1 | default build, no radio, 10 min | the baseline | write the numbers down |
+| 2 | `json-log`, 10 min | the cable log's own cost | `worst_gap_us` within 2 ms of step 1 |
+| 3 | `json-log,wifi-status`, joined, no client, 10 min | the radio idle | no watchdog reset; `overruns` 0 |
+| 4 | the same, the page open on a laptop, 30 min | a client streaming | `overruns` 0; `seq` gaps only if the WiFi is weak |
+| 5 | the same, two clients, plus `/scan` every 10 s (disarmed) | the most load | `worst_gap_us` under 30 ms (the proposed pass number: the review, B7) |
+| 6 | the router switched off for 1 min, then on, with the page open | the WiFi going away and back | no reset, no `overruns`; it joins again by itself, the page reconnects |
+| 7 | step 4, armed, with the Pi's frames | the scan waits | `/scan` says "paused"; no I2C fault |
+
+If any step fails, `wifi-status` stays off: the cable (`json-log`) carries the lines.
