@@ -3,6 +3,14 @@
 The current work list, newest first. Tick items off as they land; each tick = a commit.
 Ben's messages, word for word: `docs/history/messages-*.md`.
 
+## Saturday 7 November: the hardware debug plan
+
+Ben, 7 Nov: the Rust replaces the C++, WiFi pages too, with JSON instead of streaming text; graphs of steering, brake and throttle in `hw_panel`; debug one part of the car at a time.
+
+| # | Task | Status |
+|---|---|---|
+| 126 | **The hardware debug plan** ([brief](docs/designs/2026-11-07_esp32-debug-link_brief.md), "The plan now"; [second review](docs/designs/2026-11-07_esp32-debug-link_review-2.md)). Steps: today's log; USB cable and Pololu's tools; two small fixes and paper sheets; the Pi ready; Rust with no radio; record the joystick path, PASS or FAIL; return wire and graphs in `hw_panel`; the steering page; timing test and WiFi pages. Replaces the 6 Nov [bench link](docs/designs/2026-11-06_bench-link.md) | ⬜ proposed, order chosen by Ben. Nothing built. 🔒 the hardware people: a USB cable, the current limits, the return wire, where the steering and brake sensors connect |
+
 ## Wednesday 4 November: the weak links, for Thursday's pick
 
 Ben, 4 Nov: "think about the areas of this car and what is the weakest ... ideas on how to improve each section of the driving experience", then "save this full list". The list: [the weak links](docs/designs/2026-11-04_weak-links.md) (every area, the evidence, the ideas, the papers). Words: `docs/history/messages-2026-11-04.md`.
@@ -26,15 +34,16 @@ Ben, 4 Nov: "think about the areas of this car and what is the weakest ... ideas
 | 113 | **The stop-sign watcher lets rear-camera boxes trip the lock** (`stop_sign_watcher.py:34`). Reviewer's word, not checked | ⬜ |
 | 114 | **The developer window in Bevy** ([design](docs/designs/2026-11-05_own-simulator.md)) (Ben, 5 Nov): his layout, in `ros/hud/aav_dev_window` | 🔧 live on Gazebo, with goals through its gates (5 Nov). Next: a slower laptop, cancel a goal, the algorithm list, SWAP |
 | 115 | **Our own simulator in Rust and Bevy** ([design](docs/designs/2026-11-05_own-simulator.md)) (Ben, 5 Nov: "we want to replace gazebo"): every sensor Gazebo gives, beside Gazebo until it wins on the same routes | ⬜ EGM review first |
-| 116 | **Does the car stop if Ben's MacBook drops off?** The LLM on the Mac sends Nav2 goals; a goal may carry on with the Mac gone. Check, then a heartbeat if so | ⬜ before the LLM drives the real car |
+| 116 | **Does the car stop if Ben's MacBook drops off?** The LLM on the Mac sends Nav2 goals; a goal may carry on with the Mac gone. Check, then a heartbeat if so Screen heartbeats now exist for tests (`watch_screens:=`, `docs/simulation.md`), refused on the real car; what the car does about a lost Mac is still to decide | ⬜ before the LLM drives the real car |
 | 117 | **One RViz** (Ben, 5 Nov: "two nav screens"): `demo_all.sh` says `rviz:=false` | ✅ edited 5 Nov; not launched yet |
 | 118 | **Everything is a drop-in** (Ben, 5 Nov: "just swap out and test"): one conformance check against `docs/interfaces.yaml` for any sensor source or algorithm, and find what still depends on Gazebo by name | ✅ 5 Nov: `pixi run drop-in`, the contract's `drop_in` rules, `/vehicle/sim/` and `/control/sim/`, target `sim`. Against real sensors: not yet |
 | 119 | **The foot-tall kerbs may be invisible to Nav2** (Ben, 5 Nov: the lots have kerbs about a foot tall; `nav2.yaml:366` sets the cubes' floor at 0.3 m, and `docs/learn-lidar.md:141` ignores kerbs). Read, not tested. Check the flat scan's floor, then test a 0.3 m kerb in the simulator. The map may have to hold them | ⬜ before autonomy near a kerb |
 | 120 | **The campus world and the one map** (Ben, 5 Nov): OpenStreetMap plus his measurements gives surfaces, kerbs and buildings, anchored by lat/lon to `navsat.yaml`'s datum, each cell saying where it came from. Generates Gazebo's world and NDT's practice map; Bevy draws it with pavement, concrete and grass. Real drives replace it. No RTK (Ben, 5 Nov): the rough map guides the stitching of a real drive, and NDT against the finished map replaces GPS's offset. Tape two or three long distances as the check. A drive only suggests map changes and a person accepts them (Ben, 5 Nov): the window shows them on the map to approve, and that review doubles as the winter record | 🟡 world, one costmap and NDT's guess built and driven in Gazebo (`docs/campus.md`); drive fitting, the GPS offset and approving changes not built; which lot and his measurements: Ben |
 | 121 | **NDT's score floor on the campus** (found 5 Nov): 1.5 there, 2.3 in the test lot. Measure how high a wrong pose scores before `ndt_ekf` on the campus | ⬜ |
 | 122 | **Reversing on long drives** (found 5 Nov): with `reversing:=true`, Nav2 backed the car a long way, at 0.5 m/s, to a goal behind it. Should reversing cost more, or stay short? | ⬜ decision |
-| 123 | **MPPI holds the car near 1 m/s** (found 5 Nov): with `sim_speed:=3` every command stayed under 1 m/s, and RPP reached 2.8 m/s on the same road, at 17 deg/s of turn rate. Why does MPPI hold back? | ⬜ |
+| 123 | **MPPI held the car near 1 m/s** (found 5 Nov): its 3 m of path was shorter than its futures at any higher speed. The path now grows with `sim_speed`; the campus defaults to 2.5 m/s (mean 2.2) | ✅ Gazebo only |
 | 124 | **Why the car wiggles** (Ben, 5 Nov; N7): the turn rate flips about once a second on MPPI and RPP. Not the steering lag model (the same without it). NDT in place of GPS's jitter: no clear change. Next: look at the controller's sampling and its path critics | ⬜ |
+| 125 | **Read their Humble bags** (after the drive as is, 6 Nov): rename `/velodyne_points`, `/imu/data_raw`, `/aav/gps/fix` to ours, so `ndt-map build` and replay can use them ([tonight](docs/car-evening.md)) | ⬜ after the drive |
 
 ## Tuesday 3 November: 0.2 polished for the meeting (4 Nov), then the car
 

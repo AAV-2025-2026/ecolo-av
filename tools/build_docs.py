@@ -59,6 +59,8 @@ PAGES = [
     ('whats-new.md', "What's new", '22 Oct to 1 Nov, by area, with pictures (history)'),
     ('audit-friday.md', 'Audit, 16 Oct', 'The hardware audit, machine by machine'),
     ('audit-questions.md', 'Audit questions', 'What only the car can tell us'),
+    ('car-evening.md', 'Tonight: drive as is',
+     'Nothing flashed: their stack drives, and we record everything'),
     ('car-day.md', 'Car day', 'The order: Day A changes nothing, Day B upgrades'),
     ('car-setup.md', 'Car setup', 'One car computer: back up, upgrade, install, start at boot'),
     ('tests.md', 'Every test', 'Every test, in order: sim, bench, stands, lot, the drive'),

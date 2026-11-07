@@ -1633,8 +1633,50 @@ ours wins: a simulator we write can share our mistakes. Design:
 - **Found:** NDT's 2.3 floor is the test lot's (1.5 on the campus, wrong poses unmeasured); with
   reversing on, the car backed a long way to a goal behind it. See `docs/campus.md`.
 
+## 5 November, night: faster, and screens as heartbeats
+
+**Q (Ben): Is the frame rate still slow? The car drives really slow. And can the hardware debug
+screen and the Mac display both send heartbeats to the FSM, so a simulation can test that too?**
+
+A: The window itself was fine (112 fps); the scene behind it was a 10 Hz camera, now 30 Hz. The
+car was held near 1 m/s by MPPI's 3 m of path, shorter than its futures. The path now grows with
+the speed, and the campus defaults to 2.5 m/s, in Gazebo only. `watch_screens:=dev_window,hw_panel`
+makes commands need each screen's beat, so a dead screen starves the spine's own watchdog. It runs
+the spine's logic in `spine_sim`, not the ESP32. Firmware and CAN frames are unchanged, and the
+real car refuses it: what the car does about a lost Mac is still TODO 116.
+
+## 6 November: driving as is
+
+**Q (Ben): We drive the car with nothing flashed. What would help, like bag files?**
+
+A: Their stack drives; ours only gets the recordings. The C++ has no timeout, so the runbook says
+never on the ground with it: tonight is the hardware lead's and Ben's decision, with the Kar-Tech
+stop in hand. Record on each computer, and drive what gives us numbers we only have as guesses:
+`docs/car-evening.md`.
+
+## 7 November: debugging the hardware
+
+**Q (Ben): The hardware screen talking directly to the ESP32, with some reporting. What does the C++ do, what does the Rust have, and what's missing?**
+
+A: The Rust is ahead on safety (timeouts, watchdog, heartbeat, latch) and behind on seeing: no WiFi,
+status page, `/scan` or WebSocket log. Two-way UART is written, but off, with its wire unconfirmed.
+
+**Q (Ben): What I'm really missing is how much each direction is pushed, where it really is, and the other sensors, on the hardware screen. Graph the Pi and the ESP32 together?**
+
+A: Yes, in `hw_panel`, which can read both ROS and the ESP32. Neither side reports those values yet.
+The accelerator has no position sensor. IMU and GPS aren't on the ESP32, so its own page can't show them.
+
+**Q (Ben): Which order?**
+
+A: Two EGM reviews found the first plan bigger than the question. Ben chose the second review's order,
+with the graphs in `hw_panel`: `docs/designs/2026-11-07_esp32-debug-link_brief.md`, "The plan now".
+
 ## Open threads
 
+- **The hardware debug plan (7 Nov):** order chosen, nothing built (TODO 126). Replaces the bench link. Open: a USB cable, rotating the WiFi password and closing the C++'s `/update`, which computer runs `hw_panel` on the day, whether the return wire exists.
+
+- **The car, 6 Nov evening:** it moved forward once a hardware fuse and a questionable circuit board were dealt with (Ben). The remote reaches the ESP32 and it sends throttle. Open: which fuse and board, why the fuse went, what each stop cuts. CORTEX does the Motor Pi's job (H1). The Orin's CAN was down. Next steps and the hardware people's questions: `docs/history/audit-2026-11-06-car.md`.
+- **The bench link (6 Nov):** replaced by the hardware debug plan (7 Nov, above). Still open from it: where the steering and brake sensors connect (the hardware people); whether WiFi upsets the firmware's timing.
 - **The campus (5 Nov):** which lot is the real one and where the measurements are (Ben); test the kerbs (TODO 119); how a wrong pose scores on the campus (TODO 121); reversing on long drives (TODO 122); MPPI's speed (TODO 123); the wiggle (TODO 124).
 - **Own simulator:** does the Bevy window pass on a slower laptop? EGM review of the design; does carly have a GPU?
 - **The Mac as a driver:** does the car stop if the MacBook drops off (TODO 116)?

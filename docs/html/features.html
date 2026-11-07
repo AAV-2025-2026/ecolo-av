@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">41 min read · 14 sections</div></header>
+<div class="meta">42 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -26,13 +26,14 @@
 <a href="whats-new.html">What&#x27;s new</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
+<a href="car-evening.html">Tonight: drive as is</a>
 <a href="car-day.html">Car day</a>
 <a href="car-setup.html">Car setup</a>
 <a href="tests.html">Every test</a>
 <a href="know-the-car.html">Know the car</a>
 <a href="measure-the-car.html">Measure the car</a>
-<a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
+<a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <a href="learn-car.html">The car, box by box</a>
 <a href="learn-journey.html">A command&#x27;s journey</a>
@@ -47,8 +48,8 @@
 <a href="controllers.html">Controllers</a>
 <a href="campus.html">The campus</a>
 <a href="maps-and-position.html">Maps and position</a>
-<a href="learn-nav2.html">Learn: Nav2</a>
 <span class="sep">Reference:</span>
+<a href="learn-nav2.html">Learn: Nav2</a>
 <a href="learn-can.html">Learn: CAN</a>
 <a href="status.html">Status</a>
 <a href="howto-driver.html">Build a driver</a>
@@ -1034,6 +1035,27 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Ben</td>
 <td>2026-11-05</td>
 <td>sim</td>
+</tr>
+<tr>
+<td><a href="simulation.html">Screens as heartbeats</a> (<code>watch_screens:=dev_window,hw_panel</code>)</td>
+<td>Test what stops the car when a screen dies: the window and the hardware panel each beat, and with <code>spine:=true</code> the spine's own state machine latches. Refused for the real car</td>
+<td>Ben</td>
+<td>2026-11-05</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="controllers.html">Which follower rides best</a> (<code>measure controllers --tours campus</code>)</td>
+<td>Ben: the car should follow a line "that doesn't make you want to throw up". A new score, sway, measures the sideways swing a passenger feels, over Carleton's roads; the report ranks the followers by it</td>
+<td>Ben</td>
+<td>2026-11-05</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="car-evening.html">Tonight: drive as is</a></td>
+<td>Ben: drive with nothing flashed, and get bags out of it. What to record on their stack, which drives give which number</td>
+<td>Ben</td>
+<td>2026-11-06</td>
+<td>planned</td>
 </tr>
 <tr>
 <td><a href="../designs/2026-11-05_own-simulator.md">Drop-in check</a> (<code>pixi run drop-in</code>): each stream's rate and frame against the contract</td>
