@@ -3,7 +3,7 @@
 //! Subscribes  control/<target>/actuator_cmd  ackermann_msgs/AckermannDriveStamped: ego's
 //!                                   command, from the output mux (aav_io_mux): control/car/
 //!                                   for source real, control/bench/ for bench,
-//!                                   control/gazebo/ for sim. Never /ego/actuator_cmd
+//!                                   control/sim/ for sim. Never /ego/actuator_cmd
 //!                                   itself: on the car, only an output mux that found
 //!                                   every source REAL reaches this node
 //!             safety/estop          std_msgs/Bool
@@ -376,7 +376,7 @@ impl Source {
         match self {
             Source::Real => "control/car/actuator_cmd",
             Source::Bench => "control/bench/actuator_cmd",
-            Source::Sim => "control/gazebo/actuator_cmd",
+            Source::Sim => "control/sim/actuator_cmd",
         }
     }
 
@@ -385,7 +385,7 @@ impl Source {
         match self {
             Source::Real => Target::Car,
             Source::Bench => Target::Bench,
-            Source::Sim => Target::Gazebo,
+            Source::Sim => Target::Sim,
         }
     }
 

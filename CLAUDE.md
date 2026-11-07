@@ -53,6 +53,13 @@ These are the conventions decided so far. They apply to people and to Claude ses
   1. stock ROS packages (robot_localization, Nav2, twist_mux, teleop_twist_*);
   2. then code inherited from the previous teams;
   3. then a reasonable stub.
+- **Our own algorithms** (Ben, 5 Nov): for each area we build a new best hybrid from papers,
+  known algorithms and current implementations. Stock stays the default; ours runs beside
+  it as the challenger until it wins on the same routes and bags. Every algorithm stays.
+- **Everything is a drop-in replacement** (Ben, 5 Nov: "just swap out and test"). Gazebo, our
+  simulator and the real sensors all produce the same topics; so does every algorithm for its
+  job. `docs/interfaces.yaml` is what they must match. Nothing downstream may care which one
+  is running, and tests score them the same way. The safety locks are never swapped out.
 - **Languages:**
   - Python (rclpy) for the ROS nodes we write;
   - Rust (`no_std`, Embassy) for all firmware and hardware drivers, not C or C++ (Ben,
@@ -67,6 +74,10 @@ These are the conventions decided so far. They apply to people and to Claude ses
   - no C++ of our own: the inherited C++ moves to Rust (Ben, 10 Oct). The IMU driver
     went to Ben's Rust twin (11 Oct), the radar clustering to a Rust ROS node (15 Oct).
     Stock ROS packages stay as they are;
+  - **Screens** (Ben, 5 Nov): the in-car HUD and street map stay raylib, on the Pi. Screens on
+    a laptop or desktop can be Bevy. The Orin runs no graphics and no simulator: Gazebo, and
+    later our own simulator, run on a Mac or Linux desktop, for testing only
+    (`docs/designs/2026-11-05_own-simulator.md`);
   - Rust ROS nodes (rclrs from crates.io: `aav_imu_yahboom`, `aav_spine_bridge`)
     are for those ports, the HUD (raylib, Ben, 11 Oct), and later for a node where Rust
     pays off, such as ego.

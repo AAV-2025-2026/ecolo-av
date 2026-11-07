@@ -31,7 +31,7 @@ NAMES = {REAL: 'REAL', SIM: 'SIM', BENCH: 'BENCH', REPLAY: 'REPLAY'}
 # source:= on the sensor mux: where this run's sensor data must come from.
 SOURCES = {'real': REAL, 'sim': SIM, 'bench': BENCH, 'replay': REPLAY}
 # target:= on the output mux: who plays the car, and the source its data must come from.
-TARGETS = {'car': REAL, 'gazebo': SIM, 'turtle': SIM, 'carla': SIM, 'bench': BENCH}
+TARGETS = {'car': REAL, 'sim': SIM, 'turtle': SIM, 'carla': SIM, 'bench': BENCH}
 
 # The sensor topics the sensor mux watches: the raw data, as each driver or stand-in
 # publishes it. The derived topics (/sensors/imu/data, the EKFs) follow from these.
@@ -83,7 +83,7 @@ def choose(target: str, source: str) -> Tuple[str, str]:
     take: the output mux would refuse every command, so say so before anything starts.
     """
     if not target and not source:
-        raise ValueError('give target:= (car, gazebo, bench, turtle, carla) or source:=')
+        raise ValueError('give target:= (car, sim, bench, turtle, carla) or source:=')
     if target:
         needs = target_of(target)
         if not source:
@@ -256,6 +256,11 @@ class Gate:
     the evidence has gone: an announcement of another source, the sensor mux's problems,
     or a sensor mux checking for another source. Doubt only waits, closed, and reopens
     after settle s of all clear: the sensor mux not heard yet or quiet, or its doubts.
+
+    screens: screens that must be alive for commands to flow, for a test of what stops the
+    car (Ben, 5 Nov). A silent one only waits; with no commands the spine's own watchdog
+    latches, as with any lost computer. Never on the real car: a laptop dropping off isn't
+    a reason to brake on the road, so a car target refuses them.
     """
 
     target: str
@@ -266,9 +271,18 @@ class Gate:
     unheard: List[str] = field(default_factory=list)   # Announcers.unheard: waits
     latched: Tuple[str, ...] = ()   # why it stopped, while latched
     clear_since: Optional[float] = None
+    screens: Tuple[str, ...] = ()   # names of the screens that must be alive
+    screen_timeout: float = 1.0     # s: 10 beats a second, so a quiet second is no glitch
+    beats: Dict[str, float] = field(default_factory=dict)   # each screen's newest beat
 
     def __post_init__(self):
         self.expected = target_of(self.target)
+        if self.screens and self.expected == REAL:
+            raise ValueError(f'target:={self.target} takes no screens: a test-only rule')
+
+    def beat(self, screen: str, now: float) -> None:
+        """Note that a screen is alive."""
+        self.beats[screen] = now
 
     def judge(self, now: float) -> Tuple[List[str], List[str]]:
         """Return (problems, waits) now: what latches a stop, and what only holds it shut."""
@@ -288,6 +302,12 @@ class Gate:
                 problems.append('the sensor mux says no')
         problems += foreign(self.entries, self.expected)
         waits += self.unheard
+        for screen in self.screens:
+            heard = self.beats.get(screen)
+            if heard is None:
+                waits.append(f'waiting for the {screen} screen')
+            elif now - heard > self.screen_timeout:
+                waits.append(f'the {screen} screen is quiet ({now - heard:.1f} s)')
         return problems, waits
 
     def update(self, now: float) -> None:

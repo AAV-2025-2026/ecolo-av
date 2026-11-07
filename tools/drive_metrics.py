@@ -5,7 +5,7 @@ No ROS here, so the tests run anywhere (tools/tests/test_drive_metrics.py).
 
 One leg is one Nav2 goal. It records, on Gazebo's clock:
 
-  truth     [(t, x, y, yaw)]        where the car really was (/vehicle/gazebo/truth, map frame)
+  truth     [(t, x, y, yaw)]        where the car really was (/vehicle/sim/truth, map frame)
   plans     [(t, [(x, y), ...])]    each path the planner sent (/plan), as it arrived
   steering  [(t, angle)]            ego's steering command (/ego/actuator_cmd), rad
   asked     [(t, v)]                the controller's speed command (/cmd_vel_nav), m/s
@@ -600,6 +600,8 @@ def summary(leg):
         'end_error_m': math.nan,
         'end_heading_deg': math.nan,
         'steering_rms': rms_rate(leg['steering']),
+        'sway_mps2': sway(truth)[0],
+        'sway_flips_per_100m': sway(truth)[1],
         'stops': stops(truth),
         'reversals': reversals(truth),
         'reversed_m': reversed_distance(truth),
@@ -688,6 +690,8 @@ COLUMNS = [
     ('end_error_m', 'End: off the goal (m)', '{:.2f}'),
     ('end_heading_deg', 'End: heading off (deg)', '{:.0f}'),
     ('steering_rms', 'Steering work (rad/s RMS)', '{:.3f}'),
+    ('sway_mps2', 'Sway: the sideways swing a passenger feels (m/s^2 RMS)', '{:.3f}'),
+    ('sway_flips_per_100m', 'Sway: left-right changes per 100 m', '{:.1f}'),
     ('stops', 'Stops', '{:d}'),
     ('reversals', 'Reversals', '{:d}'),
     ('reversed_m', 'Driven in reverse (m)', '{:.1f}'),
@@ -800,6 +804,43 @@ OVERALL = [
     ('turns_ok', "Kept to the car's turning radius", lambda v: 'yes' if v else '**no**'),
     ('off_path_mean_m', 'Off the path, mean of the legs (m)', '{:.2f}'),
 ]
+
+
+COMFORT = [
+    ('legs', 'Legs reached', '{}'),
+    ('sway_mps2', 'Sway (m/s^2)', '{:.3f}'),
+    ('sway_flips_per_100m', 'Left-right changes per 100 m', '{:.1f}'),
+    ('off_path_mean_m', 'Off the path, mean (m)', '{:.2f}'),
+    ('off_path_max_m', 'Off the path, worst (m)', '{:.2f}'),
+    ('speed_mps', 'Mean speed (m/s)', '{:.2f}'),
+    ('time_s', 'Time (s)', '{:.0f}'),
+]
+
+
+def comfort(rows):
+    """Return one row for a tour's legs: how pleasant the whole drive was, weighted by distance."""
+    done = [r for r in rows if r and r['driven_m'] > 0.0 and not math.isnan(r['sway_mps2'])]
+    out = {'legs': f"{sum(1 for r in rows if r and r['reached'])}/{len(rows)}",
+           'reached_all': bool(rows) and all(r and r['reached'] for r in rows)}
+    metres = sum(r['driven_m'] for r in done)
+    if not metres:
+        return {**out, 'sway_mps2': math.nan}
+
+    def mean(key):
+        return sum(r[key] * r['driven_m'] for r in done) / metres
+
+    seconds = sum(r['time_s'] for r in done)
+    return {**out, 'sway_mps2': mean('sway_mps2'),
+            'sway_flips_per_100m': mean('sway_flips_per_100m'),
+            'off_path_mean_m': mean('off_path_mean_m'),
+            'off_path_max_m': max(r['off_path_max_m'] for r in done),
+            'speed_mps': metres / seconds if seconds > 0.0 else math.nan, 'time_s': seconds}
+
+
+def comfort_order(row):
+    """Sort key: those that reached every goal first, then the least sway; no number is last."""
+    value = row.get('sway_mps2', math.nan)
+    return (not row.get('reached_all'), math.isnan(value), value)
 
 
 def overall(rows):
@@ -1142,6 +1183,8 @@ def final_metre(speeds, still=STILL, creep=CREEP, metre=LAST_METRE):
 
 WEAVE_WIDTH = 4.0   # s: a swing faster than this is weave; slower is drift
 TURN_DEADBAND = 0.02  # rad/s: a turn command smaller than this counts as straight
+SWAY_STEP = 0.1     # s: the true track's spacing, for how the car swings sideways
+SWAY_DEADBAND = 0.03  # rad/s: a turn smaller than this, on the true track, counts as straight
 
 
 def lateral(track, a, b):
@@ -1182,6 +1225,30 @@ def weave(series, width=WEAVE_WIDTH):
         return math.nan
     swings = [value_at(series, t) - mean for t, mean in means]
     return math.sqrt(sum(s * s for s in swings) / len(swings))
+
+
+def sway(truth, step=SWAY_STEP, width=WEAVE_WIDTH, deadband=SWAY_DEADBAND):
+    """
+    Return (RMS m/s^2, left-right changes per 100 m) of how the car swings sideways.
+
+    What a passenger feels: the sideways push (speed x turn rate) minus its `width` s average,
+    so a long corner counts nothing and a wobble counts in full. From the true track, thinned
+    to `step` s. (nan, nan) if the track is too short or the car hardly moved.
+    """
+    points = thin(truth, step)
+    push, turning = [], []
+    for a, b in zip(points, points[1:]):
+        dt = b[0] - a[0]
+        if dt <= 0.0:
+            continue
+        rate = angle_diff(b[3], a[3]) / dt
+        turning.append((b[0], rate))
+        push.append((b[0], math.hypot(b[1] - a[1], b[2] - a[2]) / dt * rate))
+    metres = travelled(truth)
+    swings = weave(push, width)
+    if math.isnan(swings) or metres < 1.0:
+        return math.nan, math.nan
+    return swings, 100.0 * sign_flips(turning, deadband) / metres
 
 
 def sign_flips(series, deadband=TURN_DEADBAND):

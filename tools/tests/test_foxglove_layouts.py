@@ -80,7 +80,7 @@ def test_the_cockpit_has_every_part_on_one_screen():
     assert {'3D', 'Image', 'map', 'Plot', 'Indicator', 'DiagnosticSummary', 'CallService',
             'Table'} <= kinds
     shown = layout_check.shown_topics(layout)
-    assert {'/vehicle/gazebo/chase_camera/compressed', '/perception/voxels/cubes',
+    assert {'/vehicle/sim/chase_camera/compressed', '/perception/voxels/cubes',
             '/localization/health', '/plan', '/goal_pose', '/diagnostics'} <= shown
 
 
@@ -132,10 +132,10 @@ def test_the_cockpit_shows_every_localizer():
 
 
 def test_the_chase_cameras_raw_picture_stays_off_the_wifi():
-    raw = '/vehicle/gazebo/chase_camera/image_raw'
+    raw = '/vehicle/sim/chase_camera/image_raw'
     assert raw in TOPICS
     assert not any(re.fullmatch(p, raw) for p in WIFI)
-    assert TOPICS['/vehicle/gazebo/chase_camera/compressed']['live'] == ['road']
+    assert TOPICS['/vehicle/sim/chase_camera/compressed']['live'] == ['road']
 
 
 def test_an_unknown_panel_is_refused():

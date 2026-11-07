@@ -1,0 +1,45 @@
+# The developer window: Bevy and egui, for laptops only.
+#
+# Its own workspace on purpose, with no package.xml: colcon and the car's builds (the Pi,
+# the Orin) never compile Bevy. It shares only the logic crates that use no engine.
+[workspace]
+
+[package]
+name = "dev-window"
+description = "The developer window, as a test of Bevy: Ben's layout, with pretend data"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "dev_window"
+path = "src/main.rs"
+
+[features]
+# Without ROS by default: pretend data builds on any computer, with nothing sourced.
+# `ros` needs a built workspace sourced (tools/dev_window.sh does it).
+default = []
+ros = ["dep:rclrs", "dep:ros-env"]
+
+[dependencies]
+# No audio: "3d" and egui's render support are all this window draws with.
+bevy = { version = "0.20", default-features = false, features = ["3d"] }
+bevy_egui = "0.43"
+# The logic the raylib screens use too, with no engine in it.
+debug-core = { path = "../aav_hud/crates/debug-core" }  # the cubes' bands, the camera
+hud-core = { path = "../aav_hud/crates/hud-core" }      # a picture message into RGBA
+map-core = { path = "../aav_hud/crates/map-core" }      # map to screen and back; grids
+serde = { version = "1", features = ["derive"] }
+serde_yaml_ng = "0.10"
+rclrs = { version = "0.8", optional = true }
+# The message types: compiled from the Rust code that ships with Jazzy (AMENT_PREFIX_PATH).
+ros-env = { version = "0.3", optional = true }
+# The BlendState of egui's camera, as in bevy_egui's own example.
+wgpu-types = "30"
+
+# Bevy is far too slow without optimisation, so optimise the libraries even in a dev build.
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3

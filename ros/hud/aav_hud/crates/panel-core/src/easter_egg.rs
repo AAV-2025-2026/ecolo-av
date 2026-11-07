@@ -18,7 +18,7 @@ use crate::{
     buttons::Buttons,
     calibration::{CalPage, Mode},
     gate::Gate,
-    state::{PanelState, Row},
+    state::{PanelState, Row, Speed, SpeedUnknown},
     sweep::Outcome,
 };
 
@@ -37,8 +37,12 @@ pub fn watch(
     now: Instant,
 ) -> Watch {
     let sweeping = matches!(cal.mode(), Mode::Sweep(_) | Mode::Ending { .. });
-    let still = state.seen_speed(now).is_none_or(|v| v.abs() < STILL)
-        && buttons.asked_speed().abs() < STILL
+    // A NaN speed is unknown: not still (no status, or a quiet one, is no news).
+    let still = match state.speed(now) {
+        Speed::Measured(v) => v.abs() < STILL,
+        Speed::Unknown(SpeedUnknown::NotANumber) => false,
+        Speed::Unknown(SpeedUnknown::Never | SpeedUnknown::Stale) => true,
+    } && buttons.asked_speed().abs() < STILL
         && !buttons.is_driving()
         && !buttons.is_centring()
         && !sweeping;
@@ -139,6 +143,7 @@ mod tests {
                 speed_wheels: None,
                 no_timeout_lock: None,
                 speed_loop_mode: None,
+                speed_seen: true,
             },
             Caps {
                 sim: 1.0,

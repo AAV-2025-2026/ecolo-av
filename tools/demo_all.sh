@@ -37,7 +37,9 @@ done
 # The debug HUD's run: AMCL beside the global EKF and a trial tracker, so every layer
 # and the panel's tracker have something to show (docs/designs/2026-10-29_debug-hud.md).
 # The test lot already has nav and the lidar on, as amcl:=true needs.
-sim_args="world:=test_lot"
+# rviz:=false: this script opens RViz itself (step 2, drive.rviz). Without it the launch
+# opens a second one (road.rviz) as well.
+sim_args="world:=test_lot rviz:=false"
 steps=4
 if $debug; then
   sim_args="$sim_args amcl:=true tracker:=pure_pursuit reversing:=false"

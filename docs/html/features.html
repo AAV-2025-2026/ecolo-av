@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">40 min read · 14 sections</div></header>
+<div class="meta">48 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -26,13 +26,14 @@
 <a href="whats-new.html">What&#x27;s new</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
+<a href="car-evening.html">Tonight: drive as is</a>
 <a href="car-day.html">Car day</a>
 <a href="car-setup.html">Car setup</a>
 <a href="tests.html">Every test</a>
 <a href="know-the-car.html">Know the car</a>
 <a href="measure-the-car.html">Measure the car</a>
-<a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
+<a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <a href="learn-car.html">The car, box by box</a>
 <a href="learn-journey.html">A command&#x27;s journey</a>
@@ -45,10 +46,11 @@
 <a href="learn-lidar.html">Learn: lidar</a>
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
 <a href="maps-and-position.html">Maps and position</a>
+<span class="sep">Reference:</span>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <a href="learn-can.html">Learn: CAN</a>
-<span class="sep">Reference:</span>
 <a href="status.html">Status</a>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
@@ -75,6 +77,7 @@
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
+<a href="hardware-debug.html">Hardware debug</a>
 <a href="learn-state-space.html">Learn: state space</a>
 <a href="vehicle-model.html">The car as a linear model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
@@ -87,6 +90,8 @@
 <a href="can-plan.html">CAN plan</a>
 <a href="rust-firmware.html">Rust firmware</a>
 <a href="esp32-bench.html">ESP32 first flash</a>
+<a href="esp32-safety.html">ESP32 safety rules</a>
+<a href="esp32-cpp-parity.html">ESP32 C++ parity</a>
 <a href="platforms.html">Platforms</a>
 <a href="bandwidth.html">Bandwidth</a>
 <a href="car-install.html">From a USB stick</a>
@@ -844,6 +849,27 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>built</td>
 </tr>
 <tr>
+<td>ESP32 status lines (<code>json-log</code>, <code>wifi-status</code>, <code>status-lines</code>)</td>
+<td>Ben, 7 Nov: the Rust does the C++'s WiFi jobs, with JSON instead of streaming text and a way to pause, so we can see whether the Pi passes its messages to the ESP32 correctly. The <code>firmware/status</code> lines on the USB cable, and, off by default and read only, over WiFi: a page with graphs, <code>/status.json</code>, <code>/scan</code>, a WebSocket; the tick's worst gap and late ticks for the timing test; <code>tools/esp32_status_sim.py</code> to try the page without a board. Later on 7 Nov (Ben: "That first step is scary"): the board judges the Pi link itself (OK, NO FRAMES, STALE, COUNTER FROZEN, BAD FRAMES), says its build and numbers (<code>config</code>) and which I2C devices answered at boot (<code>devices</code>), a <code>health</code> line and <code>/health</code>, <code>/config</code>, a banner on the page; and <code>pixi run esp first-check</code>, the gate after the first flash: SAFE TO GO ON or STOP. Later again (Ben: "worth knowing its settings including steering limits and speed limits and braking pressure limits, communication rates"): the <code>config</code> line and the text <code>CONFIG</code> line state every setting, each from the constant the code runs with: steering, speed and throttle caps, brake positions, timeouts, rates (<code>none</code> when unknown); the long text line goes out a chunk a tick</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="esp32-cpp-parity.html">ESP32: every C++ behaviour</a> (<code>cpp-stop-centre</code>, <code>cpp-rc-steering</code>, <code>cpp-throttle-ramp</code>, <code>cpp-parity</code>)</td>
+<td>Ben, 7 Nov: "we should have all the features from c++ version at a minimum … We don't know why they made their choice so it's best to assume it was for good reasons". A table of every C++ behaviour and where the Rust has it; the C++'s log lines (boot, <code>STATUS:</code>, faults, Jrk errors, scan names, <code>/status</code>, <code>/log</code>) in the default build; its three ways of moving the car that differ from ours behind features, off by default, to compare on the bench</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
+<td>ESP32 firmware update over WiFi (<code>wifi-update</code>, <code>app-update</code>)</td>
+<td>The C++ had one (<code>/update</code>), for anyone at any time; ours only while the car is parked, with a password, for a checked image of this program, switching only after a full write and read-back. Off by default, never in the car-day build</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
 <td>ESP32 actuator firmware in C++ (<code>aav_umod_esp32</code>)</td>
 <td>It drives today's car, so it stays until its Rust version is proven</td>
 <td>the 2025-26 team</td>
@@ -1042,6 +1068,48 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>sim</td>
 </tr>
 <tr>
+<td><a href="../designs/2026-11-05_own-simulator.md">Developer window</a> (<code>pixi run dev-window</code>, Bevy): Ben's layout: the scene, console, what the lidar sees from the car with NDT's cells going dark to light purple, one map you click, and the keys. Pretend data or live ROS, as drop-ins</td>
+<td>One screen for developers instead of many windows, with widgets a raylib screen would have to draw by hand. It is also the first step to our own simulator</td>
+<td>Ben</td>
+<td>2026-11-05</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="campus.html">The campus</a> (<code>pixi run campus</code>, <code>world:=campus</code>): Carleton from OpenStreetMap: a Gazebo world with bump-mapped pavement, kerbs, grass, trees and buildings; one Nav2 map of the whole campus; a guessed NDT map</td>
+<td>Practice on the real place's shapes while the hardware catches up, then replace the guess with real drives. Runs in Gazebo only: not yet checked against the real campus</td>
+<td>Ben</td>
+<td>2026-11-05</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="simulation.html">Screens as heartbeats</a> (<code>watch_screens:=dev_window,hw_panel</code>)</td>
+<td>Test what stops the car when a screen dies: the window and the hardware panel each beat, and with <code>spine:=true</code> the spine's own state machine latches. Refused for the real car</td>
+<td>Ben</td>
+<td>2026-11-05</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="controllers.html">Which follower rides best</a> (<code>measure controllers --tours campus</code>)</td>
+<td>Ben: the car should follow a line "that doesn't make you want to throw up". A new score, sway, measures the sideways swing a passenger feels, over Carleton's roads; the report ranks the followers by it</td>
+<td>Ben</td>
+<td>2026-11-05</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="car-evening.html">Tonight: drive as is</a></td>
+<td>Ben: drive with nothing flashed, and get bags out of it. What to record on their stack, which drives give which number</td>
+<td>Ben</td>
+<td>2026-11-06</td>
+<td>planned</td>
+</tr>
+<tr>
+<td><a href="../designs/2026-11-05_own-simulator.md">Drop-in check</a> (<code>pixi run drop-in</code>): each stream's rate and frame against the contract</td>
+<td>Ben: "everything is a drop in". Gazebo, our simulator and real sensors must be swappable, so one check says whether each is</td>
+<td>Ben</td>
+<td>2026-11-05</td>
+<td>built</td>
+</tr>
+<tr>
 <td><a href="hud.html#the-little-robot-easter-egg">The little robot</a> (easter egg, a tribute to WALL-E): the map's car as a little tracked robot from above (<code>car_marker: robot</code>); its round eyes peek over the bottom of the hardware panel and the debug screen when all is quiet (<code>easter_egg</code>, <code>easter_egg_after</code>); it drives across the panel at start-up and after a lock-to-lock check passes</td>
 <td>Fun for the team (Ben, 1 Nov: "a huge fan of wall-e and his round eyes"), without ever hiding a control, the e-stop or a warning: never while the car moves or anything warns</td>
 <td>Ben</td>
@@ -1049,10 +1117,17 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>built</td>
 </tr>
 <tr>
-<td><a href="hud.html#the-steering-calibration-page">Steering calibration page</a> on the hardware panel (Tab): the live raw position, allowed or why not, GO LIMP, HOLD, STEP, MARK left / centre / right, equal limits and warnings (<code>steering_limits</code>' Rust twin, shared test vectors), SAVE to <code>~/.local/share/aav/steering-calibration/</code> for a person to copy, and a lock-to-lock check that stops and holds on resistance; <code>--demo</code> has a pretend steering actuator (<code>--demo-bind</code> a stiff spot)</td>
+<td><a href="hud.html#the-steering-calibration-page">Steering calibration page</a> on the hardware panel (Tab): the live raw position, allowed or why not, GO LIMP, HOLD, STEP, MARK left / centre / right, equal limits and warnings (<code>steering_limits</code>' Rust twin, shared test vectors), SAVE to <code>~/.local/share/aav/steering-calibration/</code> for a person to copy, and a lock-to-lock check that stops and holds on resistance; <code>--demo</code> has a pretend steering actuator (<code>--demo-bind</code> a stiff spot). Since 7 Nov a NaN speed (today's ESP32) is unknown, never stopped: the page asks only after a person presses ON STANDS, STILL, and says SOFTWARE ALLOWS, never "safe"; the speed buttons stay off on stands with no wheel speed</td>
 <td>Measure and set the steering actuator's ends and centre from a laptop, moving the wheels by hand or with the motor, then test lock to lock and stop if it finds resistance (Ben, 1 Nov)</td>
 <td>Ben</td>
 <td>2026-11-01</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="hud.html#the-graphs-page">Graphs page</a> on the hardware panel (Tab, <code>--page graphs</code>): a hop chain (ego, mux, Pi wrote, ESP32 got), each OK, DIFFERENT, STALE, NO DATA or NOT TESTED (a parked car is never OK); 60 s graphs of steering, brake and throttle with now / avg / low / high, two lines each (what the Pi wrote, what the ESP32 got); the counts that prove the wire (frames written, counted, lost, bad); FREEZE (and at an e-stop); the IMU and GPS; <code>--esp32 ws://...</code> reads the ESP32's JSON status lines over its WebSocket, read only</td>
+<td>See whether the Pi passes its messages to the ESP32 correctly, one hop at a time, with the graphs in <code>hw_panel</code> beside the actuators and the sensors (Ben, 7 Nov: "graphs in hw_panel"; the ESP32 debug link's second review: hops with a verdict, two lines a graph)</td>
+<td>Ben</td>
+<td>2026-11-07</td>
 <td>built</td>
 </tr>
 </tbody>
@@ -1166,6 +1241,20 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Ben, 1 Nov: "If we do enough tests we should be able to figure out the driving characteristics of the car and get more accurate with every pass": each test says what to measure, what it fits and when the error is small enough to stop, and the lidar records the lot's map meanwhile</td>
 <td>Ben</td>
 <td>2026-11-01</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="hardware-debug.html">Link check</a> (<code>pixi run link-check</code>; the bridge's <code>/control/car/link_frame</code>, <code>/vehicle/esp32/uplink_health</code>, <code>/vehicle/throttle</code>)</td>
+<td>The hardware debug plan (7 Nov) asks whether the Pi passes its messages to the ESP32 correctly. The bridge reports what it really wrote, decoded from the bytes, and counts every frame; the check sets those counts against the ESP32's (<code>frames</code>, <code>bad</code>, <code>skipped</code>), knowing a frame by its counter and check byte, never the counter alone. A parked car is NOT TESTED, never a PASS</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="esp32-bench.html#walk-me-through-it-pixi-run-esp-walk">Walk me through it</a> (<code>pixi run esp walk</code>)</td>
+<td>Ben, 7 Nov: "reading isn't my strong suit. I need you to walk me through it": the first flash of the Rust ESP32 is scary, so the whole bench page comes one short step at a time, in bold colour and spoken aloud (macOS <code>say</code>). It runs the copy of the C++, the build, the flash (only once <code>flash</code> is typed) and the first check, says each row ("Brake: pass. The brake is on.") and the board's settings, asks the hands-on checks one by one, rolls back on a STOP or a no, and writes a record in <code>bench-logs/</code>. <code>--dry-run</code> runs nothing</td>
+<td>Ben</td>
+<td>2026-11-07</td>
 <td>built</td>
 </tr>
 <tr>

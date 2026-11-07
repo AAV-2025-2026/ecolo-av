@@ -7,7 +7,7 @@
 <!-- Generated from docs/car-day.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Car day: the runbook</h1>
-<div class="meta">66 min read · 30 sections</div></header>
+<div class="meta">69 min read · 31 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -26,13 +26,14 @@
 <a href="whats-new.html">What&#x27;s new</a>
 <a href="audit-friday.html">Audit, 16 Oct</a>
 <a href="audit-questions.html">Audit questions</a>
+<a href="car-evening.html">Tonight: drive as is</a>
 <a class="here" href="car-day.html">Car day</a>
 <a href="car-setup.html">Car setup</a>
 <a href="tests.html">Every test</a>
 <a href="know-the-car.html">Know the car</a>
 <a href="measure-the-car.html">Measure the car</a>
-<a href="decisions.html">Decisions</a>
 <span class="sep">Learn:</span>
+<a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <a href="learn-car.html">The car, box by box</a>
 <a href="learn-journey.html">A command&#x27;s journey</a>
@@ -45,10 +46,11 @@
 <a href="learn-lidar.html">Learn: lidar</a>
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
 <a href="maps-and-position.html">Maps and position</a>
+<span class="sep">Reference:</span>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <a href="learn-can.html">Learn: CAN</a>
-<span class="sep">Reference:</span>
 <a href="status.html">Status</a>
 <a href="howto-driver.html">Build a driver</a>
 <a href="costmaps.html">Costmaps</a>
@@ -75,6 +77,7 @@
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
+<a href="hardware-debug.html">Hardware debug</a>
 <a href="learn-state-space.html">Learn: state space</a>
 <a href="vehicle-model.html">The car as a linear model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
@@ -87,6 +90,8 @@
 <a href="can-plan.html">CAN plan</a>
 <a href="rust-firmware.html">Rust firmware</a>
 <a href="esp32-bench.html">ESP32 first flash</a>
+<a href="esp32-safety.html">ESP32 safety rules</a>
+<a href="esp32-cpp-parity.html">ESP32 C++ parity</a>
 <a href="platforms.html">Platforms</a>
 <a href="bandwidth.html">Bandwidth</a>
 <a href="car-install.html">From a USB stick</a>
@@ -98,7 +103,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-people">The people</a><a href="#logins">Logins</a><a href="#the-machines">The machines</a><a href="#the-order">The order</a><a href="#ready-for-car-day-the-02-checklist">Ready for car day (the 0.2 checklist)</a><a href="#what-to-bring">What to bring</a><a href="#session-0-before-leaving-at-home">A0 · Session 0: before leaving (at home)</a><a href="#day-a-nothing-destroyed">Day A: nothing destroyed</a><a href="#session-1-safety-first">A1 · Session 1: safety first</a><a href="#a2-back-up-every-machine">A2 · Back up every machine</a><a href="#session-2-measure-and-weigh">A3 · Session 2: measure and weigh</a><a href="#session-3-questions-for-the-hardware-lead">A4 · Session 3: questions for the hardware lead</a><a href="#session-4-the-orin-and-the-motor-pi">A5 · Session 4: our stack, on the Orin and the Motor Pi</a><a href="#a6-the-steering-actuators-ends-way-a">A6 · The steering actuator&#x27;s ends, Way A</a><a href="#a7-the-brake-on-stands">A7 · The brake, on stands</a><a href="#session-6-the-esp32">A8 · Session 6: the Rust ESP32, on stands</a><a href="#session-9-the-first-drive-on-stands">A9 · Session 9: the keyboard, on stands</a><a href="#a9b-the-joystick-on-stands">A9b · The joystick, on stands</a><a href="#a10-the-ground-at-walking-pace">A10 · The ground, at walking pace</a><a href="#any-time-on-day-a-after-a5">Any time on Day A, after A5</a><a href="#session-5-the-camera-pi">Session 5: the camera Pi</a><a href="#session-7-can-read-only">Session 7: CAN, read-only</a><a href="#session-8-foxglove-from-a-laptop">Session 8: Foxglove from a laptop</a><a href="#session-10-what-to-record">Session 10: what to record</a><a href="#day-b-upgrades-and-the-reflash">Day B: upgrades and the reflash</a><a href="#b3-the-orin-its-image-then-the-reflash">B3 · The Orin: its image, then the reflash</a><a href="#b4-the-lab-desktop-stays-frozen">B4 · The lab desktop stays frozen</a><a href="#session-11-the-labs-ubuntu-desktop">Session 11: the lab&#x27;s Ubuntu desktop</a><a href="#before-you-leave-the-car">Before you leave the car</a><a href="#afterwards-at-home">Afterwards, at home</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-people">The people</a><a href="#logins">Logins</a><a href="#the-machines">The machines</a><a href="#the-order">The order</a><a href="#ready-for-car-day-the-02-checklist">Ready for car day (the 0.2 checklist)</a><a href="#what-to-bring">What to bring</a><a href="#session-0-before-leaving-at-home">A0 · Session 0: before leaving (at home)</a><a href="#day-a-nothing-destroyed">Day A: nothing destroyed</a><a href="#session-1-safety-first">A1 · Session 1: safety first</a><a href="#a2-back-up-every-machine">A2 · Back up every machine</a><a href="#session-2-measure-and-weigh">A3 · Session 2: measure and weigh</a><a href="#session-3-questions-for-the-hardware-lead">A4 · Session 3: questions for the hardware lead</a><a href="#session-4-the-orin-and-the-motor-pi">A5 · Session 4: our stack, on the Orin and the Motor Pi</a><a href="#a6-the-steering-actuators-ends-way-a">A6 · The steering actuator&#x27;s ends, Way A</a><a href="#a7-the-brake-on-stands">A7 · The brake, on stands</a><a href="#a7b-the-motor-pis-uart-ready">A7b · The Motor Pi&#x27;s UART, ready</a><a href="#session-6-the-esp32">A8 · Session 6: the Rust ESP32, on stands</a><a href="#session-9-the-first-drive-on-stands">A9 · Session 9: the keyboard, on stands</a><a href="#a9b-the-joystick-on-stands">A9b · The joystick, on stands</a><a href="#a10-the-ground-at-walking-pace">A10 · The ground, at walking pace</a><a href="#any-time-on-day-a-after-a5">Any time on Day A, after A5</a><a href="#session-5-the-camera-pi">Session 5: the camera Pi</a><a href="#session-7-can-read-only">Session 7: CAN, read-only</a><a href="#session-8-foxglove-from-a-laptop">Session 8: Foxglove from a laptop</a><a href="#session-10-what-to-record">Session 10: what to record</a><a href="#day-b-upgrades-and-the-reflash">Day B: upgrades and the reflash</a><a href="#b3-the-orin-its-image-then-the-reflash">B3 · The Orin: its image, then the reflash</a><a href="#b4-the-lab-desktop-stays-frozen">B4 · The lab desktop stays frozen</a><a href="#session-11-the-labs-ubuntu-desktop">Session 11: the lab&#x27;s Ubuntu desktop</a><a href="#before-you-leave-the-car">Before you leave the car</a><a href="#afterwards-at-home">Afterwards, at home</a></nav>
 <div class="lead"><p>Written 24 October 2026, for the team; split into two days on 1 November (Ben: "Split
 it"). This page <strong>owns the order</strong>: <a href="car-setup.html">Car setup</a> only says how to set up
 one computer.</p>
@@ -313,7 +318,7 @@ repo yet: fill them in from the vault.</p>
                               ├─► A3 measure   A4 questions    B3 the Orin: image, reflash ✍
                               ▼                                B4 the lab desktop ✍
  A5 our stack, beside theirs ─► A6 steering ends (Way A) ─► A7 brake on stands
-   ─► A8 the Rust ESP32 ✍ ─► A9 keyboard and joystick on stands ─► A10 walking pace ✍
+   ─► A7b the Motor Pi's UART ✍ ─► A8 the Rust ESP32 ✍ ─► A9 keyboard and joystick on stands ─► A10 walking pace ✍
    ─► A11 the car tests and the map            (recording all day: session 10)</code></pre>
 <div class="table-wrap"><table>
 <thead>
@@ -383,11 +388,18 @@ repo yet: fill them in from the vault.</p>
 <td>A1</td>
 </tr>
 <tr>
+<td>A7b ✍</td>
+<td><strong>The Motor Pi's UART, ready</strong>: the console off it, theirs off at boot, ours on</td>
+<td><a href="#a7b-the-motor-pis-uart-ready">A7b</a></td>
+<td>laptop person, hardware lead</td>
+<td>A2, A5; H1 🔒</td>
+</tr>
+<tr>
 <td>A8 ✍</td>
 <td><strong>The Rust ESP32</strong>, on stands</td>
 <td><a href="#session-6-the-esp32">session 6</a></td>
 <td>laptop person, e-stop person, hardware lead</td>
-<td>A2, A5, A7; H1 🔒</td>
+<td>A2, A5, A7, A7b; H1 🔒</td>
 </tr>
 <tr>
 <td>A9</td>
@@ -750,7 +762,9 @@ entry exists (on a laptop without them, the vault holds them).</p>
 <section class="card"><h2 id="day-a-nothing-destroyed">Day A: nothing destroyed</h2>
 <p>Every change on Day A undoes from a checked backup: our code goes in <code>~/aav-jazzy</code>, beside
 theirs; the ESP32's flash goes back from its copy. <strong>Nothing is upgraded, reflashed or
-disabled.</strong> Theirs is only stopped (<code>systemctl stop</code>), never turned off at boot.</p>
+disabled.</strong> Theirs is only stopped (<code>systemctl stop</code>), never turned off at boot.
+The one exception is <a href="#a7b-the-motor-pis-uart-ready">A7b</a>, signed: the Motor Pi's UART, each
+change with its own way back.</p>
 </section>
 <section class="card"><h2 id="session-1-safety-first">A1 · Session 1: safety first</h2>
 <p><strong>Who:</strong> everyone, as named in <a href="#the-people">the people</a> (Q32). <strong>How long:</strong>
@@ -1399,11 +1413,125 @@ ground move</strong>, with whatever firmware is on the ESP32 now. Wheels off the
 <p><strong>Stop point:</strong> 1-2 pass; 3-4 written down. The brake's strength is measured on the
 ground later (tests 4.3, <a href="know-the-car.html">Know the car</a>).</p>
 </section>
+<section class="card"><h2 id="a7b-the-motor-pis-uart-ready">A7b · The Motor Pi's UART, ready</h2>
+<p><strong>Who:</strong> the laptop person, with the hardware lead there. <strong>How long:</strong> 30 min.
+🔒 H1 (is CORTEX the Motor Pi, which port?). <strong>Before:</strong> A2 (the Motor Pi's backup) and A5.</p>
+<p><strong>Why</strong> (review 2, B6): the Pi's kernel console is on the ESP32's UART today
+(<code>console=ttyAMA0</code>, audit of 6 Nov). The kernel's messages, and maybe a login prompt, go to the
+ESP32 as noise. And theirs (<code>aav_serial_bridge</code>) only stopped comes back at the next boot:
+<strong>two writers on one wire</strong>. The link check sees that as more frames than the Pi wrote.</p>
+<p><code>✍ Signed (approver): ________ at __:__ · Hardware lead: ________</code></p>
+<h3 id="look-first-changes-nothing">Look first (changes nothing)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do, on the Motor Pi</th>
+<th>Write down</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1</td>
+<td><code>cat /proc/cmdline</code></td>
+<td>every <code>console=</code>: ______</td>
+</tr>
+<tr>
+<td>L2</td>
+<td><code>ls -l /dev/serial0 /dev/ttyAMA0 /dev/ttyS0</code></td>
+<td>where <code>serial0</code> points: ______</td>
+</tr>
+<tr>
+<td>L3</td>
+<td><code>systemctl list-units 'serial-getty@*'</code></td>
+<td>a login prompt on: ______ (none?)</td>
+</tr>
+<tr>
+<td>L4</td>
+<td><code>systemctl is-enabled aav_serial_bridge</code></td>
+<td><code>enabled</code> or <code>disabled</code>: ______</td>
+</tr>
+<tr>
+<td>L5</td>
+<td><code>sudo fuser -v /dev/ttyAMA0</code> (the port from L2)</td>
+<td>who holds it: ______</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-three-changes">The three changes</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do</th>
+<th>You should see</th>
+<th>The way back</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Keep the boot line: <code>sudo cp /boot/firmware/cmdline.txt /boot/firmware/cmdline.txt.2025-26</code></td>
+<td>the copy, one line long</td>
+<td></td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>The console off the UART:</strong> <code>sudo nano /boot/firmware/cmdline.txt</code>. Delete only <code>console=ttyAMA0,115200</code> (or <code>console=serial0,115200</code>). Keep <code>console=tty1</code>. It stays <strong>one line</strong></td>
+<td><code>cat</code> shows one line, no serial <code>console=</code></td>
+<td><code>sudo cp /boot/firmware/cmdline.txt.2025-26 /boot/firmware/cmdline.txt</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>No login prompt on it:</strong> <code>sudo systemctl disable --now serial-getty@ttyAMA0.service</code> (the name from L3; skip if none)</td>
+<td>L3 shows none</td>
+<td><code>sudo systemctl enable --now serial-getty@ttyAMA0.service</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Theirs off at boot:</strong> <code>sudo systemctl disable --now aav_serial_bridge</code></td>
+<td>L4: <code>disabled</code>; L5: nobody</td>
+<td><code>sudo systemctl enable --now aav_serial_bridge</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>sudo reboot</code>, then L1-L5 again</td>
+<td>no serial console, no prompt, theirs disabled, nobody on the port</td>
+<td>the way back of 2-4, then reboot</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Ours on:</strong> <code>~/aav-jazzy/aav.sh car motor_pi</code></td>
+<td><code>serial port /dev/ttyAMA0 open</code>; L5 shows <strong>one</strong> <code>python3</code></td>
+<td>Ctrl-C</td>
+</tr>
+<tr>
+<td>7</td>
+<td>A second terminal: <code>~/aav-jazzy/aav.sh ros2 topic hz /control/car/link_frame</code></td>
+<td>about 10 Hz: the bridge reports what it writes</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition warning">
+<p class="admonition-title">The boot line is one line</p>
+<p>A line break in <code>cmdline.txt</code> stops the Pi booting. Edit with care, check with <code>cat</code>,
+and keep step 1's copy. Ubuntu on a Pi keeps it in <code>/boot/firmware/</code>; older Raspberry
+Pi OS in <code>/boot/</code>.</p>
+</div>
+<p>Ours at boot is <code>car_setup.sh motor_pi services</code> (<a href="car-setup.html">car setup</a>): it refuses
+while theirs is enabled. On Day A, start ours by hand (step 6).</p>
+<p><strong>Back to the 2025-26 way</strong> (the C++ on the ESP32, 6d): the way back of 4, so theirs runs
+again. Leave the console off the UART: the C++ doesn't need it there either.</p>
+<p><strong>Stop point:</strong> 1-7 done and the sheet signed, or the way back done and why written down.</p>
+</section>
 <section class="card"><h2 id="session-6-the-esp32">A8 · Session 6: the Rust ESP32, on stands</h2>
 <p><strong>Who:</strong> the laptop person, the e-stop person, the hardware lead. <strong>How long:</strong> 90 min.
 <strong>Bring:</strong> the ESP32's USB cable, the RC transmitter, a multimeter.
 🔒 <strong>H1</strong> (the link to the Motor Pi) and <strong>Ben's OK</strong> (on a call):
-<a href="esp32-bench.html">First flash on the bench</a> says "do it with Ben".</p>
+<a href="esp32-bench.html">First flash on the bench</a> says "do it with Ben".
+Or let it lead you: <code>pixi run esp walk</code> shows and says each step below, one at a time
+(<a href="esp32-bench.html#walk-me-through-it-pixi-run-esp-walk">walk me through it</a>).</p>
 <p><strong>Before:</strong> A2 (the board's backup, 6a) and A7 (the brake) done; the Motor Pi and the Orin have our stack (session 4); the
 laptop's USB cable in the ESP32 MicroMod. Every command below runs on the laptop, in the
 repo.</p>
@@ -1486,9 +1614,9 @@ agree. <strong>All of Day A: version 2.</strong></p>
 <tbody>
 <tr>
 <td>1</td>
-<td>On the Motor Pi: stop theirs, <code>sudo systemctl stop aav_serial_bridge</code></td>
-<td><code>systemctl status aav_serial_bridge</code>: inactive</td>
-<td>never two drive paths</td>
+<td>On the Motor Pi: theirs off (A7b step 4); check <code>systemctl status aav_serial_bridge</code></td>
+<td>inactive, and disabled</td>
+<td>never two drive paths: do A7b first</td>
 </tr>
 <tr>
 <td>2</td>
@@ -2643,7 +2771,7 @@ reboots into recovery mode and is off for the whole copy. Not possible at the dr
 </tr>
 </tbody>
 </table></div></section>
-<nav class="prevnext"><a class="prev" href="audit-questions.html"><small>Previous</small>← Audit questions</a>
+<nav class="prevnext"><a class="prev" href="car-evening.html"><small>Previous</small>← Tonight: drive as is</a>
 <a class="next" href="car-setup.html"><small>Next</small>Car setup →</a></nav>
 </main>
 <footer>Source: <code>docs/car-day.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>

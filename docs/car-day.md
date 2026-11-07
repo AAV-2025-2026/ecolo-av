@@ -74,7 +74,7 @@ Our stack runs in **ROS domain 42**, so it never mixes with theirs (domain 0).
                               ├─► A3 measure   A4 questions    B3 the Orin: image, reflash ✍
                               ▼                                B4 the lab desktop ✍
  A5 our stack, beside theirs ─► A6 steering ends (Way A) ─► A7 brake on stands
-   ─► A8 the Rust ESP32 ✍ ─► A9 keyboard and joystick on stands ─► A10 walking pace ✍
+   ─► A7b the Motor Pi's UART ✍ ─► A8 the Rust ESP32 ✍ ─► A9 keyboard and joystick on stands ─► A10 walking pace ✍
    ─► A11 the car tests and the map            (recording all day: session 10)
 ```
 
@@ -88,7 +88,8 @@ Our stack runs in **ROS domain 42**, so it never mixes with theirs (domain 0).
 | A5 | Our stack, beside theirs, on the Orin and the Motor Pi | [session 4](#session-4-the-orin-and-the-motor-pi) | laptop person | A2 |
 | A6 | **The steering's ends, Way A** (Pololu's utility), on stands | [A6](#a6-the-steering-actuators-ends-way-a) | hardware lead + laptop person | A2 |
 | A7 | **The brake, on stands** | [A7](#a7-the-brake-on-stands) | hardware lead, e-stop person | A1 |
-| A8 ✍ | **The Rust ESP32**, on stands | [session 6](#session-6-the-esp32) | laptop person, e-stop person, hardware lead | A2, A5, A7; H1 🔒 |
+| A7b ✍ | **The Motor Pi's UART, ready**: the console off it, theirs off at boot, ours on | [A7b](#a7b-the-motor-pis-uart-ready) | laptop person, hardware lead | A2, A5; H1 🔒 |
+| A8 ✍ | **The Rust ESP32**, on stands | [session 6](#session-6-the-esp32) | laptop person, e-stop person, hardware lead | A2, A5, A7, A7b; H1 🔒 |
 | A9 | The keyboard, then the **joystick**, on stands | [session 9](#session-9-the-first-drive-on-stands), [A9b](#a9b-the-joystick-on-stands) | safety driver, e-stop person, laptop person | A8 |
 | A10 ✍ | **The ground, at walking pace** | [A10](#a10-the-ground-at-walking-pace) | all five | A6-A9 passed |
 | A11 | The car tests and the lot's map | [Know the car](know-the-car.md) | all five | A10 |
@@ -245,6 +246,8 @@ Car day: is /Users/ben/Code/ecolo-av ready? (car-day.md)
 Every change on Day A undoes from a checked backup: our code goes in `~/aav-jazzy`, beside
 theirs; the ESP32's flash goes back from its copy. **Nothing is upgraded, reflashed or
 disabled.** Theirs is only stopped (`systemctl stop`), never turned off at boot.
+The one exception is [A7b](#a7b-the-motor-pis-uart-ready), signed: the Motor Pi's UART, each
+change with its own way back.
 
 ## A1 · Session 1: safety first {#session-1-safety-first}
 
@@ -496,12 +499,61 @@ ground move**, with whatever firmware is on the ESP32 now. Wheels off the ground
 **Stop point:** 1-2 pass; 3-4 written down. The brake's strength is measured on the
 ground later (tests 4.3, [Know the car](know-the-car.md)).
 
+## A7b · The Motor Pi's UART, ready
+
+**Who:** the laptop person, with the hardware lead there. **How long:** 30 min.
+🔒 H1 (is CORTEX the Motor Pi, which port?). **Before:** A2 (the Motor Pi's backup) and A5.
+
+**Why** (review 2, B6): the Pi's kernel console is on the ESP32's UART today
+(`console=ttyAMA0`, audit of 6 Nov). The kernel's messages, and maybe a login prompt, go to the
+ESP32 as noise. And theirs (`aav_serial_bridge`) only stopped comes back at the next boot:
+**two writers on one wire**. The link check sees that as more frames than the Pi wrote.
+
+`✍ Signed (approver): ________ at __:__ · Hardware lead: ________`
+
+### Look first (changes nothing)
+
+| # | Do, on the Motor Pi | Write down |
+|---|---|---|
+| L1 | `cat /proc/cmdline` | every `console=`: ______ |
+| L2 | `ls -l /dev/serial0 /dev/ttyAMA0 /dev/ttyS0` | where `serial0` points: ______ |
+| L3 | `systemctl list-units 'serial-getty@*'` | a login prompt on: ______ (none?) |
+| L4 | `systemctl is-enabled aav_serial_bridge` | `enabled` or `disabled`: ______ |
+| L5 | `sudo fuser -v /dev/ttyAMA0` (the port from L2) | who holds it: ______ |
+
+### The three changes
+
+| # | Do | You should see | The way back |
+|---|---|---|---|
+| 1 | Keep the boot line: `sudo cp /boot/firmware/cmdline.txt /boot/firmware/cmdline.txt.2025-26` | the copy, one line long | |
+| 2 | **The console off the UART:** `sudo nano /boot/firmware/cmdline.txt`. Delete only `console=ttyAMA0,115200` (or `console=serial0,115200`). Keep `console=tty1`. It stays **one line** | `cat` shows one line, no serial `console=` | `sudo cp /boot/firmware/cmdline.txt.2025-26 /boot/firmware/cmdline.txt` |
+| 3 | **No login prompt on it:** `sudo systemctl disable --now serial-getty@ttyAMA0.service` (the name from L3; skip if none) | L3 shows none | `sudo systemctl enable --now serial-getty@ttyAMA0.service` |
+| 4 | **Theirs off at boot:** `sudo systemctl disable --now aav_serial_bridge` | L4: `disabled`; L5: nobody | `sudo systemctl enable --now aav_serial_bridge` |
+| 5 | `sudo reboot`, then L1-L5 again | no serial console, no prompt, theirs disabled, nobody on the port | the way back of 2-4, then reboot |
+| 6 | **Ours on:** `~/aav-jazzy/aav.sh car motor_pi` | `serial port /dev/ttyAMA0 open`; L5 shows **one** `python3` | Ctrl-C |
+| 7 | A second terminal: `~/aav-jazzy/aav.sh ros2 topic hz /control/car/link_frame` | about 10 Hz: the bridge reports what it writes | |
+
+!!! warning "The boot line is one line"
+    A line break in `cmdline.txt` stops the Pi booting. Edit with care, check with `cat`,
+    and keep step 1's copy. Ubuntu on a Pi keeps it in `/boot/firmware/`; older Raspberry
+    Pi OS in `/boot/`.
+
+Ours at boot is `car_setup.sh motor_pi services` ([car setup](car-setup.md)): it refuses
+while theirs is enabled. On Day A, start ours by hand (step 6).
+
+**Back to the 2025-26 way** (the C++ on the ESP32, 6d): the way back of 4, so theirs runs
+again. Leave the console off the UART: the C++ doesn't need it there either.
+
+**Stop point:** 1-7 done and the sheet signed, or the way back done and why written down.
+
 ## A8 · Session 6: the Rust ESP32, on stands {#session-6-the-esp32}
 
 **Who:** the laptop person, the e-stop person, the hardware lead. **How long:** 90 min.
 **Bring:** the ESP32's USB cable, the RC transmitter, a multimeter.
 🔒 **H1** (the link to the Motor Pi) and **Ben's OK** (on a call):
 [First flash on the bench](esp32-bench.md) says "do it with Ben".
+Or let it lead you: `pixi run esp walk` shows and says each step below, one at a time
+([walk me through it](esp32-bench.md#walk-me-through-it-pixi-run-esp-walk)).
 
 **Before:** A2 (the board's backup, 6a) and A7 (the brake) done; the Motor Pi and the Orin have our stack (session 4); the
 laptop's USB cable in the ESP32 MicroMod. Every command below runs on the laptop, in the
@@ -540,7 +592,7 @@ The flash overwrites the C++: only with 6a's file checked (4194304 bytes).
 
 | # | Do | You should see | If not |
 |---|---|---|---|
-| 1 | On the Motor Pi: stop theirs, `sudo systemctl stop aav_serial_bridge` | `systemctl status aav_serial_bridge`: inactive | never two drive paths |
+| 1 | On the Motor Pi: theirs off (A7b step 4); check `systemctl status aav_serial_bridge` | inactive, and disabled | never two drive paths: do A7b first |
 | 2 | `vendor/cargo-tools/bin/espflash flash --chip esp32 --monitor car-day/esp32/spine-esp32-umod-v2.elf` | `spine-esp32-umod 0.1.0, link: Motor-Pi UART, version 2 frames (the Orin's heartbeat)` | roll back (6d) |
 | 3 | On the Motor Pi: `legacy.yaml` to version 2: in `~/aav-jazzy/aav/ros/can_bridge/aav_legacy/config/legacy.yaml`, `frame_version: 2`, then `~/aav-jazzy/aav.sh build` | | |
 | 4 | Start the Orin: `~/aav-jazzy/aav.sh ros2 launch aav_bringup car.launch.py machine:=orin max_speed:=0.3 gps:=false lidar:=false stands:=true` | the output mux makes the heartbeat. Its `foxglove_bridge` can't open port 8765 (theirs holds it): harmless, see session 8 | |

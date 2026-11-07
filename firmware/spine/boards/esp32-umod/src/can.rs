@@ -7,6 +7,17 @@ use esp_hal::twai::{EspTwaiFrame, StandardId, Twai};
 use esp_hal::Blocking;
 use spine_board::CanFrame;
 
+/// The bus speed (`aav.dbc`): the one number; [`BAUD`] is TWAI's setting for it, and the
+/// settings line reports this.
+pub const KBIT: u32 = 500;
+pub const BAUD: esp_hal::twai::BaudRate = match KBIT {
+    125 => esp_hal::twai::BaudRate::B125K,
+    250 => esp_hal::twai::BaudRate::B250K,
+    500 => esp_hal::twai::BaudRate::B500K,
+    1000 => esp_hal::twai::BaudRate::B1000K,
+    _ => panic!("TWAI runs at 125, 250, 500 or 1000 kbit/s"),
+};
+
 /// How long a send may wait for the one transmit buffer: a frame takes about 0.25 ms at
 /// 500 kbit/s, and two leave in the same tick (VEHICLE_FEEDBACK and VEHICLE_STATUS).
 const SEND_WAIT: Duration = Duration::from_millis(2);

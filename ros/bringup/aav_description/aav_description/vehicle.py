@@ -573,5 +573,10 @@ def nav2_tuned(nav2, v, reversing=False, max_speed=None, radar=True, lidar=False
     if max_speed is not None:
         follow = servers['FollowPath']
         follow['vx_max' if controller == 'mppi' else 'desired_linear_vel'] = float(max_speed)
+        if controller == 'mppi':
+            # Its futures must fit on the path it keeps: with 3 m of path and 2.8 s ahead, MPPI
+            # stayed near 1 m/s whatever vx_max said (found on the campus, 5 Nov).
+            ahead = float(follow['time_steps']) * float(follow['model_dt']) * float(max_speed)
+            follow['prune_distance'] = max(float(follow['prune_distance']), ahead * 1.2)
         smoother['max_velocity'][0] = float(max_speed)
     return out

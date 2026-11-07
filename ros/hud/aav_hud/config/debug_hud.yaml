@@ -9,7 +9,7 @@ debug_hud:
     lidar_topic: /sensors/lidar/points            # sensor_msgs/msg/PointCloud2: reliable, keep last 1, the cubes
     local_odom_topic: /localization/odom/local    # nav_msgs/msg/Odometry, odom frame: EKF local (blue); places the cubes
     global_odom_topic: /localization/odom/global  # nav_msgs/msg/Odometry, map frame: EKF global (green)
-    truth_topic: /vehicle/gazebo/truth            # nav_msgs/msg/Odometry, map frame: Gazebo's truth (white), sim only
+    truth_topic: /vehicle/sim/truth            # nav_msgs/msg/Odometry, map frame: Gazebo's truth (white), sim only
     amcl_topic: /localization/amcl/pose           # geometry_msgs/msg/PoseWithCovarianceStamped, map frame: AMCL (orange)
     amcl_particles_topic: /localization/amcl/particles  # nav2_msgs/msg/ParticleCloud, best effort, map frame: AMCL's particles (small orange arrows)
     ndt_pose_topic: /localization/ndt/pose        # geometry_msgs/msg/PoseWithCovarianceStamped, map frame: NDT (purple), ndt:=true; good fits only

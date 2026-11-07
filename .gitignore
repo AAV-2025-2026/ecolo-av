@@ -59,6 +59,9 @@ yarn-error.log*
 
 # Drives recorded with tools/record.sh, and logs
 /bags/
+# The guided first flash's records and the ESP32's flash copy (pixi run esp walk):
+# the copy holds the C++'s WiFi password
+/bench-logs/
 *.log
 
 # Downloaded third-party source (vendor/README.md says what and how): only the list

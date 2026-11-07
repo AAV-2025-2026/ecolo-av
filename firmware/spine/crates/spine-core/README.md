@@ -68,9 +68,10 @@ The speed is one more input; the state machine decides what it means.
 | Still over the limit `OVERSPEED_WINDOW_MS` (2 s) after tripping, speeding up or steady | hard stop, latched |
 | RC direct, throttle stick at zero, signal healthy | `rc_stop_brake` (0.33) for `rc_stop_ms` (1 s), then the stop brake |
 
-Latched: the computer must disarm, then arm. RC direct has no arming, so it stays stopped
-until the signal and the speed are back, the throttle stick is at zero and the gear switch
-is on brake (`rc_hold`). The computer going silent still lets RC direct keep driving: its
+Latched: the computer must disarm, then arm. RC direct has no arming, so after any stop
+(an e-stop, a driver fault, a lost RC or speed, an overspeed) and after power-up it stays
+stopped until the stop is gone, the throttle stick is at zero and the gear switch is on
+brake (`rc_hold`; the e-stop and the driver fault since 7 Nov). The computer going silent still lets RC direct keep driving: its
 own input is fine.
 
 A link that has never sent a speed leaves the overspeed and lost-speed rules off

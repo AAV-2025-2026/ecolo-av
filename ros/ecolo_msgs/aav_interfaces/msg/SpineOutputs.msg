@@ -2,7 +2,7 @@
 # Jrk G2, the reverse relay and the steering Jrk G2 (spine-core's Outputs).
 #
 # Only in simulation: on the car these go over I2C and wires, never to ROS. Published by
-# spine_sim on /vehicle/gazebo/spine_outputs at 100 Hz in Gazebo's spine profile
+# spine_sim on /vehicle/sim/spine_outputs at 100 Hz in Gazebo's spine profile
 # (sim.launch.py spine:=true), where gazebo_adapter's actuator model turns them into what
 # Gazebo's car does.
 

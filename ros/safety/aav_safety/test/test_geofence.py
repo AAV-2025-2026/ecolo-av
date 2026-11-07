@@ -127,10 +127,30 @@ def test_rho_and_b_from_their_parts():
 
 def test_the_open_speed_loop_coasts_until_measured():
     assert coasts('uart', {'speed_loop.mode': 'open'}, {})
-    assert not coasts('uart', {'speed_loop.mode': 'pi'}, {})
     assert not coasts('uart', {'speed_loop.mode': 'open'}, {'open_loop_decel': 0.8})
     assert not coasts('spine', None, {})
     assert not coasts('gazebo_esp32', {'speed_loop.mode': 'open'}, {})
+
+
+def test_changing_the_speed_loop_mode_alone_never_releases_the_programs():
+    assert coasts('uart', {'speed_loop.mode': 'pi'}, {})
+    # Each mode needs its own measurement: open's stop says nothing about pi's.
+    assert coasts('uart', {'speed_loop.mode': 'pi'}, {'open_loop_decel': 0.8})
+    assert coasts('uart', {'speed_loop.mode': 'open'}, {'pi_loop_decel': 0.8})
+    assert not coasts('uart', {'speed_loop.mode': 'pi'}, {'pi_loop_decel': 0.8})
+    assert coasts('uart', {'speed_loop.mode': 'teleport'}, {'open_loop_decel': 0.8})
+
+
+def test_the_measured_stop_limits_the_braking():
+    ego = load('ego', 'aav_ego', 'config', 'ego.yaml')['ego']['ros__parameters']
+    car = load('bringup', 'aav_description', 'config', 'vehicle.yaml')
+    car['actuators']['pi_loop_decel'] = 0.5
+    legacy = dict(load('can_bridge', 'aav_legacy', 'config', 'legacy.yaml')[
+        'legacy_uart_bridge']['ros__parameters'])
+    legacy['speed_loop.mode'] = 'pi'
+    motion, coasting = motion_from(ego, car, 'uart', 10.0, 0.1, legacy=legacy)
+    assert not coasting
+    assert motion.braking == pytest.approx(0.25)
 
 
 def test_motion_from_the_real_configs():
@@ -150,9 +170,8 @@ def test_motion_from_the_real_configs():
     assert motion.max_speed == ego['max_speed']
     assert motion_from(ego, car, 'spine', 10.0, 0.1, spine=spine, max_speed=0.3)[0].max_speed \
         == 0.3
-    # Today's car: the 2025-26 ESP32 in open mode coasts.
-    assert motion_from(ego, car, 'uart', 10.0, 0.1, legacy=legacy)[1] == (
-        legacy['speed_loop.mode'] == 'open' and not act.get('open_loop_decel'))
+    # Today's car: the 2025-26 ESP32, its stop not measured.
+    assert motion_from(ego, car, 'uart', 10.0, 0.1, legacy=legacy)[1]
 
 
 def test_along_an_arc():

@@ -42,6 +42,7 @@ so add `--local`: `pixi run tools/ros.sh --local python3 tools/<script>.py`.
 | `check_graph.py` | the running graph against `docs/interfaces.yaml`; then `/localization/health`'s line (warn only) | `check <profile>` |
 | `bench_check.py` | starts bench mode, tests the whole graph: contract, drive, e-stops | `bench-check` |
 | `sim_check.py` | Gazebo's road world headless, the whole graph, a drive (`--voxels`: Nav2 on the lidar's cubes) | `sim-check` |
+| `drop_in_check.py`, `drop_in.py` | is what's running a true drop-in: each stream's rate and frame against the contract's `drop_in` rules (`drop_in.py`: the logic, no ROS) | `drop-in` |
 | `gz_crash.py` | did Gazebo itself crash at start-up? (sim-check retries once) | - |
 | `layout_check.py` | is every topic in `foxglove/` served by a bridge? | - |
 | `ci_annotate.py` | a failed test log into GitHub annotations | (CI) |
@@ -73,7 +74,7 @@ so add `--local`: `pixi run tools/ros.sh --local python3 tools/<script>.py`.
 | `clear.sh` | a person clears the e-stop or a safety latch | `clear <estop, gate, geofence, watchdog>` |
 | `drive_to_point.sh` | drive to one point and stop (`--sim`) | `drive-to-point` |
 | `keyboard.sh` | teleop_twist_keyboard into `/drivers/keyboard/cmd_vel` (`--sim`, `--local`) | `keyboard` |
-| `record.sh` | records a drive into `bags/` (MCAP) | - |
+| `record.sh` | records a drive into `bags/` (MCAP), with what the Motor Pi wrote for `link_check.py` | - |
 | `replay_commands.sh` | plays a bag's commands into `/drivers/replay/cmd_vel` (no flags, never local) | - |
 | `build_engine.py` | the Orin's TensorRT model, on the Orin (JetPack's Python) | - |
 | `calibrate_camera.py` | calibrate a streamed camera; print the board | `calibrate-camera` |
@@ -84,6 +85,7 @@ so add `--local`: `pixi run tools/ros.sh --local python3 tools/<script>.py`.
 | Script | Does | Task |
 |---|---|---|
 | `ros.sh` | the workspace sourced; `--local` for stand-ins | (most tasks) |
+| `dev_window.sh` | the developer window (Bevy): pretend data, `--live` beside a sim here, or `--watch` | `dev-window` |
 | `screen.sh` | one of the four raylib screens, live or with pretend data (`--demo`) | `hud`, `map`, `debug-hud`, `hw-panel` |
 | `demo_all.sh` | Gazebo, RViz, the HUD and the map window in one go (`--debug`: the debug HUD too) | `demo` |
 | `pick.py` | a plain-words menu of the sim's switches (route, follower, where-am-I, speed loop): prints, saves and runs the command (`docs/switches.md`) | `pick` |
@@ -96,6 +98,7 @@ so add `--local`: `pixi run tools/ros.sh --local python3 tools/<script>.py`.
 | `diffusion_data.py` | the teachers' paths (the lattice, Hybrid-A*) on random maps: map_server and planner_server only, no Gazebo | `diffusion data` |
 | `lattice_primitives.py` | the State Lattice planner's primitives for our car, by Nav2's generator (`--check`: still right for `vehicle.yaml`?) | - (needs `pixi run get vendor`) |
 | `heading_check.py` | the global EKF's heading against Gazebo's truth | - (ros.sh --local) |
+| `campus_world.py` | Carleton from OpenStreetMap: a Gazebo world, one Nav2 map of the whole campus, and NDT's guessed map (tested without ROS) | `campus` |
 | `ndt_map.py` | NDT's map of the test lot: drive the mapping route, or build from a bag (its maths without ROS) | `ndt-map` |
 | `gazebo_steering.py` | how much later Gazebo's wheels turn than the actuator model's (run with `tools/ros.sh --local`) | - |
 | `timing_test.py` | every topic's gaps and late messages, parked and driving | `measure timing` |
@@ -135,8 +138,12 @@ Each lands outside git, checksum pinned where the script says.
 |---|---|---|
 | `pico.sh` | our Rust Pico 2 boards: install probe-rs, build the UF2, flash through a probe | `pico <spine, wheel, sentinel> <tools, build, flash>` |
 | `elf2uf2.py` | a Pico 2 program into a UF2 file | (pico.sh build) |
-| `esp32.sh` | the ESP32 board's Rust: tools, build, flash, check, QEMU | `esp <tools, build, flash, qemu-tools, qemu-check>` |
-| `esp32_qemu.py` | the ESP32 firmware in QEMU: heartbeat, uplink, RC modes | (`esp qemu-check`) |
+| `esp32.sh` | the ESP32 board's Rust: tools, build, flash, check, QEMU, the first check, the guided walk | `esp <tools, build, flash, first-check, walk, qemu-tools, qemu-check>` |
+| `esp32_qemu.py` | the ESP32 firmware in QEMU: heartbeat, uplink, RC modes; `--idle` boots it and only records its log | (`esp qemu-check`, `esp first-check --qemu`) |
+| `esp32_first_check.py` | after the first flash: reads the ESP32's log on the USB cable for 30 s (or `--file`), text or JSON, and prints PASS/FAIL per check, then SAFE TO GO ON or STOP. Only reads | `esp first-check [port]` |
+| `esp32_walk.py` | walk me through it: the whole first flash (`docs/esp32-bench.md`), one step at a time, bold and spoken (`say`; `--quiet`): the copy of the C++, the build, the flash once `flash` is typed, the first check row by row, the checks on stands, the roll back; a record in `bench-logs/`. `--dry-run` runs nothing | `esp walk [port]` |
+| `esp32_walk_steps.py` | its steps, answers and spoken sentences (no hardware: tested in `tests/`) | - |
+| `esp32_status_sim.py` | a pretend ESP32 with `wifi-status` on 127.0.0.1:8765: its page, `/status.json`, `/health`, `/config`, `/scan` and the WebSocket of status lines (`firmware/status`), moving; read only, standard library | - |
 | `legacy_firmware.sh` | today's C++ ESP32 firmware, with PlatformIO | `-e firmware legacy-esp32` |
 
 ### Data and analysis
@@ -147,6 +154,7 @@ Each lands outside git, checksum pinned where the script says.
 | `stalls.py` | the numbers behind `measure timing` (no ROS) | - |
 | `drive_metrics.py` | the numbers behind `measure controllers` (no ROS) | - |
 | `measure.sh` | picks one of the five measurements below and runs it (Gazebo ones `--local`) | `measure <controllers, timing, stream, atob, bandwidth>` |
+| `link_check.py` | did the Motor Pi's frames reach the ESP32? A bag (or the live topics) against the ESP32's status lines: PASS, FAIL, NOT TESTED (its maths without ROS) | `link-check` |
 | `atob_score.py` | scores A-to-B runs (bag or CSV): speed up, hold, stop on B; EKF vs truth or tape | `measure atob` |
 | `can_load.py` | the CAN bus load from `firmware/can/aav.dbc` | - |
 | `compare_detectors.py` | YOLO11, YOLO26 and RF-DETR on the same pictures | - |
@@ -206,7 +214,8 @@ Each lands outside git, checksum pinned where the script says.
 | `build_docs.py`, `graph_picture.py`, `vehicle_model.py`, `state_space_demo.py`, `measure_map.py` | write `docs/html/`, `docs/img/` (`measure_map.py` also its table in `docs/measure-the-car.md`) |
 | `make_stop_sign.py`, `make_map.py` | write the stop sign's files in `ros/sim/aav_gazebo/models/`; a map's PGM and YAML |
 | `record.sh` | writes `bags/` |
-| `esp32.sh flash`, `pico.sh <board> flash`, `legacy_firmware.sh -t upload` | write a board's flash (bench only) |
+| `esp32.sh flash`, `esp32.sh walk` (once `flash` is typed), `pico.sh <board> flash`, `legacy_firmware.sh -t upload` | write a board's flash (bench only) |
+| `esp32_walk.py` | writes `bench-logs/`: the record, the first check's log, the copy of the C++ (a secret inside) |
 | `legacy_firmware.sh` | with no `src/secrets.h`, copies `secrets.h.example` there (placeholders, untracked) |
 | `car_install.sh`, `car_screens_install.sh` | write `~/aav-jazzy`, `~/.config` on a car computer |
 | `car_setup.sh --apply` | sudo: apt upgrades, chrony, udev, netplan, linger; `~/aav-backup`, `~/.config` on a car computer |

@@ -38,6 +38,44 @@ qemu = []
 # The e-stop's spare contact on an input pin. Off until it is wired (Q6): an unwired
 # input floats, and would trip and release at random.
 estop-input = []
+# The 2025-26 C++'s behaviours that differ from ours (docs/esp32-cpp-parity.md), each off by
+# default, so the team can try them one by one ("all their features plus ours, and then we
+# can pare back"). None changes a speed limit or a stop rule.
+#   cpp-stop-centre:    on any stop the spine makes, the wheels back to straight, as
+#                       jrkSafeStop() did (spine-core's ESTOP_STEERING = Centre), at the
+#                       steering rate limit instead of at once.
+#   cpp-rc-steering:    the RC stick steers right 1950/1550 as hard as left, as
+#                       handleRCMode() did: full right lock at 80 % of the stick.
+#   cpp-throttle-ramp:  with legacy-uart: the DAC moves at most 6 codes up and 12 down a
+#                       frame, as writeDACRamped(): idle frames coast down. A brake demand
+#                       or any stop still cuts it at once.
+#   cpp-parity:         all three.
+cpp-stop-centre = []
+cpp-rc-steering = []
+cpp-throttle-ramp = []
+cpp-parity = ["cpp-stop-centre", "cpp-rc-steering", "cpp-throttle-ramp"]
+# The JSON status lines (firmware/status: hb, status, event) on the USB cable, in place of
+# the text lines, a chunk a tick so the print never waits.
+json-log = []
+# Read only, off by default: join a WiFi as a station and serve, on port 80, a status page
+# (page.html), /status.json, /scan (an I2C scan, a few addresses a tick, only while not
+# armed) and /ws (a WebSocket of the status lines). No command of any kind. The WiFi's
+# name and password come from src/wifi_secrets.rs, which git ignores (README.md). Not
+# with qemu: QEMU has no radio.
+# Off by default, never in the car-day build: wifi-status, and a firmware update over WiFi
+# on port 8080 (/update), the C++'s OTA page made safe (src/update.rs): only with the
+# UPDATE_PASSWORD from src/wifi_secrets.rs, only while the car is parked, only an ESP32
+# app image of this program, and a restart only after it is written and read back. Needs
+# the two-slot partition table (partitions-ota.csv), flashed over USB once.
+wifi-update = ["wifi-status", "dep:esp-storage", "dep:app-update"]
+wifi-status = [
+    "dep:esp-radio",
+    "dep:esp-alloc",
+    "esp-rtos/esp-radio",
+    "esp-rtos/esp-alloc",
+    "dep:embassy-net",
+    "dep:picoserve",
+]
 
 [dependencies]
 # Ours: the logic, the glue, the drivers (firmware/spine/crates).
@@ -56,6 +94,18 @@ esp-bootloader-esp-idf = { version = "0.6.0", features = ["esp32"] }
 esp-println = { version = "0.18.0", features = ["esp32", "log-04"] }
 esp-backtrace = { version = "0.20.0", features = ["esp32", "panic-handler", "println"] }
 log = "0.4"
+# The status lines (firmware/status).
+status-lines = { path = "../../crates/status-lines" }
+
+# wifi-status only: the radio, its heap, TCP/IP, and the HTTP and WebSocket server.
+esp-radio = { version = "1.0.0-beta.1", features = ["esp32", "wifi", "unstable", "log-04"], optional = true }
+esp-alloc = { version = "0.11.0", features = ["esp32"], optional = true }
+embassy-net = { version = "0.9.1", features = ["tcp", "dhcpv4", "proto-ipv4", "medium-ethernet"], optional = true }
+picoserve = { version = "0.20.1", features = ["embassy", "ws"], optional = true }
+# wifi-update only: the flash (the same esp-storage esp-bootloader-esp-idf uses), and the
+# update's checks.
+esp-storage = { version = "0.10.0", features = ["esp32"], optional = true }
+app-update = { path = "../../crates/app-update", optional = true }
 
 embassy-executor = "0.10.0"
 embassy-time = "0.5.1"
@@ -74,6 +124,10 @@ debug = 2          # symbols for backtraces; they never reach the flash image
 lto = "fat"
 codegen-units = 1
 opt-level = "s"
+
+# The radio's binary blobs need opt-level 2 or 3 (esp-radio's docs).
+[profile.release.package.esp-radio]
+opt-level = 3
 
 [profile.dev]
 opt-level = "s"    # the ESP32 is slow at debug-level code

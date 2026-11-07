@@ -83,6 +83,52 @@ impl Frame {
     }
 }
 
+/// The C++'s DAC ramp (`writeDACRamped`, `hardware_configs.h`): each call moved the code at
+/// most this far up, or down. On the Motor-Pi's link it was called once a frame, so at
+/// 50 frames a second the code rose at most 300 a second and fell at most 600.
+pub const ACCEL_STEP: u16 = 6;
+pub const DECEL_STEP: u16 = 12;
+
+/// How far the steering's stick or frame value turns right for each count it turns left:
+/// the C++ steered the negative side with `JRK_CENTER` counts per unit (1950) and the
+/// positive side with `JRK_MAX - JRK_CENTER` (1550), so a right turn reached the Jrk's 400
+/// limit at 80 % of the stick. [`Frame::targets`] does the same; the RC can, with this.
+pub const STEER_RIGHT_PER_LEFT: f32 = STEER_CENTRE as f32 / (JRK_MAX - STEER_CENTRE) as f32;
+
+/// The C++'s ramp, one frame at a time: [`ACCEL_STEP`] up, [`DECEL_STEP`] down, to at
+/// most [`DAC_CAP`]. A brake demand (`Throttle::Cut`) cut it to 0 at once (`writeDAC(0)`,
+/// `current_dac = 0`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct DacRamp {
+    code: u16,
+}
+
+impl DacRamp {
+    pub const fn new() -> Self {
+        DacRamp { code: 0 }
+    }
+
+    /// One step toward `target`; returns the code the DAC gets.
+    pub fn toward(&mut self, target: u16) -> u16 {
+        let target = target.min(DAC_CAP);
+        self.code = if self.code < target {
+            (self.code + ACCEL_STEP).min(target)
+        } else {
+            self.code.saturating_sub(DECEL_STEP).max(target)
+        };
+        self.code
+    }
+
+    /// Straight to 0.
+    pub fn cut(&mut self) {
+        self.code = 0;
+    }
+
+    pub const fn code(&self) -> u16 {
+        self.code
+    }
+}
+
 /// C's `(uint16_t)x` for 0 <= x < 65536: drop the fraction.
 fn truncate(x: f32) -> u16 {
     x as u16 // saturates; NaN gives 0
@@ -117,6 +163,32 @@ mod tests {
         assert_eq!(t(0.0, 0.0, -0.3).brake, 1050);
         assert_eq!(t(0.0, 0.0, -0.06).brake, 400); // 210, clamped up to "released"
         assert_eq!(t(0.0, 0.0, -0.05).throttle, Throttle::Idle); // not below -0.05
+    }
+
+    #[test]
+    fn the_ramp_rises_6_and_falls_12_a_frame_as_write_dac_ramped() {
+        let mut r = DacRamp::new();
+        assert_eq!(r.toward(350), 6);
+        assert_eq!(r.toward(350), 12);
+        let up: u16 = (0..100).map(|_| r.toward(350)).last().unwrap();
+        assert_eq!(up, 350);
+        assert_eq!(r.toward(0), 338);
+        assert_eq!(r.toward(330), 330); // never past its target
+        assert_eq!(r.toward(9999), 336); // one step at a time
+        let top: u16 = (0..200).map(|_| r.toward(9999)).last().unwrap();
+        assert_eq!(top, DAC_CAP);
+        r.cut();
+        assert_eq!(r.code(), 0);
+        assert_eq!(r.toward(0), 0);
+    }
+
+    #[test]
+    fn right_turns_have_the_bigger_gain() {
+        // The same ratio as the frame's two gains.
+        let left = f32::from(t(1.0, 0.0, 0.0).steering - STEER_CENTRE);
+        let right = f32::from(STEER_CENTRE - t(-0.5, 0.0, 0.0).steering) / 0.5;
+        assert!((right / left - STEER_RIGHT_PER_LEFT).abs() < 1e-3);
+        assert!((STEER_RIGHT_PER_LEFT - 1950.0 / 1550.0).abs() < 1e-6);
     }
 
     #[test]

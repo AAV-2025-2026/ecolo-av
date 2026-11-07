@@ -78,3 +78,20 @@ def test_a_version_3_uplink_carries_the_counts():
     assert (u.steering_counts, u.brake_counts) == (1234, 400)
     (u,) = r.feed(pack_uplink(up(sequence=1), version=2), 0.0)
     assert (u.steering_counts, u.brake_counts, u.calibration) == (None, None, 0)
+
+
+def test_throttle_is_the_command_before_the_ramp_and_never_measured():
+    from aav_legacy.uplink_reader import throttle_state
+    command, measured = throttle_state(up(throttle_out=0.4))
+    assert command == 0.4 and math.isnan(measured)
+
+
+def test_health_counts_the_frames_lost_and_bad():
+    from aav_legacy.uplink_reader import health_fields
+    r = UplinkReader(timeout=0.2)
+    assert health_fields(r, 0.0) == {'fresh': False, 'frames': 0, 'lost': 0, 'bad': 0}
+    bad = bytearray(pack_uplink(up(sequence=3)))
+    bad[12] ^= 0x01
+    r.feed(pack_uplink(up(sequence=1)) + bytes(bad) + pack_uplink(up(sequence=4)), 1.0)
+    assert health_fields(r, 1.1) == {'fresh': True, 'frames': 2, 'lost': 2, 'bad': 1}
+    assert not health_fields(r, 1.5)['fresh']

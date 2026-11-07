@@ -1,0 +1,1024 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The ESP32&#x27;s safety rules · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/esp32-safety.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>The ESP32&#x27;s safety rules</h1>
+<div class="meta">21 min read · 9 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="release-0.2.html">The 0.2 guide</a>
+<a href="whats-new.html">What&#x27;s new</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-evening.html">Tonight: drive as is</a>
+<a href="car-day.html">Car day</a>
+<a href="car-setup.html">Car setup</a>
+<a href="tests.html">Every test</a>
+<a href="know-the-car.html">Know the car</a>
+<a href="measure-the-car.html">Measure the car</a>
+<span class="sep">Learn:</span>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-speed.html">Learn: speed</a>
+<a href="learn-lidar.html">Learn: lidar</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
+<a href="maps-and-position.html">Maps and position</a>
+<span class="sep">Reference:</span>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="path-followers.html">Path followers</a>
+<a href="switches.html">Switches</a>
+<a href="trials.html">Trials</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="hardware-debug.html">Hardware debug</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="geofence.html">The geofence</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a class="here" href="esp32-safety.html">ESP32 safety rules</a>
+<a href="esp32-cpp-parity.html">ESP32 C++ parity</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#1-the-chain">1. The chain</a><a href="#2-how-it-boots">2. How it boots</a><a href="#3-what-releases-the-brake">3. What releases the brake</a><a href="#4-what-counts-as-a-lost-connection">4. What counts as a lost connection</a><a href="#5-what-each-failure-upstream-does">5. What each failure upstream does</a><a href="#6-joystick-and-rc">6. Joystick and RC</a><a href="#7-the-laptop-as-the-heartbeat">7. The laptop as the heartbeat</a><a href="#8-the-2025-26-c-and-open-questions">8. The 2025-26 C++ and open questions</a><a href="#where-its-proved">Where it&#x27;s proved</a></nav>
+<div class="lead"><p>What the ESP32 control board does to keep the car still: how it boots, what lets it drive,
+what counts as a lost link, and what each failure upstream does. Every line is checked
+against the code; the proofs are in the last table.</p>
+<div class="admonition warning">
+<p class="admonition-title">Which firmware this is about</p>
+<ul>
+<li><strong>The car runs the 2025-26 C++ today</strong> (<code>legacy.yaml</code>: <code>frame_version: 1</code>). It has
+  none of the timeouts below. What it does instead: <a href="#8-the-2025-26-c-and-open-questions">section 8</a>.</li>
+<li>Sections 2 to 7 are the <strong>Rust firmware</strong> (<code>firmware/spine/boards/esp32-umod</code>).
+  <span class="badge b-untested">untested</span> on the car: <strong>never flashed yet</strong>. Proven in <code>cargo test</code> and in the
+  emulator (QEMU) only.</li>
+</ul>
+</div></div>
+<section class="card"><h2 id="1-the-chain">1. The chain</h2>
+<pre class="highlight"><code class="language-text"> joystick ─┐  (USB on a laptop, or on the Motor Pi)
+ keyboard ─┤
+ hw_panel ─┤  slot 45, only while GO is held
+ RC via ROS┤  slot 95 (rc_driver, from the uplink)
+ Nav2 ...  ┘
+     │
+     ▼
+ twist_mux ──► ego ──────► output mux ──────────────► legacy_uart_bridge ──UART──► ESP32 ──I2C──► steering Jrk
+ picks one     50 Hz,      passes ego's command,        (on the Motor Pi)    50 Hz            ├──► brake Jrk
+ (0.5 s per    always,     and +1 on the HEARTBEAT      copies the counter                    └──► DAC (throttle)
+  slot)        stops on    counter, only while its      into each frame                            + direction pin
+               0.3 s quiet gate is OPEN
+
+ RC receiver ──iBUS──────────────────────────────────────────────────────────► ESP32 (RC direct: no Pi, no Orin)
+
+ red mushroom button, Kar-Tech wireless stop ──► power, by hardware. Outside the firmware.</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Link</th>
+<th>What it carries</th>
+<th>Who makes it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/control/car/actuator_cmd</code></td>
+<td>ego's speed and steering</td>
+<td>the output mux</td>
+</tr>
+<tr>
+<td><code>/control/car/heartbeat</code></td>
+<td>the counter, +1 per command passed on</td>
+<td>the output mux, only</td>
+</tr>
+<tr>
+<td>the serial frame (version 2)</td>
+<td>values, the counter, <code>armed</code> and <code>estop</code> flags, a CRC</td>
+<td>the bridge: it <strong>copies</strong> the counter, never makes one</td>
+</tr>
+<tr>
+<td>iBUS</td>
+<td>the RC sticks and switches</td>
+<td>the RC receiver</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The heartbeat is the output mux's counter.</strong> Wherever the output mux runs (the Orin,
+or the Motor Pi with <code>machine:=motor_pi_alone</code>), that machine is the heartbeat.</p>
+</section>
+<section class="card"><h2 id="2-how-it-boots">2. How it boots</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Output</th>
+<th>At reset (<code>init</code>)</th>
+<th>Nobody driving, after</th>
+<th>Latched?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Throttle (DAC)</td>
+<td>0</td>
+<td>0</td>
+<td></td>
+</tr>
+<tr>
+<td>Brake</td>
+<td>full (3500)</td>
+<td>full: this board sets <code>IDLE_BRAKE = 1.0</code></td>
+<td></td>
+</tr>
+<tr>
+<td>Direction</td>
+<td>forward</td>
+<td>forward</td>
+<td></td>
+</tr>
+<tr>
+<td>Steering</td>
+<td>centre (1950)</td>
+<td>held where it is (centre, after boot)</td>
+<td></td>
+</tr>
+<tr>
+<td>Mode</td>
+<td><code>Manual</code> (nobody)</td>
+<td><code>Manual</code></td>
+<td><strong>yes</strong>: the computer must stop, then drive</td>
+</tr>
+<tr>
+<td>RC mode switch</td>
+<td>taken as Computer until the RC is heard</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What</th>
+<th>Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>DAC 0, brake full, direction, steering centre: in that order</td>
+<td>milliseconds</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Each I2C device probed (read only)</td>
+<td>about 1 ms</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Self-test: no fault from the Jrks or the DAC. Nothing can arm before</td>
+<td>the first tick</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Running: waits for a stop frame (section 3)</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>A hang or a panic: the hardware watchdog (100 ms) resets the chip, back to step 1.</p>
+<p><code>spine-core</code>'s own <code>IDLE_BRAKE</code> is 0.0 (brake released); the ESP32 board overrides it
+with 1.0 until the team decides (section 8).</p>
+</section>
+<section class="card"><h2 id="3-what-releases-the-brake">3. What releases the brake</h2>
+<h3 id="computer-joystick-keyboard-nav2-through-ros">Computer (joystick, keyboard, Nav2 through ROS)</h3>
+<pre class="highlight"><code class="language-text"> boot ─► latched ─► a STOP frame with a new counter ─► unlatched ─► a DRIVE frame, new counter ─► drives
+                    (ego says stand still: the hold                   (speed asked, no brake:
+                     brake, or the armed flag clear)                   the brake lets go)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Needed</th>
+<th>How you get it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>The self-test passed</td>
+<td>every Jrk and the DAC answer</td>
+</tr>
+<tr>
+<td>2</td>
+<td>No e-stop</td>
+<td><code>/safety/estop</code> false (<code>pixi run clear estop</code>)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>The counter moving</td>
+<td>the output mux running, its gate OPEN (2 s of all clear)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>A stop frame</td>
+<td>ego standing still: start with the joystick's trigger <strong>released</strong></td>
+</tr>
+<tr>
+<td>5</td>
+<td>A drive frame</td>
+<td>trigger held, stick forward</td>
+</tr>
+<tr>
+<td>6</td>
+<td>RC switch on Computer or RC via ROS</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p>The bridge sends stop frames by itself whenever ego is quiet, so steps 4 and 5 happen
+by themselves once ROS runs. After any timeout: the same, from step 3.</p>
+<h3 id="rc-via-ros-ch6-middle">RC via ROS (CH6 middle)</h3>
+<p>The same as Computer, plus:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Needed</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The RC signal stays</td>
+<td>losing it is a hard stop</td>
+</tr>
+<tr>
+<td>The uplink wire (GPIO17 to the Pi, H9) and <code>uplink: true</code></td>
+<td>the sticks go up on it</td>
+</tr>
+<tr>
+<td><code>rc_driver</code> running (with the bridge, <code>rc:=true</code>)</td>
+<td>it turns the sticks into <code>/drivers/rc/cmd_vel</code></td>
+</tr>
+<tr>
+<td>The heartbeat</td>
+<td>the command still goes through ego and the output mux</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="rc-direct-ch6-high">RC direct (CH6 high)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Needed</th>
+<th>Not needed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RC signal healthy</td>
+<td>the Motor Pi, the Orin, any frame</td>
+</tr>
+<tr>
+<td>No e-stop, no driver fault</td>
+<td>arming</td>
+</tr>
+<tr>
+<td>After any stop, and after power-up: signal back, throttle stick at zero, gear switch on brake (7 Nov)</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stick and gear</th>
+<th>Brake</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gear forward or reverse, throttle pushed</td>
+<td>released</td>
+</tr>
+<tr>
+<td>Throttle at zero</td>
+<td>0.33 for 1 s, then full</td>
+</tr>
+<tr>
+<td>Gear on brake (middle)</td>
+<td>full</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="4-what-counts-as-a-lost-connection">4. What counts as a lost connection</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Noticed after</th>
+<th>The car</th>
+<th>Latched?</th>
+<th>To clear</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No frames (Pi, bridge or wire gone)</td>
+<td>100 ms (QEMU: 111-120 ms)</td>
+<td>throttle 0, brake full, fault 1</td>
+<td>yes</td>
+<td>frames, a stop, a drive</td>
+</tr>
+<tr>
+<td>Frames come, <strong>counter frozen</strong> (Orin or mux gone)</td>
+<td>100 ms (QEMU: 113-118 ms)</td>
+<td>the same</td>
+<td>yes</td>
+<td>the same</td>
+</tr>
+<tr>
+<td>Bad CRC</td>
+<td>each frame ignored; fault bit 2 shown</td>
+<td>all bad: as "no frames"</td>
+<td>as no frames</td>
+<td>fix the wire</td>
+</tr>
+<tr>
+<td>Wrong version (13-byte frames into this build)</td>
+<td>ignored</td>
+<td>never drives</td>
+<td></td>
+<td><code>frame_version: 2</code></td>
+</tr>
+<tr>
+<td>A value outside -1..1</td>
+<td>that frame</td>
+<td>throttle 0, the rest kept</td>
+<td>no</td>
+<td></td>
+</tr>
+<tr>
+<td>RC lost (silent 100 ms, or CH6 out of range), on RC via ROS or RC direct</td>
+<td>100 ms (QEMU: 117-119 ms)</td>
+<td>brake full, fault 256</td>
+<td>yes</td>
+<td>computer: stop, drive. RC direct: stick zero + gear on brake</td>
+</tr>
+<tr>
+<td>RC lost, switch on Computer</td>
+<td></td>
+<td><strong>nothing</strong></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Wheel speed lost (300 ms)</td>
+<td>only once a frame has sent one</td>
+<td>brake full, fault 64</td>
+<td>yes</td>
+<td></td>
+</tr>
+<tr>
+<td>Over 1.25 m/s (0.75 back)</td>
+<td>at once</td>
+<td>throttle 0, brake 0.5 until under 1.0</td>
+<td>no</td>
+<td>by itself</td>
+</tr>
+<tr>
+<td>Still over the limit 2 s later</td>
+<td>2 s</td>
+<td>brake full, fault 512</td>
+<td>yes</td>
+<td></td>
+</tr>
+<tr>
+<td>Driver fault (a Jrk, the DAC, the expander)</td>
+<td>that tick</td>
+<td>brake full, fault 8, 16 or 32</td>
+<td>yes</td>
+<td>computer: stop, drive. RC direct: stick zero + gear on brake</td>
+</tr>
+<tr>
+<td>E-stop flag (<code>/safety/estop</code>)</td>
+<td>the next frame, whatever its counter</td>
+<td>brake full</td>
+<td>yes</td>
+<td>a new counter with the flag clear, then stop, drive</td>
+</tr>
+</tbody>
+</table></div>
+<div class="admonition note">
+<p class="admonition-title">The speed rules are off on the car</p>
+<p>The wheel speed comes only in version 4 frames, and the Motor Pi doesn't send them
+yet. So no overspeed check and no lost-speed stop on the ESP32. The only limit is the
+open-loop throttle cap: <code>max_speed / full_throttle_speed</code> = 1.0 / 3.0, and 3.0 is a
+guess (Q4).</p>
+</div>
+</section>
+<section class="card"><h2 id="5-what-each-failure-upstream-does">5. What each failure upstream does</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Fails</th>
+<th>First to notice</th>
+<th>Time</th>
+<th>The car</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The Orin, or its network (Orin + Motor Pi set-up)</td>
+<td>the ESP32: counter frozen</td>
+<td>100 ms</td>
+<td>full brake, latched</td>
+</tr>
+<tr>
+<td>The output mux, or its gate not OPEN</td>
+<td>the ESP32: no new counter</td>
+<td>100 ms</td>
+<td>full brake; never arms</td>
+</tr>
+<tr>
+<td>ego</td>
+<td>the output mux gets nothing: no beat</td>
+<td>100 ms</td>
+<td>full brake, latched</td>
+</tr>
+<tr>
+<td>twist_mux</td>
+<td>ego: no command for 0.3 s</td>
+<td>0.3 s</td>
+<td>ego slows to 0; hold brake. <strong>No fault</strong>: the counter still moves</td>
+</tr>
+<tr>
+<td>The joystick unplugged, or its node dead</td>
+<td><code>joy_alive</code> SILENT 0.5 s, twist_mux 0.5 s, ego 0.3 s</td>
+<td>about 1 s</td>
+<td>ego slows to 0</td>
+</tr>
+<tr>
+<td>The joystick's values frozen while driving</td>
+<td><code>joy_alive</code> FROZEN</td>
+<td>2 s</td>
+<td>ego slows to 0</td>
+</tr>
+<tr>
+<td>Any driver's slot quiet</td>
+<td>twist_mux</td>
+<td>0.5 s</td>
+<td>the next driver, or ego slows to 0</td>
+</tr>
+<tr>
+<td>hw_panel closed, or its window frozen</td>
+<td>it sends only while it draws</td>
+<td>0.5 s</td>
+<td>as any quiet slot</td>
+</tr>
+<tr>
+<td>The laptop's WiFi (running the keyboard or hw_panel)</td>
+<td>twist_mux</td>
+<td>0.5 s</td>
+<td>ego slows to 0</td>
+</tr>
+<tr>
+<td>The Motor Pi</td>
+<td>the ESP32: no frames</td>
+<td>100 ms</td>
+<td>full brake, latched</td>
+</tr>
+<tr>
+<td>The bridge, Ctrl-C</td>
+<td>it sends 5 stop frames as it ends</td>
+<td>at once</td>
+<td>braked</td>
+</tr>
+<tr>
+<td>The bridge, crashed</td>
+<td>the ESP32: no frames</td>
+<td>100 ms</td>
+<td>full brake, latched</td>
+</tr>
+<tr>
+<td>The serial wire</td>
+<td>the ESP32: no frames</td>
+<td>100 ms</td>
+<td>full brake, latched</td>
+</tr>
+<tr>
+<td>The uplink wire (GPIO17)</td>
+<td>the bridge warns after 0.2 s</td>
+<td></td>
+<td><strong>nothing stops</strong>; RC via ROS can't work</td>
+</tr>
+</tbody>
+</table></div>
+<pre class="highlight"><code class="language-text"> a person or program goes quiet ──► ego slows the car (counter keeps moving, no fault)
+ ego / mux / Orin / Pi / wire  ──► the ESP32 brakes hard in ~0.1 s and latches</code></pre>
+</section>
+<section class="card"><h2 id="6-joystick-and-rc">6. Joystick and RC</h2>
+<h3 id="does-the-joystick-need-the-orin">Does the joystick need the Orin?</h3>
+<p><strong>No, not if the Motor Pi runs everything</strong> (<code>machine:=motor_pi_alone</code>). Then the Pi is
+the heartbeat, and the Orin must <strong>not</strong> run <code>car orin</code> (two muxes, two egos, both would
+drive).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Set-up</th>
+<th>Joystick plugged into</th>
+<th>Heartbeat from</th>
+<th>The Orin</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>motor_pi_alone</code> (car day A9b)</td>
+<td>the Motor Pi</td>
+<td>the Motor Pi</td>
+<td>off, or not running our stack</td>
+</tr>
+<tr>
+<td>Orin + Motor Pi (<code>machine:=orin</code>, <code>car motor_pi</code>)</td>
+<td>a laptop (<code>pixi run car laptop</code>)</td>
+<td>the Orin</td>
+<td><strong>needed</strong>: it down = full brake in 100 ms</td>
+</tr>
+</tbody>
+</table></div>
+<p>The joystick going quiet is <strong>not</strong> a firmware stop: ego slows the car (section 5). The
+ESP32 brakes on its own only when ego, the mux, the Pi or the wire stops.</p>
+<h3 id="rc-direct">RC direct</h3>
+<p>Works with <strong>no Pi and no Orin</strong>. The ESP32 reads the receiver itself.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Risk (Arsh, PR #23)</th>
+<th>What the code does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The transmitter turned off while its switch is on Computer</td>
+<td>nothing: a lost RC on Computer changes nothing. It <strong>can't stop autonomy</strong></td>
+</tr>
+<tr>
+<td>The Orin or Pi goes quiet during RC direct</td>
+<td>RC keeps driving: its own input is fine. The computer latches and must re-arm later</td>
+</tr>
+<tr>
+<td>Once the wheel speed is sent: a 0.3 s network gap</td>
+<td>a hard stop and latch, even in RC direct</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="7-the-laptop-as-the-heartbeat">7. The laptop as the heartbeat</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Question</th>
+<th>True in the code today</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Does hw_panel's <code>/hud/hw_panel/heartbeat</code> reach the ESP32?</td>
+<td><strong>No.</strong> The bridge reads only <code>/control/car/heartbeat</code>. The output mux reads screens only with <code>screens:=</code>, and refuses it for the car (the node won't start)</td>
+</tr>
+<tr>
+<td>Can a laptop run the output mux for the real car?</td>
+<td>In principle: it is a ROS node. <strong>No command or machine file does it.</strong> <code>laptop.yaml</code> has only the joystick and the detector. Never tried</td>
+</tr>
+<tr>
+<td>What a laptop can do</td>
+<td>drive (<code>pixi run keyboard</code>), watch (<code>pixi run hw-panel stands:=true</code>), e-stop</td>
+</tr>
+<tr>
+<td>hw_panel's speed buttons on the real car</td>
+<td><strong>off</strong> (on stands too, until a driven-wheel speed exists, TODO 49b)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-command-that-works-today-with-no-orin">The command that works today, with no Orin</h3>
+<p><span class="badge b-untested">untested</span> on the car. With the Rust firmware and <code>frame_version: 2</code>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Where</th>
+<th>Run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>the Motor Pi</td>
+<td><code>~/aav-jazzy/aav.sh ros2 launch aav_bringup car.launch.py machine:=motor_pi_alone max_speed:=0.3</code></td>
+</tr>
+<tr>
+<td>the laptop (to drive)</td>
+<td><code>export ROS_DOMAIN_ID=42</code>, then <code>pixi run keyboard</code></td>
+</tr>
+<tr>
+<td>the laptop (to watch)</td>
+<td><code>export ROS_DOMAIN_ID=42</code>, then <code>pixi run hw-panel stands:=true</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The heartbeat is made on the Motor Pi, beside the ESP32. The laptop can drop off: its
+slot times out and ego stops the car.</p>
+<p><strong>Missing, for a laptop heartbeat:</strong> a machine file with the mux and ego and no bridge,
+and one bench run. Not recommended: the WiFi would then be in the heartbeat's path.</p>
+</section>
+<section class="card"><h2 id="8-the-2025-26-c-and-open-questions">8. The 2025-26 C++ and open questions</h2>
+<h3 id="what-the-c-on-the-car-today-does-differently">What the C++ (on the car today) does differently</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>C++ (today)</th>
+<th>Rust</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Boot</td>
+<td>WiFi first (up to 10 s), then DAC 0, steering centre, brake full</td>
+<td>safe in milliseconds</td>
+</tr>
+<tr>
+<td>First frame after boot</td>
+<td>drives</td>
+<td>latched until a stop frame</td>
+</tr>
+<tr>
+<td>Frames stop</td>
+<td>the last throttle stays on</td>
+<td>full brake in 100 ms</td>
+</tr>
+<tr>
+<td>Counter, CRC</td>
+<td>none: a sum</td>
+<td>heartbeat counter, CRC-8</td>
+</tr>
+<tr>
+<td>RC receiver silent</td>
+<td>the last values stay</td>
+<td>lost after 100 ms: full brake</td>
+</tr>
+<tr>
+<td>A Jrk missing at boot</td>
+<td>skipped; the car still drives</td>
+<td>its fault stops the car</td>
+</tr>
+<tr>
+<td>Jrk or DAC errors</td>
+<td>printed</td>
+<td>full brake</td>
+</tr>
+<tr>
+<td>E-stop</td>
+<td>the button cuts power</td>
+<td>the same; the spare-contact input is off until wired (Q6)</td>
+</tr>
+<tr>
+<td>Over the air</td>
+<td>an HTTP firmware update page on its WiFi</td>
+<td>none: the WiFi status build only reads</td>
+</tr>
+</tbody>
+</table></div>
+<p>With the C++, the Orin going down is still covered: the bridge runs on the Pi and sends
+brake frames 0.3 s after ego goes quiet. The Pi, the bridge or the wire going down is not.
+So the bridge locks every program out (<code>/safety/legacy_uart_bridge/lock</code>), and the
+joystick is for stands only.</p>
+<h3 id="open-questions">Open questions</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Question</th>
+<th>For</th>
+<th>Recommendation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>✅ <strong>Fixed 7 Nov:</strong> RC direct drove again at once after an e-stop or a driver fault cleared, with the stick still pushed. Now any stop holds it (<code>rc_hold</code>) until the stick is at zero and the gear on brake. Test <code>rc_direct_waits_for_a_person_after_an_estop_or_a_driver_fault_clears</code></td>
+<td>Arsh to review</td>
+<td>done</td>
+</tr>
+<tr>
+<td>2</td>
+<td>✅ <strong>Fixed 7 Nov, by the same change:</strong> the board starts with its e-stop input on, so after power-up or a reset RC direct waits for the stick at zero and the gear on brake</td>
+<td>Arsh to review</td>
+<td>done</td>
+</tr>
+<tr>
+<td>3</td>
+<td>What does the receiver send when the transmitter is off (its failsafe, Q7)? If it keeps sending, the ESP32 never sees a lost RC</td>
+<td>hardware lead</td>
+<td>test bench check 11; set the failsafe to throttle zero and gear on brake</td>
+</tr>
+<tr>
+<td>4</td>
+<td>The transmitter off on Computer can't stop the car</td>
+<td>Ben</td>
+<td>the Kar-Tech stop is the stop; never count on the transmitter</td>
+</tr>
+<tr>
+<td>5</td>
+<td>No wheel speed to the ESP32, so no overspeed check</td>
+<td>Arsh</td>
+<td>send version 4 frames once a rear-wheel speed exists (TODO 49b); keep <code>max_speed:=0.3</code> until then</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>IDLE_BRAKE</code>: 1.0 (held) or 0.0 (released)</td>
+<td>Ben</td>
+<td>keep 1.0 until the e-stop input is wired (Q6)</td>
+</tr>
+<tr>
+<td>7</td>
+<td>What the Kar-Tech and the red button cut, and what the brake does with no power (S1, S2)</td>
+<td>hardware lead</td>
+<td>press each on stands, write it down</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Two output muxes at once (Orin and Pi, or a laptop) both drive, and their counters mix, so the heartbeat never freezes</td>
+<td>Ben</td>
+<td>warn when a second publisher appears on <code>/control/car/heartbeat</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td>A laptop as the heartbeat</td>
+<td>Ben</td>
+<td>no: use <code>motor_pi_alone</code> (wired, beside the ESP32)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="where-its-proved">Where it's proved</h2>
+<p><code>spine.rs</code>, <code>fsm.rs</code>: <code>firmware/spine/crates/spine-core/src/</code>. <code>link.rs</code>, <code>health.rs</code>,
+<code>actuators.rs</code>, <code>spine_board.rs</code>, <code>calibration.rs</code>: <code>firmware/spine/crates/spine-board/src/</code>.
+<code>legacy_uart_bridge.py</code>, <code>legacy_protocol.py</code>: <code>ros/can_bridge/aav_legacy/aav_legacy/</code>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Statement</th>
+<th>Code</th>
+<th>Test</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Boots latched</td>
+<td><code>fsm.rs:122-134</code>, <code>spine.rs:373</code></td>
+<td><code>boots_latched_until_disarm_then_arm</code>; <code>armed_frames_after_a_reboot_do_not_drive</code></td>
+</tr>
+<tr>
+<td>Reset order: DAC 0, brake, direction, steering</td>
+<td><code>actuators.rs:128-133</code></td>
+<td><code>init_cuts_the_throttle_then_brakes_then_sets_up</code></td>
+</tr>
+<tr>
+<td><code>IDLE_BRAKE</code> 1.0 on the ESP32, 0.0 in spine-core</td>
+<td><code>boards/esp32-umod/src/main.rs:142</code>, <code>spine.rs:82</code></td>
+<td><code>the_idle_brake_after_boot</code>; QEMU first check: "Brake PASS 1.00" (<code>esp32-bench.md</code>)</td>
+</tr>
+<tr>
+<td>Self-test before arming</td>
+<td><code>fsm.rs:44-51</code>, <code>spine.rs:578-583</code></td>
+<td><code>the_self_test_waits_for_the_devices_and_nothing_arms_before_it</code></td>
+</tr>
+<tr>
+<td>Release: a stop, then a command</td>
+<td><code>fsm.rs:168-177</code>, <code>spine.rs:498-505</code></td>
+<td><code>direct_commands_need_a_stop_first</code>; <code>drive_frames_after_a_reboot_do_not_drive_until_a_stop_frame</code></td>
+</tr>
+<tr>
+<td>Ego standing still is a stop frame</td>
+<td><code>legacy_protocol.py:127-128</code> (hold brake), <code>legacy-link/src/targets.rs:63-67</code> (Cut)</td>
+<td><code>v2_after_a_heartbeat_loss_it_stays_braked_until_a_stop</code></td>
+</tr>
+<tr>
+<td>Only a changed counter is a command</td>
+<td><code>legacy-link/src/v2.rs:144</code>, <code>link.rs:460-463</code></td>
+<td><code>v2_a_frozen_counter_brakes_within_the_timeout_though_frames_still_come</code></td>
+</tr>
+<tr>
+<td>100 ms timeout, latched</td>
+<td><code>spine.rs:182</code>, <code>spine.rs:571-575</code></td>
+<td><code>lost_commands_brake_and_latch</code>; QEMU 111-120 ms (<code>esp32-bench.md</code>)</td>
+</tr>
+<tr>
+<td>Bad CRC ignored</td>
+<td><code>link.rs:430-434</code></td>
+<td><code>v2_bad_crc_frames_are_ignored_so_the_heartbeat_stops</code></td>
+</tr>
+<tr>
+<td>13-byte frames never drive this build</td>
+<td><code>link.rs:425-429</code></td>
+<td><code>v2_ignores_version_1_frames_so_never_drives</code></td>
+</tr>
+<tr>
+<td>E-stop flag at once; released by a new counter</td>
+<td><code>link.rs:450-469</code></td>
+<td><code>v2_the_estop_flag_works_whatever_the_counter</code></td>
+</tr>
+<tr>
+<td>RC lost: 100 ms; only on an RC position</td>
+<td><code>calibration.rs:147</code>, <code>spine.rs:528-531</code></td>
+<td><code>a_silent_receiver_stops_rc</code>; <code>rc_lost_on_the_computer_position_changes_nothing</code>; QEMU 117-119 ms</td>
+</tr>
+<tr>
+<td>RC direct's own latch</td>
+<td><code>spine.rs:556-563</code>, <code>spine.rs:657</code></td>
+<td><code>rc_direct_stays_stopped_after_a_lost_signal_until_a_person_clears_it</code></td>
+</tr>
+<tr>
+<td>RC direct beats the computer; the computer still latches</td>
+<td><code>spine.rs:571-575</code>, <code>spine.rs:623-624</code></td>
+<td><code>the_computer_stopping_while_rc_direct_drives_still_latches</code></td>
+</tr>
+<tr>
+<td>RC zero stick: 0.33 then full</td>
+<td><code>spine.rs:192-193</code>, <code>spine.rs:750-760</code></td>
+<td><code>rc_at_zero_throttle_stops_lightly_for_a_second_then_holds</code></td>
+</tr>
+<tr>
+<td>Wheel speed rules off until a speed comes</td>
+<td><code>spine.rs:433-455</code></td>
+<td><code>a_link_that_never_sends_a_speed_leaves_the_rules_off</code></td>
+</tr>
+<tr>
+<td>Overspeed: 1.25 m/s, 0.5 brake, 2 s</td>
+<td><code>spine.rs:189-190</code>, <code>fsm.rs:181</code>, <code>spine.rs:540-555</code></td>
+<td><code>overspeed_cuts_the_throttle_and_brakes_until_under_the_limit_then_drives_on</code>; <code>an_overspeed_that_holds_steady_for_two_seconds_is_a_hard_stop_and_latches</code></td>
+</tr>
+<tr>
+<td>Driver fault stops; latches the computer</td>
+<td><code>spine.rs:532-535</code></td>
+<td><code>driver_fault_stops_and_needs_rearm</code>; <code>driver_fault_stops_rc_too</code></td>
+</tr>
+<tr>
+<td>Open questions 1 and 2, fixed: any stop holds RC direct</td>
+<td><code>spine.rs</code> (<code>rc_hold</code> set on an e-stop and a driver fault too)</td>
+<td><code>rc_direct_waits_for_a_person_after_an_estop_or_a_driver_fault_clears</code>; the board's <code>rc_drives_without_the_computer</code>; QEMU's <code>direct</code></td>
+</tr>
+<tr>
+<td>The board's link verdict (OK, STALE, COUNTER FROZEN)</td>
+<td><code>health.rs:6-12</code></td>
+<td><code>frames_with_a_frozen_counter_say_counter_frozen</code></td>
+</tr>
+<tr>
+<td>The counter: +1 per command, only while OPEN</td>
+<td><code>ros/io_mux/aav_io_mux/aav_io_mux/output_mux.py:109-112</code></td>
+<td><code>test_heartbeat.py</code>: <code>test_it_counts_each_command_and_wraps_in_a_byte</code>, <code>test_it_never_moves_by_itself</code></td>
+</tr>
+<tr>
+<td>The bridge leaves 5 stop frames as it ends</td>
+<td><code>legacy_uart_bridge.py:350-358</code></td>
+<td></td>
+</tr>
+<tr>
+<td>The joystick's SILENT 0.5 s, FROZEN 2 s</td>
+<td><code>ros/drivers/aav_teleop/config/joy_alive.yaml:10-15</code>, <code>ros/safety/aav_safety/aav_safety/joy_alive.py</code></td>
+<td><code>test_joy_alive.py</code>: <code>test_frozen_values_while_driving_stop_after_frozen_after</code></td>
+</tr>
+<tr>
+<td>The bridge copies, never makes, the counter</td>
+<td><code>ros/can_bridge/aav_legacy/aav_legacy/uart_relay.py:93</code>, <code>:164-185</code></td>
+<td><code>test_the_counter_moves_only_when_the_orin_sends_one</code>; <code>test_when_ego_goes_quiet_it_sends_stops_with_the_last_counter</code></td>
+</tr>
+<tr>
+<td>The bridge reads only <code>/control/car/heartbeat</code></td>
+<td><code>legacy_uart_bridge.py:150</code></td>
+<td></td>
+</tr>
+<tr>
+<td>The car refuses <code>screens:=</code></td>
+<td><code>ros/io_mux/aav_io_mux/aav_io_mux/provenance.py:278-281</code></td>
+<td><code>test_the_real_car_refuses_the_screens_rule</code></td>
+</tr>
+<tr>
+<td>ego sends at 50 Hz and stops on 0.3 s of quiet</td>
+<td><code>ros/ego/aav_ego/aav_ego/ego_node.py:112-130</code>, <code>ego.yaml:19</code></td>
+<td></td>
+</tr>
+<tr>
+<td>twist_mux: 0.5 s per slot, hw_panel at 45</td>
+<td><code>ros/command_mux/aav_command_mux/config/twist_mux.yaml</code></td>
+<td></td>
+</tr>
+<tr>
+<td>hw_panel sends only while it draws</td>
+<td><code>ros/hud/aav_hud/crates/panel-app/src/ros.rs:1-13</code></td>
+<td><code>sends_only_while_the_window_draws_and_the_estop_is_five_trues</code></td>
+</tr>
+<tr>
+<td>hw_panel speed buttons off on the real car</td>
+<td><code>ros/hud/aav_hud/crates/panel-core/src/gate.rs:1-8</code></td>
+<td><code>the_preflight_refuses_the_real_car_without_a_driven_wheel_speed</code></td>
+</tr>
+<tr>
+<td><code>motor_pi_alone</code>: mux, ego, joystick, bridge on the Pi</td>
+<td><code>ros/bringup/aav_bringup/config/machines/motor_pi_alone.yaml</code></td>
+<td><code>test_every_machine_file_loads_and_starts</code> (launch only)</td>
+</tr>
+<tr>
+<td><code>laptop.yaml</code>: joystick and detector only</td>
+<td><code>ros/bringup/aav_bringup/config/machines/laptop.yaml</code></td>
+<td></td>
+</tr>
+<tr>
+<td>The car's file says version 1, uplink off</td>
+<td><code>ros/can_bridge/aav_legacy/config/legacy.yaml</code></td>
+<td></td>
+</tr>
+<tr>
+<td>C++: no timeout, holds the last values</td>
+<td><code>firmware/legacy/aav_umod_esp32/src/main.cpp:162-186</code>, <code>modules/ros2_handler/ros2_handler.cpp</code></td>
+<td><code>tools/tests/test_legacy_cpp.py</code> (the frame only)</td>
+</tr>
+<tr>
+<td>C++: OTA update page</td>
+<td><code>firmware/legacy/aav_umod_esp32/src/main.cpp:64</code></td>
+<td></td>
+</tr>
+<tr>
+<td>No e-stop input on the ESP32 yet</td>
+<td><code>boards/esp32-umod/src/main.rs:200-210</code></td>
+<td></td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="esp32-bench.html"><small>Previous</small>← ESP32 first flash</a>
+<a class="next" href="esp32-cpp-parity.html"><small>Next</small>ESP32 C++ parity →</a></nav>
+</main>
+<footer>Source: <code>docs/esp32-safety.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

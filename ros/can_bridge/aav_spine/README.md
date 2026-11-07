@@ -21,7 +21,7 @@ owns the shared launch file and config both twins use.
 
 | Direction | Topic | Type |
 |---|---|---|
-| sub | `/control/<target>/actuator_cmd` (`car`, `bench` or `gazebo`, by `source`) | ackermann_msgs/AckermannDriveStamped |
+| sub | `/control/<target>/actuator_cmd` (`car`, `bench` or `sim`, by `source`) | ackermann_msgs/AckermannDriveStamped |
 | sub | `/safety/estop` | std_msgs/Bool |
 | sub | `/safety/output_mux/state` | std_msgs/String |
 | sub | `/can/rx` | can_msgs/Frame |

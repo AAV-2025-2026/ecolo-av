@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tonight: drive as is, and record everything · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/car-evening.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Tonight: drive as is, and record everything</h1>
+<div class="meta">6 min read · 7 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="release-0.2.html">The 0.2 guide</a>
+<a href="whats-new.html">What&#x27;s new</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a class="here" href="car-evening.html">Tonight: drive as is</a>
+<a href="car-day.html">Car day</a>
+<a href="car-setup.html">Car setup</a>
+<a href="tests.html">Every test</a>
+<a href="know-the-car.html">Know the car</a>
+<a href="measure-the-car.html">Measure the car</a>
+<span class="sep">Learn:</span>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-speed.html">Learn: speed</a>
+<a href="learn-lidar.html">Learn: lidar</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
+<a href="maps-and-position.html">Maps and position</a>
+<span class="sep">Reference:</span>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="path-followers.html">Path followers</a>
+<a href="switches.html">Switches</a>
+<a href="trials.html">Trials</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="hardware-debug.html">Hardware debug</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="geofence.html">The geofence</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="esp32-safety.html">ESP32 safety rules</a>
+<a href="esp32-cpp-parity.html">ESP32 C++ parity</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#safety-first">Safety first</a><a href="#before-you-drive-15-min">Before you drive (15 min)</a><a href="#record">Record</a><a href="#what-to-drive">What to drive</a><a href="#the-sheet">The sheet</a><a href="#before-you-go-home">Before you go home</a><a href="#at-home-next">At home, next</a></nav>
+<div class="lead"><p>Ben, 6 Nov: we drive the car with nothing flashed. The ESP32 keeps the 2025-26 C++ and the car
+runs the 2025-26 stack (Humble, domain 0). Our software drives nothing tonight. <strong>Every minute of
+driving is data we don't have yet.</strong></p>
+<blockquote>
+<p><strong>The short version</strong></p>
+<ul>
+<li>Their stack drives. Ours only gets the recordings, at home.</li>
+<li><strong>Test the Kar-Tech stop first</strong>, and keep it in someone's hand.</li>
+<li>Record on each computer, to its own disk.</li>
+<li>Write the time and what you did on one sheet.</li>
+<li>Copy the bags off before anyone goes home.</li>
+</ul>
+</blockquote></div>
+<section class="card"><h2 id="safety-first">Safety first</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Fact</th>
+<th>So</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The C++ has <strong>no timeout</strong>: if the Pi, the bridge or the wire dies, the last throttle stays</td>
+<td>The stop is a person: the Kar-Tech stop, in hand, whenever the car has power</td>
+</tr>
+<tr>
+<td>The RC transmitter has no timeout either</td>
+<td>Turning it off does not stop the car</td>
+</tr>
+<tr>
+<td>The runbook says the C++ is "never the joystick or the ground" (<a href="car-day.html">car day</a>)</td>
+<td>Tonight is the <strong>hardware lead's and Ben's decision</strong>. Write down who decided</td>
+</tr>
+<tr>
+<td>The throttle's strength is a guess</td>
+<td>Empty lot, walking pace at first, a safety driver in the seat</td>
+</tr>
+</tbody>
+</table></div>
+<p>Before moving on the ground: ask S1-S3 (what the stops cut, the brake without power, what stops a
+frozen Pi), then test the Kar-Tech stop with the wheels off the ground.</p>
+<p><strong>Never two drive paths.</strong> Don't start <code>car motor_pi</code> or our bridge beside theirs.</p>
+</section>
+<section class="card"><h2 id="before-you-drive-15-min">Before you drive (15 min)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>☐</th>
+<th>Do</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>☐</td>
+<td><code>df -h</code> on the Orin and LOCALIZATION</td>
+<td>The lidar is about 5 GB per 10 min; stop at 2 GB left</td>
+</tr>
+<tr>
+<td>☐</td>
+<td><code>date</code> on every computer, at the same moment; a photo of the answers</td>
+<td>Their clocks may differ: this lines the bags up at home</td>
+</tr>
+<tr>
+<td>☐</td>
+<td><code>ros2 topic list &gt; ~/aav-bags/topics.txt</code> and <code>ros2 topic hz</code> on the ones below</td>
+<td>What their stack really publishes tonight</td>
+</tr>
+<tr>
+<td>☐</td>
+<td>A photo of the wiring, the Jrks and the ESP32</td>
+<td>Reference, and for the hardware lead's answers</td>
+</tr>
+<tr>
+<td>☐</td>
+<td>A phone on the dash, filming the road and a clock</td>
+<td>Shows what the car did, and proves the times</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="record">Record</h2>
+<p>Each computer records its own sensors, so a weak network can't lose data. Log in with the logins
+from the vault. Run each in its own <code>tmux</code>, so a dropped ssh doesn't stop it.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Computer</th>
+<th>Run</th>
+<th>Gives</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LOCALIZATION (.113)</td>
+<td><code>source /opt/ros/humble/setup.bash; ros2 bag record -o ~/aav-bags/&lt;name&gt; /imu/data_raw /imu/mag /aav/gps/fix</code></td>
+<td>The real IMU and GPS</td>
+</tr>
+<tr>
+<td>The Orin (.140)</td>
+<td><code>source /opt/ros/humble/setup.bash; ros2 bag record -o ~/aav-bags/&lt;name&gt; /velodyne_points /scan</code></td>
+<td>The real lidar</td>
+</tr>
+<tr>
+<td>CORTEX (.120)</td>
+<td><code>source /opt/ros/humble/setup.bash; ros2 bag record -o ~/aav-bags/&lt;name&gt; &lt;the command topics from topics.txt&gt;</code></td>
+<td>What the car was told to do</td>
+</tr>
+</tbody>
+</table></div>
+<p>Keep one bag per drive below, each with its own <code>&lt;name&gt;</code>. Ctrl-C ends a bag cleanly.</p>
+</section>
+<section class="card"><h2 id="what-to-drive">What to drive</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Name</th>
+<th>Do</th>
+<th>Gives us</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>parked</code></td>
+<td>Parked, nobody touching it, 5 min</td>
+<td>The IMU's bias, the GPS's noise</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>walk</code></td>
+<td>Parked: someone walks past at 5 m, then 10 m</td>
+<td>The lidar on a person, for the tracker and ghost obstacles</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>tape</code></td>
+<td>10 m by tape, straight, slowly; start and end on tape marks</td>
+<td>The wheel diameter (TODO 60)</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>straight</code></td>
+<td>A long straight, wheel centred, slowly</td>
+<td>How much it pulls right (TODO 67)</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>lock</code></td>
+<td>One slow full circle at full lock, each way; mark the circle's edge and measure it</td>
+<td>The real turning radius</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>coast</code></td>
+<td>Up to a steady slow speed, let go, roll to a stop; 3 times</td>
+<td>The drag, which settles the 5-times throttle guess (TODO 52b)</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>brake</code></td>
+<td>Same speed, brake firmly, measure the distance; 3 times</td>
+<td>The real stopping distance</td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>lot</code></td>
+<td>2 slow laps, a figure 8, a stop by each cone</td>
+<td>NDT's map, and real scores for every algorithm</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>smooth</code></td>
+<td>Your smoothest drive round a bend or two</td>
+<td>The sway a person gets: the number the followers must beat</td>
+</tr>
+<tr>
+<td>10</td>
+<td><code>buildings</code></td>
+<td>If there's time and it's allowed: slowly past known buildings on campus</td>
+<td>The first real drive to fit the campus map to (TODO 120)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Do the first eight even if nothing else happens. Note the lot's corner from a phone (latitude and
+longitude): it becomes <code>navsat.yaml</code>'s <code>datum</code>.</p>
+</section>
+<section class="card"><h2 id="the-sheet">The sheet</h2>
+<p>One line per drive: bag name, start time, who drove, what happened, anything odd (a stop, a
+stumble, a sensor dropping out). A bag nobody can explain is half a bag.</p>
+</section>
+<section class="card"><h2 id="before-you-go-home">Before you go home</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>☐</th>
+<th>Do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>☐</td>
+<td>Copy to the encrypted drive: <code>rsync -a &lt;user&gt;@192.168.1.140:aav-bags/ ~/aav-bags/orin/</code>, the same for .113 and .120</td>
+</tr>
+<tr>
+<td>☐</td>
+<td>Check the sizes match, and <code>ros2 bag info</code> opens one from each computer</td>
+</tr>
+<tr>
+<td>☐</td>
+<td>Photograph the sheet</td>
+</tr>
+<tr>
+<td>☐</td>
+<td>Leave their stack as you found it. Delete nothing from the car</td>
+</tr>
+</tbody>
+</table></div>
+<p>Bags stay out of git. Ben's Mac has only 18 GB free, so bags go on the drive, not the Mac.</p>
+</section>
+<section class="card"><h2 id="at-home-next">At home, next</h2>
+<p>Their topics have the old names, so the bags need renaming before our tools read them (TODO 125).
+Then: the wheel diameter and drag into <code>vehicle.yaml</code>, NDT's map with <code>pixi run ndt-map build</code>, and
+every algorithm scored on real data. <strong>Untested:</strong> nothing has read a Humble bag from this car yet.</p></section>
+<nav class="prevnext"><a class="prev" href="audit-questions.html"><small>Previous</small>← Audit questions</a>
+<a class="next" href="car-day.html"><small>Next</small>Car day →</a></nav>
+</main>
+<footer>Source: <code>docs/car-evening.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

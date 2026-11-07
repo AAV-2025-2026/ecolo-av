@@ -1470,8 +1470,217 @@ Ben: "All the perception stack maybe, what part does what. When sitting at the c
 | A "throttle cap", not a "speed cap": the ESP32 can't see speed; a joystick-alive check to build | TODO 74 |
 | The car-ready checklist: when 0.2 is done | [Car day](../car-day.md#ready-for-car-day-the-02-checklist) |
 
+## 4 November: the weak links
+
+### "we have created all the basic algorithms ... can you find a better solution then what is out there now" (afternoon)
+
+Ben's own picture of the stack, checked: `ekf_local` is dead reckoning; `ekf_global` is a
+position (not a map); **NDT** is the pinpoint on the saved map and **KISS-ICP** is "how far
+did I move" (and, stacked, builds the map); the cubes are an occupancy **grid** (geometry),
+not an occupancy **network** (a learned one); a stop sign's distance comes from its box
+height and the lens, not from the voxels (camera-to-lidar calibration is pick 4); MPPI
+already simulates thousands of short futures. The answer: the limit isn't the algorithms
+but the unmeasured car, the blind zone near the bumper, the missing keep-in map and the
+safety rules that share no model. Three research proposals that get better with the car's
+own data: A (online identification + a CBF safety filter), B (the lidar teaches the camera
+free space), C (degeneracy-aware NDT). All in `docs/designs/2026-11-04_weak-links.md`.
+
+### "state machines for speeding up and slowing down ... a simulation internally so that it could know where it was going to stop", "or a mathematical model"
+
+A mathematical model used as an internal simulation, and a state machine only for modes.
+Pieces exist: MPPI and MPC simulate ahead (with no lags); the geofence's RSS stopping path
+(every number a guess); the spine's ramp (no jerk limit); the car's linear model (never
+fitted). The maths version of the idea is a **safety filter** (control barrier functions).
+
+### "What is ames CBF, Sha Simplex or Zhang degeneracy and self supervised free space ... How do we even tell the car what is a safe area to drive in and how far its allowed to go and what is the plan"
+
+The four names in plain words (the design, Part 2). The safe area today: a 30 m circle round
+the start, an empty Nav2 map on the car, seven limits in seven files, one goal at a time.
+Proposed: one **site file** (keep-in, keep-out, speed zones, named places, missions) read
+by the geofence, Nav2's keepout and speed filters, the CBF filter and the screens.
+
+### "Is nav2 the best option?"
+
+For this year's car, yes: the only navigation stack stock on Jazzy, built for Ackermann,
+and already a frame whose planner and follower we swap through its own actions. Not for
+streets with lanes and traffic: next year a lane model (lanelet2) on top, or Autoware's
+planner. Autoware, Apollo and openpilot were weighed and set aside.
+
+### "merging the gazebo screen with nav map so I can select where I want to go ... they are both cubes"; "how do i see this?"
+
+Three kinds of cubes: the lidar's (teal, perception, for the eye), Nav2's (red wireframes,
+what it stops for), NDT's map (purple, never moves: localization). The Drive screen
+(TODO 90, 0.3): the map window's two-press goal flow and the seeing screen merged, in
+raylib; the camera topic in place of Gazebo's window. To see today's pieces:
+`pixi run demo --debug ndt:=true ndt_map:=maps/ndt/test_lot.pcd voxels:=true`.
+
+### "think about the areas of this car and what is the weakest ... whatever else I am forgetting"; "save this full list"
+
+The forgotten areas: sensing and the clocks, behaviour (where a state machine belongs),
+safety as one model, data and ground truth, compute and plumbing, the mission and the
+screens. The weakest across the car: nothing measured on the real car; a 0.9 s reaction
+chain (reaction, not braking, dominates the stopping path at 1 m/s); a low thing near the
+bumper and a person treated as a cone; no keep-in map and no speed plan; safety rules with
+no shared model. Saved as `docs/designs/2026-11-04_weak-links.md`; TODO 99-104 for
+Thursday's pick.
+
+### "look at all the research ideas we have and really think about what ones will help us and what improvements or edge can we bring" (evening)
+
+Ben's picks from the weak links: the brake follows a wish, the behaviour layer and the
+speed profile, the clocks: yes; the tracker and research A: "?". Every research idea in the
+repo judged (kept, folded or dropped: AMCL dropped; more followers and planners stopped;
+the 2027-28 list stays parked; B moved to spring). Our edges: a slow car, one lot driven a
+hundred times, a winter, a person always on the joystick, the trials harness, the Simplex
+frame already built. Twelve new ideas, three threads: **the car that knows itself**
+(identification, the brake-health monitor, speed by trust, the CBF filter), **the winter
+lot** (snow out of the lidar, NDT and KISS-ICP on snow and ice, pole landmarks, a truth
+rig, a dataset), **it learns safely** (shadow mode, the tuner on the harness, shielded
+learning, the VLM that may only say STOP). The tracker: the radar's own tracking mode plus
+a blind-zone memory first. Research A: yes, staged. `docs/designs/2026-11-04_research-ideas.md`.
+
+### "taking the best of everything we know ... the best of all worlds"; "all 5 are important"; "a new window that is in rust" (evening)
+
+Ben's direction: after 0.3 ("it drove"), **converge**: one winner per area, chosen by
+numbers on the lot's bags, the losers archived. All five picks are his: the brake, the
+clock, the speed profile, tracking and the CBF filter ("i just don't know what this is":
+a bumper made of maths, explained in `docs/designs/2026-11-04_one-car.md`, section 2).
+And one window: Gazebo headless, one Rust Drive window (map, 3D, camera, click-to-go), RViz
+off unless asked; not Gazebo's renderer compiled into Rust. The EGM scope and readability
+reviews corrected the weak-links page (chrony is already installed by `car_setup.sh`; a
+speed policy exists in `aav_track/speed.py`; the closed speed loop is written and the car
+runs `open`; Cyclone was chosen 23 Oct; research C reproduces in Gazebo today; the CBF
+filter goes beside the locks, never instead). Everything in one place:
+`docs/designs/2026-11-04_one-car.md`; TODO 106, 107.
+
+## 5 November: the designs behind the picks
+
+### "please continue writing everything"
+
+Five designs, for the EGM review: [one window](../designs/2026-11-05_one-window.md)
+(Gazebo headless, one Rust Drive window; TODO 107), [the car that knows itself](../designs/2026-11-05_knows-itself.md)
+(research A: measured numbers with error bars, a brake-health monitor, the safety filter in
+ego beside the locks, speed only first; TODO 104), [the behaviour layer and one speed profile](../designs/2026-11-05_behaviour-and-speed.md)
+(stop at X through Nav2's stock `speed_limit` topic; the lock stays as the guard; TODO 102),
+[tracks and memory](../designs/2026-11-05_tracks-and-memory.md) (the radar's own tracking
+mode, a person lock, the blind-zone memory in the cubes node; TODO 103, 93) and
+[shadow mode](../designs/2026-11-05_shadow-mode.md) (a SHADOW lock, the bag, a scorer; TODO 108).
+
+### "when I said simplify down to one design i meant down the raod"
+
+Ben corrected the direction: one design per area is for later, with no date set. Now we build
+new algorithms of our own, from papers, known algorithms and current implementations,
+merging what each teaches. Any new algorithm still runs beside the default until numbers
+say it wins. The first EGM stage had judged the designs against "simplify now", so its
+complaint about adding too much is withdrawn; its three blockers stand
+(`docs/designs/2026-11-05_egm-review.md`).
+
+### "keep all the algo ... a new best hybrid for each"; "What map are you talking about"
+
+Ben's answers. Every algorithm stays, and each area gets a new best hybrid, starting with how
+the car stops. Stock stays the default and ours challenges it until it wins (now in
+`CLAUDE.md`). The rest of the EGM review runs on all eight designs. The screen: the street map
+is the car's and is done; the one to collapse is Gazebo's 3D, the Nav2 map you click on and the
+NDT/ICP views, into a single developers' screen with a list of algorithms to swap. The design
+was corrected. His two links: `ros2_bevy` is an early Gazebo alternative and
+`ros2-impulse-examples` is workflow examples, neither a window; Bevy is an open question (D6).
+
+### "If we can find a way to merge gazebo and nav2 and cube window great, if not lets think about using bevi"
+
+After the EGM review (`docs/designs/2026-11-05_egm-review.md`), Ben's calls. A code gate on the
+speed-loop mode: the geofence's hold stays until braking is measured. All eight designs get
+fixed before the stopping design. Tracking pauses. The window: try to merge Gazebo, Nav2 and the
+cubes first, and Bevy only if that fails; the HUD and the street map stay in raylib.
+
+## 5 November, evening: the screens, and our own simulator
+
+**Ben:** Why two nav windows? What's the difference between the cubes, ICP and NDT?
+
+**Answer:** `demo_all.sh` opened one RViz and `sim.launch.py` another. Cubes: what's around me.
+Costmap: where I can drive. NDT: where I am on the saved map. KISS-ICP: how far I moved.
+
+**Ben:** Which computer runs what?
+
+| Computer | Runs |
+|---|---|
+| Orin | the real car's ROS, TensorRT, no graphics, no simulator; streams results such as the cubes |
+| Dash Pi | the HUD and street map, raylib |
+| His MacBook | Bevy screens, plugged in, and the LLM, which drives like a joystick |
+| His Mac or Linux desktop (carly) | the simulator, for testing only |
+
+**Ben:** "we want to replace gazebo with our own contorl too."
+
+**Answer:** Yes, because the world is simple and the car slow. Gazebo stays as the referee until
+ours wins: a simulator we write can share our mistakes. Design:
+`docs/designs/2026-11-05_own-simulator.md`.
+
+### The campus: can we practise on Carleton? (Ben, 5 Nov, night)
+
+- **Does the window make the GPS and IMU?** No: Gazebo and our Python nodes still do. The window
+  only shows them. Our own simulator isn't built.
+- **One costmap or segments?** One: 1.6 x 1.6 km at 0.25 m worked on the Mac in Gazebo.
+- **Google?** Being students doesn't lift its terms, so the world uses OpenStreetMap. Tape and
+  points read by hand are for checking.
+- **No RTK:** the map's shape comes from sizes, a lidar drive measures the kerbs, the drive is
+  fitted to the outlines, and NDT against the finished map shows GPS's offset as it wanders.
+- **A drive suggests, a person accepts** (Ben: "Thats a great point"). Not built yet.
+- **Top right:** one set of cells, dark purple to light purple, with a legend; orange is the
+  lidar seeing what the map hasn't.
+- **Is the lidar's view the occupancy map?** Nearly: the cubes are an occupancy grid, built fresh
+  from each scan. NDT holds the shape of what stood still when it was recorded. A person shows as
+  cubes that fit no cell. We use no occupancy *network*: that's a camera model.
+- **Joystick back:** ego runs every change of direction through a stop, then reverses, capped
+  at 0.5 m/s. The model is there, with guessed numbers until the car's tests measure them.
+- **Found:** NDT's 2.3 floor is the test lot's (1.5 on the campus, wrong poses unmeasured); with
+  reversing on, the car backed a long way to a goal behind it. See `docs/campus.md`.
+
+## 5 November, night: faster, and screens as heartbeats
+
+**Q (Ben): Is the frame rate still slow? The car drives really slow. And can the hardware debug
+screen and the Mac display both send heartbeats to the FSM, so a simulation can test that too?**
+
+A: The window itself was fine (112 fps); the scene behind it was a 10 Hz camera, now 30 Hz. The
+car was held near 1 m/s by MPPI's 3 m of path, shorter than its futures. The path now grows with
+the speed, and the campus defaults to 2.5 m/s, in Gazebo only. `watch_screens:=dev_window,hw_panel`
+makes commands need each screen's beat, so a dead screen starves the spine's own watchdog. It runs
+the spine's logic in `spine_sim`, not the ESP32. Firmware and CAN frames are unchanged, and the
+real car refuses it: what the car does about a lost Mac is still TODO 116.
+
+## 6 November: driving as is
+
+**Q (Ben): We drive the car with nothing flashed. What would help, like bag files?**
+
+A: Their stack drives; ours only gets the recordings. The C++ has no timeout, so the runbook says
+never on the ground with it: tonight is the hardware lead's and Ben's decision, with the Kar-Tech
+stop in hand. Record on each computer, and drive what gives us numbers we only have as guesses:
+`docs/car-evening.md`.
+
+## 7 November: debugging the hardware
+
+**Q (Ben): The hardware screen talking directly to the ESP32, with some reporting. What does the C++ do, what does the Rust have, and what's missing?**
+
+A: The Rust is ahead on safety (timeouts, watchdog, heartbeat, latch) and behind on seeing: no WiFi,
+status page, `/scan` or WebSocket log. Two-way UART is written, but off, with its wire unconfirmed.
+
+**Q (Ben): What I'm really missing is how much each direction is pushed, where it really is, and the other sensors, on the hardware screen. Graph the Pi and the ESP32 together?**
+
+A: Yes, in `hw_panel`, which can read both ROS and the ESP32. Neither side reports those values yet.
+The accelerator has no position sensor. IMU and GPS aren't on the ESP32, so its own page can't show them.
+
+**Q (Ben): Which order?**
+
+A: Two EGM reviews found the first plan bigger than the question. Ben chose the second review's order,
+with the graphs in `hw_panel`: `docs/designs/2026-11-07_esp32-debug-link_brief.md`, "The plan now".
+
 ## Open threads
 
+- **The hardware debug plan (7 Nov):** order chosen, nothing built (TODO 126). Replaces the bench link. Open: a USB cable, rotating the WiFi password and closing the C++'s `/update`, which computer runs `hw_panel` on the day, whether the return wire exists.
+
+- **The car, 6 Nov evening:** it moved forward once a hardware fuse and a questionable circuit board were dealt with (Ben). The remote reaches the ESP32 and it sends throttle. Open: which fuse and board, why the fuse went, what each stop cuts. CORTEX does the Motor Pi's job (H1). The Orin's CAN was down. Next steps and the hardware people's questions: `docs/history/audit-2026-11-06-car.md`.
+- **The bench link (6 Nov):** replaced by the hardware debug plan (7 Nov, above). Still open from it: where the steering and brake sensors connect (the hardware people); whether WiFi upsets the firmware's timing.
+- **The campus (5 Nov):** which lot is the real one and where the measurements are (Ben); test the kerbs (TODO 119); how a wrong pose scores on the campus (TODO 121); reversing on long drives (TODO 122); MPPI's speed (TODO 123); the wiggle (TODO 124).
+- **Own simulator:** does the Bevy window pass on a slower laptop? EGM review of the design; does carly have a GPU?
+- **The Mac as a driver:** does the car stop if the MacBook drops off (TODO 116)?
+- **One car (4-5 Nov):** Ben's direction (our own algorithms now, one design down the road; corrected 5 Nov) and five picks in `docs/designs/2026-11-04_one-car.md`; the detail in `2026-11-04_weak-links.md` and `2026-11-04_research-ideas.md`; five designs of 5 Nov (one window, knows itself, behaviour and speed, tracks and memory, shadow mode). EGM: zoom out done, 3 blockers open (`2026-11-05_egm-review.md`); three stages not run. Open for Ben: which algorithm first, how "our own" fits "prefer stock packages", each design's questions.
 - **The diffusion planner (2 Nov):** design written, for review; nothing built. Open: the crop, the teacher mix, the guard's limits (its six questions).
 - **Road to 0.2 (1 Nov, night):** five rows left (TODO, "Left for 0.2"): the car-ready checklist, TODO 74's gaps, the hardware lead's questions (H1, C1, `.211`, the router), the people named, the release notes.
 - **Car setup (1 Nov):** the runbook and `car_setup.sh` are written and tested in dry run; their first real run is on the car. Open: the joystick turned off with its receiver in, a firmware cap for the first moves (TODO 74); which computer is the Motor Pi (H1); a machine file for the localization Pi.

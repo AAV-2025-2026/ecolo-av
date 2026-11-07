@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The campus · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/campus.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>The campus</h1>
+<div class="meta">5 min read · 6 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="release-0.2.html">The 0.2 guide</a>
+<a href="whats-new.html">What&#x27;s new</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-evening.html">Tonight: drive as is</a>
+<a href="car-day.html">Car day</a>
+<a href="car-setup.html">Car setup</a>
+<a href="tests.html">Every test</a>
+<a href="know-the-car.html">Know the car</a>
+<a href="measure-the-car.html">Measure the car</a>
+<span class="sep">Learn:</span>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-speed.html">Learn: speed</a>
+<a href="learn-lidar.html">Learn: lidar</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="controllers.html">Controllers</a>
+<a class="here" href="campus.html">The campus</a>
+<a href="maps-and-position.html">Maps and position</a>
+<span class="sep">Reference:</span>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="path-followers.html">Path followers</a>
+<a href="switches.html">Switches</a>
+<a href="trials.html">Trials</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="hardware-debug.html">Hardware debug</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="geofence.html">The geofence</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="esp32-safety.html">ESP32 safety rules</a>
+<a href="esp32-cpp-parity.html">ESP32 C++ parity</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#whats-real-and-whats-guessed">What&#x27;s real and what&#x27;s guessed</a><a href="#what-it-makes">What it makes</a><a href="#what-was-measured-gazebo-5-nov">What was measured (Gazebo, 5 Nov)</a><a href="#ndts-score-floor">NDT&#x27;s score floor</a><a href="#found-along-the-way">Found along the way</a><a href="#next-the-real-lidar-drive">Next: the real lidar drive</a></nav>
+<div class="lead"><p>Carleton in Gazebo, on one Nav2 costmap, with a guessed NDT map. It's for practice while the
+hardware catches up (Ben, 5 Nov). Nothing here has met the real campus yet.</p>
+<pre class="highlight"><code class="language-sh">pixi run campus                                       # builds maps/campus/ (about 10 s)
+pixi run sim world:=campus reversing:=false screen_cubes:=true ndt:=true gui:=false rviz:=false
+pixi run dev-window --live --ndt-map maps/ndt/campus.pcd   # in a second terminal</code></pre>
+<p>Click a road or lot on the map, then confirm, as in any world. The car starts in lot P4,
+because the datum itself is on a station shelter. It drives at up to 2.5 m/s here, in Gazebo
+only: the real car's limit stays 1 m/s.</p></div>
+<section class="card"><h2 id="whats-real-and-whats-guessed">What's real and what's guessed</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>From OpenStreetMap</th>
+<th>Guessed by <code>tools/campus_world.py</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>where roads, lots, buildings and trees are</td>
+<td>how tall most buildings are (529 of 574)</td>
+</tr>
+<tr>
+<td>their shapes</td>
+<td>where kerbs run (58 km: every edge of every road and lot, 0.30 m)</td>
+</tr>
+<tr>
+<td>many road widths</td>
+<td>other road widths, tree sizes, trees inside woods</td>
+</tr>
+<tr>
+<td></td>
+<td>all the looks: pavement, grass, brick, stone</td>
+</tr>
+</tbody>
+</table></div>
+<p>The data is (c) OpenStreetMap contributors, under the ODbL, so anything showing it must say so.
+<code>maps/</code> isn't in git: <code>pixi run campus</code> makes it again.</p>
+<p><strong>Google:</strong> being students doesn't change Google's terms, which limit copying their maps into
+another map. So the world is built from OpenStreetMap. Your own tape measurements and points
+you read by hand are for checking it.</p>
+</section>
+<section class="card"><h2 id="what-it-makes">What it makes</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>File</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>maps/campus/campus.sdf</code>, <code>meshes/</code>, <code>textures/</code></td>
+<td>the world: 355,000 triangles, bump-mapped</td>
+</tr>
+<tr>
+<td><code>maps/campus/campus.pgm</code>, <code>.yaml</code></td>
+<td>one Nav2 map: 1.6 x 1.6 km at 0.25 m (6400 x 6400 cells)</td>
+</tr>
+<tr>
+<td><code>maps/campus/place.yaml</code></td>
+<td>where the car starts, what went in, the credit</td>
+</tr>
+<tr>
+<td><code>maps/ndt/campus.pcd</code></td>
+<td>NDT's map, <strong>a guess</strong>: points on the same shapes</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The shape (Ben, 5 Nov):</strong> everything that isn't pavement is a foot up, held in by a concrete
+kerb, with grass on top.</p>
+<p><strong>One costmap, no segments.</strong> It works on a Mac: only roads and lots are free. Gazebo held
+real time (0.98-1.01). Nav2's planner loop runs at about 8 Hz, not the 20 Hz it wants, and warns
+about it in the console. Paths and grass are blocked: the car stays on roads and lots.</p>
+<p><strong>Sent once.</strong> At this size Nav2 sending the whole costmap every second froze the window (up to
+1.66 s) and may have caused the flashing. <code>world:=campus</code> sends it once, then only changes. The
+window also skips a grid it already has.</p>
+</section>
+<section class="card"><h2 id="what-was-measured-gazebo-5-nov">What was measured (Gazebo, 5 Nov)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Nav2 goal from P4, 40 m</td>
+<td>reached</td>
+</tr>
+<tr>
+<td>EKF against the truth</td>
+<td>within 0.36 m</td>
+</tr>
+<tr>
+<td>NDT against the truth, on the guess, grass raised</td>
+<td>within 0.13 m (near buildings, 90 s)</td>
+</tr>
+<tr>
+<td>NDT on a map recorded on that road, grass not raised</td>
+<td>within 0.11 m</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>This doesn't show the real campus will work.</strong> The guess is made from the same shapes as the
+world, so of course it fits here.</p>
+</section>
+<section class="card"><h2 id="ndts-score-floor">NDT's score floor</h2>
+<p><code>ndt.yaml</code>'s 2.3 is the test lot's, with walls close by. On the campus, fits at the true place
+score about 1.6-1.9 on the guess, and 2.00-2.31 on a recorded map. So this world uses 1.5.</p>
+<p><strong>Floors.</strong> The grass is at 0.30 m, right on the car's usual 0.3 m floor. NDT looked at it and
+got lost, so here NDT looks above 0.45 m. The window's cubes look down to 0.12 m, so kerbs and
+grass show as the lidar's rings. Nav2's flat scan keeps 0.3 m: untested against kerbs (TODO 119).</p>
+<p><strong>Not measured:</strong> how high a <em>wrong</em> pose scores here. Until it is, leave <code>ndt_ekf</code> off on the
+campus: NDT is watched, and doesn't steer the estimate.</p>
+</section>
+<section class="card"><h2 id="found-along-the-way">Found along the way</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Finding</th>
+<th>What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>With <code>reversing</code> on, the car backs a long way to a goal behind it, at 0.5 m/s</td>
+<td>use <code>reversing:=false</code> here; a decision for later (TODO 122)</td>
+</tr>
+<tr>
+<td>MPPI stayed near 1 m/s at any <code>sim_speed</code>: its 3 m of path was shorter than its futures</td>
+<td>fixed: the path now grows with the speed. Campus default 2.5 m/s (mean 2.2)</td>
+</tr>
+<tr>
+<td>The car wiggles: the turn rate flips about once a second</td>
+<td>TODO 124</td>
+</tr>
+<tr>
+<td>Kerbs sit at Nav2's 0.3 m floor</td>
+<td>TODO 119: test it now this world exists</td>
+</tr>
+<tr>
+<td>A lot's middle is far from anything</td>
+<td>the lidar sees little there: NDT may lose the fit</td>
+</tr>
+<tr>
+<td>Lidar cubes reach 30 m, NDT's points 45 m</td>
+<td>so the top view can look empty in open space</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="next-the-real-lidar-drive">Next: the real lidar drive</h2>
+<p>A drive suggests and a person accepts (Ben, 5 Nov). The tools to record and build a map exist,
+and were rehearsed here:</p>
+<pre class="highlight"><code class="language-sh">tools/record.sh --lidar
+pixi run ndt-map --out maps/ndt/&lt;place&gt; build &lt;bag&gt; --poses /localization/odom/global</code></pre>
+<p>Not built yet: fitting a drive onto the outlines, the GPS offset, and approving changes in the
+window.</p></section>
+<nav class="prevnext"><a class="prev" href="controllers.html"><small>Previous</small>← Controllers</a>
+<a class="next" href="maps-and-position.html"><small>Next</small>Maps and position →</a></nav>
+</main>
+<footer>Source: <code>docs/campus.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

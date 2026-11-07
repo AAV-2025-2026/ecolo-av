@@ -12,6 +12,10 @@
 #   spine = sim.launch.py world:=road spine:=true: the road world with the spine in the
 #   loop (spine_bridge, the CAN topics, spine_sim on Gazebo's car). Whatever is live in
 #   sim and road must be live there too
+# drop_in: what a stream must be, beyond name and type, so anything can replace what makes it:
+#   Gazebo, our simulator, the real sensor (Ben, 5 Nov). The floors are Gazebo's rates
+#   measured 5 Nov, less a margin; the ceilings are the car's (docs/bandwidth.md) plus a margin.
+#   tools/drop_in_check.py measures them; pixi run drop-in.
 # All topic names are absolute. QoS is the ROS default (reliable, volatile, depth 10)
 # unless noted.
 #
@@ -109,7 +113,7 @@ topics:
   /safety/sensor_watchdog/state:
     type: std_msgs/msg/String
     pub: [sensor_watchdog]
-    sub: [hud, map]
+    sub: [hud, map, dev_window]
     live: [sim]
     note: One line for people, 10 Hz - OK, or STOP (the lock is on) or WARN, then each input that isn't OK and why, those that stop first, such as "STOP - gps STALE (nothing for 2.3 s (more than 2 s))". The HUD and the map window show it as a banner, and the HUD the first input in its GO / STOP panel, red for STOP or when it goes silent (then twist_mux holds Nav2 too).
   /hud/heartbeat:
@@ -117,6 +121,16 @@ topics:
     pub: [hud]
     sub: [sensor_watchdog]
     note: The HUD's screen is alive - the number of frames it has drawn, 10 Hz, sent only while that number rises, from the same 10 ms timer that sends the e-stop button's messages, so it stops when the screen or the e-stop's sender freezes or dies. The sensor watchdog's hud input (kind heartbeat, 1 s; car.launch.py watch_hud:=true, the default; sim.launch.py with hud:=true or watch_hud:=true) - silent, or a count that stops rising, locks twist_mux's sensors lock like a dead sensor - Nav2 and the AI slot stop, people and the e-stop never. Latched (Ben, 24 Oct) - a dropout after the HUD's start-up holds them as hud LOST, even once it beats again, until a person calls /safety/sensor_watchdog/clear; one dropout within 5 s of its first beat is forgiven. Reliable, depth 10.
+  /hud/dev_window/heartbeat:
+    type: std_msgs/msg/UInt64
+    pub: [dev_window]
+    sub: [output_mux]
+    note: The developer window is alive - the number of frames it has drawn, 10 Hz, only with --developer. Read only with sim watch_screens - a test of what stops the car, refused for the real car
+  /hud/hw_panel/heartbeat:
+    type: std_msgs/msg/UInt64
+    pub: [hw_panel]
+    sub: [output_mux]
+    note: The hardware panel is alive - the number of frames it has drawn, 10 Hz. Read only with sim watch_screens - a test of what stops the car, refused for the real car
   /safety/collision_monitor/state:
     type: nav2_msgs/msg/CollisionMonitorState
     pub: [collision_monitor]
@@ -133,7 +147,7 @@ topics:
     pub: [geofence]
     sub: [twist_mux, language_drive, hw_panel]
     live: [sim, car, bench]
-    note: true while a stopping path of the car - forward and back, straight and at full lock, each its RSS stopping distance long (reaction time and braking worked out from ego.yaml, vehicle.yaml and the backend's timeout, aav_safety geofence.py motion_from) - brings a corner within 1 m plus the global pose's spread of the fence's edge (NEAR; at a standstill a person drives it back in); while the car is outside the fence (OUTSIDE) or the global pose jumped (JUMP), both latched until a person calls /safety/geofence/clear; while the global pose is stale over 1 s, over 3 m unsure or NaN, or no GPS position has reached the EKF for 2 s (LOST); before 3 s of good poses (STARTING); and on a backend that coasts (COASTING - legacy_uart_bridge in speed_loop open, until test 4.3 measures its stop). false otherwise, and in stands mode (STANDS - car.launch.py stands:=true, said loudly); a heartbeat at 10 Hz (aav_safety geofence). The fence - a circle of radius m round the marked start spot (start_x, start_y - car 30, Gazebo 200, bench 100), or a site's polygon in the map frame drawn for navsat.yaml's datum (geofence.yaml sites; the machine file's geofence site). A twist_mux lock (geofence) at priority 51 - it holds every program (scripted 50, replay 40, point 25, nav 20, ai 10), never a person (joy, rc, keyboard) or the actuator tests (60, which stop themselves on its state). Fail-safe - the lock's 1 s timeout holds them when the geofence dies or hangs (mux.launch.py geofence_lock, a required argument - true wherever a geofence runs, the car next to the mux, the bench, Gazebo with geofence:=true; false on the turtle and CARLA). Independent of Nav2 (the 26 Oct review's F6). docs/geofence.md.
+    note: true while a stopping path of the car - forward and back, straight and at full lock, each its RSS stopping distance long (reaction time and braking worked out from ego.yaml, vehicle.yaml and the backend's timeout, aav_safety geofence.py motion_from) - brings a corner within 1 m plus the global pose's spread of the fence's edge (NEAR; at a standstill a person drives it back in); while the car is outside the fence (OUTSIDE) or the global pose jumped (JUMP), both latched until a person calls /safety/geofence/clear; while the global pose is stale over 1 s, over 3 m unsure or NaN, or no GPS position has reached the EKF for 2 s (LOST); before 3 s of good poses (STARTING); and on a backend that coasts (COASTING - legacy_uart_bridge, in either speed_loop mode, until test 4.3 measures that mode's stop). false otherwise, and in stands mode (STANDS - car.launch.py stands:=true, said loudly); a heartbeat at 10 Hz (aav_safety geofence). The fence - a circle of radius m round the marked start spot (start_x, start_y - car 30, Gazebo 200, bench 100), or a site's polygon in the map frame drawn for navsat.yaml's datum (geofence.yaml sites; the machine file's geofence site). A twist_mux lock (geofence) at priority 51 - it holds every program (scripted 50, replay 40, point 25, nav 20, ai 10), never a person (joy, rc, keyboard) or the actuator tests (60, which stop themselves on its state). Fail-safe - the lock's 1 s timeout holds them when the geofence dies or hangs (mux.launch.py geofence_lock, a required argument - true wherever a geofence runs, the car next to the mux, the bench, Gazebo with geofence:=true; false on the turtle and CARLA). Independent of Nav2 (the 26 Oct review's F6). docs/geofence.md.
   /safety/geofence/state:
     type: std_msgs/msg/String
     pub: [geofence]
@@ -173,7 +187,7 @@ topics:
     note: Priority 10, the slot for a learned driver. Today the 2025-26 lane keeping (aav_lane_geometry) uses it.
   /safety/estop:
     type: std_msgs/msg/Bool
-    pub: [joy_teleop, hud, language_drive, actuator_test, hw_panel]
+    pub: [joy_teleop, hud, language_drive, actuator_test, hw_panel, dev_window]
     sub: [twist_mux, spine_bridge, legacy_uart_bridge, language_drive, actuator_test, carla_adapter, point_driver, hw_panel]
     note: true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button (hud, aav_hud) only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions; language_drive (aav_language) does the same from its estop() tool, and the hardware panel (hw_panel) from its E-STOP button; actuator_test's preflight sets it when the car is still moving 5 s after its stop. None of them ever publishes false.
   /control/cmd_vel:
@@ -185,30 +199,35 @@ topics:
   /ego/actuator_cmd:
     type: ackermann_msgs/msg/AckermannDriveStamped
     pub: [ego]
-    sub: [output_mux]
+    sub: [output_mux, hw_panel]
     live: [turtle, sim, car, bench]
-    note: 50 Hz, always. speed (m/s), steering_angle (rad, + left), acceleration, steering_angle_velocity. No backend reads it - the output mux passes it on to the one target's /control/<target>/actuator_cmd (aav_io_mux, docs/sources-and-targets.md).
+    note: 50 Hz, always. speed (m/s), steering_angle (rad, + left), acceleration, steering_angle_velocity. No backend reads it - the output mux passes it on to the one target's /control/<target>/actuator_cmd (aav_io_mux, docs/sources-and-targets.md). The hardware panel's GRAPHS page reads it only to judge the first hop (ego), and pairs it with the mux's output by stamp.
 
   # --- the output mux -> one backend (aav_io_mux output_mux, target:=) ---
   /control/car/actuator_cmd:
     type: ackermann_msgs/msg/AckermannDriveStamped
     pub: [output_mux]
-    sub: [spine_bridge, legacy_uart_bridge]
+    sub: [spine_bridge, legacy_uart_bridge, hw_panel]
     live: [car]
-    note: The real car's commands - ego's /ego/actuator_cmd, passed on unchanged by output_mux target:=car, and only while the sensor mux says every source is REAL and nothing on /system/source says otherwise. Anything else and it sends nothing - latched until /safety/output_mux/clear on evidence (an announcement of another source, the sensor mux's problems), only held shut on doubt (the sensor mux not heard or quiet for 3 s, or its doubts); the backends' own timeouts brake (spine_bridge 0.1 s then the spine's 100 ms, legacy_uart_bridge 0.3 s). The real backends read only this topic (spine_bridge with source real), so a simulator's ego can't reach them.
+    note: The real car's commands - ego's /ego/actuator_cmd, passed on unchanged by output_mux target:=car, and only while the sensor mux says every source is REAL and nothing on /system/source says otherwise. Anything else and it sends nothing - latched until /safety/output_mux/clear on evidence (an announcement of another source, the sensor mux's problems), only held shut on doubt (the sensor mux not heard or quiet for 3 s, or its doubts); the backends' own timeouts brake (spine_bridge 0.1 s then the spine's 100 ms, legacy_uart_bridge 0.3 s). The real backends read only this topic (spine_bridge with source real), so a simulator's ego can't reach them. The hardware panel's GRAPHS page only reads it (the mux hop - equal to ego's, paired by stamp).
+  /control/car/link_frame:
+    type: aav_interfaces/msg/LinkFrame
+    pub: [legacy_uart_bridge]
+    sub: [hw_panel]
+    note: What the Pi really wrote to the ESP32 - a sample of the serial frames (link_frame_rate_hz, default 10), with the frame's own values and a count of every frame written. tools/link_check.py compares the counts with the ESP32's. Named by role, as the bridge is interim.
   /control/car/heartbeat:
     type: aav_interfaces/msg/Heartbeat
     pub: [output_mux]
     sub: [legacy_uart_bridge]
     live: [car]
     note: The Orin's heartbeat (TODO 50) - one message for each command output_mux target:=car passes on to /control/car/actuator_cmd, so only while its gate is OPEN; counter +1 each time (u8, 255 then 0), header copied from the command. legacy_uart_bridge (the Motor Pi) copies the last counter into every version 2 serial frame and never makes one up, so a stuck or cut-off Pi can't fake it. The Rust ESP32 firmware brakes, latched, when the counter hasn't changed for 100 ms (docs/rust-firmware.md, "The heartbeat"). spine_bridge doesn't read it - DRIVE_CMD has its own counter.
-  /control/gazebo/actuator_cmd:
+  /control/sim/actuator_cmd:
     type: ackermann_msgs/msg/AckermannDriveStamped
     pub: [output_mux]
     sub: [gazebo_adapter, spine_bridge, legacy_uart_bridge]
     live: [sim]
-    note: Gazebo's commands, from output_mux target:=gazebo, while every source is SIM. Exactly one backend reads it - gazebo_adapter, or in the spine profile (spine:=true) spine_bridge with source sim, or with today's car in the loop (esp32:=true) legacy_uart_bridge, remapped from /control/car/actuator_cmd, with source sim.
-  /control/gazebo/heartbeat:
+    note: Gazebo's commands, from output_mux target:=sim, while every source is SIM. Exactly one backend reads it - gazebo_adapter, or in the spine profile (spine:=true) spine_bridge with source sim, or with today's car in the loop (esp32:=true) legacy_uart_bridge, remapped from /control/car/actuator_cmd, with source sim.
+  /control/sim/heartbeat:
     type: aav_interfaces/msg/Heartbeat
     pub: [output_mux]
     sub: []
@@ -251,7 +270,7 @@ topics:
   /safety/output_mux/state:
     type: std_msgs/msg/String
     pub: [output_mux]
-    sub: [hud, spine_bridge]
+    sub: [hud, spine_bridge, dev_window]
     live: [turtle, sim, car, bench]
     note: One line for people, 2 Hz and on each change - OPEN (passing ego's commands on), WAIT (closed, not latched - the sensor mux not heard yet or quiet for 3 s, its doubts, a node on /system/source whose announcement hasn't arrived yet, or settling for 2 s after all clear) or STOP (latched, and why, such as "STOP - target car needs REAL - camera_front_left is SIM (gazebo_adapter)"). The target first, such as "OPEN - car". spine_bridge (role spine) reads it as the safety gate - /spine/arm is refused unless it said OPEN for the bridge's own target within gate_timeout (1.5 s); Ben, 24 Oct. The HUD's GO / STOP panel shows it, with the first reason.
 
@@ -259,7 +278,7 @@ topics:
   /system/source:
     type: aav_interfaces/msg/DataSource
     pub: [gazebo_adapter, turtlesim_adapter, spine_bridge, legacy_uart_bridge, mock_imu, mock_gps, mock_battery, mock_camera, mock_radar, mock_lidar, replay_source, carla_adapter, camera_stream_front_left, camera_stream_front_right]
-    sub: [hud, map, actuator_test, point_driver, point_cli, sensor_mux, output_mux, debug_hud, hw_panel]
+    sub: [hud, map, actuator_test, point_driver, point_cli, sensor_mux, output_mux, debug_hud, hw_panel, dev_window]
     live: [turtle, sim, car, replay, bench]
     note: Latched (reliable, transient local, depth 1). Where the data comes from - REAL, SIM, BENCH or REPLAY - per sensor, one list per announcer. Gazebo and turtlesim announce SIM; spine_bridge REAL on the car, BENCH on the bench and SIM in Gazebo's spine profile (its source parameter; gazebo_adapter then announces only the sensors), with each bench stand-in - with role:=sensors (today's wiring, the Orin's CAN bus with only the wheel sensors) only odometry and wheels, never an actuator; legacy_uart_bridge REAL; replay.launch.py REPLAY; each camera_stream_<camera> its camera (camera_front_left...) as its source parameter says, REAL on the car. The HUD shows a banner when anything isn't REAL. The sensor mux and the output mux count an announcement only while its announcer still publishes here, and refuse a run where any announcement differs from the source the run asked for.
   /system/algorithms:
@@ -278,14 +297,16 @@ topics:
   # --- backends -> the rest ---
   /vehicle/odom:
     type: nav_msgs/msg/Odometry
+    drop_in: {min_hz: 45, frame: odom}
     pub: [spine_bridge, encoder_udp, turtlesim_adapter, gazebo_adapter, carla_adapter]
     sub: [ekf_local, ekf_global, actuator_test, sensor_watchdog, gps_heading, legacy_uart_bridge, debug_hud, localization_health]
     live: [turtle, sim, car, replay, bench]
     note: Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK. With today's wiring (car.launch.py actuators:=uart, spine_bridge role:=sensors on the Orin) only from the two wheels while both are fresh, with no yaw rate (covariance 1e3 - the steering angle isn't on the bus). In Gazebo's spine profile spine_bridge publishes it from spine_sim's frames, as on the car; /vehicle/status, steering, throttle, brake and wheels likewise. legacy_uart_bridge reads it only with speed_loop.mode pi, to close its speed loop on vx.
   /vehicle/status:
     type: aav_interfaces/msg/VehicleStatus
+    drop_in: {min_hz: 10}
     pub: [spine_bridge, gazebo_adapter, turtlesim_adapter, carla_adapter, legacy_uart_bridge]
-    sub: [hud, language_drive, debug_hud, hw_panel]
+    sub: [hud, language_drive, debug_hud, hw_panel, dev_window]
     live: [turtle, sim, bench]
     note: Mode, armed, e-stop, measured speed and steering, actuator levels, fault bits. For the HUD and Foxglove. legacy_uart_bridge publishes it, 10 Hz, only with uplink true (the ESP32's uplink frame on TX1, TODO 50 - off until its wire is confirmed) - speed NaN (that ESP32 has no wheel speed), steering_angle the steering Jrk's position or NaN; mode COMPUTER also while the transmitter's switch is on RC via ROS (/vehicle/rc has the switch).
   /vehicle/steering:
@@ -309,12 +330,17 @@ topics:
     pub: [legacy_uart_bridge]
     sub: [hw_panel]
     note: One line for people, on each change and at 2 Hz while anyone asks - what the steering calibration does and why, such as "LIMP - the steering actuator's motor is off" or "REFUSED - steering_calibration is none - stands or bench only, set by the hardware lead". The bridge's own refusals come first (its steering_calibration parameter, frame_version 3, a fresh uplink, no e-stop, ego not driving, the car not moving); then the firmware's state from the uplink. Only with uplink true.
+  /vehicle/esp32/uplink_health:
+    type: aav_interfaces/msg/UplinkHealth
+    pub: [legacy_uart_bridge]
+    sub: [hw_panel]
+    note: How the ESP32's uplink frames arrive - fresh, frames, lost and bad, 1 Hz, only with uplink true.
   /vehicle/throttle:
     type: aav_interfaces/msg/ActuatorState
-    pub: [spine_bridge, gazebo_adapter, carla_adapter]
+    pub: [spine_bridge, gazebo_adapter, carla_adapter, legacy_uart_bridge]
     sub: [actuator_test, hw_panel]
     live: [sim, bench]
-    note: The throttle, 0..1. From the spine (car, bench) only measured; command is NaN, as the spine's speed loop decides it. In Gazebo, command is the speed loop's, measured the actuator model's.
+    note: The throttle, 0..1. From the spine (car, bench) only measured; command is NaN, as the spine's speed loop decides it. In Gazebo, command is the speed loop's, measured the actuator model's. From legacy_uart_bridge (uplink true) command is the value the firmware asks for before its ramp, and measured is NaN - no sensor reads the throttle.
   /vehicle/brake:
     type: aav_interfaces/msg/ActuatorState
     pub: [spine_bridge, gazebo_adapter, carla_adapter, legacy_uart_bridge]
@@ -371,12 +397,14 @@ topics:
     note: Raw counts from imu_node (not tesla yet); tesla from mock_imu. The filter ignores it (use_mag false).
   /sensors/imu/data:
     type: sensor_msgs/msg/Imu
+    drop_in: {min_hz: 45, max_hz: 220, frame: imu_link}
     pub: [imu_filter_madgwick]
     sub: [ekf_local, ekf_global, sensor_watchdog, navsat_transform, debug_hud, actuator_test, hw_panel, localization_health]
     live: [sim, car, replay, bench]
     note: Adds a relative orientation (no magnetometer). The EKFs fuse the yaw rate only.
   /sensors/gps/fix:
     type: sensor_msgs/msg/NavSatFix
+    drop_in: {min_hz: 4.5, max_hz: 12, frame: gps_link}
     pub: [ublox_gps, gps_nmea, ublox_nav_sat_fix_hp, gazebo_gps, mock_gps, carla_adapter]
     sub: [navsat_transform, hud, language_drive, actuator_test, sensor_watchdog, point_driver, debug_hud, hw_panel, localization_health]
     live: [sim, car, replay, bench]
@@ -399,6 +427,7 @@ topics:
     note: GPS time, from NMEA (gps_driver:=nmea).
   /sensors/radar/points:
     type: sensor_msgs/msg/PointCloud2
+    drop_in: {min_hz: 9, frame: radar_link}
     pub: [radar, mock_radar, gazebo_radar, carla_adapter]
     sub: [radar_clusters, local_costmap, collision_monitor, sensor_watchdog, actuator_test, hw_panel]
     live: [bench, road]
@@ -416,6 +445,7 @@ topics:
     note: aav_battery_victron's sign of life.
   /sensors/camera/front_left/image_raw:
     type: sensor_msgs/msg/Image
+    drop_in: {min_hz: 9, max_hz: 18, frame: camera_left_link}
     pub: [camera_left, mock_camera, test_camera, gz_road_bridge, gazebo_camera, carla_adapter, camera_stream_front_left]
     sub: [object_detector, object_detector_orin, object_detector_laptop, object_detector_all, lane_finder, hud, sensor_watchdog, actuator_test, hw_panel]
     live: [bench, road]
@@ -433,6 +463,7 @@ topics:
     note: The lens. usb_cam reads aav_sensors/config/cameras/left.ini (the 2024-25 calibration). lane_finder takes its focal length and centre from here; camera_obstacles keeps each camera's by its frame_id; stop_sign_watcher its focal length (fy), to turn a stop sign's box height into a distance. camera_stream_front_left publishes the undistorted picture's lens (no distortion) with each picture's detections, once the camera has a calibration (aav_camera_stream config/cameras.yaml).
   /sensors/camera/front_right/image_raw:
     type: sensor_msgs/msg/Image
+    drop_in: {min_hz: 9, max_hz: 18, frame: camera_right_link}
     pub: [gz_road_bridge, carla_adapter, camera_stream_front_right]
     sub: []
     live: [road]
@@ -463,6 +494,7 @@ topics:
     note: The roof Velodyne VLP-16's UDP packets as they come (the stock velodyne_driver, aav_sensors sensors.launch.py lidar:=true), one turn (0.1 s, about 76 packets) a message, frame lidar_link. It reads only packets from lidar_ip (192.168.1.201, the 16 Oct audit) on lidar_port (2368), so it runs on the computer they're sent to - the Jetson. lidar_cloud turns them into /sensors/lidar/points. In bench mode (lidar:=true), mock_lidar sends it the bench world's packets on 127.0.0.1:2369, so the same driver runs.
   /sensors/lidar/points:
     type: sensor_msgs/msg/PointCloud2
+    drop_in: {min_hz: 9, max_hz: 12, frame: lidar_link, reliable: true}
     pub: [lidar_cloud, gz_lidar_bridge, carla_adapter]
     sub: [lidar_scan, voxels, debug_hud, ndt, kiss_icp, actuator_test, hw_panel]
     live: [road, car]
@@ -477,13 +509,14 @@ topics:
   # --- perception ---
   /perception/voxels/cubes:
     type: sensor_msgs/msg/PointCloud2
+    drop_in: {min_hz: 9, max_hz: 12, frame: base_link, reliable: true}
     pub: [voxels]
-    sub: [local_costmap, collision_monitor, debug_hud]
+    sub: [local_costmap, collision_monitor, debug_hud, dev_window]
     note: A trial (docs/designs/2026-10-30_voxels.md), only with navigation.launch.py voxels:=true (sim.launch.py and car.launch.py pass it on; needs the lidar) - the roof lidar's cloud as 0.25 m cubes (aav_voxels voxels), in base_link, the cloud's stamp, 10 Hz. Fields x, y, z (float32) - the centre of every cube holding a point between 0.3 m and the roof plus 0.5 m (vehicle.obstacle_heights) above the road, the road's plane fitted to each cloud (so a leaning car doesn't see the road as an obstacle); the car's own body left out; out to 30 m. Reliable, depth 1. Then the local costmap's lidar_layer marks with it and collision_monitor's voxels source stops for it, instead of /sensors/lidar/scan. The debug HUD draws it as red wireframes over its own cubes (key V), placed with the local EKF's pose at the cloud's stamp.
   /perception/voxels/ground:
     type: sensor_msgs/msg/PointCloud2
     pub: [voxels]
-    sub: [local_costmap]
+    sub: [local_costmap, dev_window]
     note: The voxels trial's road - in base_link, the centre of every flat 0.25 m square where the lidar saw the fitted road (within 0.15 m of it), z on that plane. Free space - the local costmap's lidar_layer clears with it (marking false), as the scan's inf rays did. Reliable, depth 1, with each cube cloud.
   /perception/voxels/status:
     type: diagnostic_msgs/msg/DiagnosticStatus
@@ -584,43 +617,43 @@ topics:
     note: Pretend a driver failed, on the bench and in Gazebo's spine profile. Fault bits as in VehicleStatus (8 = steering, 16 = brake, 32 = throttle DAC, 64 = encoder).
 
   # --- Gazebo's road world: the simulator's own ---
-  /vehicle/gazebo/truth:
+  /vehicle/sim/truth:
     type: nav_msgs/msg/Odometry
     pub: [gz_bridge]
     sub: [gazebo_gps, debug_hud]
     live: [sim]
     note: Where the Gazebo car really is (map frame - the world's origin is the datum - 50 Hz), like the bench's /vehicle/bench/truth. Only the stand-ins read it - gazebo_gps, for the receiver's velocity (/sensors/gps/fix_velocity), never for a position; tools/sim_check.py compares it with /localization/odom/global. Gazebo's other topics (/gazebo/odom, imu, navsat, cmd_vel, radar/points) only link the bridges, gazebo_adapter and the sensor nodes (gazebo_imu, gazebo_gps, gazebo_radar, gazebo_camera - one process per sensor, as on the car).
-  /vehicle/gazebo/chase_camera/image_raw:
+  /vehicle/sim/chase_camera/image_raw:
     type: sensor_msgs/msg/Image
     pub: [gz_chase_bridge]
-    sub: [chase_jpeg]
+    sub: [chase_jpeg, dev_window]
     live: [road]
     note: Gazebo's chase camera (aav_description aav.sensors.gazebo.xacro, chase_camera:=true, the default in sim.launch.py) - 7 m behind the rear axle and 3.5 m up, fixed to the car, 640 x 360 RGB, 10 Hz, frame base_link. Only where the world renders sensors (road, test_lot); never on the car. Big (6.9 MB/s), so the bridge's WiFi list leaves it out (image_raw); chase_jpeg makes the JPEG Lichtblick shows.
-  /vehicle/gazebo/chase_camera/compressed:
+  /vehicle/sim/chase_camera/compressed:
     type: sensor_msgs/msg/CompressedImage
     pub: [chase_jpeg]
     sub: [foxglove_bridge]
     live: [road]
     note: The chase camera as JPEG, every picture (10 Hz, about 30 kB each) - image_transport republish (chase_jpeg, aav_gazebo gazebo.launch.py). For Lichtblick's cockpit layout (tools/foxglove/cockpit.json), so it shows Gazebo's picture without Gazebo's window. Sim only - the car has no such topic.
-  /vehicle/gazebo/spine_outputs:
+  /vehicle/sim/spine_outputs:
     type: aav_interfaces/msg/SpineOutputs
     pub: [spine_sim]
     sub: [gazebo_adapter]
     live: [spine]
     note: Gazebo's spine profile only (sim.launch.py spine:=true). What the spine's logic (spine-core, in spine_sim) writes to its actuator drivers each tick, 100 Hz on Gazebo's clock - throttle and brake (0..1), reverse, the steering target (rad). On the car these never reach ROS. gazebo_adapter's actuator model turns them into what Gazebo's car does; silent for 0.2 s, it brakes fully.
-  /vehicle/gazebo/esp32_outputs:
+  /vehicle/sim/esp32_outputs:
     type: aav_interfaces/msg/SpineOutputs
     pub: [gazebo_esp32]
     sub: [gazebo_adapter]
     live: []
     note: Gazebo with today's car in the loop only (sim.launch.py esp32:=true). What gazebo_esp32 - the 2025-26 C++ ESP32 firmware's logic, standing in behind the real legacy_uart_bridge - drives, 50 Hz - throttle (its DAC over 700, ramped 6 up and 12 down per frame), brake (the Jrk's travel past 400), reverse, the steering target (rad). gazebo_adapter's actuator model turns them into what Gazebo's car does, and still publishes /vehicle/odom itself, as the wheel sensors on today's car. Like the C++, no command timeout - the outputs stay when frames stop.
-  /vehicle/gazebo/wheels:
+  /vehicle/sim/wheels:
     type: aav_interfaces/msg/WheelSpeeds
     pub: [gazebo_adapter]
     sub: [spine_sim]
     live: [spine]
     note: Gazebo's spine profile only. Gazebo's four wheels, as /vehicle/wheels in the direct profile, for spine_sim - the front two for its wheel nodes' frames, the rear two's mean as the spine's measured speed (its motor encoder).
-  /vehicle/gazebo/steering:
+  /vehicle/sim/steering:
     type: aav_interfaces/msg/ActuatorState
     pub: [gazebo_adapter]
     sub: [spine_sim]
@@ -632,19 +665,19 @@ topics:
     type: nav_msgs/msg/Odometry
     pub: [carla_adapter]
     sub: []
-    note: Where the CARLA car really is (base_link in the map frame, each CARLA step), like /vehicle/gazebo/truth. The map frame is CARLA's world when its map is built round the datum (a Carleton map, osm:=), else the spawn point facing east (aav_carla frames.map_frame). Nothing on the car's side reads it. carla_adapter (aav_bringup carla.launch.py, pixi run carla-car) has never run against a CARLA server, so no profile checks its topics yet (docs/carla.md).
+    note: Where the CARLA car really is (base_link in the map frame, each CARLA step), like /vehicle/sim/truth. The map frame is CARLA's world when its map is built round the datum (a Carleton map, osm:=), else the spawn point facing east (aav_carla frames.map_frame). Nothing on the car's side reads it. carla_adapter (aav_bringup carla.launch.py, pixi run carla-car) has never run against a CARLA server, so no profile checks its topics yet (docs/carla.md).
 
   # --- localization ---
   /localization/odom/local:
     type: nav_msgs/msg/Odometry
     pub: [ekf_local]
-    sub: [controller_server, bt_navigator, scripted_driver, language_drive, actuator_test, sensor_watchdog, debug_hud, ndt, localization_health]
+    sub: [controller_server, bt_navigator, scripted_driver, language_drive, actuator_test, sensor_watchdog, debug_hud, ndt, localization_health, dev_window]
     live: [turtle, sim, car, replay, bench]
     note: odom frame. Smooth; drifts.
   /localization/odom/global:
     type: nav_msgs/msg/Odometry
     pub: [ekf_global]
-    sub: [navsat_transform, map, sensor_watchdog, point_driver, point_cli, debug_hud, ndt, geofence, localization_health]
+    sub: [navsat_transform, map, sensor_watchdog, point_driver, point_cli, debug_hud, ndt, geofence, localization_health, dev_window]
     live: [sim, car, replay, bench]
     note: map frame. Includes GPS; can jump. The map window (map, aav_hud) draws the car from it.
   /localization/gps/odom:
@@ -682,12 +715,12 @@ topics:
   /localization/ndt/pose:
     type: geometry_msgs/msg/PoseWithCovarianceStamped
     pub: [ndt]
-    sub: [debug_hud, ekf_global]
+    sub: [debug_hud, ekf_global, dev_window]
     note: A trial (docs/designs/2026-10-29_ndt.md) - where NDT (aav_ndt, Rust) puts base_link on the saved lidar map, map frame, stamped with the cloud's own stamp. Only good fits (score per point above min_score_per_point, converged, and while tracking no further than max_correction_m / max_correction_deg from the odometry's guess); x, y and yaw only, height, roll and pitch held at 0. Covariance - the x, y, yaw block k (-H^-1) with a floor, the rest 1e3; k fitted in Gazebo (NEES, docs/trials.md). Only with ndt:=true or ndt_ekf:=true (sim.launch.py world:=test_lot lidar:=true, the map file present). With ndt_ekf:=true (a trial, off by default) ekf_global fuses its x, y and yaw beside the GPS (pose0, refused past 5 sigma; aav_localization config/ekf_global_ndt.yaml); otherwise nothing reads it to drive. It never publishes TF. The debug HUD draws it (a purple car).
   /localization/ndt/status:
     type: diagnostic_msgs/msg/DiagnosticStatus
     pub: [ndt]
-    sub: [debug_hud]
+    sub: [debug_hud, dev_window]
     note: NDT's state after every cloud - name ndt, level OK (a good fit), WARN (a poor fit, or no start yet) or ERROR (LOST), message TRACKING, WAITING or LOST and why; values stamp (the cloud's, s), score_per_point, overlap, iterations, match_ms (wall clock, the match alone), points (after the filters), poor_in_row, restarts (from ekf_global after LOST), clouds_dropped (arrived while one was being matched), x, y, yaw, and for a fit cov_xx, cov_xy, cov_xyaw, cov_yy, cov_yyaw, cov_yawyaw (-H^-1 before the scale k and the floors, to fit k). WARN's why says which poor fit - score too low, out of iterations, or jumped from the guess. The debug HUD's panel shows it; measure controllers --ndt scores it.
   /localization/ndt/initial_pose:
     type: geometry_msgs/msg/PoseWithCovarianceStamped
@@ -718,21 +751,27 @@ topics:
     note: localization_health (aav_localization_health) once a second - OK, or WARN and each check that isn't OK (gyro_bias parked, imu_mounting, gps_quality, timestamps, frames, tf, wheels, motion; STALE where an input it needs went quiet). Warn only - nothing drives from it, and it changes nothing in the EKFs. The same checks, with their numbers, on /diagnostics. The debug HUD shows it (green OK, amber WARN with each check).
 
   # --- navigation ---
+  /global_costmap/costmap:
+    type: nav_msgs/msg/OccupancyGrid
+    pub: [global_costmap]
+    sub: [dev_window]
+    live: [sim, car]
+    note: Nav2's whole costmap, as a grid. The developer window draws it on the map. Nav2's own name.
   /map:
     type: nav_msgs/msg/OccupancyGrid
     pub: [map_server]
-    sub: [global_costmap, local_costmap, map]
+    sub: [global_costmap, local_costmap, map, dev_window]
     live: [sim]
     note: Transient local (latched). From aav_navigation/maps. AMCL reads it too when launched without amcl_map:= (the sim gives it /localization/amcl/map). The map window (map, aav_hud) draws it north up, for the big screen.
   /goal_pose:
     type: geometry_msgs/msg/PoseStamped
-    pub: [rviz2, map]
+    pub: [rviz2, map, dev_window]
     sub: [bt_navigator, map]
     note: RViz "2D Goal Pose", or the map window's place search (map, aav_hud - only after DRIVE HERE then CONFIRM, map frame, facing from the car, refused off Nav2's /map or with no car), starts a navigate_to_pose. The map window shows it until Nav2 plans for it.
   /plan:
     type: nav_msgs/msg/Path
     pub: [planner_server, diffusion_planner]
-    sub: [map, debug_hud]
+    sub: [map, debug_hud, dev_window]
     note: The planned path, for RViz/Foxglove, and the map window (map, aav_hud) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives. Which planner makes it is navigation.launch.py planner:= (docs/controllers.md, Planners) - hybrid (SmacPlannerHybrid, the default) or lattice (SmacPlannerLattice, our own primitives) keep to the car's turning radius; smac2d, navfn and theta_star, trials in sim and bench only, don't. Always the plugin GridBased, so the behaviour trees never change. With planner:=diffusion (aav_diffusion_planner, a trial) diffusion_planner publishes it - the path it returned, the model's or the lattice's - and planner_server's own goes to /drivers/nav/diffusion/lattice_plan.
 
   /drivers/nav/diffusion/lattice_plan:

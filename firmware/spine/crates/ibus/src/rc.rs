@@ -56,6 +56,11 @@ pub struct RcMap {
     pub half_travel: u16,
     /// Throttle at or below this fraction counts as none (the C++: 5 %).
     pub throttle_deadband: f32,
+    /// The steering stick's gain to the right, over its gain to the left: 1.0 today, the
+    /// same both ways. The C++ steered right harder (`legacy_link::STEER_RIGHT_PER_LEFT`,
+    /// 1950 / 1550): the stick reached full right lock at 80 % of its travel. The board's
+    /// `cpp-rc-steering` feature sets that.
+    pub steer_right_gain: f32,
 }
 
 impl Default for RcMap {
@@ -80,6 +85,7 @@ impl RcMap {
         centre: 1500,
         half_travel: 500,
         throttle_deadband: 0.05,
+        steer_right_gain: 1.0,
     };
 
     /// Today's channels with the mode switch's middle as RC via ROS (TODO 48,
@@ -130,9 +136,20 @@ impl RcMap {
         Some(RcInput {
             switch,
             throttle: self.signed_throttle(throttle, gear),
-            steering: self.below_centre(steering).clamp(-1.0, 1.0),
+            steering: self.steering(steering),
             brake: gear == Gear::Brake,
         })
+    }
+
+    /// The steering stick, -1 (right) to 1 (left), with the right side's gain.
+    fn steering(&self, value: u16) -> f32 {
+        let s = self.below_centre(value);
+        let s = if s < 0.0 {
+            s * self.steer_right_gain
+        } else {
+            s
+        };
+        s.clamp(-1.0, 1.0)
     }
 
     /// Where the gear switch is.
@@ -194,6 +211,20 @@ mod tests {
 
     fn rc(c: Channels) -> Option<RcInput> {
         RcMap::default().rc_input(&c)
+    }
+
+    #[test]
+    fn the_right_gain_steers_right_harder_and_still_clamps() {
+        let cpp = RcMap {
+            steer_right_gain: 1950.0 / 1550.0,
+            ..RcMap::TODAY
+        };
+        let steer = |map: &RcMap, us| map.rc_input(&ch(2000, 1500, us, 1500)).unwrap().steering;
+        assert_eq!(steer(&RcMap::TODAY, 1750), -0.5);
+        assert!((steer(&cpp, 1750) + 0.5 * 1950.0 / 1550.0).abs() < 1e-6);
+        assert_eq!(steer(&cpp, 1250), 0.5); // left as before
+        assert_eq!(steer(&cpp, 2000), -1.0); // full right lock, clamped
+        assert_eq!(steer(&cpp, 1900), -1.0); // reached before the stick's end
     }
 
     const ON: u16 = 2000;

@@ -3,8 +3,35 @@
 The plan for the first time the Rust program (`firmware/spine/boards/esp32-umod`) goes onto
 the car's ESP32 control board. Do it with Ben, **wheels off the ground**, with the C++
 ready to go back on. What the program is: [Rust firmware](rust-firmware.md).
+Its safety rules (boot, release, lost links, what each failure does): [ESP32 safety](esp32-safety.md).
 
 [[untested]] Nothing here has been done on a board yet. The emulator has (next section).
+
+## Walk me through it: `pixi run esp walk`
+
+One command walks this whole page with you, one step at a time. Each step is a few words
+on the screen, in bold colour, and the same words **spoken aloud** (the Mac's `say`).
+
+| Part | What it does | You |
+|---|---|---|
+| Before you start | wheels off the ground, a person at the e-stop, the RC on | press **Enter** |
+| Save the C++ | builds the C++, finds the board, copies its flash (4 MB), builds the Rust | watch; Enter to try again |
+| Flash | says "wheels off the ground, e-stop in hand" | type **`flash`** |
+| The first check | 30 s of the log; reads each row out ("Brake: pass. The brake is on.") and the board's settings | listen |
+| Checks on stands | section 3, one question at a time ("Press the red e-stop now. Did the car stop by itself?") | **yes**, **no**, **skip** |
+| Roll back | on a STOP or a no: puts the saved C++ back, listens for its first line | type **`flash`** |
+| The record | `bench-logs/<date>-esp32-first-flash.md`: every step, every answer, the table | read it later |
+
+`stop` (or `n`) stops at any step. After the flash, stopping asks: roll back?
+
+| Command | Does |
+|---|---|
+| `pixi run esp walk` | the whole walk, on the first USB serial port |
+| `pixi run esp walk /dev/cu.usbserial-0001` | on that port |
+| `pixi run esp walk --dry-run` | a rehearsal: shows every step, **runs nothing** |
+| `--quiet`, `--voice Samantha`, `--rate 160` | no speech; another voice; slower or faster |
+
+[[untested]] Tested with a saved log and `--dry-run` only: not yet on a board.
 
 !!! warning "Before you start"
     - The car on stands: **all four wheels off the ground**.
@@ -162,19 +189,89 @@ over each run they agreed to 0.1 %.
 |---|---|---|
 | 1 | `vendor/cargo-tools/bin/espflash list-ports` | the board's port (a Mac: `/dev/cu.usbserial-…`) |
 | 2 | `pixi run esp flash` (add `--port <port>` if asked) | it flashes, resets, and shows the log |
-| 3 | read the first lines | `spine-esp32-umod 0.1.0, link: Motor-Pi UART, version 2 frames (the Orin's heartbeat); the last reset: …` |
+| 3 | read the first lines | `spine-esp32-umod 0.1.0, link: Motor-Pi UART, version 2 frames (the Orin's heartbeat); the last reset: …`, then `CONFIG …` and `DEVICES 4/4 answered …` |
+| 4 | leave the monitor: **Ctrl-C** | the port is free for the first check |
 
 If it won't connect: hold the board's BOOT button while it starts flashing.
 
+## 2a. The first check: the gate
+
+Before any check below, let the board judge itself. Pi's bridge **off**, RC transmitter
+on, nothing else.
+
+| Step | Command | Check |
+|---|---|---|
+| 1 | `pixi run esp first-check` (or `pixi run esp first-check /dev/cu.usbserial-…`) | it reads the log for 30 s; it sends nothing |
+| 2 | read the last line | `SAFE TO GO ON to the next step`: go to 3. `STOP: <check>, roll back`: section 4 |
+
+Opening the port can restart the board (its reset wiring): that is fine, the check sees
+the boot. `--save board.log` keeps what it read; `--pi on` once the bridge runs (then the
+link must say OK); `--json` for a machine.
+
+| Check | PASS when | If not |
+|---|---|---|
+| Build | the commit in the `CONFIG` line is this checkout's | flash again |
+| Features | `legacy-uart` (`json-log`, `wifi-status` allowed), never `qemu` | build the right one |
+| Last reset | a power-on | a watchdog (a tick hung), a panic, a brown-out: roll back |
+| Devices | all four answered at boot: steering Jrk 0x05, brake Jrk 0x04, DAC 0x0C, expander 0x20; each Jrk's feedback mode | a wire, a power, an address |
+| Brake | at `IDLE_BRAKE` (1.0: full on) | roll back |
+| Throttle | 0 | **e-stop**, roll back |
+| Steering | centred (1950) | roll back |
+| Mode | stopped, not armed, latched | roll back |
+| Faults | none, or only 1 (command timeout) and 256 (RC lost: the transmitter is off) | the fault names the device |
+| Tick | the worst gap under 50 ms, half the watchdog | roll back |
+| Restarts | none in the 30 s | roll back |
+| Pi link | INFO only: says what the board sees. NO FRAMES is right with the bridge off | |
+
+The Pi link, judged on the board by the spine's own 100 ms rule (`spine_board::LinkHealth`):
+
+| The board says | Means |
+|---|---|
+| OK | frames with the Orin's counter moving |
+| NO FRAMES | nothing yet: the bridge is off, or the cable |
+| STALE | frames came, then stopped |
+| COUNTER FROZEN | the Pi sends, the Orin's counter doesn't move: is the output mux running? |
+| BAD FRAMES | bad frames or stray bytes in the last 3 s: the cable, or `frame_version` (2 for this build) |
+
+The board also says it once a second on the cable (`HEALTH link=… age_ms=… counter_moving=…
+devices=4/4 faults=…`), and with `wifi-status` at `/health` and in big words on its page.
+
+The QEMU build, booted idle (`pixi run esp first-check --qemu`, 7 Nov, Ben's Mac):
+
+```text
+Check       Result  What it saw
+----------  ------  -----------
+Log         PASS    245 lines, text form
+Build       PASS    216ca6b
+Features    PASS    legacy-uart,qemu,uplink
+Last reset  PASS    power-on
+Devices     PASS    4/4: steering 0x05 answered, feedback analog; brake 0x04 answered, ...
+Brake       PASS    1.00 (IDLE_BRAKE 1.0)
+Throttle    PASS    0 in every line
+Steering    PASS    centred
+Mode        PASS    stopped, not armed, latched
+Faults      PASS    0x0000
+Tick        PASS    worst gap 10.1 ms (under 50); 0 late ticks in the window
+Restarts    PASS    none in the window
+Pi link     INFO    NO FRAMES: right while the Pi's bridge is off
+
+SAFE TO GO ON to the next step
+```
+
+[[untested]] Not run on a board yet. On the board, the text log's own prints wait on the
+UART, so the tick may come late now and then (`Late ticks`, INFO); the timing test in the
+board's README measures it.
+
 ## 3. Checks, wheels off the ground
 
-Do them in order. Stop at the first one that fails, and roll back.
+Only after 2a said SAFE TO GO ON. Do them in order. Stop at the first one that fails, and
+roll back.
 
 | # | Do | Expect |
 |---|---|---|
 | 1 | Power on, nothing else | brake pulled (3500), steering centred (1950), DAC 0 V. Log: `STATUS t=… mode=Manual … faults=0x0000`. Status LED blinks fast |
 | 2 | Unplug a Jrk's I2C, then plug it back | the red LED and a fault bit (8 steering, 16 brake) while it is out |
-| 3 | Start the Motor-Pi's bridge (`frame_version: 2`), with ego stale | the bridge sends stop frames: brake stays full. `LINK` shows `frames=` rising, `bad=0`, `counter=` still |
+| 3 | Start the Motor-Pi's bridge (`frame_version: 2`), with ego stale | the bridge sends stop frames: brake stays full. `LINK` shows `frames=` rising, `bad=0`, `counter=` still. `HEALTH link=ok` with the Orin's mux running, `link=counter_frozen` without |
 | 4 | Drive slowly from ROS (keyboard or joystick, 0.3 m/s) | `mode=Computer`, green LED, brake lets go (400), the DAC rises smoothly (600 codes a second at most), the wheels turn **forward** |
 | 5 | Steer left from ROS | the wheels turn **left**. If right: the steering sign (Q2), in `legacy.yaml` |
 | 6 | Stop from ROS | throttle 0; the bridge's hold brake: target 1050, as the C++ gave it |
@@ -184,7 +281,7 @@ Do them in order. Stop at the first one that fails, and roll back.
 | 9a | While driving, stop the Orin's output mux (or unplug the Orin's network), the bridge still running | within 0.2 s: brake full, throttle 0, `faults` has 1, though `LINK frames=` still rises; `repeats=` rises instead. The heartbeat (TODO 50) |
 | 9b | Bring the Orin back | stays braked until ego stands still (a stop with a new counter), then drives |
 | 9c | `/safety/estop` true while driving | `estop=true` at once, brake full |
-| 10 | RC override switch on, gear forward, a little throttle | `mode=Rc`, blue LED, wheels turn; ROS commands ignored |
+| 10 | RC override switch on. **First the throttle stick at zero and the gear on brake** (RC direct waits for this after power-up and after any stop), then gear forward, a little throttle | `mode=Rc`, blue LED, wheels turn; ROS commands ignored. Without the first step: nothing moves, as it should |
 | 11 | RC: switch the transmitter off | within 0.1 s: brake full, `faults` has 256 (RC lost) |
 | 12 | RC override off | back to the computer, or Manual |
 | 13 | The red e-stop button | the car stops by itself, as today |
@@ -216,7 +313,7 @@ the ground; checks 1 to 14 passed first.
 | R3 | A little throttle, gear forward | the wheels turn, **through ego**: its speed and steering-rate limits; `/vehicle/status` mode 2 |
 | R4 | Steer with the stick while rolling | the wheels steer (standing still they don't: the bicycle model) |
 | R5 | Transmitter off while on RC via ROS | within 0.1 s: brake full, faults 256; stays braked when it comes back, until the stick is centred (a stop), then drives |
-| R6 | CH6 **high** (RC direct) | `/vehicle/status` mode 1; the ESP32 drives from the sticks, as check 10; ROS can't |
+| R6 | CH6 **high** (RC direct); stick at zero and gear on brake first | `/vehicle/status` mode 1; the ESP32 drives from the sticks, as check 10; ROS can't |
 | R7 | Transmitter off while on RC direct | as check 11: brake full, faults 256 |
 | R8 | Stop the bridge while on RC via ROS | the heartbeat stops: brake full within 0.2 s (fault 1). RC direct still works: the fallback |
 

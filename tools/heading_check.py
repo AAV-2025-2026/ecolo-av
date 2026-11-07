@@ -17,7 +17,7 @@ TODO 13. Starts Gazebo's empty world headless (no Nav2, lidar or radar: a light 
 a private ROS domain and Gazebo partition, drives a fixed walking-pace profile through
 twist_mux's scripted slot (PROFILE: forward, reversing, gentle turns both ways), and
 compares the global EKF's heading (/localization/odom/global, what Nav2 steers by) with
-Gazebo's truth (/vehicle/gazebo/truth). It prints, for forward and for reversing, the
+Gazebo's truth (/vehicle/sim/truth). It prints, for forward and for reversing, the
 median, 95th percentile and worst heading error, in degrees, and a JSON line to collect.
 
 GPS noise is random, so one run proves little: judge over several.
@@ -143,7 +143,7 @@ def run_once(domain, launch_args, gyro_bias, log_path, wrong_start=0.0, gps_ever
 
     recording = [False]
     node.create_subscription(Imu, '/localization/gps/heading', on_course, 10)
-    node.create_subscription(Odometry, '/vehicle/gazebo/truth', on_truth, 10)
+    node.create_subscription(Odometry, '/vehicle/sim/truth', on_truth, 10)
     node.create_subscription(Odometry, '/localization/odom/global', on_global, 10)
     cmd = node.create_publisher(TwistStamped, '/drivers/scripted/cmd_vel', 10)
 

@@ -16,8 +16,9 @@ use crate::spine_board::Every;
 use core::convert::Infallible;
 use embedded_io::{Read, ReadReady, Write};
 use legacy_link::{
-    Ask, CalRequest, Counts, DriveMode, Frame, FrameError, FrameV4, Heartbeat, ModeSwitch, Parser,
-    ParserV4, Situation, SteerCal, SteeringDrive, Sticks, Targets, Throttle, Uplink, WheelSpeed,
+    Ask, CalRequest, Counts, DacRamp, DriveMode, Frame, FrameError, FrameV4, Heartbeat, ModeSwitch,
+    Parser, ParserV4, Situation, SteerCal, SteeringDrive, Sticks, Targets, Throttle, Uplink,
+    WheelSpeed,
 };
 use spine_core::protocol::{decode_incoming, EstopCmd, FrameError as CanError, Incoming, Mode};
 use spine_core::{DirectCmd, Inputs, Outputs, RcInput, RcSwitch, SpeedReport};
@@ -131,6 +132,33 @@ pub struct LinkStats {
     pub uplink_errors: u32,
 }
 
+/// The last frame the link took whole: its checksum or CRC passed. For reporting only
+/// (`firmware/status/README.md`: `rx`); it never drives anything.
+///
+/// A version 2 or 3 frame whose values are out of range is still here, as it came: it
+/// was received, and turned down after. Version 1's parser drops such a frame's values.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LastFrame {
+    /// Its version: 1, 2 or 3.
+    pub version: u8,
+    /// The Orin's counter in it; none in version 1.
+    pub counter: Option<u8>,
+    /// Its last byte: version 1's sum, or the CRC-8. With the counter, it tells one frame
+    /// from the next.
+    pub check: u8,
+    /// Steering, speed and accel, as they came.
+    pub values: Frame,
+    /// When it arrived: the tick's clock, in ms.
+    pub at_ms: u32,
+}
+
+impl LastFrame {
+    /// How old it is at `now_ms`.
+    pub fn age_ms(&self, now_ms: u32) -> u32 {
+        now_ms.wrapping_sub(self.at_ms)
+    }
+}
+
 /// No uplink: a link that sends nothing back ([`LegacyLink::new`]).
 #[derive(Debug, Clone, Copy, Default)]
 pub struct NoUplink;
@@ -205,11 +233,14 @@ pub struct LegacyLink<U, T = NoUplink> {
     cal: Calibration,
     last: Option<DirectCmd>,
     stats: LinkStats,
+    last_frame: Option<LastFrame>,
     uplink_due: Every,
     sequence: u8,
     steer_cal: SteerCal,
     /// The latest frame's e-stop flag.
     frame_estop: bool,
+    /// With [`LegacyLink::with_cpp_ramp`]: the C++'s DAC ramp, a step a command.
+    ramp: Option<DacRamp>,
 }
 
 impl<U: Read + ReadReady> LegacyLink<U, NoUplink> {
@@ -241,16 +272,35 @@ impl<U: Read + ReadReady, T: Write> LegacyLink<U, T> {
             cal,
             last: None,
             stats: LinkStats::default(),
+            last_frame: None,
             uplink_due: Every::new(UPLINK_PERIOD_MS),
             sequence: 0,
             steer_cal: SteerCal::new(limits.min.min(limits.max), limits.max.max(limits.min)),
             frame_estop: false,
+            ramp: None,
         }
+    }
+
+    /// The C++'s DAC ramp too (`writeDACRamped`, `legacy_link::DacRamp`): each command
+    /// moves the throttle at most 6 codes up and 12 down, so an idle frame (|speed| under
+    /// 3 %) or a frame turned down lets the throttle fall a step at a time instead of at
+    /// once: the car coasts down as it did on the C++. A stop (a brake demand, `armed`
+    /// clear, the steering calibration) still cuts it at once, as the C++ cut it for a
+    /// brake demand; so do a change of direction and every stop the spine makes. Off by
+    /// default: the board's `cpp-throttle-ramp` feature.
+    pub fn with_cpp_ramp(mut self) -> Self {
+        self.ramp = Some(DacRamp::new());
+        self
     }
 
     /// What the link has seen since boot.
     pub fn stats(&self) -> LinkStats {
         self.stats
+    }
+
+    /// The last frame taken whole, if any since boot.
+    pub fn last_frame(&self) -> Option<LastFrame> {
+        self.last_frame
     }
 
     /// The uplink frame for a tick: `sequence`, then what the report says.
@@ -332,7 +382,19 @@ impl<U: Read + ReadReady, T: Write> LegacyLink<U, T> {
     }
 
     /// The tick's command: a stop in any frame this tick wins, so an arming edge isn't lost.
-    fn give(&mut self, cmd: DirectCmd, inputs: &mut Inputs) {
+    fn give(&mut self, mut cmd: DirectCmd, inputs: &mut Inputs) {
+        if let Some(ramp) = &mut self.ramp {
+            let turning = self.last.is_some_and(|last| last.reverse != cmd.reverse);
+            if cmd.stop || turning {
+                ramp.cut();
+            }
+            let code = if cmd.stop {
+                0
+            } else {
+                ramp.toward(self.cal.throttle.code(cmd.throttle))
+            };
+            cmd.throttle = self.cal.throttle.fraction(code);
+        }
         self.last = Some(cmd);
         if inputs.direct_cmd.is_none_or(|old| !old.stop) {
             inputs.direct_cmd = Some(cmd);
@@ -364,6 +426,13 @@ impl<U: Read + ReadReady, T: Write> LegacyLink<U, T> {
             }
         };
         self.stats.frames += 1;
+        self.last_frame = Some(LastFrame {
+            version: 1,
+            counter: None,
+            check: values.encode()[legacy_link::FRAME_LEN - 1],
+            values,
+            at_ms: inputs.now_ms,
+        });
         if let Some(cmd) = self.command_for(values, inputs) {
             self.give(cmd, inputs);
         }
@@ -395,6 +464,17 @@ impl<U: Read + ReadReady, T: Write> LegacyLink<U, T> {
         self.stats.frames += 1;
         self.stats.counter = Some(frame.counter);
         self.frame_estop = frame.flags.estop;
+        if let Decoder::V2 { parser, .. } = &self.decoder {
+            if let Some(accepted) = parser.last_accepted() {
+                self.last_frame = Some(LastFrame {
+                    version: accepted.version,
+                    counter: Some(frame.counter),
+                    check: accepted.check,
+                    values: frame.values,
+                    at_ms: inputs.now_ms,
+                });
+            }
+        }
         // An e-stop is always safe to obey: whatever the counter, and it wins in a tick.
         if frame.flags.estop {
             inputs.estop_cmd = Some(EstopCmd {
@@ -641,6 +721,37 @@ mod tests {
         assert_eq!(targets(&inputs.direct_cmd.unwrap()), (2725, 400, 0));
         // With nothing before it, nothing.
         assert_eq!(receive(&mut link(), &bad).direct_cmd, None);
+    }
+
+    #[test]
+    fn with_the_cpp_ramp_the_throttle_moves_a_step_a_frame() {
+        let mut l = link().with_cpp_ramp();
+        let code = |l: &mut LegacyLink<FakeUart>, s, v, a| {
+            targets(&receive(l, &frame(s, v, a)).direct_cmd.unwrap()).2
+        };
+        // Up 6 a frame toward 350, as writeDACRamped.
+        assert_eq!(code(&mut l, 0.0, 0.5, 0.0), 6);
+        assert_eq!(code(&mut l, 0.0, 0.5, 0.0), 12);
+        for _ in 0..100 {
+            code(&mut l, 0.0, 0.5, 0.0);
+        }
+        assert_eq!(code(&mut l, 0.0, 0.5, 0.0), 350);
+        // An idle frame: down 12, not to 0; the brake stays released.
+        let idle = receive(&mut l, &frame(0.0, 0.0, 0.0)).direct_cmd.unwrap();
+        assert_eq!(targets(&idle), (1950, 400, 338));
+        assert!(!idle.stop);
+        // Out of range: one step down too, the rest kept.
+        let mut bad = [0u8; 13];
+        bad[..4].copy_from_slice(&2.0f32.to_le_bytes());
+        bad[12] = bad[..12].iter().fold(0u8, |s, &b| s.wrapping_add(b));
+        assert_eq!(targets(&receive(&mut l, &bad).direct_cmd.unwrap()).2, 326);
+        // A brake demand cuts it at once, and it rises from 0 again.
+        assert_eq!(code(&mut l, 0.0, 0.5, -1.0), 0);
+        assert_eq!(code(&mut l, 0.0, 0.5, 0.0), 6);
+        // So does a change of direction.
+        assert_eq!(code(&mut l, 0.0, -0.5, 0.0), 6);
+        // Without it, the frame's code at once (the default).
+        assert_eq!(code(&mut link(), 0.0, 0.5, 0.0), 350);
     }
 
     #[test]
@@ -900,5 +1011,73 @@ mod tests {
         let inputs = receive(&mut l, &v2(2.0, 0.5, 0.0, 3, true));
         assert!(inputs.bad_frame);
         assert_eq!(targets(&inputs.direct_cmd.unwrap()), (2725, 400, 0));
+    }
+
+    #[test]
+    fn it_keeps_the_last_good_frame_for_the_status_line() {
+        let mut l = link_v2();
+        assert_eq!(l.last_frame(), None);
+        let bytes = v2(-0.1, 0.3, 0.0, 41, true);
+        receive(&mut l, &bytes);
+        let want = LastFrame {
+            version: 2,
+            counter: Some(41),
+            check: bytes[16],
+            values: Frame {
+                steering: -0.1,
+                speed: 0.3,
+                accel: 0.0,
+            },
+            at_ms: 0,
+        };
+        assert_eq!(l.last_frame(), Some(want));
+        assert_eq!(want.age_ms(18), 18);
+        // A bad CRC leaves it; a repeat of the counter replaces it: it was received.
+        let mut bad = v2(0.5, 0.5, 0.0, 42, true);
+        bad[16] ^= 1;
+        receive(&mut l, &bad);
+        assert_eq!(l.last_frame(), Some(want));
+        receive(&mut l, &bytes);
+        // The first frame after boot only sets the heartbeat: a repeat too.
+        assert_eq!(l.stats().repeats, 2);
+        assert_eq!(l.last_frame(), Some(want));
+    }
+
+    #[test]
+    fn version_1_keeps_its_sum_and_no_counter() {
+        let mut l = link();
+        let bytes = frame(0.25, 0.5, 0.0);
+        receive(&mut l, &bytes);
+        let last = l.last_frame().unwrap();
+        assert_eq!(
+            (last.version, last.counter, last.check),
+            (1, None, bytes[12])
+        );
+        assert_eq!(last.values.speed, 0.5);
+    }
+
+    #[test]
+    fn version_3_says_so() {
+        let mut l = link_v2();
+        let bytes = FrameV3 {
+            values: Frame {
+                steering: 0.0,
+                speed: 0.0,
+                accel: -1.0,
+            },
+            counter: 7,
+            flags: legacy_link::Flags {
+                armed: true,
+                estop: false,
+            },
+            calibration: CalRequest::Off,
+        }
+        .encode();
+        receive(&mut l, &bytes);
+        let last = l.last_frame().unwrap();
+        assert_eq!(
+            (last.version, last.counter, last.check),
+            (3, Some(7), bytes[19])
+        );
     }
 }

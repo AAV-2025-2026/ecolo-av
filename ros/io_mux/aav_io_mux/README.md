@@ -20,12 +20,12 @@ topics (pictures, point clouds) cost nothing extra.
 | Target | Its source | Command topic |
 |---|---|---|
 | `car` | REAL | `/control/car/actuator_cmd` |
-| `gazebo`, `turtle`, `carla` | SIM | `/control/<target>/actuator_cmd` |
+| `sim` (Gazebo today), `turtle`, `carla` | SIM | `/control/<target>/actuator_cmd` |
 | `bench` | BENCH | `/control/bench/actuator_cmd` |
 
 ## Interface
 
-Launch: `ros2 launch aav_io_mux io_mux.launch.py target:=car|gazebo|bench|turtle|carla [source:=real|sim|bench|replay]`.
+Launch: `ros2 launch aav_io_mux io_mux.launch.py target:=car|sim|bench|turtle|carla [source:=real|sim|bench|replay]`.
 An empty `target` starts no output mux (a replay drives nothing). An empty `source`
 takes the target's. A source the target can't take is refused before anything starts.
 
@@ -47,7 +47,7 @@ It watches `provenance.SENSORS`: IMU, GPS, three cameras, radar, lidar, `/vehicl
 | Subscribes | `/ego/actuator_cmd` (`ackermann_msgs/AckermannDriveStamped`), `/system/sensor_mux/state`, `/system/source` |
 | Publishes | `/control/<target>/actuator_cmd` (ego's command, unchanged, while OPEN); `/control/<target>/heartbeat` (`aav_interfaces/Heartbeat`, counter +1 per command passed on, a byte); `/safety/output_mux/state` (`std_msgs/String`, 2 Hz and on change: OPEN, WAIT or STOP, the target, and why) |
 | Serves | `/safety/output_mux/clear` (`std_srvs/Trigger`): a person reopens a latched STOP (`pixi run clear gate`) |
-| Parameters | `target` (`car`), `settle` (2.0 s), `stale_after` (3.0 s) |
+| Parameters | `target` (`car`), `settle` (2.0 s), `stale_after` (3.0 s), `screens` (`hud/<screen>/heartbeat`s commands need: a test; refused for `car`) |
 
 Modules:
 
@@ -74,6 +74,7 @@ Modules:
   the spine's 100 ms; legacy_uart_bridge 0.3 s; Gazebo 0.2 s).
 - Each backend reads only its own target's topic, so a simulator's ego can't reach the car.
 - The heartbeat moves only while OPEN. The ESP32 brakes, latched, when it stops for 100 ms.
+- A quiet screen (`screens`) is doubt: WAIT, never STOP. It only exists in tests.
 - Both nodes time on a steady clock, not simulated time.
 
 ## Side Effects

@@ -65,15 +65,15 @@ mod v2;
 mod v3;
 mod v4;
 
-pub use frame::{Frame, FrameError, BAUD, FRAME_LEN};
-pub use parser::{Parser, ParserV2, ParserV3, ParserV4};
+pub use frame::{Frame, FrameError, BAUD, FRAME_HZ, FRAME_LEN};
+pub use parser::{Accepted, Parser, ParserV2, ParserV3, ParserV4};
 pub use steer_cal::{
     Ask, CalRequest, CalState, Refusal, Situation, SteerCal, SteeringDrive, CAL_RATE,
     CAL_TIMEOUT_MS, COUNTS_MAX,
 };
 pub use targets::{
-    Targets, Throttle, BRAKE_BELOW, BRAKE_FULL, BRAKE_RELEASED, DAC_CAP, SPEED_DEADBAND,
-    STEER_CENTRE,
+    DacRamp, Targets, Throttle, ACCEL_STEP, BRAKE_BELOW, BRAKE_FULL, BRAKE_RELEASED, DAC_CAP,
+    DECEL_STEP, SPEED_DEADBAND, STEER_CENTRE, STEER_RIGHT_PER_LEFT,
 };
 pub use uplink::{
     Counts, DriveMode, ModeSwitch, Sticks, Uplink, KIND_STATUS, UPLINK_LEN, UPLINK_V2_LEN,

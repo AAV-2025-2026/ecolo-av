@@ -79,8 +79,8 @@ real-time factor at 0.98-0.99.
 | Rear camera, looking back | `/aav/camera_rear/image` | `/sensors/camera/rear/image_raw`, `.../camera_info` | 10 Hz | none | road |
 | Radar | `/aav/radar/points` (a lidar shaped like the radar) | `/sensors/radar/points` | 10 Hz | 5 cm | road |
 | Lidar (roof) | `/aav/lidar/points` | `/sensors/lidar/points` | 10 Hz | 3 cm | road and test_lot; on by default, `lidar:=false` drops it |
-| Chase camera (Gazebo's view, not a sensor) | `/aav/chase_camera/image` | `/vehicle/gazebo/chase_camera/image_raw`, and its JPEG `.../compressed`, for Lichtblick's [cockpit](foxglove.md#cockpit) | 10 Hz | none | road and test_lot; on by default, `chase_camera:=false` drops it |
-| Where the car really is | `/model/aav/truth` | `/vehicle/gazebo/truth`, for checks only | 50 Hz | none | road |
+| Chase camera (Gazebo's view, not a sensor) | `/aav/chase_camera/image` | `/vehicle/sim/chase_camera/image_raw`, and its JPEG `.../compressed`, for Lichtblick's [cockpit](foxglove.md#cockpit) | 10 Hz | none | road and test_lot; on by default, `chase_camera:=false` drops it |
+| Where the car really is | `/model/aav/truth` | `/vehicle/sim/truth`, for checks only | 50 Hz | none | road |
 | Steering, throttle, brake | (the actuator model) | `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake`: command and measured | 50 Hz | none | all |
 | Each wheel's speed | `/world/aav/model/aav/joint_state` | `/vehicle/wheels` (m/s, all four) | 50 Hz | none | all |
 | "This is a simulation" | (`gazebo_adapter`) | `/system/source`, latched: every sensor above is SIM | once | - | all |
@@ -222,7 +222,7 @@ pixi run sim-check --spine                # tests it (3 more minutes)
 
 | | Direct path (default) | `spine:=true` |
 |---|---|---|
-| Takes ego's commands (`/control/gazebo/actuator_cmd`) | `gazebo_adapter` | `spine_bridge` (only one backend at a time) |
+| Takes ego's commands (`/control/sim/actuator_cmd`) | `gazebo_adapter` | `spine_bridge` (only one backend at a time) |
 | Speed loop | a Python copy in `actuator_model.py` | the spine's own, in Rust |
 | Ego goes quiet | brakes after 0.2 s | full brake after 0.2 s (0.1 + 0.1), **latched** |
 | `/safety/estop` | twist_mux stops the drivers: brake 0.46 s | ESTOP_CMD to the spine: brake within 12 ms, latched |
@@ -231,6 +231,30 @@ pixi run sim-check --spine                # tests it (3 more minutes)
 | `/system/source` | SIM (`gazebo_adapter`) | SIM (`spine_bridge`, `source:=sim`) |
 
 Stop times in full: [Full simulation](full-simulation.md#stop-times-the-direct-path-vs-the-spine).
+
+### A screen as a heartbeat: `watch_screens:=`
+
+Ben, 5 Nov: test what happens when a screen dies. Each screen sends its own heartbeat: the frames
+it has drawn. Name them, and commands flow only while they all beat.
+
+```text
+screen stops ─► output mux WAIT ─► no commands ─► the spine's 100 ms watchdog ─► stop, latched
+```
+
+```bash
+pixi run sim world:=test_lot spine:=true watch_screens:=dev_window,hw_panel
+pixi run dev-window --live      # and pixi run hw-panel: the car arms once both beat
+```
+
+| Step (`spine:=true`, 5 Nov) | Output mux | Spine |
+|---|---|---|
+| The window beats | OPEN | computer, armed |
+| The window closes | WAIT, within 1.5 s | manual, not armed, `CMD_TIMEOUT` |
+| The window comes back | OPEN | **stays latched**: disarm, then arm |
+
+It uses the same stop as a lost computer, with no change to the firmware or the CAN frames. It
+needs a person to re-arm, because `arm_when_open` arms only once. The real car refuses this rule:
+a laptop dropping off isn't a reason to brake on the road.
 
 ### Faster in Gazebo: `sim_speed:=`
 
@@ -289,7 +313,7 @@ bench's road, built in 3D, so the car's own camera and radar can see it.
 |---|---|---|
 | Front camera | 640 x 360, 86 degrees across, 10 Hz: the bench camera's picture and lens (the 2024-25 calibration at a third of its size) | `/sensors/camera/front_left/image_raw`, `/sensors/camera/front_left/camera_info`, in `camera_left_link` |
 | Radar | a lidar shaped like the TI radar: 8.4 m, 120 degrees, 61 x 3 rays, 10 Hz. `gazebo_radar` keeps the rays that hit something, with the TI driver's fields | `/sensors/radar/points`, best effort, in `radar_link` |
-| Where the car really is | Gazebo's own pose, like the bench's `/vehicle/bench/truth` | `/vehicle/gazebo/truth`, for checks only |
+| Where the car really is | Gazebo's own pose, like the bench's `/vehicle/bench/truth` | `/vehicle/sim/truth`, for checks only |
 
 | Lidar (on by default) | a generic 16-beam spinning lidar: 360 degrees in 1800 steps, 15 degrees down to 15 up, 0.5-100 m, 3 cm of noise, 10 Hz | `/sensors/lidar/points`, reliable, in `lidar_link` |
 
@@ -658,7 +682,7 @@ Work down the chain:
 | 1 | Is a driver publishing? | `ros2 topic hz /drivers/keyboard/cmd_vel` (or `joy`, `scripted`, `nav`) |
 | 2 | Did the mux pick it? | `ros2 topic echo /control/cmd_vel`. If it's silent, look for a latched e-stop: `ros2 topic echo /safety/estop` |
 | 3 | Is ego converting it? | `ros2 topic echo /ego/actuator_cmd`: it's always 50 Hz, so look at the speed |
-| 4 | Is the output mux open, and a backend listening? | `ros2 topic echo /safety/output_mux/state` says OPEN; `ros2 topic info /control/gazebo/actuator_cmd -v` |
+| 4 | Is the output mux open, and a backend listening? | `ros2 topic echo /safety/output_mux/state` says OPEN; `ros2 topic info /control/sim/actuator_cmd -v` |
 | 5 | In Gazebo or replay: is everything on sim time? | a node on wall-clock time ignores sim-time messages |
 | 6 | Does the graph match the contract? | `pixi run check sim` (or `road`, `replay`) |
 | 7 | Is the sensor watchdog holding Nav2? | `ros2 topic echo /safety/sensor_watchdog/state`: anything but OK says which sensor and why |

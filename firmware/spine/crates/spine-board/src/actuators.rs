@@ -99,6 +99,12 @@ pub struct Actuators<I2C> {
     /// Each Jrk's feedback: a position, or not; `None` until it has said.
     steering_feedback: Option<bool>,
     brake_feedback: Option<bool>,
+    /// The last targets sent to each Jrk (or tried), for reporting.
+    steering_counts: Option<u16>,
+    brake_counts: Option<u16>,
+    /// Each Jrk's error flags as the latest read took them; `None` if that read failed.
+    steering_errors: Option<ErrorFlags>,
+    brake_errors: Option<ErrorFlags>,
 }
 
 impl<I2C: I2c> Actuators<I2C> {
@@ -114,6 +120,10 @@ impl<I2C: I2c> Actuators<I2C> {
             steering: 0.0,
             steering_feedback: None,
             brake_feedback: None,
+            steering_counts: None,
+            brake_counts: None,
+            steering_errors: None,
+            brake_errors: None,
         }
     }
 
@@ -143,10 +153,9 @@ impl<I2C: I2c> Actuators<I2C> {
         if let Some(angle) = steering {
             self.steering = angle;
         }
-        bits |= jrk_fault(
-            self.dev.steering.take_error_flags(),
-            faults::STEERING_DRIVER,
-        );
+        let flags = self.dev.steering.take_error_flags().ok();
+        self.steering_errors = flags;
+        bits |= jrk_fault(flags, faults::STEERING_DRIVER);
         let brake_counts = match position(&mut self.dev.brake, &mut self.brake_feedback) {
             Ok(target) => target,
             Err(()) => {
@@ -155,7 +164,9 @@ impl<I2C: I2c> Actuators<I2C> {
             }
         };
         let brake = brake_counts.map(|t| self.cal.brake.fraction(t));
-        bits |= jrk_fault(self.dev.brake.take_error_flags(), faults::BRAKE_DRIVER);
+        let flags = self.dev.brake.take_error_flags().ok();
+        self.brake_errors = flags;
+        bits |= jrk_fault(flags, faults::BRAKE_DRIVER);
         Readings {
             steering: self.steering,
             positions: Positions {
@@ -223,6 +234,24 @@ impl<I2C: I2c> Actuators<I2C> {
         self.reverse
     }
 
+    /// The last target sent to the steering Jrk, in counts, whether the write worked or
+    /// not; `None` before the first. A "stop motor" (limp) leaves it as it was.
+    pub fn steering_counts(&self) -> Option<u16> {
+        self.steering_counts
+    }
+
+    /// The last target sent to the brake Jrk, in counts, whether the write worked or not.
+    pub fn brake_counts(&self) -> Option<u16> {
+        self.brake_counts
+    }
+
+    /// The steering and brake Jrks' error flags, as this tick's read took them (and so
+    /// cleared them: the C++'s `getErrorFlagsHalting()` after each target). `None`: that
+    /// read failed. For the log: nothing more is read for it.
+    pub fn jrk_errors(&self) -> (Option<ErrorFlags>, Option<ErrorFlags>) {
+        (self.steering_errors, self.brake_errors)
+    }
+
     /// The devices, to read something else from them.
     pub fn devices(&mut self) -> &mut Devices<I2C> {
         &mut self.dev
@@ -288,6 +317,7 @@ impl<I2C: I2c> Actuators<I2C> {
 
     fn write_brake(&mut self, brake: f32) -> u16 {
         let target = self.cal.brake.target(brake);
+        self.brake_counts = Some(target);
         match self.dev.brake.set_target(target) {
             Ok(()) => 0,
             Err(_) => faults::BRAKE_DRIVER,
@@ -302,6 +332,7 @@ impl<I2C: I2c> Actuators<I2C> {
     fn write_steering_target(&mut self, target: u16) -> u16 {
         let s = &self.cal.steering;
         let target = target.clamp(s.min.min(s.max), s.max.max(s.min));
+        self.steering_counts = Some(target);
         match self.dev.steering.set_target(target) {
             Ok(()) => 0,
             Err(_) => faults::STEERING_DRIVER,
@@ -334,10 +365,10 @@ fn position<I2C: I2c>(
     }
 }
 
-/// A Jrk's fault bit, if reading its errors failed or it reports one.
-fn jrk_fault<E>(flags: Result<ErrorFlags, E>, bit: u16) -> u16 {
+/// A Jrk's fault bit, if reading its errors failed (`None`) or it reports one.
+fn jrk_fault(flags: Option<ErrorFlags>, bit: u16) -> u16 {
     match flags {
-        Ok(f) if !f.is_fault() => 0,
+        Some(f) if !f.is_fault() => 0,
         _ => bit,
     }
 }

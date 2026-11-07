@@ -198,10 +198,10 @@ class Check(Node):
         if not pattern:
             self.create_subscription(Image, f'/sensors/camera/{CAMERA}/image_raw',
                                      self.on_image, LATEST)
-            self.create_subscription(Odometry, '/vehicle/gazebo/truth', self.on_truth, 10)
+            self.create_subscription(Odometry, '/vehicle/sim/truth', self.on_truth, 10)
             # Straight to Gazebo's car: no ego or mux here (a private domain, a stand-in).
             self.drive = self.create_publisher(AckermannDriveStamped,
-                                               '/control/gazebo/actuator_cmd', 10)
+                                               '/control/sim/actuator_cmd', 10)
             self.create_timer(0.1, self.send_drive)
         self.create_subscription(Detection2DArray, '/perception/detections', self.on_det, 10)
         self.create_subscription(CompressedImage,

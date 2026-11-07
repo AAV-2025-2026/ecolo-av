@@ -4,6 +4,8 @@
 # decided (to see why it did what it did). No camera images: they are huge.
 # The actuators' own reports and the go-to driver's feedback (hidden: its action topic)
 # let tools/atob_score.py score an A-to-B run from the bag; Gazebo's truth when in sim.
+# What the Motor Pi wrote to the ESP32 and how its uplink arrives let tools/link_check.py
+# say whether the frames got there (docs/hardware-debug.md).
 #
 # usage: tools/record.sh [--lidar] [name]   -> bags/<date>_<name>/ (MCAP, Jazzy's default)
 #   --lidar  also the lidar's cloud, to build the NDT map at home (pixi run ndt-map build):
@@ -23,10 +25,10 @@ mkdir -p bags
 # messages (/vehicle/status).
 exec tools/ros.sh ros2 bag record -o "$out" --include-hidden-topics --topics \
   /vehicle/odom /vehicle/status /vehicle/joint_states /vehicle/wheels \
-  /vehicle/steering /vehicle/throttle /vehicle/brake /vehicle/gazebo/truth /system/source \
+  /vehicle/steering /vehicle/throttle /vehicle/brake /vehicle/sim/truth /system/source \
   /sensors/imu/data_raw /sensors/imu/data /sensors/imu/mag /sensors/gps/fix /sensors/gps/fix_velocity /vehicle/battery \
   /drivers/joy/joy /safety/estop /control/cmd_vel /drivers/joy/cmd_vel /drivers/keyboard/cmd_vel /drivers/scripted/cmd_vel /drivers/nav/cmd_vel \
   /drivers/point/cmd_vel /drivers/rc/cmd_vel /drivers/tests/cmd_vel /drive_to_point/_action/feedback /drive_to_point/_action/status \
-  /ego/actuator_cmd /can/tx /can/rx \
+  /ego/actuator_cmd /can/tx /can/rx /control/car/link_frame /vehicle/esp32/uplink_health \
   /localization/odom/local /localization/odom/global /localization/gps/odom /localization/gps/fix /localization/gps/heading \
   /tf /tf_static /robot_description /plan /goal_pose /clock ${lidar[@]+"${lidar[@]}"}

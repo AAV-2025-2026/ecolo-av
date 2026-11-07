@@ -1,0 +1,11 @@
+# The partition table for a `wifi-update` board: two app slots, so a WiFi update writes
+# the one not running, and the bootloader switches only once it is written and checked.
+# Flash it over USB once, with the wifi-update build, bench only:
+#   espflash flash --chip esp32 --partition-table partitions-ota.csv --erase-parts otadata <elf>
+# Without it (espflash's default: one factory app), /update says so and writes nothing.
+# Name,   Type, SubType, Offset,   Size
+nvs,      data, nvs,     0x9000,   0x6000
+otadata,  data, ota,     0xf000,   0x2000
+phy_init, data, phy,     0x11000,  0x1000
+ota_0,    app,  ota_0,   0x20000,  0x1E0000
+ota_1,    app,  ota_1,   0x200000, 0x1E0000

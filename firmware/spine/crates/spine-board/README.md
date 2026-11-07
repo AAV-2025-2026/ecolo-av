@@ -73,7 +73,17 @@ The order of the writes, every tick:
 | `SpokeSensors::TODAY.update(a, b, now_ms)` | for a board that reads the two spoke sensors itself, every millisecond: the 2025-26 encoder Pico's rule, a count on A's rising edge, backwards if B rose in the 20 ms before. From the `wheel-encoder` crate, re-exported (15 Oct) |
 | `LegacyLink::new(uart, cal, version)`, `with_uplink(uart, tx, cal, version)` | the UART link, without or with the `legacy-link` uplink status frame every `UPLINK_PERIOD_MS` (20 ms) on TX; `NoUplink` sends nothing. `stats()` gives its `LinkStats`; `uplink_frame(&report, seq)` builds one uplink frame |
 | `Report` | one tick as the spine saw it (outputs, RC, positions), handed to the link after each tick |
+| `LegacyLink::last_frame()`, `LastFrame` | the last frame taken whole (its checksum or CRC passed): version, counter, last byte, the three values, when; for the status lines only (`firmware/status`) |
+| `SpineBoard::last_report()`, `rc_channels()` | the latest tick's `Report`, and the RC's raw channels: what a board reports, without reading a device again |
+| `Actuators::steering_counts()`, `brake_counts()` | the last target sent to each Jrk, in counts |
 | `Positions`, `Readings` | where the Jrks are (in radians and 0..1, and raw in counts: `steering_counts`, `brake_counts`); what `Actuators::read()` found |
+| `TickTiming` | the longest gap between ticks since boot, and the ticks over 10 ms late: the timing test's baseline |
+| `BusScan`, `ScanState` | which I2C addresses answer (0x01 to 0x77): `start()`, then `step(&mut i2c, armed, n)` after each tick probes `n` addresses with no data, none while armed; `found()` |
+| `LinkHealth::new(timeout_ms)`, `update(now_ms, &stats)`, `LinkReport`, `LinkVerdict` | the Pi link judged on the board, each tick, by the spine's own 100 ms rule: `NoFramesYet`, `Ok`, `Stale` (frames stopped), `CounterFrozen` (frames come, the Orin's counter doesn't move: the mux is not running), `BadFrames` (bad frames or stray bytes in the last `BAD_WINDOW_MS`, 3 s); with the age of the last frame and whether the counter moves. Reporting only (7 Nov) |
+| `DeviceCheck::run(&mut i2c, &addresses)`, `Device`, `Found`, `feedback_name` | which of the four devices answer, once at boot: a probe with no data each, and each Jrk's feedback mode (a RAM setting). Never reads the error registers, which would clear them (7 Nov) |
+| `LegacyLink::with_cpp_ramp()` | the 2025-26 C++'s DAC ramp on this link: 6 codes up and 12 down a frame, cut on a stop or a change of direction (`legacy_link::DacRamp`). Off unless asked: the ESP32's `cpp-throttle-ramp` (7 Nov) |
+| `Actuators::jrk_errors()`, `ErrorFlags` | each Jrk's error flags from the tick's own read (`None`: the read failed); no extra read (7 Nov) |
+| `cpp_log` | the C++'s log lines, from what the tick has: `boot_devices`, `RcReady`, `CppStatus` (`STATUS:… \| STR:OK BRK:OK`), `FaultChange` (`FAULT … set=… cleared=…`), `JrkErrorLine`, `scan_label` and `ScanFound` (`Found: 0x05 <- JRK steer`) (7 Nov) |
 | `StandInBus`, `DeviceTargets` | stand-in devices on an I2C bus for a board with none wired (the ESP32 in QEMU); not for the car |
 
 It depends on `spine-core`, `aav-inputs`, `wheel-encoder`, `legacy-link`, `jrk-g2`,

@@ -7,7 +7,7 @@ NDT's map of Gazebo's test lot: the lidar's clouds, laid down where the car trul
     pixi run ndt-map build <bag>        build the map from a bag already recorded
     pixi run ndt-map drive --keep-bag   ... and keep the bag (bags/ndt-map-<time>: ~1 MB
                                         a cloud, about 3 GB for the route)
-    pixi run ndt-map build <bag> --poses /localization/odom/global --out maps/ndt/<place>
+    pixi run ndt-map --out maps/ndt/<place> build <bag> --poses /localization/odom/global
                                         a real drive (tools/record.sh --lidar): no truth, so
                                         the clouds go where an Odometry topic in the bag
                                         says (docs/tests.md, 4.21)
@@ -54,7 +54,7 @@ sys.path.insert(0, str(ROOT / 'ros' / 'bringup' / 'aav_description'))
 from aav_description import vehicle  # noqa: E402, I100
 OUT = ROOT / 'maps' / 'ndt' / 'test_lot'
 CLOUD_TOPIC = '/sensors/lidar/points'
-TRUTH_TOPIC = '/vehicle/gazebo/truth'
+TRUTH_TOPIC = '/vehicle/sim/truth'
 VOXEL = 0.10            # m: the map's thinning
 MIN_HEIGHT = 0.3        # m above base_link: below is ground
 MAX_RANGE = 45.0        # m from base_link, flat

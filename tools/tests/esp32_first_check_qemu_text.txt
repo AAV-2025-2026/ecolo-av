@@ -1,0 +1,246 @@
+ets Jul 29 2019 12:21:46
+
+rst:0x1 (POWERON_RESET),boot:0x12 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:6384
+load:0x40078000,len:15916
+load:0x40080400,len:3920
+entry 0x40080644
+I (667) boot: ESP-IDF v5.5.1-838-gd66ebb86d2e 2nd stage bootloader
+I (668) boot: compile time Nov 26 2025 10:51:37
+I (668) boot: Multicore bootloader
+I (687) boot: chip revision: v3.0
+I (689) boot.esp32: SPI Speed      : 40MHz
+I (689) boot.esp32: SPI Mode       : DIO
+I (689) boot.esp32: SPI Flash Size : 4MB
+I (694) boot: Enabling RNG early entropy source...
+I (700) boot: Partition Table:
+I (700) boot: ## Label            Usage          Type ST Offset   Length
+I (701) boot:  0 nvs              WiFi data        01 02 00009000 00006000
+I (701) boot:  1 phy_init         RF data          01 01 0000f000 00001000
+I (701) boot:  2 factory          factory app      00 00 00010000 003f0000
+I (703) boot: End of partition table
+I (723) esp_image: segment 0: paddr=00010020 vaddr=3f400020 size=04df0h ( 19952) map
+I (733) esp_image: segment 1: paddr=00014e18 vaddr=3ffb0000 size=021ech (  8684) load
+I (743) esp_image: segment 2: paddr=0001700c vaddr=40080000 size=01acch (  6860) load
+I (755) esp_image: segment 3: paddr=00018ae0 vaddr=00000000 size=07538h ( 30008)
+I (765) esp_image: segment 4: paddr=00020020 vaddr=400d0020 size=11c4ch ( 72780) map
+I (797) boot: Loaded app from partition at offset 0x10000
+I (797) boot: Disabling RNG early entropy source...
+INFO - spine-esp32-umod 0.1.0, link: Motor-Pi UART, version 2 frames (the Orin's heartbeat), with the uplink on TX1 and the three-position mode switch, in QEMU with stand-in devices; the last reset: Some(ChipPowerOn)
+INFO - CONFIG t=7 build=216ca6b features=legacy-uart,qemu,uplink version=0.1.0 link=uart frame=2 tick_ms=10 watchdog_ms=100 cmd_timeout_ms=100 idle_brake=1.00 full_throttle_speed=3.00 i2c_khz=0 steering_jrk=0x05 brake_jrk=0x04 dac=0x0c expander=0x20 steer_min=400 steer_centre=1950 steer_max=3500 brake_released=400 brake_full=3500 throttle_full_code=700 last_reset=ChipPowerOn
+INFO - DEVICES 4/4 answered t=9 steering=0x05,answered,analog brake=0x04,answered,analog dac=0x0c,answered expander=0x20,answered
+INFO - EVENT t=12 mode=Manual armed=false estop=true throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - STATUS t=12 mode=Manual armed=false estop=true throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=12 lifecycle=SelfTest safety=Estop authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=12 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=1 uplink_errors=0
+INFO - DEVICES t=12 steering=1950 brake=3500 dac=0 expander=0xffff
+INFO - EVENT t=60 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - STATUS t=210 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=210 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=210 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=11 uplink_errors=0
+INFO - STATUS t=410 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=410 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=410 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=21 uplink_errors=0
+INFO - TICK t=510 worst_gap_us=10005 overruns=0
+INFO - STATUS t=610 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=610 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=610 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=31 uplink_errors=0
+INFO - HEALTH t=760 link=no_frames age_ms=none counter_moving=unknown frames=0 bad=0 skipped=0 repeats=0 devices=4/4 faults=0x0000 mode=Manual armed=false
+INFO - STATUS t=810 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=810 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=810 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=41 uplink_errors=0
+INFO - STATUS t=1010 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=1010 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=1010 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=51 uplink_errors=0
+INFO - STATUS t=1210 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=1210 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=1210 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=61 uplink_errors=0
+INFO - STATUS t=1410 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=1410 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=1410 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=71 uplink_errors=0
+INFO - TICK t=1510 worst_gap_us=10005 overruns=0
+INFO - STATUS t=1610 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=1610 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=1610 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=81 uplink_errors=0
+INFO - HEALTH t=1760 link=no_frames age_ms=none counter_moving=unknown frames=0 bad=0 skipped=0 repeats=0 devices=4/4 faults=0x0000 mode=Manual armed=false
+INFO - STATUS t=1810 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=1810 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=1810 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=91 uplink_errors=0
+INFO - STATUS t=2010 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=2010 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=2010 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=101 uplink_errors=0
+INFO - STATUS t=2210 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=2210 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=2210 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=111 uplink_errors=0
+INFO - STATUS t=2410 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=2410 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=2410 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=121 uplink_errors=0
+INFO - TICK t=2510 worst_gap_us=10083 overruns=0
+INFO - CONFIG t=2510 build=216ca6b features=legacy-uart,qemu,uplink version=0.1.0 link=uart frame=2 tick_ms=10 watchdog_ms=100 cmd_timeout_ms=100 idle_brake=1.00 full_throttle_speed=3.00 i2c_khz=0 steering_jrk=0x05 brake_jrk=0x04 dac=0x0c expander=0x20 steer_min=400 steer_centre=1950 steer_max=3500 brake_released=400 brake_full=3500 throttle_full_code=700 last_reset=ChipPowerOn
+INFO - STATUS t=2610 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=2610 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=2610 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=131 uplink_errors=0
+INFO - HEALTH t=2760 link=no_frames age_ms=none counter_moving=unknown frames=0 bad=0 skipped=0 repeats=0 devices=4/4 faults=0x0000 mode=Manual armed=false
+INFO - STATUS t=2810 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=2810 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=2810 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=141 uplink_errors=0
+INFO - STATUS t=3010 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=3010 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=3010 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=151 uplink_errors=0
+INFO - STATUS t=3210 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=3210 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=3210 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=161 uplink_errors=0
+INFO - STATUS t=3410 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=3410 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=3410 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=171 uplink_errors=0
+INFO - TICK t=3510 worst_gap_us=10083 overruns=0
+INFO - STATUS t=3610 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=3610 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=3610 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=181 uplink_errors=0
+INFO - HEALTH t=3760 link=no_frames age_ms=none counter_moving=unknown frames=0 bad=0 skipped=0 repeats=0 devices=4/4 faults=0x0000 mode=Manual armed=false
+INFO - STATUS t=3810 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=3810 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=3810 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=191 uplink_errors=0
+INFO - STATUS t=4010 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=4010 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=4010 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=201 uplink_errors=0
+INFO - STATUS t=4210 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=4210 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=4210 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=211 uplink_errors=0
+INFO - STATUS t=4410 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=4410 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=4410 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=221 uplink_errors=0
+INFO - TICK t=4510 worst_gap_us=10083 overruns=0
+INFO - STATUS t=4610 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=4610 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=4610 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=231 uplink_errors=0
+INFO - HEALTH t=4760 link=no_frames age_ms=none counter_moving=unknown frames=0 bad=0 skipped=0 repeats=0 devices=4/4 faults=0x0000 mode=Manual armed=false
+INFO - STATUS t=4810 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=4810 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=4810 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=241 uplink_errors=0
+INFO - STATUS t=5010 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=5010 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=5010 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=251 uplink_errors=0
+INFO - STATUS t=5210 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=5210 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=5210 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=261 uplink_errors=0
+INFO - STATUS t=5410 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=5410 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=5410 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=271 uplink_errors=0
+INFO - TICK t=5510 worst_gap_us=10083 overruns=0
+INFO - STATUS t=5610 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=5610 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=5610 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=281 uplink_errors=0
+INFO - HEALTH t=5760 link=no_frames age_ms=none counter_moving=unknown frames=0 bad=0 skipped=0 repeats=0 devices=4/4 faults=0x0000 mode=Manual armed=false
+INFO - STATUS t=5810 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=5810 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=5810 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=291 uplink_errors=0
+INFO - STATUS t=6010 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=6010 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=6010 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=301 uplink_errors=0
+INFO - STATUS t=6210 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=6210 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=6210 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=311 uplink_errors=0
+INFO - STATUS t=6410 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=6410 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=6410 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=321 uplink_errors=0
+INFO - TICK t=6510 worst_gap_us=10083 overruns=0
+INFO - STATUS t=6610 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=6610 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=6610 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=331 uplink_errors=0
+INFO - HEALTH t=6760 link=no_frames age_ms=none counter_moving=unknown frames=0 bad=0 skipped=0 repeats=0 devices=4/4 faults=0x0000 mode=Manual armed=false
+INFO - STATUS t=6810 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=6810 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=6810 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=341 uplink_errors=0
+INFO - STATUS t=7010 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=7010 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=7010 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=351 uplink_errors=0
+INFO - STATUS t=7210 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=7210 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=7210 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=361 uplink_errors=0
+INFO - STATUS t=7410 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=7410 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=7410 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=371 uplink_errors=0
+INFO - TICK t=7510 worst_gap_us=10083 overruns=0
+INFO - DEVICES 4/4 answered t=7510 steering=0x05,answered,analog brake=0x04,answered,analog dac=0x0c,answered expander=0x20,answered
+INFO - STATUS t=7610 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=7610 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=7610 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=381 uplink_errors=0
+INFO - HEALTH t=7760 link=no_frames age_ms=none counter_moving=unknown frames=0 bad=0 skipped=0 repeats=0 devices=4/4 faults=0x0000 mode=Manual armed=false
+INFO - STATUS t=7810 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=7810 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=7810 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=391 uplink_errors=0
+INFO - STATUS t=8010 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=8010 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=8010 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=401 uplink_errors=0
+INFO - STATUS t=8210 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=8210 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=8210 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=411 uplink_errors=0
+INFO - STATUS t=8410 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=8410 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=8410 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=421 uplink_errors=0
+INFO - TICK t=8510 worst_gap_us=10083 overruns=0
+INFO - STATUS t=8610 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=8610 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=8610 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=431 uplink_errors=0
+INFO - HEALTH t=8760 link=no_frames age_ms=none counter_moving=unknown frames=0 bad=0 skipped=0 repeats=0 devices=4/4 faults=0x0000 mode=Manual armed=false
+INFO - STATUS t=8810 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=8810 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=8810 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=441 uplink_errors=0
+INFO - STATUS t=9010 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=9010 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=9010 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=451 uplink_errors=0
+INFO - STATUS t=9210 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=9210 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=9210 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=461 uplink_errors=0
+INFO - STATUS t=9410 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=9410 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=9410 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=471 uplink_errors=0
+INFO - TICK t=9510 worst_gap_us=10083 overruns=0
+INFO - STATUS t=9610 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=9610 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=9610 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=481 uplink_errors=0
+INFO - HEALTH t=9760 link=no_frames age_ms=none counter_moving=unknown frames=0 bad=0 skipped=0 repeats=0 devices=4/4 faults=0x0000 mode=Manual armed=false
+INFO - STATUS t=9810 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=9810 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=9810 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=491 uplink_errors=0
+INFO - STATUS t=10010 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=10010 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=10010 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=501 uplink_errors=0
+INFO - STATUS t=10210 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=10210 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=10210 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=511 uplink_errors=0
+INFO - STATUS t=10410 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=10410 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=10410 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=521 uplink_errors=0
+INFO - TICK t=10510 worst_gap_us=10083 overruns=0
+INFO - STATUS t=10610 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=10610 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=10610 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=531 uplink_errors=0
+INFO - HEALTH t=10760 link=no_frames age_ms=none counter_moving=unknown frames=0 bad=0 skipped=0 repeats=0 devices=4/4 faults=0x0000 mode=Manual armed=false
+INFO - STATUS t=10810 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=10810 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=10810 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=541 uplink_errors=0
+INFO - STATUS t=11010 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=11010 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=11010 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=551 uplink_errors=0
+INFO - STATUS t=11210 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=11210 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=11210 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=561 uplink_errors=0
+INFO - STATUS t=11410 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=11410 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=11410 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=571 uplink_errors=0
+INFO - TICK t=11510 worst_gap_us=10083 overruns=0
+INFO - STATUS t=11610 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=11610 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=11610 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=581 uplink_errors=0
+INFO - HEALTH t=11760 link=no_frames age_ms=none counter_moving=unknown frames=0 bad=0 skipped=0 repeats=0 devices=4/4 faults=0x0000 mode=Manual armed=false
+INFO - STATUS t=11810 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=11810 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=11810 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=591 uplink_errors=0
+INFO - STATUS t=12010 mode=Manual armed=false estop=false throttle=0.00 brake=1.00 reverse=false steer=0.000 faults=0x0000 counter=-1
+INFO - FSM t=12010 lifecycle=Running safety=Latched authority=Idle motion=StandstillHold confidence=Degraded
+INFO - LINK t=12010 frames=0 bad=0 skipped=0 repeats=0 counter=-1 uplinks=601 uplink_errors=0

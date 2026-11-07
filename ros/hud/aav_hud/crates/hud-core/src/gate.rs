@@ -252,7 +252,7 @@ mod tests {
     fn the_gates_lines_read() {
         assert_eq!(Gate::parse(OPEN), Gate::Open("all REAL".into()));
         assert_eq!(
-            Gate::parse("OPEN - gazebo: every source SIM"),
+            Gate::parse("OPEN - sim: every source SIM"),
             Gate::Open("all SIM".into())
         );
         let stop = "STOP - target car needs REAL - camera_front_left is SIM \

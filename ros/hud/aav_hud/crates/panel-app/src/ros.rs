@@ -19,7 +19,8 @@
 //! - `/safety/estop`, both ways: reliable, depth 10, as the backends;
 //! - the buttons' command and `/control/cmd_vel`: reliable, depth 10 (twist_mux's);
 //! - the calibration request and the bridge's line: reliable, depth 10 (the bridge's);
-//! - everything else: best effort (SensorDataQoS), which takes reliable publishers too.
+//! - everything else: best effort (SensorDataQoS), which takes reliable publishers too
+//!   (the GRAPHS page's ego, mux, link_frame and uplink_health among them).
 //!
 //! The command's stamp is left at 0: twist_mux and ego go by arrival, and ego warns only
 //! about a stamp that is set and far from its clock (sim time in Gazebo).
@@ -48,16 +49,18 @@ use panel_core::{
     buttons::Command,
     calibration::{FirmwareState, Raw, Request},
     config::{Count, Number, PanelConfig, Topic, NODE_NAME},
+    graphs::{Drive, PiFrame, UplinkHealth as Health},
     state::{Actuator, ImuReading, Row, Update, Wheels},
 };
 use rclrs::*;
 use ros_env::aav_interfaces::msg::{
-    ActuatorRaw, ActuatorState, DataSource, SteeringCalibration, VehicleStatus as VehicleStatusMsg,
-    WheelSpeeds,
+    ActuatorRaw, ActuatorState, DataSource, LinkFrame, SteeringCalibration, UplinkHealth,
+    VehicleStatus as VehicleStatusMsg, WheelSpeeds,
 };
+use ros_env::ackermann_msgs::msg::AckermannDriveStamped;
 use ros_env::geometry_msgs::msg::{Twist, TwistStamped, Vector3};
 use ros_env::sensor_msgs::msg::{BatteryState, Image, Imu, NavSatFix, PointCloud2};
-use ros_env::std_msgs::msg::{Bool, Header, String as StringMsg};
+use ros_env::std_msgs::msg::{Bool, Header, String as StringMsg, UInt64};
 
 /// How many updates may wait for the screen. More are dropped: the screen is stuck.
 const QUEUE: usize = 512;
@@ -122,10 +125,14 @@ impl RosSource {
         {
             let shared = Arc::clone(&shared);
             let executor = Arc::clone(&executor);
-            ctrlc::set_handler(move || {
+            // One handler a process: a second node (only the tests make one) shares it.
+            match ctrlc::set_handler(move || {
                 shared.stopped.store(true, Ordering::SeqCst);
                 executor.halt_spinning();
-            })?;
+            }) {
+                Ok(()) | Err(ctrlc::Error::MultipleHandlers) => {}
+                Err(e) => return Err(e.into()),
+            }
         }
         let source = Self {
             updates,
@@ -316,8 +323,56 @@ fn spin(
             move |m: StringMsg| send(&tx, Update::CalibrationLine(m.data))
         })?;
 
+    // The GRAPHS page: read only.
+    let drive = |m: &AckermannDriveStamped| Drive {
+        stamp_ns: stamp_ns(&m.header),
+        speed: f64::from(m.drive.speed),
+        steering: f64::from(m.drive.steering_angle),
+    };
+    let _ego = node.create_subscription(topic(Topic::EgoCommand).as_str().sensor_data_qos(), {
+        let tx = tx.clone();
+        move |m: AckermannDriveStamped| send(&tx, Update::EgoCommand(drive(&m)))
+    })?;
+    let _car = node.create_subscription(topic(Topic::CarCommand).as_str().sensor_data_qos(), {
+        let tx = tx.clone();
+        move |m: AckermannDriveStamped| send(&tx, Update::CarCommand(drive(&m)))
+    })?;
+    let _link = node.create_subscription(topic(Topic::LinkFrame).as_str().sensor_data_qos(), {
+        let tx = tx.clone();
+        move |m: LinkFrame| {
+            let f = PiFrame {
+                version: m.version,
+                counter: m.counter,
+                check: m.check,
+                armed: m.armed,
+                estop: m.estop,
+                steering: f64::from(m.steering),
+                speed: f64::from(m.speed),
+                accel: f64::from(m.accel),
+                written: m.written,
+                write_errors: m.write_errors,
+            };
+            send(&tx, Update::LinkFrame(f))
+        }
+    })?;
+    let _uplink =
+        node.create_subscription(topic(Topic::UplinkHealth).as_str().sensor_data_qos(), {
+            let tx = tx.clone();
+            move |m: UplinkHealth| {
+                let h = Health {
+                    fresh: m.fresh,
+                    frames: m.frames,
+                    lost: m.lost,
+                    bad: m.bad,
+                };
+                send(&tx, Update::UplinkHealth(h))
+            }
+        })?;
+
     let estop_pub: Publisher<Bool> =
         node.create_publisher(topic(Topic::Estop).as_str().qos(reliable10))?;
+    let alive_pub: Publisher<UInt64> =
+        node.create_publisher(topic(Topic::ScreenAlive).as_str().qos(reliable10))?;
     let buttons_pub: Publisher<TwistStamped> =
         node.create_publisher(topic(Topic::Buttons).as_str().qos(reliable10))?;
     let calibration_pub: Publisher<SteeringCalibration> =
@@ -334,7 +389,8 @@ fn spin(
             let now = Instant::now();
             // The buttons: only while the window draws.
             let drawn = Frames(shared.frames.load(Ordering::Relaxed));
-            if heartbeat.poll(now, drawn).is_some() {
+            if let Some(Frames(count)) = heartbeat.poll(now, drawn) {
+                let _ = alive_pub.publish(UInt64 { data: count });
                 let command = *shared
                     .command
                     .lock()
@@ -403,6 +459,12 @@ fn send(tx: &SyncSender<Update>, update: Update) {
     match tx.try_send(update) {
         Ok(()) | Err(TrySendError::Full(_)) | Err(TrySendError::Disconnected(_)) => {}
     }
+}
+
+/// A header's stamp in ns (0: none), to pair ego's command with the mux's.
+fn stamp_ns(h: &Header) -> u64 {
+    let secs = u64::try_from(h.stamp.sec).unwrap_or(0);
+    secs * 1_000_000_000 + u64::from(h.stamp.nanosec)
 }
 
 /// The buttons' command as twist_mux takes it: base_link, stamp 0 (see the module's notes).
@@ -507,6 +569,12 @@ impl Params {
             .read_only()?;
         config.theme = theme.get().parse()?;
         names.push(theme);
+        let esp32 = node
+            .declare_parameter::<Arc<str>>("esp32_url")
+            .default(config.esp32_url.as_str().into())
+            .read_only()?;
+        config.esp32_url = esp32.get().to_string();
+        names.push(esp32);
         let mut numbers = Vec::new();
         for n in Number::ALL {
             let p = node
@@ -664,6 +732,109 @@ mod tests {
         spin(&mut executor, 1000);
         assert_eq!(trues.load(Ordering::SeqCst), 5);
         assert_eq!(falses.load(Ordering::SeqCst), 0);
+        Ok(())
+    }
+
+    /// The GRAPHS page's topics reach the window as updates: ego's and the mux's
+    /// commands with their stamps, a frame the Pi wrote, the uplink's health. Needs ROS
+    /// sourced; this computer only, ROS_DOMAIN_ID (95 unless set), topics of its own.
+    #[test]
+    fn the_graphs_topics_arrive_as_updates() -> Result<()> {
+        use ros_env::ackermann_msgs::msg::AckermannDrive;
+        use ros_env::builtin_interfaces::msg::Time;
+        if std::env::var_os("ROS_DOMAIN_ID").is_none() {
+            std::env::set_var("ROS_DOMAIN_ID", "95");
+        }
+        std::env::set_var("ROS_AUTOMATIC_DISCOVERY_RANGE", "LOCALHOST");
+        let prefix = format!("/hw_panel_graphs_test_{}", std::process::id());
+        let mut config = PanelConfig::default();
+        for t in [
+            Topic::EgoCommand,
+            Topic::CarCommand,
+            Topic::LinkFrame,
+            Topic::UplinkHealth,
+        ] {
+            config.set_topic(t, format!("{prefix}/{}", t.parameter()));
+        }
+        let (mut panel, config) = RosSource::start(vec!["hw_panel".into()], config)?;
+        let context = Context::default_from_env()?;
+        let executor = context.create_basic_executor();
+        let talker = executor.create_node("hw_panel_graphs_test_talker")?;
+        let ego: Publisher<AckermannDriveStamped> =
+            talker.create_publisher(config.topic(Topic::EgoCommand))?;
+        let link: Publisher<LinkFrame> = talker.create_publisher(config.topic(Topic::LinkFrame))?;
+        let uplink: Publisher<UplinkHealth> =
+            talker.create_publisher(config.topic(Topic::UplinkHealth))?;
+        let mut got = Vec::new();
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while Instant::now() < deadline && got.len() < 3 {
+            let mut cmd = AckermannDriveStamped::default();
+            cmd.header.stamp = Time {
+                sec: 12,
+                nanosec: 5,
+            };
+            cmd.drive = AckermannDrive {
+                steering_angle: 0.25,
+                speed: 0.5,
+                ..Default::default()
+            };
+            ego.publish(cmd)?;
+            link.publish(LinkFrame {
+                version: 2,
+                counter: 41,
+                check: 17,
+                steering: -0.1,
+                speed: 0.3,
+                written: 12040,
+                ..Default::default()
+            })?;
+            uplink.publish(UplinkHealth {
+                fresh: true,
+                frames: 7,
+                lost: 1,
+                bad: 2,
+                ..Default::default()
+            })?;
+            std::thread::sleep(Duration::from_millis(100));
+            for u in panel.drain(Instant::now()) {
+                let kind = std::mem::discriminant(&u);
+                if !got
+                    .iter()
+                    .any(|g: &Update| std::mem::discriminant(g) == kind)
+                {
+                    got.push(u);
+                }
+            }
+        }
+        let ego = got.iter().find_map(|u| match u {
+            Update::EgoCommand(d) => Some(*d),
+            _ => None,
+        });
+        assert_eq!(
+            ego,
+            Some(Drive {
+                stamp_ns: 12_000_000_005,
+                speed: 0.5,
+                steering: 0.25,
+            })
+        );
+        let frame = got.iter().find_map(|u| match u {
+            Update::LinkFrame(f) => Some(*f),
+            _ => None,
+        });
+        assert!(
+            frame.is_some_and(|f| (f.counter, f.check, f.written) == (41, 17, 12040)),
+            "{frame:?}"
+        );
+        assert!(got.iter().any(|u| matches!(
+            u,
+            Update::UplinkHealth(Health {
+                fresh: true,
+                frames: 7,
+                lost: 1,
+                bad: 2
+            })
+        )));
         Ok(())
     }
 }

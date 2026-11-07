@@ -26,7 +26,7 @@ everything is real. Package `aav_io_mux`, built 23 Oct.
  Gazebo        ├─► /sensors/... ──► sensor_mux         │                        legacy_uart_bridge
  bench mocks   │   /vehicle/...      │ /system/sensor_mux/state
  a bag (replay)┘   /system/source ───┤ (ok? which source?)
-                                     ▼                 ├─► /control/gazebo/.. ──► gazebo_adapter
+                                     ▼                 ├─► /control/sim/.. ──► gazebo_adapter
  drivers ─► twist_mux ─► ego ─► output_mux ────────────┤   /control/bench/... ──► spine_bridge (bench)
                     /ego/actuator_cmd  (target:=car)   └─► /control/turtle/.. ──► turtlesim_adapter
 ```
@@ -80,7 +80,7 @@ gate is shut (Ben, 24 Oct), and says why.
 |---|---|---|
 | `real` | `car` | `OPEN - car: ...` |
 | `bench` | `bench` | `OPEN - bench: ...` |
-| `sim` (Gazebo, `spine:=true`) | `gazebo` | `OPEN - gazebo: ...` |
+| `sim` (Gazebo, `spine:=true`) | `gazebo` | `OPEN - sim: ...` |
 
 - Disarming always works.
 - Both bridges, Rust and Python, say the same words (`spine-bridge`'s `gate.rs`,

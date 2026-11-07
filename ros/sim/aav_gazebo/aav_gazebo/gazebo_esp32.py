@@ -9,7 +9,7 @@ hands the outputs to gazebo_adapter's actuator model (esp32:=true), as the wires
   legacy_uart_bridge ──TCP, 13-byte frames──> gazebo_esp32 ──> gazebo_adapter ──> Gazebo
 
 Listens     TCP 127.0.0.1:port, one connection at a time: the bridge's bytes
-Publishes   vehicle/gazebo/esp32_outputs  aav_interfaces/SpineOutputs, 50 Hz: the
+Publishes   vehicle/sim/esp32_outputs  aav_interfaces/SpineOutputs, 50 Hz: the
                               throttle (DAC / 700), brake (the Jrk's travel), direction
                               and steering target the firmware drives now
 
@@ -39,7 +39,7 @@ class GazeboEsp32(Node):
         self.server.listen(1)
         self.server.setblocking(False)
         self.client = None
-        self.pub = self.create_publisher(SpineOutputs, 'vehicle/gazebo/esp32_outputs', 10)
+        self.pub = self.create_publisher(SpineOutputs, 'vehicle/sim/esp32_outputs', 10)
         self.create_timer(0.01, self.read)
         self.create_timer(0.02, self.publish)
         self.get_logger().info(f'the C++ ESP32 firmware, standing in: listening on '

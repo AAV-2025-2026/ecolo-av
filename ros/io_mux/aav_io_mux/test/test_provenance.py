@@ -17,13 +17,13 @@ def gazebo(*topics, kind=SIM):
 
 def test_each_target_needs_its_own_source_and_topic():
     assert p.target_of('car') == REAL
-    assert p.target_of('gazebo') == p.target_of('turtle') == p.target_of('carla') == SIM
+    assert p.target_of('sim') == p.target_of('turtle') == p.target_of('carla') == SIM
     assert p.target_of('bench') == BENCH
     assert p.command_topic('car') == '/control/car/actuator_cmd'
-    assert p.command_topic('gazebo') == '/control/gazebo/actuator_cmd'
+    assert p.command_topic('sim') == '/control/sim/actuator_cmd'
 
 
-@pytest.mark.parametrize('bad', ['', 'real', 'Car', 'sim'])
+@pytest.mark.parametrize('bad', ['', 'real', 'Car', 'gazebo'])
 def test_an_unknown_target_is_refused(bad):
     with pytest.raises(ValueError, match='target:='):
         p.command_topic(bad)
@@ -31,13 +31,13 @@ def test_an_unknown_target_is_refused(bad):
 
 def test_a_launch_takes_the_targets_own_source_and_no_other():
     assert p.choose('car', '') == ('car', 'real')
-    assert p.choose('gazebo', 'sim') == ('gazebo', 'sim')
+    assert p.choose('sim', 'sim') == ('sim', 'sim')
     assert p.choose('bench', '') == ('bench', 'bench')
     assert p.choose('', 'replay') == ('', 'replay')
     with pytest.raises(ValueError, match='target:=car needs source:=real, not sim'):
         p.choose('car', 'sim')
-    with pytest.raises(ValueError, match='target:=gazebo needs source:=sim, not real'):
-        p.choose('gazebo', 'real')
+    with pytest.raises(ValueError, match='target:=sim needs source:=sim, not real'):
+        p.choose('sim', 'real')
     with pytest.raises(ValueError, match='give target'):
         p.choose('', '')
 
@@ -310,7 +310,7 @@ def test_an_announcer_not_heard_yet_holds_the_gate_and_its_sim_latches():
 
 
 def test_gazebo_refuses_a_real_backend_in_its_graph():
-    gate = Gate('gazebo', settle=0.0)
+    gate = Gate('sim', settle=0.0)
     gate.report = ok(0.0, source=SIM)
     gate.entries = gazebo(IMU)
     assert gate.is_open(0.0)
@@ -326,3 +326,42 @@ def test_the_bench_needs_bench_sources():
     assert gate.is_open(0.0)
     gate.entries.append(Entry('gazebo_adapter', 'gps', GPS, SIM))
     assert not gate.is_open(0.1)
+
+
+def open_gate(**args):
+    gate = Gate('sim', settle=0.0, **args)
+    gate.report = Report(0.0, SIM, True, (), ())
+    return gate
+
+
+def test_commands_wait_for_the_screens_they_need():
+    gate = open_gate(screens=('dev_window',))
+    assert not gate.is_open(0.5), 'not heard yet'
+    gate.beat('dev_window', 0.5)
+    gate.update(0.5)
+    assert gate.is_open(0.6)
+    assert not gate.is_open(1.7), 'quiet for over a second'
+    assert not gate.latched, 'a quiet screen only waits'
+    gate.report = Report(1.8, SIM, True, (), ())
+    gate.beat('dev_window', 1.8)
+    gate.update(1.8)
+    assert gate.is_open(1.9), 'and comes back'
+
+
+def test_every_screen_named_must_beat():
+    gate = open_gate(screens=('dev_window', 'hw_panel'))
+    gate.beat('dev_window', 0.5)
+    gate.update(0.5)
+    assert not gate.is_open(0.6)
+    gate.beat('hw_panel', 0.6)
+    gate.update(0.6)
+    assert gate.is_open(0.7)
+
+
+def test_no_screens_named_changes_nothing():
+    assert open_gate().is_open(0.1)
+
+
+def test_the_real_car_refuses_the_screens_rule():
+    with pytest.raises(ValueError, match='takes no screens'):
+        Gate('car', screens=('dev_window',))

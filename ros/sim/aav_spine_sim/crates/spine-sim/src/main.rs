@@ -13,10 +13,10 @@
 //!             /vehicle/bench/hw_estop       std_msgs/Bool     true = the hardware e-stop is pressed
 //!             /vehicle/bench/driver_faults  std_msgs/UInt16   pretend a driver failed (fault bits)
 //!             car:=gazebo only:
-//!             /vehicle/gazebo/wheels        aav_interfaces/WheelSpeeds   Gazebo's wheels: the
+//!             /vehicle/sim/wheels        aav_interfaces/WheelSpeeds   Gazebo's wheels: the
 //!                                           front two for the wheel nodes, the rear two's mean
 //!                                           for the spine's measured speed (its encoder)
-//!             /vehicle/gazebo/steering      aav_interfaces/ActuatorState the model's angle
+//!             /vehicle/sim/steering      aav_interfaces/ActuatorState the model's angle
 //! Publishes   /can/rx                       can_msgs/Frame    VEHICLE_FEEDBACK 50 Hz, VEHICLE_STATUS 10 Hz,
 //!                                                             and the front wheel nodes' WHEEL_SPEED_L
 //!                                                             and WHEEL_SPEED_R 100 Hz (wheel-core)
@@ -24,7 +24,7 @@
 //!             /vehicle/bench/truth          nav_msgs/Odometry where the model car really is (map
 //!                                                             frame, 50 Hz), for the pretend sensors
 //!             car:=gazebo only:
-//!             /vehicle/gazebo/spine_outputs aav_interfaces/SpineOutputs  throttle, brake, reverse
+//!             /vehicle/sim/spine_outputs aav_interfaces/SpineOutputs  throttle, brake, reverse
 //!                                           and steering target, every tick (100 Hz)
 //! Parameters  car (model), wheelbase, track, wheel_radius (m), max_steering (rad), start_x,
 //!             start_y (m), start_yaw (rad), speed_loop (default: the spine's speed loop
@@ -167,7 +167,7 @@ fn main() -> Result<()> {
             let bench = Arc::new(Mutex::new(bench));
             let mut keep = switches(&node, &bench)?;
             keep.extend(measurements(&node, &bench)?);
-            let outputs = node.create_publisher::<SpineOutputs>("/vehicle/gazebo/spine_outputs")?;
+            let outputs = node.create_publisher::<SpineOutputs>("/vehicle/sim/spine_outputs")?;
             let handle = spawn_loop(
                 &node,
                 bench,
@@ -233,7 +233,7 @@ fn measurements(node: &Node, bench: &Arc<Mutex<Bench<MeasuredCar>>>) -> Result<K
     let wheels = {
         let bench = Arc::clone(bench);
         node.create_subscription::<WheelSpeeds, _>(
-            "/vehicle/gazebo/wheels",
+            "/vehicle/sim/wheels",
             move |w: WheelSpeeds| {
                 let mut b = bench.lock().unwrap();
                 let car = b.car_mut();
@@ -246,7 +246,7 @@ fn measurements(node: &Node, bench: &Arc<Mutex<Bench<MeasuredCar>>>) -> Result<K
     let steering = {
         let bench = Arc::clone(bench);
         node.create_subscription::<ActuatorState, _>(
-            "/vehicle/gazebo/steering",
+            "/vehicle/sim/steering",
             move |s: ActuatorState| {
                 bench.lock().unwrap().car_mut().measure_steering(s.measured);
             },

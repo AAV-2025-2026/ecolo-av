@@ -19,7 +19,12 @@ node (rclrs):
   simple buttons for the actuators (Speed +/-, steering, CENTRE, STOP, GO held, E-STOP),
   through twist_mux's `buttons` slot (45). Speed only on SIM and BENCH. Its second page
   (Tab), **STEERING CAL**, finds the steering actuator's ends and centre (limp or jog,
-  mark, equal limits, save) and checks them lock to lock, stopping on resistance.
+  mark, equal limits, save) and checks them lock to lock, stopping on resistance. Its
+  third, **GRAPHS**, shows whether the Pi passes ego's commands on to the ESP32: a chain
+  of hops (ego, mux, Pi wrote, ESP32 got), each OK, DIFFERENT, STALE, NO DATA or NOT
+  TESTED; 60 s graphs of steering, brake and throttle (what the Pi wrote, what the ESP32
+  got), FREEZE, and the counts that prove the wire. `--esp32 ws://...` reads the ESP32's
+  own status lines, read only.
 
 It was called `aav_hud_raylib` until 25 Oct, when the 2025-26 Flutter app and its Flask
 back end (then `aav_hud`) went to `archive/2026-27-flutter-hud/` and this package took
@@ -51,8 +56,8 @@ blue, global green, AMCL orange, NDT purple). docs/hud.md, "Themes".
 | `crates/map-app` | binary `map`: the same shape, plus the street map, place search and the blur behind the glass (`frost.rs`) |
 | [`debug-core`](./crates/debug-core/README.md) | the debug HUD's logic: cubes (kept, fading), frames, poses at a stamp, NDT's status and map, the keys, the camera; no ROS, no raylib |
 | `crates/debug-app` | binary `debug_hud`: the window (`ui.rs`, instanced cubes, the seeing screen's top-downs), the node (`ros.rs`), `--demo` |
-| [`panel-core`](./crates/panel-core/README.md) | the hardware panel's logic: the buttons, where they may drive (`gate`), every sensor's number, `safety.py`'s rules ported, the steering calibration page (`calibration`, `steering_limits`, `sweep`); no ROS, no raylib |
-| `crates/panel-app` | binary `hw_panel`: the window (`ui.rs`, the calibration page in `ui/calibration.rs`), the node (`ros.rs`), `--demo`, `--self-test`, `--cal-self-test` (`cal_script.rs`) |
+| [`panel-core`](./crates/panel-core/README.md) | the hardware panel's logic: the buttons, where they may drive (`gate`), every sensor's number, `safety.py`'s rules ported, the steering calibration page (`calibration`, `steering_limits`, `sweep`), the graphs page (`graphs`, `esp32`, `ws`); no ROS, no raylib |
+| `crates/panel-app` | binary `hw_panel`: the window (`ui.rs`, the calibration page in `ui/calibration.rs`, the graphs in `ui/graphs.rs`), the node (`ros.rs`), the ESP32's WebSocket (`esp32.rs`, its own thread, read only), `--demo`, `--self-test`, `--cal-self-test` (`cal_script.rs`) |
 
 ### Node `hud` (topic names from `config/hud.yaml`)
 
@@ -96,7 +101,7 @@ Other parameters: `stale_after` (1.0 s), `plan_stale_after` (3.0 s; `plan_kept_f
 | sub | `voxels_cubes_topic`: `/perception/voxels/cubes` (reliable, keep last 1, base_link; red wireframes, key V) | sensor_msgs/PointCloud2 |
 | sub | `voxels_status_topic`: `/perception/voxels/status` (Nav2's cubes section: road fit, count, ms) | diagnostic_msgs/DiagnosticStatus |
 | sub | `health_topic`: `/localization/health` (OK, or WARN and each check) | std_msgs/String |
-| sub | `local_odom_topic`: `/localization/odom/local`; `global_odom_topic`: `/localization/odom/global`; `truth_topic`: `/vehicle/gazebo/truth`; `wheel_odom_topic`: `/vehicle/odom` | nav_msgs/Odometry |
+| sub | `local_odom_topic`: `/localization/odom/local`; `global_odom_topic`: `/localization/odom/global`; `truth_topic`: `/vehicle/sim/truth`; `wheel_odom_topic`: `/vehicle/odom` | nav_msgs/Odometry |
 | sub | `amcl_topic`: `/localization/amcl/pose`; `ndt_pose_topic`: `/localization/ndt/pose` (purple) | geometry_msgs/PoseWithCovarianceStamped |
 | sub | `amcl_particles_topic`: `/localization/amcl/particles` (best effort; small orange arrows) | nav2_msgs/ParticleCloud |
 | sub | `ndt_status_topic`: `/localization/ndt/status` (the panel's NDT section) | diagnostic_msgs/DiagnosticStatus |
@@ -130,6 +135,9 @@ relative to where it starts; key M), `ndt_map_cell` (1.0 m), `voxels_cube_size` 
 | sub | `steering_raw_topic`: `/vehicle/steering_actuator/raw` (the calibration page: counts, the firmware's state) | aav_interfaces/ActuatorRaw |
 | sub | `calibration_line_topic`: `/vehicle/steering_actuator/calibration` (the bridge's line) | std_msgs/String |
 | pub | `steering_calibration_topic`: `/drivers/buttons/steering_calibration` (the calibration page's limp or jog, 10 Hz while it asks and the window draws; END: MODE_OFF 0.5 s) | aav_interfaces/SteeringCalibration |
+| sub | `ego_command_topic`: `/ego/actuator_cmd`; `car_command_topic`: `/control/car/actuator_cmd` (the GRAPHS page's first hops, paired by stamp) | ackermann_msgs/AckermannDriveStamped |
+| sub | `link_frame_topic`: `/control/car/link_frame` (what the Pi wrote); `uplink_health_topic`: `/vehicle/esp32/uplink_health` | aav_interfaces/LinkFrame, UplinkHealth |
+| reads | `esp32_url` (empty: off), or `--esp32 ws://HOST:PORT/`: the ESP32's JSON status lines (`firmware/status/`) over its WebSocket; sends only the opening, a pong or a close | WebSocket text |
 
 Other parameters: `stale_after` (1.0 s), `speed_step` (0.1 m/s), `steer_step` (0.05 rad),
 `creep` (0.1 m/s, CENTRE), `sim_cap` (1.0 m/s), `stands_cap` (0.3 m/s), `theme` (`initial_d`);
@@ -153,6 +161,7 @@ it; never vehicle.yaml).
 | `pixi run hw-panel [stands:=true] [fullscreen:=true]`; `pixi run hw-panel --demo` | `hw_panel.launch.py` (localhost-only); the panel with a pretend car |
 | `hw_panel --self-test 0.3:8` | for checks: Speed + to 0.3 m/s, GO held 8 s, through the same buttons and rules; prints asked and seen |
 | `map`, `hw_panel`, `debug_hud` `--demo --robot-now` | the little robot (the easter egg) at once, for screenshots (docs/hud.md, "The little robot") |
+| `hw_panel --demo --page graphs [--esp32 ws://HOST:81/]` | the GRAPHS page with a pretend path (every hop OK); with `--esp32`, the real board's lines instead of the pretend ones |
 | `hw_panel --demo --page calibration [--demo-bind 2800] [--cal-self-test]` | the steering calibration page with a pretend steering actuator; the self-test limps, marks, holds and runs the lock-to-lock check (with a stiff spot it must stop) |
 
 `sim.launch.py hud:=true` and `map:=true` start them too. On the car,
@@ -183,10 +192,15 @@ it; never vehicle.yaml).
   BENCH only (1.0 m/s); off on the real car, on stands too until TODO 49b (the reason is
   on screen).
 - `hw_panel`'s calibration page never drives (GO is off there) and asks nothing while it
-  isn't allowed (an e-stop, the car moving, the speed or the position unseen); leaving
+  isn't allowed (an e-stop, the car moving, the speed unknown, the position unseen). A
+  NaN speed is unknown, never stopped: then a person's ON STANDS, STILL is needed, and the
+  page says SOFTWARE ALLOWS, ON A PERSON'S WORD; leaving
   the page ends its mode. Jog targets stay in `jog_min`..`jog_max`, the check's inside
   the measured limits; the check stops and holds on resistance. It never writes
   vehicle.yaml or the firmware: SAVE writes a file for a person to copy.
+- `hw_panel`'s GRAPHS page and its ESP32 reader only read. The ESP32's lines feed the
+  graphs and the status strip, never the buttons, the gate or the calibration page's
+  rules. A value that never changed is NOT TESTED: a parked car never shows OK.
 - `debug_hud`'s clouds never go through the shared queue: a newest-only slot to the
   `cubes` thread, then a newest-only slot to the screen. Each is placed with the local
   EKF's pose at its own stamp. Nav2's cubes go the same way, through their own slots
@@ -200,6 +214,7 @@ it; never vehicle.yaml).
 ## Side Effects
 
 - Opens a window: it needs a screen, and fails without one.
+- `hw_panel` publishes `/hud/hw_panel/heartbeat`; only sim's `watch_screens:=` reads it.
 - Publishes `/safety/estop`, `/hud/heartbeat` and `/goal_pose` (a goal drives the car);
   `hw_panel` publishes `/drivers/buttons/cmd_vel` (the buttons drive the car).
 - `map` reads the PMTiles and SQLite files from disk; `debug_hud` reads `ndt_map` (a PCD)

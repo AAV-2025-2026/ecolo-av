@@ -14,7 +14,7 @@ a run"). Each input is one run: a bag folder (MCAP, from tools/record.sh) or a C
 
 Where each number comes from:
 
-  speeds        Gazebo's truth /vehicle/gazebo/truth if recorded, else the wheels
+  speeds        Gazebo's truth /vehicle/sim/truth if recorded, else the wheels
                 /vehicle/odom, else the global EKF (twist.linear.x): the rise, hold,
                 overshoot, slowing, jerk, coast and creep numbers
   set speed     --speed, else the top speed command: /drivers/point/cmd_vel, else
@@ -22,7 +22,7 @@ Where each number comes from:
                 the command went to 0). Bags from before 26 Oct have
                 /drivers/goto/cmd_vel instead: read too
   stop, EKF     the last pose on /localization/odom/global (map frame)
-  stop, truth   the last pose on /vehicle/gazebo/truth (map frame; Gazebo only)
+  stop, truth   the last pose on /vehicle/sim/truth (map frame; Gazebo only)
   stop, tape    --taped ALONG ACROSS: measured by hand from the B mark (the car)
   GPS part      real (the tape, else the truth) minus the EKF's view: localization's
                 error, not control's
@@ -66,7 +66,7 @@ sys.path.insert(0, os.path.join(ROOT, 'tools'))
 import drive_metrics as dm  # noqa: E402
 
 EKF = '/localization/odom/global'
-TRUTH = '/vehicle/gazebo/truth'
+TRUTH = '/vehicle/sim/truth'
 WHEEL = '/vehicle/odom'
 # The first one recorded. /drivers/goto/cmd_vel: the point driver's topic before 26 Oct, so
 # bags recorded before the rename still score.

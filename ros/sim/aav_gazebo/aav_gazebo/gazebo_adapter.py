@@ -5,11 +5,11 @@ The car itself: its actuators, wheels and odometry, as the spine is on the car. 
 sensor has a node of its own, as on the car (relay.py; one process each, so each runs on
 its own core, Ben 22 Oct): gazebo_imu, gazebo_gps, gazebo_radar, gazebo_camera.
 
-Subscribes  control/gazebo/actuator_cmd  ackermann_msgs/AckermannDriveStamped: ego's
+Subscribes  control/sim/actuator_cmd  ackermann_msgs/AckermannDriveStamped: ego's
                                   command, from the output mux (aav_io_mux; not with spine)
-            vehicle/gazebo/spine_outputs  aav_interfaces/SpineOutputs, only with spine:
+            vehicle/sim/spine_outputs  aav_interfaces/SpineOutputs, only with spine:
                                   spine_sim's throttle, brake, gear and steering target
-            vehicle/gazebo/esp32_outputs  aav_interfaces/SpineOutputs, only with esp32: the
+            vehicle/sim/esp32_outputs  aav_interfaces/SpineOutputs, only with esp32: the
                                   same from gazebo_esp32, today's C++ ESP32 standing in
                                   behind the real legacy_uart_bridge
             gazebo/odom           nav_msgs/Odometry   (bridged from the Ackermann system)
@@ -20,13 +20,13 @@ Publishes   gazebo/cmd_vel        geometry_msgs/Twist (bridged to /model/aav/cmd
             vehicle/status        aav_interfaces/VehicleStatus (mode COMPUTER, armed; not with
                                   spine)
             vehicle/steering      aav_interfaces/ActuatorState: ego's angle, the model's; with
-                                  spine, on vehicle/gazebo/steering: the spine's target, the
+                                  spine, on vehicle/sim/steering: the spine's target, the
                                   model's angle
             vehicle/throttle      aav_interfaces/ActuatorState: the speed loop's, the model's
             vehicle/brake         aav_interfaces/ActuatorState: the same (NaN with the model
                                   off). Neither with spine: spine_bridge has them
             vehicle/wheels        aav_interfaces/WheelSpeeds: each wheel's spin x its radius;
-                                  with spine, on vehicle/gazebo/wheels, for spine_sim
+                                  with spine, on vehicle/sim/wheels, for spine_sim
             system/source         aav_interfaces/DataSource, latched: everything above, and
                                   every sensor Gazebo gives (the sensor nodes' too), is SIM
                                   (sources.py)
@@ -47,7 +47,7 @@ The spine in the loop (spine:=true, docs/full-simulation.md step 4): ego's comma
 to spine_bridge instead, and over the CAN topics to spine_sim, which runs the spine's own
 firmware logic (spine-core). Its outputs come here, to the actuator model's actuators
 (Actuators.drive: its speed loop is skipped), and what Gazebo's car does goes back to
-spine_sim on vehicle/gazebo/wheels and vehicle/gazebo/steering; spine_bridge publishes the
+spine_sim on vehicle/sim/wheels and vehicle/sim/steering; spine_bridge publishes the
 car's /vehicle/* from the spine's CAN frames. Exactly one backend still takes ego's
 commands: spine_bridge. If spine_sim goes quiet for cmd_timeout s, the car brakes fully.
 
@@ -61,7 +61,7 @@ So ekf_local, ekf_global, navsat_transform and imu_filter_madgwick run in simula
 with the same configs as on the car, and radar_clusters, Nav2's costmap and
 collision_monitor read the radar as they would on the car. radar is true only in a world
 that renders the radar stand-in (gazebo.launch.py). Gazebo's ground-truth pose is not
-passed on: gz_bridge carries it to /vehicle/gazebo/truth, for checks only.
+passed on: gz_bridge carries it to /vehicle/sim/truth, for checks only.
 """
 
 import math
@@ -143,10 +143,10 @@ class GazeboAdapter(Node):
         self.cmd_pub = self.create_publisher(Twist, 'gazebo/cmd_vel', 10)
         if self.spine:
             # The car's /vehicle/* come from spine_bridge; these only go to spine_sim.
-            self.steering_pub = self.create_publisher(ActuatorState, 'vehicle/gazebo/steering',
+            self.steering_pub = self.create_publisher(ActuatorState, 'vehicle/sim/steering',
                                                       10)
-            self.wheels_pub = self.create_publisher(WheelSpeeds, 'vehicle/gazebo/wheels', 10)
-            self.create_subscription(SpineOutputs, 'vehicle/gazebo/spine_outputs',
+            self.wheels_pub = self.create_publisher(WheelSpeeds, 'vehicle/sim/wheels', 10)
+            self.create_subscription(SpineOutputs, 'vehicle/sim/spine_outputs',
                                      self.on_cmd, 10)
             self.get_logger().info('the spine in the loop: spine_sim drives the actuator model')
         else:
@@ -159,12 +159,12 @@ class GazeboAdapter(Node):
             if self.esp32:
                 # The car's own /vehicle/* stay here: on today's car they come from the
                 # wheel sensors, not the ESP32.
-                self.create_subscription(SpineOutputs, 'vehicle/gazebo/esp32_outputs',
+                self.create_subscription(SpineOutputs, 'vehicle/sim/esp32_outputs',
                                          self.on_cmd, 10)
                 self.get_logger().info("today's ESP32 in the loop: gazebo_esp32 drives the "
                                        'actuator model')
             else:
-                self.create_subscription(AckermannDriveStamped, 'control/gazebo/actuator_cmd',
+                self.create_subscription(AckermannDriveStamped, 'control/sim/actuator_cmd',
                                          self.on_cmd, 10)
         self.create_subscription(Odometry, 'gazebo/odom', self.on_odom, 10)
         self.create_subscription(JointState, 'joint_states', self.on_joints, 10)

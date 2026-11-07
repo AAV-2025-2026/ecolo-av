@@ -193,9 +193,10 @@ YAML_KEYS = {
     'actuators.steer_lag': 'steer_lag',
     'actuators.steer_dead_time': 'steer_dead_time',
 }
-# open_loop_decel: how the legacy bridge's open speed loop stops, for the geofence only.
+# open_loop_decel, pi_loop_decel: how the legacy bridge's speed loop stops, for the geofence only.
 NOT_LINEAR = {'actuators.throttle_deadband', 'actuators.steer_offset',
-              'actuators.steer_deadband', 'actuators.open_loop_decel'}
+              'actuators.steer_deadband', 'actuators.open_loop_decel',
+              'actuators.pi_loop_decel'}
 
 
 @dataclass(frozen=True)
