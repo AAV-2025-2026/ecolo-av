@@ -1,0 +1,10 @@
+[package]
+name = "mppi-lag"
+description = "MPPI path following (ported from Nav2) on a car model that knows its actuators' lag"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# No dependencies: the random numbers and the threads are std and our own (src/rng.rs).
+[dependencies]
