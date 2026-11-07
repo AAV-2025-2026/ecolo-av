@@ -552,6 +552,8 @@ again. Leave the console off the UART: the C++ doesn't need it there either.
 **Bring:** the ESP32's USB cable, the RC transmitter, a multimeter.
 🔒 **H1** (the link to the Motor Pi) and **Ben's OK** (on a call):
 [First flash on the bench](esp32-bench.md) says "do it with Ben".
+Or let it lead you: `pixi run esp walk` shows and says each step below, one at a time
+([walk me through it](esp32-bench.md#walk-me-through-it-pixi-run-esp-walk)).
 
 **Before:** A2 (the board's backup, 6a) and A7 (the brake) done; the Motor Pi and the Orin have our stack (session 4); the
 laptop's USB cable in the ESP32 MicroMod. Every command below runs on the laptop, in the

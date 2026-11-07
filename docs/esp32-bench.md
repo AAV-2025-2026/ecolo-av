@@ -6,6 +6,32 @@ ready to go back on. What the program is: [Rust firmware](rust-firmware.md).
 
 [[untested]] Nothing here has been done on a board yet. The emulator has (next section).
 
+## Walk me through it: `pixi run esp walk`
+
+One command walks this whole page with you, one step at a time. Each step is a few words
+on the screen, in bold colour, and the same words **spoken aloud** (the Mac's `say`).
+
+| Part | What it does | You |
+|---|---|---|
+| Before you start | wheels off the ground, a person at the e-stop, the RC on | press **Enter** |
+| Save the C++ | builds the C++, finds the board, copies its flash (4 MB), builds the Rust | watch; Enter to try again |
+| Flash | says "wheels off the ground, e-stop in hand" | type **`flash`** |
+| The first check | 30 s of the log; reads each row out ("Brake: pass. The brake is on.") and the board's settings | listen |
+| Checks on stands | section 3, one question at a time ("Press the red e-stop now. Did the car stop by itself?") | **yes**, **no**, **skip** |
+| Roll back | on a STOP or a no: puts the saved C++ back, listens for its first line | type **`flash`** |
+| The record | `bench-logs/<date>-esp32-first-flash.md`: every step, every answer, the table | read it later |
+
+`stop` (or `n`) stops at any step. After the flash, stopping asks: roll back?
+
+| Command | Does |
+|---|---|
+| `pixi run esp walk` | the whole walk, on the first USB serial port |
+| `pixi run esp walk /dev/cu.usbserial-0001` | on that port |
+| `pixi run esp walk --dry-run` | a rehearsal: shows every step, **runs nothing** |
+| `--quiet`, `--voice Samantha`, `--rate 160` | no speech; another voice; slower or faster |
+
+[[untested]] Tested with a saved log and `--dry-run` only: not yet on a board.
+
 !!! warning "Before you start"
     - The car on stands: **all four wheels off the ground**.
     - A second person at the **red e-stop button**. It cuts power by itself, whatever

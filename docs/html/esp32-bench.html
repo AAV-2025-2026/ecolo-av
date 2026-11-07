@@ -7,7 +7,7 @@
 <!-- Generated from docs/esp32-bench.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>First flash on the bench: the Rust ESP32</h1>
-<div class="meta">19 min read · 9 sections</div></header>
+<div class="meta">21 min read · 10 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -101,11 +101,88 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#before-the-board-the-emulator">Before the board: the emulator</a><a href="#what-you-need">What you need</a><a href="#1-build-and-save-the-c-first">1. Build, and save the C++ first</a><a href="#2-flash">2. Flash</a><a href="#2a-the-first-check-the-gate">2a. The first check: the gate</a><a href="#3-checks-wheels-off-the-ground">3. Checks, wheels off the ground</a><a href="#the-uplink-and-the-rc-modes-on-the-bench">The uplink and the RC modes, on the bench</a><a href="#4-roll-back-to-the-c">4. Roll back to the C++</a><a href="#after-the-bench">After the bench</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#walk-me-through-it-pixi-run-esp-walk">Walk me through it: pixi run esp walk</a><a href="#before-the-board-the-emulator">Before the board: the emulator</a><a href="#what-you-need">What you need</a><a href="#1-build-and-save-the-c-first">1. Build, and save the C++ first</a><a href="#2-flash">2. Flash</a><a href="#2a-the-first-check-the-gate">2a. The first check: the gate</a><a href="#3-checks-wheels-off-the-ground">3. Checks, wheels off the ground</a><a href="#the-uplink-and-the-rc-modes-on-the-bench">The uplink and the RC modes, on the bench</a><a href="#4-roll-back-to-the-c">4. Roll back to the C++</a><a href="#after-the-bench">After the bench</a></nav>
 <div class="lead"><p>The plan for the first time the Rust program (<code>firmware/spine/boards/esp32-umod</code>) goes onto
 the car's ESP32 control board. Do it with Ben, <strong>wheels off the ground</strong>, with the C++
 ready to go back on. What the program is: <a href="rust-firmware.html">Rust firmware</a>.</p>
-<p><span class="badge b-untested">untested</span> Nothing here has been done on a board yet. The emulator has (next section).</p>
+<p><span class="badge b-untested">untested</span> Nothing here has been done on a board yet. The emulator has (next section).</p></div>
+<section class="card"><h2 id="walk-me-through-it-pixi-run-esp-walk">Walk me through it: <code>pixi run esp walk</code></h2>
+<p>One command walks this whole page with you, one step at a time. Each step is a few words
+on the screen, in bold colour, and the same words <strong>spoken aloud</strong> (the Mac's <code>say</code>).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>What it does</th>
+<th>You</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Before you start</td>
+<td>wheels off the ground, a person at the e-stop, the RC on</td>
+<td>press <strong>Enter</strong></td>
+</tr>
+<tr>
+<td>Save the C++</td>
+<td>builds the C++, finds the board, copies its flash (4 MB), builds the Rust</td>
+<td>watch; Enter to try again</td>
+</tr>
+<tr>
+<td>Flash</td>
+<td>says "wheels off the ground, e-stop in hand"</td>
+<td>type <strong><code>flash</code></strong></td>
+</tr>
+<tr>
+<td>The first check</td>
+<td>30 s of the log; reads each row out ("Brake: pass. The brake is on.") and the board's settings</td>
+<td>listen</td>
+</tr>
+<tr>
+<td>Checks on stands</td>
+<td>section 3, one question at a time ("Press the red e-stop now. Did the car stop by itself?")</td>
+<td><strong>yes</strong>, <strong>no</strong>, <strong>skip</strong></td>
+</tr>
+<tr>
+<td>Roll back</td>
+<td>on a STOP or a no: puts the saved C++ back, listens for its first line</td>
+<td>type <strong><code>flash</code></strong></td>
+</tr>
+<tr>
+<td>The record</td>
+<td><code>bench-logs/&lt;date&gt;-esp32-first-flash.md</code>: every step, every answer, the table</td>
+<td>read it later</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>stop</code> (or <code>n</code>) stops at any step. After the flash, stopping asks: roll back?</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run esp walk</code></td>
+<td>the whole walk, on the first USB serial port</td>
+</tr>
+<tr>
+<td><code>pixi run esp walk /dev/cu.usbserial-0001</code></td>
+<td>on that port</td>
+</tr>
+<tr>
+<td><code>pixi run esp walk --dry-run</code></td>
+<td>a rehearsal: shows every step, <strong>runs nothing</strong></td>
+</tr>
+<tr>
+<td><code>--quiet</code>, <code>--voice Samantha</code>, <code>--rate 160</code></td>
+<td>no speech; another voice; slower or faster</td>
+</tr>
+</tbody>
+</table></div>
+<p><span class="badge b-untested">untested</span> Tested with a saved log and <code>--dry-run</code> only: not yet on a board.</p>
 <div class="admonition warning">
 <p class="admonition-title">Before you start</p>
 <ul>
@@ -115,7 +192,8 @@ ready to go back on. What the program is: <a href="rust-firmware.html">Rust firm
 <li>The RC transmitter on, override switch <strong>off</strong>.</li>
 <li>Know how to roll back (the last section). Try it once before the first flash.</li>
 </ul>
-</div></div>
+</div>
+</section>
 <section class="card"><h2 id="before-the-board-the-emulator">Before the board: the emulator</h2>
 <p>TODO 45 (Ben, 24 Oct): "if it doesn't get a heartbeat then it applys the breaks and stops
 the acceleration". Proven first with no hardware at all: the same firmware, in
