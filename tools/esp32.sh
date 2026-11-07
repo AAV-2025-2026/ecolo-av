@@ -201,9 +201,12 @@ case "${1:-}" in
     cargo clippy -q --release --locked -- -D warnings
     cargo clippy -q --release --locked --no-default-features \
       --features can,estop-input --target-dir target/can -- -D warnings
-    cargo clippy -q --release --locked --features qemu --target-dir target/qemu -- -D warnings
-    cargo clippy -q --release --locked --features link-v1 --target-dir target/v1 -- -D warnings
-    cargo clippy -q --release --locked --features uplink --target-dir target/uplink -- -D warnings
+    cargo clippy -q --release --locked --no-default-features \
+      --features legacy-uart --target-dir target/no-uplink -- -D warnings
+    cargo clippy -q --release --locked --no-default-features \
+      --features legacy-uart,qemu --target-dir target/qemu -- -D warnings
+    cargo clippy -q --release --locked --no-default-features \
+      --features legacy-uart,link-v1 --target-dir target/v1 -- -D warnings
     cargo clippy -q --release --locked --features qemu,uplink --target-dir target/qemu -- -D warnings
     cargo clippy -q --release --locked --features json-log --target-dir target/json -- -D warnings
     # The WiFi build with the example's made-up name and password: it checks the code,

@@ -93,6 +93,15 @@ def test_a_healthy_idle_board_is_safe_to_go_on():
     assert 'feedback analog' in rows['Devices'].detail
 
 
+def test_the_default_build_with_the_uplink_is_safe_to_go_on():
+    # Since #23 the default build is legacy-uart and uplink.
+    lines = [config(10, features='legacy-uart,uplink') if 'CONFIG' in ln else ln
+             for ln in text_log()]
+    rows, final = run(lines)
+    assert rows['Features'].result == 'PASS', rows['Features']
+    assert final.startswith('SAFE TO GO ON'), final
+
+
 def test_the_rc_lost_bit_is_expected_and_said():
     rows, final = run(text_log(faults='0x0100'))
     assert rows['Faults'].result == 'PASS'

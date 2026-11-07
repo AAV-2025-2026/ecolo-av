@@ -1,9 +1,10 @@
-//! Finding frames in the byte stream: version 1 the way the C++ did, versions 2 and 3 by
+//! Finding frames in the byte stream: version 1 the way the C++ did, versions 2, 3 and 4 by
 //! their sync byte.
 
 use crate::frame::{Frame, FrameError, FRAME_LEN};
 use crate::v2::{FrameV2, FRAME_V2_LEN, SYNC, VERSION};
 use crate::v3::{FrameV3, FRAME_V3_LEN, VERSION_3};
+use crate::v4::{FrameV4, FRAME_V4_LEN, VERSION_4};
 
 /// Bytes in, frames out. It keeps up to 13 bytes; when the 13th arrives it checks the
 /// sum. A match is a frame, and the buffer starts again. A mismatch drops the oldest byte
@@ -109,7 +110,7 @@ pub struct ParserV3 {
 /// frame from another in a status line (`firmware/status/README.md`: `rx`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Accepted {
-    /// 2 or 3.
+    /// 2, 3 or 4.
     pub version: u8,
     /// The frame's last byte: its CRC-8.
     pub check: u8,
@@ -183,6 +184,196 @@ impl ParserV3 {
     fn drop_front(&mut self, n: usize) {
         self.buf.copy_within(n..self.len, 0);
         self.len -= n;
+    }
+}
+
+/// Bytes in, version 2, 3 and 4 frames out, as [`FrameV4`] (a version 2 or 3 frame has no
+/// wheel speed). It works as [`ParserV3`] does; the version byte says the length (17, 20
+/// or 24 bytes).
+#[derive(Debug, Clone, Default)]
+pub struct ParserV4 {
+    buf: [u8; FRAME_V4_LEN],
+    len: usize,
+    last: Option<Accepted>,
+}
+
+impl ParserV4 {
+    pub const fn new() -> Self {
+        ParserV4 {
+            buf: [0; FRAME_V4_LEN],
+            len: 0,
+            last: None,
+        }
+    }
+
+    /// The version and CRC of the last frame [`ParserV4::push`] gave back as `Ok`;
+    /// `None` before the first. As [`ParserV3::last_accepted`].
+    pub fn last_accepted(&self) -> Option<Accepted> {
+        self.last
+    }
+
+    /// One byte. Returns a frame, a frame turned down, or nothing yet.
+    pub fn push(&mut self, byte: u8) -> Option<Result<FrameV4, FrameError>> {
+        if self.len == 0 && byte != SYNC {
+            return Some(Err(FrameError::Sync));
+        }
+        self.buf[self.len] = byte;
+        self.len += 1;
+        if self.len < 2 {
+            return None;
+        }
+        let want = match self.buf[1] {
+            VERSION => FRAME_V2_LEN,
+            VERSION_3 => FRAME_V3_LEN,
+            VERSION_4 => FRAME_V4_LEN,
+            _ => {
+                self.restart(self.len);
+                return Some(Err(FrameError::Version));
+            }
+        };
+        if self.len < want {
+            return None;
+        }
+        let result = match want {
+            FRAME_V2_LEN => {
+                let mut bytes = [0; FRAME_V2_LEN];
+                bytes.copy_from_slice(&self.buf[..FRAME_V2_LEN]);
+                FrameV2::decode(&bytes).map(|f| FrameV3::from(f).into())
+            }
+            FRAME_V3_LEN => {
+                let mut bytes = [0; FRAME_V3_LEN];
+                bytes.copy_from_slice(&self.buf[..FRAME_V3_LEN]);
+                FrameV3::decode(&bytes).map(FrameV4::from)
+            }
+            _ => FrameV4::decode(&self.buf),
+        };
+        if result.is_ok() {
+            self.last = Some(Accepted {
+                version: self.buf[1],
+                check: self.buf[want - 1],
+            });
+            self.drop_front(want);
+        } else {
+            self.restart(want);
+        }
+        Some(result)
+    }
+
+    /// The first `upto` bytes failed: start again at the next 0xA5 among them, if any.
+    fn restart(&mut self, upto: usize) {
+        let next = self.buf[1..upto]
+            .iter()
+            .position(|&b| b == SYNC)
+            .map_or(upto, |at| at + 1);
+        self.drop_front(next);
+    }
+
+    fn drop_front(&mut self, n: usize) {
+        self.buf.copy_within(n..self.len, 0);
+        self.len -= n;
+    }
+}
+
+#[cfg(test)]
+mod v4_tests {
+    extern crate std;
+
+    use super::*;
+    use crate::steer_cal::CalRequest;
+    use crate::v2::Flags;
+    use crate::v4::WheelSpeed;
+    use std::vec::Vec;
+
+    fn v3(counter: u8) -> FrameV3 {
+        FrameV3 {
+            values: Frame {
+                steering: 0.1,
+                speed: 0.2,
+                accel: 0.0,
+            },
+            counter,
+            flags: Flags {
+                armed: true,
+                estop: false,
+            },
+            calibration: CalRequest::Off,
+        }
+    }
+
+    fn feed(p: &mut ParserV4, bytes: &[u8]) -> Vec<Result<FrameV4, FrameError>> {
+        bytes.iter().filter_map(|&b| p.push(b)).collect()
+    }
+
+    #[test]
+    fn it_reads_all_three_versions_back_to_back() {
+        let v4 = FrameV4 {
+            command: v3(3),
+            wheel_speed: WheelSpeed::Known(0.75),
+        };
+        let v2 = FrameV2 {
+            values: v3(1).values,
+            counter: 1,
+            flags: v3(1).flags,
+        };
+        let stream: Vec<u8> = [&v2.encode()[..], &v3(2).encode()[..], &v4.encode()[..]].concat();
+        let mut p = ParserV4::new();
+        let found = feed(&mut p, &stream);
+        assert_eq!(found.len(), 3);
+        assert_eq!(found[0], Ok(FrameV4::from(v3(1))));
+        assert_eq!(found[1], Ok(FrameV4::from(v3(2))));
+        assert_eq!(found[2], Ok(v4));
+    }
+
+    #[test]
+    fn a_bad_frame_is_dropped_and_the_next_one_found() {
+        let good = FrameV4 {
+            command: v3(5),
+            wheel_speed: WheelSpeed::Unknown,
+        };
+        let mut bad = good.encode();
+        bad[FRAME_V4_LEN - 1] ^= 1;
+        let stream: Vec<u8> = [&bad[..], &good.encode()[..]].concat();
+        let mut p = ParserV4::new();
+        let found = feed(&mut p, &stream);
+        assert_eq!(found.first(), Some(&Err(FrameError::Checksum)));
+        assert_eq!(found.last(), Some(&Ok(good)));
+    }
+
+    #[test]
+    fn it_remembers_the_last_frame_it_took_of_any_version() {
+        let v4 = FrameV4 {
+            command: v3(7),
+            wheel_speed: WheelSpeed::Known(0.5),
+        };
+        let mut p = ParserV4::new();
+        assert_eq!(p.last_accepted(), None);
+        let three = v3(6).encode();
+        feed(&mut p, &three);
+        let want = Accepted {
+            version: VERSION_3,
+            check: three[FRAME_V3_LEN - 1],
+        };
+        assert_eq!(p.last_accepted(), Some(want));
+        // A bad frame leaves it as it was.
+        let mut bad = v4.encode();
+        bad[FRAME_V4_LEN - 1] ^= 1;
+        feed(&mut p, &bad);
+        assert_eq!(p.last_accepted(), Some(want));
+        let four = v4.encode();
+        feed(&mut p, &four);
+        assert_eq!(
+            p.last_accepted(),
+            Some(Accepted {
+                version: VERSION_4,
+                check: four[FRAME_V4_LEN - 1],
+            })
+        );
+    }
+
+    #[test]
+    fn an_unknown_version_is_turned_down_at_once() {
+        let mut p = ParserV4::new();
+        assert_eq!(feed(&mut p, &[SYNC, 9]), [Err(FrameError::Version)]);
     }
 }
 

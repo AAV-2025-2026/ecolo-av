@@ -17,7 +17,7 @@ firmware/status/README.md).
 |---|---|
 | Log | lines came in at all |
 | Build | the CONFIG line's build is this checkout's commit (or --build) |
-| Features | `legacy-uart`, never `qemu` (or exactly --features) |
+| Features | `legacy-uart` (`uplink`, `json-log`, `wifi-status` allowed), never `qemu` (or exactly --features) |
 | Last reset | a power-on, not a watchdog, a panic or a brown-out |
 | Devices | all four I2C devices answered at boot (the DEVICES line) |
 | Brake | at IDLE_BRAKE, as the CONFIG line says, in every status line |
@@ -64,6 +64,8 @@ FAULT_NAMES = {0x0001: 'command timeout', 0x0002: 'bad checksum', 0x0004: 'bad c
                0x0200: 'overspeed'}
 WORST_GAP_LIMIT_US = 50_000
 REPORT_ONLY_FEATURES = {'json-log', 'wifi-status'}
+# The car's build may carry these beside legacy-uart: the uplink is on by default since #23.
+ALLOWED_FEATURES = REPORT_ONLY_FEATURES | {'uplink'}
 DEVICE_NAMES = ('steering', 'brake', 'dac', 'expander')
 
 # esp-hal's names for the ESP32's reset reasons (SocResetReason), and what they mean.
@@ -309,9 +311,9 @@ def judge(log: Log, build: Optional[str], features: Optional[str], pi: str) -> L
         elif 'qemu' in have:
             row('Features', False, 'a QEMU build: stand-in devices, never on the car')
         else:
-            row('Features', 'legacy-uart' in have and not have - REPORT_ONLY_FEATURES
-                - {'legacy-uart'}, ','.join(sorted(have)) + ' (expected legacy-uart, '
-                'json-log and wifi-status allowed)')
+            row('Features', 'legacy-uart' in have and not have - ALLOWED_FEATURES
+                - {'legacy-uart'}, ','.join(sorted(have)) + ' (expected legacy-uart; '
+                'uplink, json-log and wifi-status allowed)')
 
     reset = log.reset
     row('Last reset', reset in RESET_OK,
@@ -495,7 +497,7 @@ def main(argv=None) -> int:
     ap.add_argument('--save', type=Path, help='save what was read from the port here')
     ap.add_argument('--build', help="the commit expected (default: this checkout's)")
     ap.add_argument('--features', help='the exact features expected, comma-separated '
-                    '(default: legacy-uart, json-log and wifi-status allowed)')
+                    '(default: legacy-uart; uplink, json-log and wifi-status allowed)')
     ap.add_argument('--pi', choices=('any', 'on', 'off'), default='any',
                     help="is the Pi's bridge sending? on: the link must be OK")
     ap.add_argument('--json', action='store_true', help='print the result as JSON')
