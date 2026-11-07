@@ -11,7 +11,7 @@
 //! | OTHER SENSORS: the IMU's turn rate (graph), the IMU and the GPS (words)              |
 //! ```
 //!
-//! The two lines differ in style, not only colour: the Pi's a line, the ESP32's dots,
+//! The two lines differ in style, not only colour: the Pi's a thick line, the ESP32's blue dots,
 //! each labelled at its end (review 2's nits). Gaps where lines were lost or the board
 //! restarted (marked BOARD RESTARTED).
 
@@ -142,6 +142,10 @@ impl Ui {
     fn esp32_words(&self, state: &PanelState, g: &Graphs, at: Instant) -> String {
         let link = match state.esp32.as_ref().map(|e| &e.link) {
             None => "no --esp32".to_owned(),
+            // No address: the lines came without a WebSocket (the demo's pretend board).
+            Some(Esp32Link::Connecting(url)) if url.is_empty() => {
+                "no WebSocket: pretend lines".to_owned()
+            }
             Some(Esp32Link::Connecting(url)) => format!("reaching {url}"),
             Some(Esp32Link::Connected) => "WebSocket connected".to_owned(),
             Some(Esp32Link::Lost(why)) => format!("WebSocket lost: {why}"),
@@ -354,20 +358,30 @@ impl Ui {
             );
             self.text(d, "BOARD RESTARTED", x + 4.0, plot.y + 2.0, 12.0, t.bad);
         }
-        // The Pi's: a line. The ESP32's: dots, on top.
+        // The Pi's: a thick line. The ESP32's: thin dots on top, in the local EKF's blue
+        // (no status uses it), so the two read apart in a theme whose accent is white.
+        let esp_ink = t.scene.localizers.local;
         let point = |p: &Point| Vector2::new(Self::x_of(plot, at, p.at), y_of(p.value));
         for pair in pi.windows(2) {
             if !pair[1].gap_before {
-                d.draw_line_ex(point(&pair[0]), point(&pair[1]), 2.0, t.text.rl());
+                d.draw_line_ex(point(&pair[0]), point(&pair[1]), 4.0, t.text.rl());
             }
         }
         for p in &esp {
-            d.draw_circle_v(point(p), 2.5, t.accent.rl());
+            d.draw_circle_v(point(p), 1.8, esp_ink.rl());
         }
-        for (line, word, ink) in [(&pi, "Pi", t.text), (&esp, "ESP32", t.accent)] {
+        // The Pi's word left of the ESP32's, both above the lines' ends: apart when they agree.
+        for (line, word, ink, dx) in [(&pi, "Pi", t.text, 72.0), (&esp, "ESP32", esp_ink, 46.0)] {
             if let Some(p) = line.last() {
                 let v = point(p);
-                self.text(d, word, (v.x - 46.0).max(plot.x), v.y - 16.0, 13.0, ink);
+                self.text(
+                    d,
+                    word,
+                    (v.x - dx).max(plot.x),
+                    (v.y - 18.0).clamp(plot.y, plot.y + plot.height - 16.0),
+                    13.0,
+                    ink,
+                );
             }
         }
         if pi.is_empty() && esp.is_empty() {
@@ -384,7 +398,10 @@ impl Ui {
         // The numbers.
         let sx = plot.x + plot.width + 12.0;
         let mut y = r.y;
-        for (line, word, ink) in [(&pi, "PI WROTE", t.text), (&esp, "ESP32", t.accent)] {
+        for (line, word, ink) in [
+            (&pi, "PI WROTE", t.text),
+            (&esp, "ESP32", t.scene.localizers.local),
+        ] {
             self.text(d, word, sx, y, 14.0, ink);
             y += 16.0;
             let s = Stats::of(line).map_or_else(

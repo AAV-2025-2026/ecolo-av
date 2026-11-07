@@ -680,18 +680,31 @@ impl Graphs {
             }
             _ => None,
         };
-        let written: HashMap<(u8, u8), PiFrame> = self
-            .pi
-            .since(from)
-            .map(|t| ((t.value.counter, t.value.check), t.value))
-            .collect();
+        // The counter wraps every 256 frames, so in 60 s one counter and check byte can
+        // stand for two different frames. Such a key can't say which frame arrived: it is
+        // left out (`None`), as `tools/link_check.py` does. A repeat of one frame is fine.
+        let mut written: HashMap<(u8, u8), Option<PiFrame>> = HashMap::new();
+        for t in self.pi.since(from) {
+            let f = t.value;
+            written
+                .entry((f.counter, f.check))
+                .and_modify(|seen| {
+                    if seen.is_some_and(|s| Channel::ALL.iter().any(|&c| s.value(c) != f.value(c)))
+                    {
+                        *seen = None;
+                    }
+                })
+                .or_insert(Some(f));
+        }
         let pairs: Vec<(PiFrame, Rx)> = self
             .rx
             .since(from)
             .filter_map(|t| {
                 written
                     .get(&(t.value.counter, t.value.check))
-                    .map(|f| (*f, t.value))
+                    .copied()
+                    .flatten()
+                    .map(|f| (f, t.value))
             })
             .collect();
         let channels = Channel::ALL.map(|c| {
@@ -1017,6 +1030,33 @@ mod tests {
             "{esp:?}"
         );
         // Pairs by counter and check: rx frames whose check matches nothing are left out.
+    }
+
+    #[test]
+    fn a_key_two_frames_share_is_left_out_not_different() {
+        // The counter wraps: frames 3 and 259 share counter 3 and the check byte (the test's
+        // check ignores speed), with different speeds. The ESP32 got frame 259 right: the
+        // key is ambiguous, so it is left out, not called a difference.
+        let t = Instant::now();
+        let mut g = Graphs::default();
+        let mut now = t;
+        for i in 0..300u32 {
+            now = ms(t, u64::from(i) * 50);
+            let s = f64::from(i % 256 % 50) / 100.0;
+            let d = drive(u64::from(i) + 1, 0.3, s);
+            g.record_ego(now, d);
+            g.record_mux(now, d);
+            let speed = if i == 259 { 0.4 } else { 0.1 };
+            let f = frame(i as u8, s, speed, 0.0, i);
+            g.record_pi(now, f);
+            g.record_esp32(now, &status(u64::from(i), Some(rx_of(&f)), i, 0));
+        }
+        assert_eq!(
+            frame(3, 0.03, 0.1, 0.0, 3).check,
+            frame(3, 0.03, 0.4, 0.0, 259).check
+        );
+        let esp = &g.hops(now, STALE)[3];
+        assert_ne!(esp.verdict.word(), "DIFFERENT", "{esp:?}");
     }
 
     #[test]
