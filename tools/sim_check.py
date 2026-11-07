@@ -225,7 +225,7 @@ RADAR_TOPICS = ('/sensors/radar/points', '/perception/radar/clusters',
                 '/perception/radar/cluster_boxes')
 # What only runs with Nav2 (navigation.launch.py): the map, and stop_hold beside
 # collision_monitor. A nav:=false run checks the contract without them.
-NAV_TOPICS = ('/map', '/safety/stop_hold/lock')
+NAV_TOPICS = ('/map', '/safety/stop_hold/lock', '/global_costmap/costmap')
 RADAR_FIELDS = ['x', 'y', 'z', 'intensity', 'velocity']   # the TI driver's
 LIDAR_RAYS = (1800, 16)     # the simulated roof lidar: steps around, beams (sensors xacro)
 
