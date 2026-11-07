@@ -34,7 +34,8 @@
 //! | the wheel speed | none on this board (the encoder talks to the Motor-Pi): the speed loop runs open loop |
 //! | the e-stop's spare contact | an input, with `estop-input`, once it is wired (Q6) |
 //! | the hardware watchdog | TIMG1's: fed after every tick; a hang or a panic resets the chip within 100 ms |
-//! | the log | UART0, the USB cable: a status line every 200 ms, as the C++ printed, an event line at each change, and (`legacy-uart`) a link line with the frame counts; a tick-timing line once a second |
+//! | the log | UART0, the USB cable: a status line every 200 ms, as the C++ printed, an event line at each change, and (`legacy-uart`) a link line with the frame counts; a tick-timing line and a health line (the Pi link's verdict, the devices, the faults) once a second; a config line and a devices line at boot and every 10 s |
+//! | the first look | after `init`, before the first tick: which of the four I2C devices answer, and each Jrk's feedback mode (`spine_board::DeviceCheck`, read only), for `pixi run esp first-check` |
 //!
 //! Two features report more, and neither changes what the spine does:
 //!
@@ -92,6 +93,7 @@ mod report;
 mod wifi;
 
 use core::cell::RefCell;
+use core::fmt::{self, Write as _};
 use embassy_executor::Spawner;
 use embassy_time::Duration;
 use embedded_hal_bus::i2c::RefCellDevice;
@@ -104,11 +106,15 @@ use esp_hal::time::Rate;
 use esp_hal::timer::timg::{MwdtStage, TimerGroup};
 use esp_hal::uart::{self, UartRx};
 use log::{info, warn};
-use spine_board::{Board, Calibration, CanFrame, Devices, SpineBoard, TickTiming, WheelCount};
+use spine_board::{
+    feedback_name, Board, Calibration, CanFrame, DeviceCheck, Devices, Found, LinkReport,
+    SpineBoard, TickTiming, WheelCount,
+};
 #[cfg(feature = "qemu")]
 use spine_board::{DeviceTargets, StandInBus};
 use spine_core::protocol::Mode;
 use spine_core::{Outputs, SpeedFeedback, SpineConfig};
+use static_cell::StaticCell;
 use {esp_backtrace as _, esp_println as _};
 
 esp_bootloader_esp_idf::esp_app_desc!();
@@ -142,6 +148,16 @@ const STATUS_EVERY_TICKS: u32 = 20;
 /// doesn't lengthen their burst.
 const TIMING_EVERY_TICKS: u32 = 100;
 const TIMING_AT_TICK: u32 = 50;
+
+/// The health line on the USB cable: once a second, on its own tick.
+const HEALTH_EVERY_TICKS: u32 = 100;
+const HEALTH_AT_TICK: u32 = 75;
+
+/// The config and devices lines again every 10 s, so a reader that starts late (the first
+/// check) sees them: each on a tick of its own, away from the status lines.
+const CONFIG_EVERY_TICKS: u32 = 1000;
+const CONFIG_AT_TICK: u32 = 250;
+const DEVICES_AT_TICK: u32 = 750;
 
 /// With `json-log`: the most bytes of status lines put on the USB cable each tick. At
 /// 115200 baud the UART sends about 115 bytes in 10 ms, so its 128-byte FIFO is empty
@@ -345,6 +361,7 @@ async fn main(spawner: Spawner) -> ! {
         esp_hal::time::Duration::from_millis(WATCHDOG_MS),
     );
     watchdog.enable();
+    let last_reset = reset_name(esp_hal::system::reset_reason());
     info!(
         "spine-esp32-umod {}, link: {}{}{}; the last reset: {:?}",
         env!("CARGO_PKG_VERSION"),
@@ -366,11 +383,6 @@ async fn main(spawner: Spawner) -> ! {
             ""
         },
         esp_hal::system::reset_reason()
-    );
-    #[cfg(any(feature = "json-log", feature = "wifi-status"))]
-    let mut reporter = report::Reporter::new(
-        esp_hal::rng::Rng::new().random(),
-        esp_hal::system::reset_reason(),
     );
     #[cfg(feature = "json-log")]
     let mut trickle: status_lines::Trickle = status_lines::Trickle::new();
@@ -450,6 +462,7 @@ async fn main(spawner: Spawner) -> ! {
         idle_brake: IDLE_BRAKE,
         ..SpineConfig::default()
     };
+    let numbers = board_config(&cal, &config, last_reset);
 
     #[cfg(feature = "legacy-uart")]
     let mut spine = {
@@ -493,6 +506,16 @@ async fn main(spawner: Spawner) -> ! {
             faults
         );
     }
+    // The first look, safe already (throttle 0, brake on, latched): which devices answer.
+    // Read only: probes with no data, and the Jrks' feedback mode, never their errors.
+    let found = DeviceCheck::run(&mut *i2c_bus.borrow_mut(), &cal.addresses);
+    watchdog.feed();
+    config_line(now_ms(), &numbers);
+    devices_line(now_ms(), &found);
+    #[cfg(any(feature = "json-log", feature = "wifi-status"))]
+    let mut reporter = report::Reporter::new(esp_hal::rng::Rng::new().random(), numbers, &found);
+    #[cfg(feature = "legacy-uart")]
+    let mut link_health = spine_board::LinkHealth::new(config.cmd_timeout_ms);
 
     // The WiFi tasks, on this executor: each await gives the tick its turn (wifi.rs).
     #[cfg(feature = "wifi-status")]
@@ -526,6 +549,11 @@ async fn main(spawner: Spawner) -> ! {
         let counter = spine.link().stats().counter.map_or(-1, i32::from);
         #[cfg(not(feature = "legacy-uart"))]
         let counter = -1;
+        // The Pi link's verdict (none on CAN: the Orin's spine_bridge judges that one).
+        #[cfg(feature = "legacy-uart")]
+        let health = Some(link_health.update(now, &spine.link().stats()));
+        #[cfg(not(feature = "legacy-uart"))]
+        let health: Option<LinkReport> = None;
         let summary = Summary::from(&out);
         if last != Some(summary) {
             if TEXT_LOG {
@@ -541,6 +569,15 @@ async fn main(spawner: Spawner) -> ! {
         }
         if TEXT_LOG && ticks % TIMING_EVERY_TICKS == TIMING_AT_TICK {
             timing_line(now, &timing);
+        }
+        if TEXT_LOG && ticks % HEALTH_EVERY_TICKS == HEALTH_AT_TICK {
+            health_line(now, health.as_ref(), &found, &out);
+        }
+        if TEXT_LOG && ticks % CONFIG_EVERY_TICKS == CONFIG_AT_TICK {
+            config_line(now, &numbers);
+        }
+        if TEXT_LOG && ticks % CONFIG_EVERY_TICKS == DEVICES_AT_TICK {
+            devices_line(now, &found);
         }
         #[cfg(any(feature = "json-log", feature = "wifi-status"))]
         {
@@ -570,6 +607,7 @@ async fn main(spawner: Spawner) -> ! {
                 dac,
                 reverse,
                 link,
+                health,
                 timing: &timing,
             };
             reporter.tick(ticks, &snapshot, |line| {
@@ -598,7 +636,7 @@ async fn main(spawner: Spawner) -> ! {
         {
             let devices = i2c_bus.borrow().devices();
             if devices != last_devices {
-                devices_line(now, &devices);
+                stand_in_line(now, &devices);
                 last_devices = devices;
             }
         }
@@ -667,10 +705,219 @@ fn timing_line(now: u32, t: &TickTiming) {
     );
 }
 
+/// The build and the numbers it runs with, for the config lines (text and JSON).
+fn board_config(
+    cal: &Calibration,
+    config: &SpineConfig,
+    last_reset: &'static str,
+) -> status_lines::Config<'static> {
+    let (a, s, b) = (&cal.addresses, &cal.steering, &cal.brake);
+    status_lines::Config {
+        build: env!("AAV_BUILD"),
+        features: env!("AAV_FEATURES"),
+        version: env!("CARGO_PKG_VERSION"),
+        link: if cfg!(feature = "can") { "can" } else { "uart" },
+        frame_version: if cfg!(feature = "can") {
+            None
+        } else if cfg!(feature = "link-v1") {
+            Some(1)
+        } else {
+            Some(2)
+        },
+        tick_ms: TICK.as_millis() as u32,
+        watchdog_ms: WATCHDOG_MS as u32,
+        cmd_timeout_ms: config.cmd_timeout_ms,
+        idle_brake: config.idle_brake,
+        full_throttle_speed: FULL_THROTTLE_SPEED,
+        #[cfg(not(feature = "qemu"))]
+        i2c_khz: Some(I2C_KHZ),
+        // Stand-ins: no bus speed.
+        #[cfg(feature = "qemu")]
+        i2c_khz: None,
+        addresses: status_lines::Addresses {
+            steering: a.steering,
+            brake: a.brake,
+            dac: a.dac,
+            expander: a.expander,
+        },
+        steering: status_lines::SteeringLimits {
+            min: s.min,
+            centre: s.centre,
+            max: s.max,
+        },
+        brake: status_lines::BrakeLimits {
+            released: b.released,
+            full: b.full,
+        },
+        throttle_full_code: cal.throttle.full_code,
+        last_reset,
+    }
+}
+
+/// One device as the lines say it: a Jrk whose feedback mode couldn't be read is
+/// `unknown`.
+fn device_seen(f: &Found) -> status_lines::DeviceSeen<'static> {
+    status_lines::DeviceSeen {
+        name: f.device.name(),
+        address: f.address,
+        answered: f.answered,
+        feedback: match (f.device.is_jrk() && f.answered, f.feedback) {
+            (false, _) => None,
+            (true, Some(mode)) => Some(feedback_name(mode)),
+            (true, None) => Some("unknown"),
+        },
+    }
+}
+
+/// The build and its numbers, at boot and every 10 s (`pixi run esp first-check` reads it).
+fn config_line(now: u32, c: &status_lines::Config<'_>) {
+    let a = &c.addresses;
+    info!(
+        "CONFIG t={} build={} features={} version={} link={} frame={} tick_ms={} watchdog_ms={} cmd_timeout_ms={} idle_brake={:.2} full_throttle_speed={:.2} i2c_khz={} steering_jrk={:#04x} brake_jrk={:#04x} dac={:#04x} expander={:#04x} steer_min={} steer_centre={} steer_max={} brake_released={} brake_full={} throttle_full_code={} last_reset={}",
+        now,
+        c.build,
+        c.features,
+        c.version,
+        c.link,
+        c.frame_version.map_or(0, u32::from),
+        c.tick_ms,
+        c.watchdog_ms,
+        c.cmd_timeout_ms,
+        c.idle_brake,
+        c.full_throttle_speed,
+        c.i2c_khz.unwrap_or(0),
+        a.steering,
+        a.brake,
+        a.dac,
+        a.expander,
+        c.steering.min,
+        c.steering.centre,
+        c.steering.max,
+        c.brake.released,
+        c.brake.full,
+        c.throttle_full_code,
+        c.last_reset
+    );
+}
+
+/// Which devices answered at boot: `DEVICES 4/4 answered t=… steering=0x05,answered,analog …`.
+/// (Not `DEVICES t=`: that is QEMU's line of what the stand-ins were told.)
+fn devices_line(now: u32, found: &DeviceCheck) {
+    let mut list = LineText::<160>::new();
+    for f in found.iter() {
+        let d = device_seen(f);
+        let _ = write!(
+            list,
+            " {}={:#04x},{}",
+            d.name,
+            d.address,
+            if d.answered { "answered" } else { "missing" }
+        );
+        if let Some(feedback) = d.feedback {
+            let _ = write!(list, ",{feedback}");
+        }
+    }
+    info!(
+        "DEVICES {}/{} answered t={}{}",
+        found.answered(),
+        found.expected(),
+        now,
+        list.as_str()
+    );
+}
+
+/// Once a second: is it working? The Pi link's verdict, its counts, the devices at boot,
+/// the faults and the mode.
+fn health_line(now: u32, health: Option<&LinkReport>, found: &DeviceCheck, out: &Outputs) {
+    let (link, age, moving, s) = match health {
+        Some(h) => (
+            h.verdict.name(),
+            h.age_ms,
+            match h.counter_moving {
+                Some(true) => "yes",
+                Some(false) => "no",
+                None => "unknown",
+            },
+            h.stats,
+        ),
+        None => ("can", None, "unknown", spine_board::LinkStats::default()),
+    };
+    let mut age_text = LineText::<12>::new();
+    let _ = match age {
+        Some(ms) => write!(age_text, "{ms}"),
+        None => age_text.write_str("none"),
+    };
+    info!(
+        "HEALTH t={} link={} age_ms={} counter_moving={} frames={} bad={} skipped={} repeats={} devices={}/{} faults={:#06x} mode={:?} armed={}",
+        now,
+        link,
+        age_text.as_str(),
+        moving,
+        s.frames,
+        s.bad,
+        s.skipped,
+        s.repeats,
+        found.answered(),
+        found.expected(),
+        out.faults,
+        out.mode,
+        out.armed
+    );
+}
+
+/// esp-hal's name for the last reset (`ChipPowerOn`, `CoreMwdt1`, ...), kept for the
+/// program's life. A name too long is cut: it is only for people.
+fn reset_name(reason: Option<impl fmt::Debug>) -> &'static str {
+    static NAME: StaticCell<LineText<32>> = StaticCell::new();
+    let name = NAME.init(LineText::new());
+    let _ = match reason {
+        Some(r) => write!(name, "{r:?}"),
+        None => name.write_str("Unknown"),
+    };
+    let name: &'static LineText<32> = name;
+    name.as_str()
+}
+
+/// A short text, built in place.
+struct LineText<const N: usize> {
+    buf: [u8; N],
+    len: usize,
+}
+
+impl<const N: usize> LineText<N> {
+    const fn new() -> Self {
+        LineText {
+            buf: [0; N],
+            len: 0,
+        }
+    }
+
+    fn as_str(&self) -> &str {
+        core::str::from_utf8(&self.buf[..self.len]).unwrap_or("")
+    }
+}
+
+impl<const N: usize> fmt::Write for LineText<N> {
+    /// Keeps what fits, whole characters only; says so when it cuts.
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        for c in s.chars() {
+            let mut utf8 = [0; 4];
+            let bytes = c.encode_utf8(&mut utf8).as_bytes();
+            let end = self.len + bytes.len();
+            let Some(dest) = self.buf.get_mut(self.len..end) else {
+                return Err(fmt::Error);
+            };
+            dest.copy_from_slice(bytes);
+            self.len = end;
+        }
+        Ok(())
+    }
+}
+
 /// In QEMU: what the stand-in devices were last told, whenever it changes. These are the
 /// bytes the car's Jrks, DAC and expander would have got.
 #[cfg(feature = "qemu")]
-fn devices_line(now: u32, d: &DeviceTargets) {
+fn stand_in_line(now: u32, d: &DeviceTargets) {
     let show = |v: Option<u16>| v.map_or(-1, i32::from);
     info!(
         "DEVICES t={} steering={} brake={} dac={} expander={:#06x}",

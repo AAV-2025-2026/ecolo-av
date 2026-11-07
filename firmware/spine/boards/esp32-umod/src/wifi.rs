@@ -4,6 +4,8 @@
 //! |---|---|
 //! | `/` | `page.html`: graphs of steering, brake and throttle, from `/ws` |
 //! | `/status.json` | the latest `status` line |
+//! | `/health` | the latest `health` line: the Pi link's verdict, the age of its last frame, the counter moving, its counts, the devices, the faults, the uptime, the last reset, the build |
+//! | `/config` | the latest `config` line: the build, its features and the numbers it runs with |
 //! | `/scan` | starts an I2C scan if none is going (a few addresses a tick, only while stopped and not armed), and says what it has found so far |
 //! | `/ws` | a WebSocket: every status line (`firmware/status`), as text messages |
 //!
@@ -73,21 +75,33 @@ static LINES: PubSubChannel<CriticalSectionRawMutex, LineBuf, QUEUE, STREAMS, 0>
 /// The latest status line, for `/status.json`.
 static LATEST: Mutex<CriticalSectionRawMutex, RefCell<LineBuf>> =
     Mutex::new(RefCell::new(LineBuf::new()));
+/// The latest health and config lines, for `/health` and `/config`.
+static LATEST_HEALTH: Mutex<CriticalSectionRawMutex, RefCell<LineBuf>> =
+    Mutex::new(RefCell::new(LineBuf::new()));
+static LATEST_CONFIG: Mutex<CriticalSectionRawMutex, RefCell<LineBuf>> =
+    Mutex::new(RefCell::new(LineBuf::new()));
 /// `/scan` asked for a scan; the tick takes it.
 static SCAN_ASKED: AtomicBool = AtomicBool::new(false);
 /// The scan as the tick last left it.
 static SCAN: Mutex<CriticalSectionRawMutex, RefCell<BusScan>> =
     Mutex::new(RefCell::new(BusScan::new()));
 
-/// From the tick: one line, to every WebSocket and (a status line) to `/status.json`. It
-/// never waits: with a client behind, the oldest line it hasn't read is dropped.
+/// From the tick: one line, to every WebSocket, and (a status, health or config line) to
+/// its path. It never waits: with a client behind, the oldest line it hasn't read is
+/// dropped.
 pub fn publish(line: &Line<'_>) {
     let mut buf = LineBuf::new();
     if buf.set(line).is_err() {
         return; // can't happen with MAX_LINE; never worth stopping the tick for
     }
-    if matches!(line.body, Body::Status(_)) {
-        LATEST.lock(|latest| latest.borrow_mut().clone_from(&buf));
+    let latest = match line.body {
+        Body::Status(_) => Some(&LATEST),
+        Body::Health(_) => Some(&LATEST_HEALTH),
+        Body::Config(_) => Some(&LATEST_CONFIG),
+        _ => None,
+    };
+    if let Some(latest) = latest {
+        latest.lock(|latest| latest.borrow_mut().clone_from(&buf));
     }
     LINES.immediate_publisher().publish_immediate(buf);
 }
@@ -211,22 +225,9 @@ async fn web(id: usize, stack: Stack<'static>, config: &'static picoserve::Confi
 fn router() -> picoserve::Router<impl picoserve::routing::PathRouter> {
     picoserve::Router::new()
         .route("/", get_service(File::html(PAGE)))
-        .route(
-            "/status.json",
-            get(async || {
-                let mut body = Json::new();
-                LATEST.lock(|latest| {
-                    let latest = latest.borrow();
-                    // Before the first line: an empty object.
-                    let _ = body.write_str(if latest.is_empty() {
-                        "{}"
-                    } else {
-                        latest.as_str()
-                    });
-                });
-                body
-            }),
-        )
+        .route("/status.json", get(async || latest(&LATEST)))
+        .route("/health", get(async || latest(&LATEST_HEALTH)))
+        .route("/config", get(async || latest(&LATEST_CONFIG)))
         .route(
             "/scan",
             get(async || {
@@ -241,6 +242,20 @@ fn router() -> picoserve::Router<impl picoserve::routing::PathRouter> {
             "/ws",
             get(async |upgrade: WebSocketUpgrade| upgrade.on_upgrade(Stream)),
         )
+}
+
+/// The latest line of a kind, as a reply; before the first, an empty object.
+fn latest(line: &Mutex<CriticalSectionRawMutex, RefCell<LineBuf>>) -> Json {
+    let mut body = Json::new();
+    line.lock(|latest| {
+        let latest = latest.borrow();
+        let _ = body.write_str(if latest.is_empty() {
+            "{}"
+        } else {
+            latest.as_str()
+        });
+    });
+    body
 }
 
 /// `{"scan":"running","found":[4,5,12,32]}`: the addresses in decimal, as JSON has it.
