@@ -122,20 +122,20 @@ def test_joystick_overrides_every_source(run):
         output = run.spin(0.3, driver)
 
         assert output == {speed}, (
-            f"{driver} did not reach the mux output; "
-            f"expected {speed}, actual {output}"
+            f'{driver} did not reach the mux output; '
+            f'expected {speed}, actual {output}'
         )
     run.spin(0.6)
     output = run.spin(1.0, *SPEED)
 
-    assert output == {SPEED["joy"]}
+    assert output == {SPEED['joy']}
 
 
 def test_silent_source_times_out(run):
-    output = run.spin(0.5, "keyboard", "scripted")
+    output = run.spin(0.5, 'keyboard', 'scripted')
 
-    assert output == {SPEED["keyboard"]}
+    assert output == {SPEED['keyboard']}
 
-    output = run.spin(1.0, "scripted")
+    output = run.spin(1.0, 'scripted')
 
-    assert output == {SPEED["scripted"]}
+    assert output == {SPEED['scripted']}
