@@ -38,6 +38,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c583acf993cf4245c4acb0a2cc2ab1f9cc097de73411bb6d3647ff6af2b1013d"
 
 [[package]]
+name = "app-update"
+version = "0.1.0"
+
+[[package]]
 name = "as-slice"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1953,6 +1957,7 @@ version = "0.1.0"
 name = "spine-esp32-umod"
 version = "0.1.0"
 dependencies = [
+ "app-update",
  "critical-section",
  "embassy-executor",
  "embassy-net",
@@ -1969,6 +1974,7 @@ dependencies = [
  "esp-println",
  "esp-radio",
  "esp-rtos",
+ "esp-storage",
  "ibus",
  "legacy-link",
  "log",

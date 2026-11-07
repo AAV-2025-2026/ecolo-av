@@ -2,12 +2,13 @@
 //!
 //! | Path (port 80) | Gives |
 //! |---|---|
-//! | `/` | `page.html`: graphs of steering, brake and throttle, from `/ws` |
+//! | `/`, `/status` | `page.html`: graphs of steering, brake and throttle, from `/ws` (`/status` is the C++'s path for its page) |
 //! | `/status.json` | the latest `status` line |
 //! | `/health` | the latest `health` line: the Pi link's verdict, the age of its last frame, the counter moving, its counts, the devices, the faults, the uptime, the last reset, the build |
 //! | `/config` | the latest `config` line: the build, its features and the numbers it runs with |
-//! | `/scan` | starts an I2C scan if none is going (a few addresses a tick, only while stopped and not armed), and says what it has found so far |
+//! | `/scan` | starts an I2C scan if none is going (a few addresses a tick, only while stopped and not armed), and says what it has found so far, with the C++'s names for the car's four devices |
 //! | `/ws` | a WebSocket: every status line (`firmware/status`), as text messages |
+//! | `/log` | a WebSocket: the text log, line by line, as the cable has it (the C++'s port 81 log); nothing in a `json-log` build, whose text lines are off |
 //!
 //! **Read only.** No path takes a command, a setting or an update, and nothing here can
 //! reach the spine's inputs: the tick hands lines out ([`publish`]) and reads one flag
@@ -39,24 +40,32 @@ use log::{info, warn};
 use picoserve::response::ws::{Message, SocketRx, SocketTx, WebSocketCallback};
 use picoserve::response::{Content, File, WebSocketUpgrade};
 use picoserve::routing::{get, get_service};
+use spine_board::calibration::Addresses;
+use spine_board::cpp_log::scan_label;
 use spine_board::{BusScan, ScanState};
 use static_cell::StaticCell;
 use status_lines::{Body, Line, LineBuf};
 
 /// The WiFi's name and password: build.rs's copy of `src/wifi_secrets.rs`.
 #[cfg(wifi_secrets)]
-mod secrets {
+// UPDATE_PASSWORD is for wifi-update only.
+#[cfg_attr(not(feature = "wifi-update"), allow(dead_code))]
+pub(crate) mod secrets {
     include!(concat!(env!("OUT_DIR"), "/wifi_secrets.rs"));
 }
 /// Without the file, main.rs's `compile_error!` says how to make it; this only keeps
 /// that the one error.
 #[cfg(not(wifi_secrets))]
-mod secrets {
+#[allow(dead_code)]
+pub(crate) mod secrets {
     pub const SSID: &str = "";
     pub const PASSWORD: &str = "";
+    pub const UPDATE_PASSWORD: &str = "";
 }
 
-/// The heap the radio needs (esp-radio allocates its buffers).
+/// The heap the radio needs (esp-radio allocates its buffers). It lives in the RAM the
+/// bootloader used (`dram2`, 96 KB on the ESP32, free once the program runs), not beside
+/// the statics and the stack: there it pushed the statics past the end of DRAM.
 const HEAP_BYTES: usize = 72 * 1024;
 
 /// Clients at once: HTTP connections, each with its own task; a WebSocket holds one.
@@ -65,6 +74,8 @@ const WEB_TASKS: usize = 3;
 const QUEUE: usize = 8;
 /// WebSocket clients at once: each holds one of the web tasks.
 const STREAMS: usize = 2;
+/// Text lines a slow `/log` client can fall behind.
+const LOG_QUEUE: usize = 4;
 
 /// The page (`page.html`, beside this file's folder).
 const PAGE: &str = include_str!("../page.html");
@@ -72,6 +83,12 @@ const PAGE: &str = include_str!("../page.html");
 /// Every line, for the WebSockets: a slow one loses the oldest.
 static LINES: PubSubChannel<CriticalSectionRawMutex, LineBuf, QUEUE, STREAMS, 0> =
     PubSubChannel::new();
+/// The text log's lines, for `/log`: a slow reader loses the oldest.
+static LOG_LINES: PubSubChannel<CriticalSectionRawMutex, LineBuf, LOG_QUEUE, STREAMS, 0> =
+    PubSubChannel::new();
+/// The car's four I2C addresses, for `/scan`'s names.
+static ADDRESSES: Mutex<CriticalSectionRawMutex, RefCell<Option<Addresses>>> =
+    Mutex::new(RefCell::new(None));
 /// The latest status line, for `/status.json`.
 static LATEST: Mutex<CriticalSectionRawMutex, RefCell<LineBuf>> =
     Mutex::new(RefCell::new(LineBuf::new()));
@@ -106,6 +123,14 @@ pub fn publish(line: &Line<'_>) {
     LINES.immediate_publisher().publish_immediate(buf);
 }
 
+/// From the tick: one text log line, to every `/log` client. It never waits.
+pub fn publish_text(text: &impl fmt::Display) {
+    let mut buf = LineBuf::new();
+    if buf.set_text(text).is_ok() {
+        LOG_LINES.immediate_publisher().publish_immediate(buf);
+    }
+}
+
 /// From the tick: true once after each `/scan`.
 pub fn take_scan_request() -> bool {
     SCAN_ASKED.swap(false, Ordering::Relaxed)
@@ -118,8 +143,14 @@ pub fn set_scan(scan: &BusScan) {
 
 /// Start the radio, the network and the web server, as tasks on `spawner`. Nothing waits
 /// for the WiFi: if it never joins, the tasks just keep trying.
-pub fn start(spawner: Spawner, wifi: esp_hal::peripherals::WIFI<'static>) {
-    esp_alloc::heap_allocator!(size: HEAP_BYTES);
+pub fn start(
+    spawner: Spawner,
+    wifi: esp_hal::peripherals::WIFI<'static>,
+    addresses: Addresses,
+    #[cfg(feature = "wifi-update")] flash: esp_hal::peripherals::FLASH<'static>,
+) {
+    esp_alloc::heap_allocator!(#[esp_hal::ram(reclaimed)] size: HEAP_BYTES);
+    ADDRESSES.lock(|a| *a.borrow_mut() = Some(addresses));
 
     let controller = match WifiController::new(wifi, Default::default()) {
         Ok(c) => c,
@@ -132,7 +163,8 @@ pub fn start(spawner: Spawner, wifi: esp_hal::peripherals::WIFI<'static>) {
     let seed = u64::from(esp_hal::rng::Rng::new().random()) << 32
         | u64::from(esp_hal::rng::Rng::new().random());
 
-    static RESOURCES: StaticCell<StackResources<{ WEB_TASKS + 1 }>> = StaticCell::new();
+    // A socket for each web task, DHCP's, and the update server's.
+    static RESOURCES: StaticCell<StackResources<{ WEB_TASKS + 2 }>> = StaticCell::new();
     let (stack, runner) = embassy_net::new(
         device,
         embassy_net::Config::dhcpv4(Default::default()),
@@ -155,6 +187,8 @@ pub fn start(spawner: Spawner, wifi: esp_hal::peripherals::WIFI<'static>) {
         }
         Ok(())
     })();
+    #[cfg(feature = "wifi-update")]
+    crate::update::start(spawner, stack, flash);
     if let Err(e) = spawned {
         warn!("WiFi: a task didn't start ({e:?})");
     }
@@ -207,7 +241,14 @@ async fn web(id: usize, stack: Stack<'static>, config: &'static picoserve::Confi
     stack.wait_config_up().await;
     if id == 0 {
         if let Some(v4) = stack.config_v4() {
-            info!("WiFi: serving http://{}/", v4.address.address());
+            let ip = v4.address.address();
+            info!("WiFi -> {ip}: serving http://{ip}/ (the status page; also /status, /status.json, /health, /config, /ws, /log)");
+            info!("Scan -> http://{ip}/scan");
+            #[cfg(feature = "wifi-update")]
+            info!(
+                "OTA  -> http://{ip}:{}/update (POST, with the update password; README.md)",
+                crate::update::PORT
+            );
         }
     }
     let mut tcp_rx = [0; 1024];
@@ -225,6 +266,7 @@ async fn web(id: usize, stack: Stack<'static>, config: &'static picoserve::Confi
 fn router() -> picoserve::Router<impl picoserve::routing::PathRouter> {
     picoserve::Router::new()
         .route("/", get_service(File::html(PAGE)))
+        .route("/status", get_service(File::html(PAGE)))
         .route("/status.json", get(async || latest(&LATEST)))
         .route("/health", get(async || latest(&LATEST_HEALTH)))
         .route("/config", get(async || latest(&LATEST_CONFIG)))
@@ -240,7 +282,11 @@ fn router() -> picoserve::Router<impl picoserve::routing::PathRouter> {
         )
         .route(
             "/ws",
-            get(async |upgrade: WebSocketUpgrade| upgrade.on_upgrade(Stream)),
+            get(async |upgrade: WebSocketUpgrade| upgrade.on_upgrade(Stream(&LINES))),
+        )
+        .route(
+            "/log",
+            get(async |upgrade: WebSocketUpgrade| upgrade.on_upgrade(Stream(&LOG_LINES))),
         )
 }
 
@@ -258,7 +304,8 @@ fn latest(line: &Mutex<CriticalSectionRawMutex, RefCell<LineBuf>>) -> Json {
     body
 }
 
-/// `{"scan":"running","found":[4,5,12,32]}`: the addresses in decimal, as JSON has it.
+/// `{"scan":"running","found":[4,5,12,32],"names":[{"address":4,"name":"JRK brake"},…]}`:
+/// the addresses in decimal, as JSON has it; then the C++'s names for those it knows.
 fn write_scan(w: &mut impl fmt::Write, scan: &BusScan) -> fmt::Result {
     let state = match scan.state() {
         ScanState::Idle => "starting",
@@ -273,19 +320,33 @@ fn write_scan(w: &mut impl fmt::Write, scan: &BusScan) -> fmt::Result {
         }
         write!(w, "{address}")?;
     }
+    w.write_str(r#"],"names":["#)?;
+    if let Some(a) = ADDRESSES.lock(|a| *a.borrow()) {
+        let named = scan
+            .found()
+            .filter_map(|address| scan_label(address, &a).map(|name| (address, name)));
+        for (i, (address, name)) in named.enumerate() {
+            if i > 0 {
+                w.write_char(',')?;
+            }
+            write!(w, r#"{{"address":{address},"name":"{name}"}}"#)?;
+        }
+    }
     w.write_str("]}")
 }
 
-/// A WebSocket that sends every line and takes nothing.
-struct Stream;
+/// A WebSocket that sends every line of its channel and takes nothing.
+struct Stream<const Q: usize>(
+    &'static PubSubChannel<CriticalSectionRawMutex, LineBuf, Q, STREAMS, 0>,
+);
 
-impl WebSocketCallback for Stream {
+impl<const Q: usize> WebSocketCallback for Stream<Q> {
     async fn run<R: picoserve::io::Read, W: picoserve::io::Write<Error = R::Error>>(
         self,
         mut rx: SocketRx<R>,
         mut tx: SocketTx<W>,
     ) -> Result<(), W::Error> {
-        let Ok(mut lines) = LINES.subscriber() else {
+        let Ok(mut lines) = self.0.subscriber() else {
             // Every stream is taken.
             return tx.close(Some((1013, "busy: two clients already"))).await;
         };

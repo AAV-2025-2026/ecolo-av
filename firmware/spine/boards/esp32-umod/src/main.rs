@@ -75,6 +75,10 @@ compile_error!("`qemu` runs the Motor-Pi UART link only: QEMU has no CAN (TWAI)"
 compile_error!("`link-v1` is a frame of the Motor-Pi UART link: build it with `legacy-uart`");
 #[cfg(all(feature = "uplink", not(feature = "legacy-uart")))]
 compile_error!("`uplink` sends on the Motor-Pi UART link's TX: build it with `legacy-uart`");
+#[cfg(all(feature = "cpp-throttle-ramp", not(feature = "legacy-uart")))]
+compile_error!(
+    "`cpp-throttle-ramp` is the C++'s ramp on the Motor-Pi UART link: build it with `legacy-uart`"
+);
 #[cfg(all(feature = "wifi-status", feature = "qemu"))]
 compile_error!("`wifi-status` needs the radio and Embassy's timer: QEMU has neither");
 #[cfg(all(feature = "wifi-status", not(wifi_secrets)))]
@@ -89,6 +93,8 @@ mod can;
 mod pins;
 #[cfg(any(feature = "json-log", feature = "wifi-status"))]
 mod report;
+#[cfg(feature = "wifi-update")]
+mod update;
 #[cfg(feature = "wifi-status")]
 mod wifi;
 
@@ -106,6 +112,7 @@ use esp_hal::time::Rate;
 use esp_hal::timer::timg::{MwdtStage, TimerGroup};
 use esp_hal::uart::{self, UartRx};
 use log::{info, warn};
+use spine_board::ErrorFlags;
 use spine_board::{
     feedback_name, Board, Calibration, CanFrame, DeviceCheck, Devices, Found, LinkReport,
     SpineBoard, TickTiming, WheelCount,
@@ -197,6 +204,10 @@ const TEXT_SLOT_BYTES: usize = status_lines::MAX_LINE + 1;
 /// The most bytes of queued text put on the cable each tick: as `LOG_BYTES_PER_TICK`, the
 /// UART's 128-byte FIFO empties within the tick, so the print never waits.
 const TEXT_BYTES_PER_TICK: usize = 96;
+
+/// The C++'s `STATUS:` line (`publishStatus()`), every 200 ms as it was, on a tick of its
+/// own: half way between two `STATUS` lines.
+const CPP_STATUS_AT_TICK: u32 = 10;
 
 /// The status LED blinks slowly while commands come in, fast while they don't.
 const BLINK_OK_TICKS: u32 = 50;
@@ -367,6 +378,8 @@ struct TextLog {
 impl TextLog {
     /// One line, as `info!` writes it.
     fn line(&mut self, args: fmt::Arguments<'_>) {
+        #[cfg(feature = "wifi-status")]
+        wifi::publish_text(&args);
         if self.queue.is_empty() {
             info!("{args}");
         } else {
@@ -377,6 +390,8 @@ impl TextLog {
 
     /// A long line: queued, a chunk a tick.
     fn long(&mut self, text: &impl fmt::Display) {
+        #[cfg(feature = "wifi-status")]
+        wifi::publish_text(text);
         let _ = self.queue.push_text(&Logged(text));
     }
 
@@ -450,6 +465,7 @@ async fn main(spawner: Spawner) -> ! {
 
     // The pin map (src/pins.rs, docs/rust-firmware.md).
     let pins = pins::take_pins!(p);
+    boot_pin_lines(&pins);
 
     #[cfg(not(feature = "qemu"))]
     let i2c_bus = {
@@ -509,6 +525,15 @@ async fn main(spawner: Spawner) -> ! {
     };
     #[cfg(not(feature = "uplink"))]
     let cal = Calibration::TODAY;
+    // `cpp-rc-steering`: the C++'s RC steering, harder to the right.
+    #[cfg(feature = "cpp-rc-steering")]
+    let cal = Calibration {
+        rc: ibus::RcMap {
+            steer_right_gain: legacy_link::STEER_RIGHT_PER_LEFT,
+            ..cal.rc
+        },
+        ..cal
+    };
     let devices = Devices::new(
         RefCellDevice::new(&i2c_bus),
         RefCellDevice::new(&i2c_bus),
@@ -521,6 +546,12 @@ async fn main(spawner: Spawner) -> ! {
             full_throttle_speed: FULL_THROTTLE_SPEED,
         },
         idle_brake: IDLE_BRAKE,
+        // `cpp-stop-centre`: on a stop, the wheels back to straight, as `jrkSafeStop()`.
+        estop_steering: if cfg!(feature = "cpp-stop-centre") {
+            EstopSteering::Centre
+        } else {
+            spine_core::ESTOP_STEERING
+        },
         ..SpineConfig::default()
     };
     let numbers = board_config(&cal, &config, last_reset);
@@ -540,6 +571,9 @@ async fn main(spawner: Spawner) -> ! {
                 .unwrap_or_else(|e| panic!("Motor-Pi UART: {:?}", e));
             spine_board::LegacyLink::new(motor_pi_rx, cal, version)
         };
+        // `cpp-throttle-ramp`: the C++'s DAC ramp, a step a frame.
+        #[cfg(all(not(feature = "uplink"), feature = "cpp-throttle-ramp"))]
+        let link = link.with_cpp_ramp();
         // The same UART, both ways: RX on GPIO16, the uplink's TX on GPIO17.
         #[cfg(feature = "uplink")]
         let link = {
@@ -552,6 +586,8 @@ async fn main(spawner: Spawner) -> ! {
                 .unwrap_or_else(|e| panic!("Motor-Pi UART: {:?}", e));
             spine_board::LegacyLink::with_uplink(motor_pi_rx, motor_pi_tx, cal, version)
         };
+        #[cfg(all(feature = "uplink", feature = "cpp-throttle-ramp"))]
+        let link = link.with_cpp_ramp();
         SpineBoard::with_link(board, devices, ibus_rx, link, cal, config)
     };
     #[cfg(feature = "can")]
@@ -577,6 +613,12 @@ async fn main(spawner: Spawner) -> ! {
             queue: status_lines::Trickle::new(),
         });
     let text = TEXT.take();
+    // The C++'s boot lines (spine_board::cpp_log), at once: about 30 ms of the cable.
+    for line in spine_board::cpp_log::boot_devices(&found, &cal) {
+        info!("{line}");
+    }
+    info!("{}", spine_board::cpp_log::RcReady(&cal.rc));
+    watchdog.feed();
     config_line(text, now_ms(), &numbers);
     devices_line(text, now_ms(), &found);
     #[cfg(any(feature = "json-log", feature = "wifi-status"))]
@@ -586,7 +628,13 @@ async fn main(spawner: Spawner) -> ! {
 
     // The WiFi tasks, on this executor: each await gives the tick its turn (wifi.rs).
     #[cfg(feature = "wifi-status")]
-    wifi::start(spawner, p.WIFI);
+    wifi::start(
+        spawner,
+        p.WIFI,
+        cal.addresses,
+        #[cfg(feature = "wifi-update")]
+        p.FLASH,
+    );
     #[cfg(not(feature = "wifi-status"))]
     let _ = spawner;
     #[cfg(feature = "wifi-status")]
@@ -600,6 +648,9 @@ async fn main(spawner: Spawner) -> ! {
     let mut ticks: u32 = 0;
     let mut timing = TickTiming::new(TICK.as_micros() as u32);
     let mut last: Option<Summary> = None;
+    // For the C++-style lines: the faults and the Jrks' errors last logged.
+    let mut last_faults: u16 = 0;
+    let mut last_jrk_errors = (Some(ErrorFlags(0)), Some(ErrorFlags(0)));
     #[cfg(feature = "qemu")]
     let mut last_devices = DeviceTargets::default();
     loop {
@@ -633,6 +684,19 @@ async fn main(spawner: Spawner) -> ! {
             fsm_line(text, now, &spine.state());
             #[cfg(feature = "legacy-uart")]
             link_line(text, now, &spine.link().stats());
+        }
+        if TEXT_LOG {
+            cpp_lines(
+                text,
+                now,
+                ticks,
+                &out,
+                &found,
+                config.max_steering_angle,
+                spine.actuators().jrk_errors(),
+                &mut last_faults,
+                &mut last_jrk_errors,
+            );
         }
         if TEXT_LOG && ticks % TIMING_EVERY_TICKS == TIMING_AT_TICK {
             timing_line(text, now, &timing);
@@ -698,12 +762,32 @@ async fn main(spawner: Spawner) -> ! {
         // A bus scan for /scan: after the tick's own transfers, and only while stopped.
         #[cfg(feature = "wifi-status")]
         {
+            // wifi-update: the car's state for the update's checks; its restart, here in
+            // the tick, only after a checked write, and only while parked.
+            #[cfg(feature = "wifi-update")]
+            {
+                update::set_car(app_update::CarState {
+                    stopped: out.mode == Mode::Manual,
+                    armed: out.armed,
+                    throttle: out.throttle,
+                    brake: out.brake,
+                });
+                if update::restart_due(now) {
+                    warn!("restarting into the new firmware");
+                    esp_hal::system::software_reset();
+                }
+            }
             if wifi::take_scan_request() {
                 scan.start();
             }
             let busy = out.armed || out.mode != Mode::Manual;
+            let was_done = scan.state() == spine_board::ScanState::Done;
             scan.step(&mut *i2c_bus.borrow_mut(), busy, SCAN_PER_TICK);
             wifi::set_scan(&scan);
+            // Done: the C++'s scan lines (`handleScan()`), on the cable and on /log.
+            if TEXT_LOG && !was_done && scan.state() == spine_board::ScanState::Done {
+                scan_lines(text, &scan, &cal.addresses);
+            }
         }
         #[cfg(feature = "qemu")]
         {
@@ -717,6 +801,123 @@ async fn main(spawner: Spawner) -> ! {
         ticks = ticks.wrapping_add(1);
         pace.next().await;
     }
+}
+
+/// The C++'s first boot lines: which pins and speeds the links use. Their numbers come
+/// from the pins themselves (src/pins.rs).
+fn boot_pin_lines(pins: &pins::Pins) {
+    use esp_hal::gpio::Pin as _;
+    info!(
+        "=== ESP32: AAV Controller (Rust, spine-esp32-umod {}) ===",
+        env!("CARGO_PKG_VERSION")
+    );
+    #[cfg(all(feature = "legacy-uart", feature = "uplink"))]
+    info!(
+        "Serial1 (ROS UART) @ GPIO{}/{}, {} 8N1",
+        pins.motor_pi_rx.number(),
+        pins.motor_pi_tx.number(),
+        legacy_link::BAUD
+    );
+    #[cfg(all(feature = "legacy-uart", not(feature = "uplink")))]
+    info!(
+        "Serial1 (ROS UART) @ GPIO{} (RX only), {} 8N1",
+        pins.motor_pi_rx.number(),
+        legacy_link::BAUD
+    );
+    #[cfg(feature = "can")]
+    info!(
+        "TWAI (CAN) @ GPIO{} TX, GPIO{} RX, {} kbit/s",
+        pins.can_tx.number(),
+        pins.can_rx.number(),
+        can::KBIT
+    );
+    info!(
+        "iBUS Serial2 @ GPIO{}, {}",
+        pins.ibus_rx.number(),
+        ibus::BAUD
+    );
+    #[cfg(not(feature = "qemu"))]
+    info!(
+        "I2C -> SDA:{} SCL:{}, {} kHz",
+        pins.sda.number(),
+        pins.scl.number(),
+        I2C_KHZ
+    );
+    #[cfg(feature = "qemu")]
+    info!(
+        "I2C -> SDA:{} SCL:{}, stand-in devices (QEMU)",
+        pins.sda.number(),
+        pins.scl.number()
+    );
+}
+
+/// The C++'s running lines (spine_board::cpp_log): its `STATUS:` line every 200 ms; a
+/// `FAULT` line when the faults change; a `JRK ... ERR` line when a Jrk's errors change.
+#[allow(clippy::too_many_arguments)]
+fn cpp_lines(
+    text: &mut TextLog,
+    now: u32,
+    ticks: u32,
+    out: &Outputs,
+    found: &DeviceCheck,
+    max_steering_angle: f32,
+    jrk_errors: (Option<ErrorFlags>, Option<ErrorFlags>),
+    last_faults: &mut u16,
+    last_jrk_errors: &mut (Option<ErrorFlags>, Option<ErrorFlags>),
+) {
+    use spine_board::cpp_log::{CppStatus, FaultChange, Jrk, JrkErrorLine};
+    if ticks % STATUS_EVERY_TICKS == CPP_STATUS_AT_TICK {
+        let line = CppStatus::new(out, max_steering_angle, found);
+        text.line(format_args!("{line}"));
+    }
+    if out.faults != *last_faults {
+        let line = FaultChange {
+            now_ms: now,
+            was: *last_faults,
+            now: out.faults,
+        };
+        text.line(format_args!("{line}"));
+        *last_faults = out.faults;
+    }
+    for (jrk, flags, last) in [
+        (Jrk::Steering, jrk_errors.0, &mut last_jrk_errors.0),
+        (Jrk::Brake, jrk_errors.1, &mut last_jrk_errors.1),
+    ] {
+        if flags != *last {
+            let line = JrkErrorLine {
+                jrk,
+                now_ms: now,
+                flags,
+            };
+            text.line(format_args!("{line}"));
+            *last = flags;
+        }
+    }
+}
+
+/// The C++'s `/scan` lines, once a scan is done: `=== I2C Scan ===`, a `Found:` line for
+/// each address, with its name when it is one of the car's four, `=== Scan done ===`.
+#[cfg(feature = "wifi-status")]
+fn scan_lines(
+    text: &mut TextLog,
+    scan: &spine_board::BusScan,
+    a: &spine_board::calibration::Addresses,
+) {
+    use spine_board::cpp_log::{scan_label, ScanFound};
+    text.line(format_args!("=== I2C Scan ==="));
+    let mut any = false;
+    for address in scan.found() {
+        let line = ScanFound {
+            address,
+            label: scan_label(address, a),
+        };
+        text.line(format_args!("  {line}"));
+        any = true;
+    }
+    if !any {
+        text.line(format_args!("  No I2C devices found!"));
+    }
+    text.line(format_args!("=== Scan done ==="));
 }
 
 /// One line on the USB cable: what the spine decided, and its faults. `STATUS` every

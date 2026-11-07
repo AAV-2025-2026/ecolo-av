@@ -21,7 +21,7 @@ It only moves pins: the deciding is in `spine-core`, the devices in `spine-board
 | RC override | iBUS on GPIO32 |
 | Speed | none on this board: open loop |
 | Watchdog | TIMG1, 100 ms |
-| Log | the USB cable: a `STATUS` line every 200 ms, an event line at each change, an `FSM` line with the five state regions (`spine_core::fsm`) and a `LINK` line with the frame counts, with each `STATUS`; once a second a `TICK` line (the worst gap between ticks and the overruns, the timing test's baseline) and a `HEALTH` line (below); at boot and every 10 s a `CONFIG` and a `DEVICES` line (below). With `json-log`: the JSON status lines instead (`firmware/status`), after the boot's text `CONFIG` and `DEVICES` |
+| Log | the USB cable: a `STATUS` line every 200 ms, an event line at each change, an `FSM` line with the five state regions (`spine_core::fsm`) and a `LINK` line with the frame counts, with each `STATUS`; once a second a `TICK` line (the worst gap between ticks and the overruns, the timing test's baseline) and a `HEALTH` line (below); at boot and every 10 s a `CONFIG` and a `DEVICES` line (below). The C++'s own lines too: its boot lines (pins, devices, `Ready`), its `STATUS:… \| STR:OK BRK:OK` every 200 ms, a `FAULT` line when the faults change, a `JRK … ERR` line when a Jrk's errors change (`docs/esp32-cpp-parity.md`). With `json-log`: the JSON status lines instead (`firmware/status`), after the boot's text lines |
 | First look | after `init`, before the first tick: each of the four I2C devices probed (no data), and each Jrk's feedback mode read (a RAM setting; never its errors, which a read clears). Read only, about 1 ms, the car already safe |
 
 The lines `pixi run esp first-check` reads (`docs/esp32-bench.md`, 2a):
@@ -57,7 +57,12 @@ The direction output is pin P00 of the PCA9555, not an ESP32 pin.
 | `estop-input` | the e-stop's spare contact on GPIO27, once wired (Q6) |
 | `qemu` | runs in Espressif's QEMU, never on the car: stand-in I2C devices, a busy-wait tick |
 | `json-log` | the JSON status lines (`firmware/status`: `hb`, `status` 5 a second, `event`, `health` once a second, `config` and `devices` every 10 s) on the USB cable in place of the text lines, 96 bytes a tick so the print never waits |
-| `wifi-status` | **off by default; read only.** Joins a WiFi and serves the status page, `/status.json`, `/health`, `/config`, `/scan` and a WebSocket of the status lines (10 a second). Below: "WiFi status". Not with `qemu` |
+| `wifi-status` | **off by default; read only.** Joins a WiFi and serves the status page, `/status.json`, `/health`, `/config`, `/scan`, a WebSocket of the status lines (10 a second) and one of the text log (`/log`). Below: "WiFi status". Not with `qemu` |
+| `wifi-update` | **off by default, never in the car-day build.** `wifi-status`, plus a firmware update over WiFi on port 8080, only while parked and with the password. Below: "Update over WiFi" |
+| `cpp-stop-centre` | a stop the spine makes centres the wheels, as the C++'s `jrkSafeStop()` (default: held) |
+| `cpp-rc-steering` | RC right turns 1950 counts from centre, left 1550, as the C++ (default: 1550 both) |
+| `cpp-throttle-ramp` | the C++'s DAC ramp: 6 codes up, 12 down a frame (default: 600 up a second, down at once). UART only |
+| `cpp-parity` | the three above: the C++'s behaviour, to compare on the bench (`docs/esp32-cpp-parity.md`) |
 
 | File | What |
 |---|---|
@@ -65,9 +70,11 @@ The direction output is pin P00 of the PCA9555, not an ESP32 pin.
 | `src/pins.rs` | the pin map, the one list |
 | `src/can.rs` | TWAI (CAN) at 500 kbit/s, 11-bit IDs, bus-off recovery every 1 s |
 | `src/report.rs` | the status lines from what the tick already has (`json-log`, `wifi-status`) |
-| `src/wifi.rs` | the WiFi station, its web server and WebSocket (`wifi-status`) |
+| `src/wifi.rs` | the WiFi station, its web server and WebSockets (`wifi-status`) |
+| `src/update.rs` | the update over WiFi (`wifi-update`); its checks are the `app-update` crate |
+| `partitions-ota.csv` | the flash layout with two OTA slots, for `wifi-update` |
 | `page.html` | the status page `wifi-status` serves: graphs of steering, brake and throttle |
-| `src/wifi_secrets.rs.example` | copy it to `src/wifi_secrets.rs` (git ignores it) for `wifi-status` |
+| `src/wifi_secrets.rs.example` | copy it to `src/wifi_secrets.rs` (git ignores it) for `wifi-status`; `UPDATE_PASSWORD` for `wifi-update` |
 | `build.rs` | the build's commit and features for the `hb` line; the WiFi credentials' copy |
 | `rust-toolchain.toml` | the `esp` toolchain |
 
@@ -90,6 +97,11 @@ The direction output is pin P00 of the PCA9555, not an ESP32 pin.
   has; they read no device for it (reading a Jrk's errors clears them) and change no input.
 - **`wifi-status` is read only:** no path takes a command, a setting or a firmware update.
   It is off by default, and the car-day build (`tools/car_day_build.sh`) leaves it off.
+- **`wifi-update` writes only while parked:** nobody driving, not armed, throttle 0, brake
+  full on, checked at every 4 KB; only with the password; only a valid image of this
+  program; the boot switches only after a full write and read-back. Never in the car-day build.
+- **The default build moves the car as before:** the C++'s behaviours that change how it
+  moves are features (`cpp-*`); the default only gains log lines.
 - **The tick never waits on the WiFi**: lines are handed over without waiting, and a slow
   reader loses lines (a gap in `seq`), never time. The timing test below is the proof.
 - **The WiFi's password is never in git, a log or a line.** It lives only in
@@ -105,6 +117,7 @@ The direction output is pin P00 of the PCA9555, not an ESP32 pin.
 - With `can`: sends and receives on the CAN bus through TWAI.
 - Writes logs to UART0 (the USB cable); drives the four LEDs.
 - The hardware watchdog resets the chip if a tick hangs.
+- With `wifi-update`: writes the other OTA slot of the flash, then restarts the chip.
 - With `wifi-status`: the radio, as a WiFi station; a web server on port 80; with `/scan`,
   zero-length I2C writes to 0x01 to 0x77, 4 a tick, only while stopped and not armed.
 
@@ -125,11 +138,11 @@ logs, both forms, and two recorded in QEMU on 7 Nov (text and `json-log`).
 It is a workspace of its own: it builds only for `xtensa-esp32-none-elf`, with the `esp`
 toolchain (`rust-toolchain.toml`). `tools/test.sh` runs `tools/esp32.sh check` and the
 QEMU check, where that toolchain is installed. The check runs `cargo fmt`, one build, and
-clippy on eight feature mixes:
+clippy on thirteen feature mixes, and links the biggest (`json-log,wifi-update`):
 
 | Checked | Never checked |
 |---|---|
-| the default (with `uplink`); `can,estop-input`; `legacy-uart` alone; `legacy-uart,qemu`; `legacy-uart,link-v1`; `qemu,uplink`; `json-log`; `json-log,wifi-status` (with the example's made-up credentials) | `link-v1` with `uplink`; `can` without `estop-input`; `estop-input` on the UART link; `json-log` in QEMU (tried by hand, 7 Nov) |
+| the default (with `uplink`); `can,estop-input`; `legacy-uart` alone; `legacy-uart,qemu`; `legacy-uart,link-v1`; `qemu,uplink`; `json-log`; `json-log,wifi-status` and `wifi-status` (with the example's made-up credentials); `json-log,wifi-update` (the same; its update password is always refused); `cpp-parity`; `can,estop-input,cpp-stop-centre,cpp-rc-steering` | `link-v1` with `uplink`; `can` without `estop-input`; `estop-input` on the UART link; `json-log` in QEMU (tried by hand, 7 Nov); the `cpp-*` features in QEMU; `wifi-update` without `json-log` |
 
 The logic is tested on a laptop: `cd firmware/spine && cargo test`.
 
@@ -180,12 +193,13 @@ Read only, off by default, **never flashed yet**. The plan's step 8
 
 | Path, port 80 | Gives |
 |---|---|
-| `/` | `page.html`: a big banner, "Pi link: OK" (green), "NO FRAMES", "COUNTER FROZEN: is the mux running?", "BAD FRAMES"; the devices at boot; steering, brake and throttle graphs (asked, position, low to high), pause, a window, a line filter |
+| `/`, `/status` | `page.html`: a big banner, "Pi link: OK" (green), "NO FRAMES", "COUNTER FROZEN: is the mux running?", "BAD FRAMES"; the devices at boot; steering, brake and throttle graphs (asked, position, low to high), pause, a window, a line filter |
 | `/status.json` | the latest `status` line (`{}` before the first) |
 | `/health` | the latest `health` line: the link's verdict, the age of its last frame, the counter moving, frames, bad, skipped, the devices, the faults, the uptime, the last reset, the build |
 | `/config` | the latest `config` line: the build, its features, the numbers it runs with |
-| `/scan` | starts an I2C scan if none is going; `{"scan":"running","found":[4,5]}`. It waits while armed or driving |
+| `/scan` | starts an I2C scan if none is going; `{"scan":"running","found":[4,5],"names":[…]}`, and the C++'s `Found: 0x05 <- JRK steer` lines in the log when done. It waits while armed or driving |
 | `/ws` | a WebSocket: every line, as text; two clients at most; a slow one loses lines |
+| `/log` | a WebSocket of the text log, as the C++'s on port 81 |
 
 ### Set it up
 
@@ -202,13 +216,40 @@ Read only, off by default, **never flashed yet**. The plan's step 8
 
 | Build | App image | RAM, static |
 |---|---|---|
-| default | 143 KB | 197 KB (data 8.6 KB + bss 188 KB) |
-| `json-log` | 150 KB | 197 KB |
-| `wifi-status` | 736 KB of the 4 MB partition | 197 KB (data 17.5 KB + bss 179 KB, with the radio's 72 KB heap) |
+| default | 157 KB | data 8.7 KB + bss 10.4 KB; the rest of DRAM is the stack |
+| `wifi-status` | 793 KB of the 4 MB partition | data 17.3 KB + bss 101 KB; the radio's 72 KB heap in the bootloader's RAM (`dram2`) |
+| `json-log,wifi-update` | 874 KB of a 1.9 MB OTA slot | data 17.9 KB + bss 118 KB; the same heap; 56 KB left for the stack |
+
+The radio's heap sits in `dram2`, the RAM the bootloader used: beside the statics it
+pushed them past the end of DRAM, and the link failed.
 
 The crates: `esp-radio` 1.0.0-beta.1 (WiFi), `esp-alloc` 0.11 (its heap), `embassy-net`
 0.9.1, `picoserve` 0.20.1 (HTTP and WebSocket). They resolve with esp-hal 1.2.2 and
 esp-rtos 0.4.0 as they are; `build-std` builds `alloc` too.
+
+## Update over WiFi (`wifi-update`)
+
+Off by default, **never flashed yet**, never in the car-day build. The 2025-26 C++'s
+`/update`, with the checks it didn't have (`docs/esp32-cpp-parity.md`).
+
+| Step | How |
+|---|---|
+| 1 | put a password of 12 characters or more in `src/wifi_secrets.rs`'s `UPDATE_PASSWORD`; the example's is always refused |
+| 2 | once, over USB: `espflash flash --partition-table partitions-ota.csv` with the `wifi-update` build. The default table has no OTA slots |
+| 3 | `espflash save-image --chip esp32 <the ELF> app.bin` |
+| 4 | the car parked, then `curl --data-binary @app.bin -H "X-Update-Password: …" http://<board>:8080/update` |
+
+| Reply | Means |
+|---|---|
+| 200 | written, read back, the slot's SHA-256 good; it restarts in 1 s, once parked |
+| 400, 413 | not an ESP32 app image of this program; too big for the slot |
+| 403 | the password is wrong (wait 10 s), or none is set up |
+| 409 | the car isn't parked, an update is running, or no OTA slots |
+| 500 | a flash write or the read-back failed: the boot slot is unchanged |
+
+The password crosses the WiFi in plain HTTP: the bench network only. Each 4 KB erase holds
+the tick about 45 ms, while parked; a slow
+flash chip's (up to 400 ms) trips the watchdog, and the chip restarts into the old program.
 
 ## Bench test: the tick's timing with the radio
 
