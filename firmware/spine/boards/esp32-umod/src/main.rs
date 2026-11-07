@@ -34,7 +34,14 @@
 //! | the wheel speed | none on this board (the encoder talks to the Motor-Pi): the speed loop runs open loop |
 //! | the e-stop's spare contact | an input, with `estop-input`, once it is wired (Q6) |
 //! | the hardware watchdog | TIMG1's: fed after every tick; a hang or a panic resets the chip within 100 ms |
-//! | the log | UART0, the USB cable: a status line every 200 ms, as the C++ printed, an event line at each change, and (`legacy-uart`) a link line with the frame counts |
+//! | the log | UART0, the USB cable: a status line every 200 ms, as the C++ printed, an event line at each change, and (`legacy-uart`) a link line with the frame counts; a tick-timing line once a second |
+//!
+//! Two features report more, and neither changes what the spine does:
+//!
+//! | Feature | Reports |
+//! |---|---|
+//! | `json-log` | the JSON status lines of `firmware/status` on the USB cable instead of the text lines, a chunk a tick (`report`) |
+//! | `wifi-status` | the same lines over WiFi, read only: a page, `/status.json`, `/scan`, a WebSocket (`wifi`). Off by default; its credentials come from an untracked file |
 //!
 //! With `--features qemu`, it runs in Espressif's QEMU instead (`tools/esp32.sh qemu-check`;
 //! `docs/esp32-bench.md`, "Before the board: the emulator"). Two things differ, both only
@@ -67,10 +74,22 @@ compile_error!("`qemu` runs the Motor-Pi UART link only: QEMU has no CAN (TWAI)"
 compile_error!("`link-v1` is a frame of the Motor-Pi UART link: build it with `legacy-uart`");
 #[cfg(all(feature = "uplink", not(feature = "legacy-uart")))]
 compile_error!("`uplink` sends on the Motor-Pi UART link's TX: build it with `legacy-uart`");
+#[cfg(all(feature = "wifi-status", feature = "qemu"))]
+compile_error!("`wifi-status` needs the radio and Embassy's timer: QEMU has neither");
+#[cfg(all(feature = "wifi-status", not(wifi_secrets)))]
+compile_error!(
+    "`wifi-status` needs the WiFi's name and password: copy src/wifi_secrets.rs.example to \
+     src/wifi_secrets.rs and fill it in (git ignores that file; never commit, log or copy \
+     the password). README.md, \"WiFi status\", says more"
+);
 
 #[cfg(feature = "can")]
 mod can;
 mod pins;
+#[cfg(any(feature = "json-log", feature = "wifi-status"))]
+mod report;
+#[cfg(feature = "wifi-status")]
+mod wifi;
 
 use core::cell::RefCell;
 use embassy_executor::Spawner;
@@ -123,6 +142,24 @@ const STATUS_EVERY_TICKS: u32 = 20;
 /// doesn't lengthen their burst.
 const TIMING_EVERY_TICKS: u32 = 100;
 const TIMING_AT_TICK: u32 = 50;
+
+/// With `json-log`: the most bytes of status lines put on the USB cable each tick. At
+/// 115200 baud the UART sends about 115 bytes in 10 ms, so its 128-byte FIFO is empty
+/// again by the next tick and the print never waits (it waits with interrupts off).
+#[cfg(feature = "json-log")]
+const LOG_BYTES_PER_TICK: usize = 96;
+
+/// With `wifi-status`: I2C addresses probed each tick during a `/scan`, after the tick's
+/// own transfers: about 0.1 ms each at 100 kHz.
+#[cfg(feature = "wifi-status")]
+const SCAN_PER_TICK: usize = 4;
+
+/// The RC channels a status line carries: the six the car's receiver uses.
+#[cfg(any(feature = "json-log", feature = "wifi-status"))]
+const RC_CHANNELS_SHOWN: usize = 6;
+
+/// The text lines on the USB cable: off with `json-log`, whose lines take their place.
+const TEXT_LOG: bool = !cfg!(feature = "json-log");
 
 /// The status LED blinks slowly while commands come in, fast while they don't.
 const BLINK_OK_TICKS: u32 = 50;
@@ -289,7 +326,7 @@ fn now_ms() -> u32 {
 // --- The program -------------------------------------------------------------------------
 
 #[esp_rtos::main]
-async fn main(_spawner: Spawner) -> ! {
+async fn main(spawner: Spawner) -> ! {
     enable_fpu();
     esp_println::logger::init_logger(log::LevelFilter::Info);
     let p = esp_hal::init(esp_hal::Config::default());
@@ -330,6 +367,13 @@ async fn main(_spawner: Spawner) -> ! {
         },
         esp_hal::system::reset_reason()
     );
+    #[cfg(any(feature = "json-log", feature = "wifi-status"))]
+    let mut reporter = report::Reporter::new(
+        esp_hal::rng::Rng::new().random(),
+        esp_hal::system::reset_reason(),
+    );
+    #[cfg(feature = "json-log")]
+    let mut trickle: status_lines::Trickle = status_lines::Trickle::new();
 
     // The pin map (src/pins.rs, docs/rust-firmware.md).
     let pins = pins::take_pins!(p);
@@ -450,6 +494,18 @@ async fn main(_spawner: Spawner) -> ! {
         );
     }
 
+    // The WiFi tasks, on this executor: each await gives the tick its turn (wifi.rs).
+    #[cfg(feature = "wifi-status")]
+    wifi::start(spawner, p.WIFI);
+    #[cfg(not(feature = "wifi-status"))]
+    let _ = spawner;
+    #[cfg(feature = "wifi-status")]
+    let mut scan = spine_board::BusScan::new();
+    // From here on the JSON lines own the cable: only warnings may come between them.
+    if cfg!(feature = "json-log") {
+        log::set_max_level(log::LevelFilter::Warn);
+    }
+
     let mut pace = Pace::new();
     let mut ticks: u32 = 0;
     let mut timing = TickTiming::new(TICK.as_micros() as u32);
@@ -472,17 +528,71 @@ async fn main(_spawner: Spawner) -> ! {
         let counter = -1;
         let summary = Summary::from(&out);
         if last != Some(summary) {
-            log_line("EVENT", now, &out, counter);
+            if TEXT_LOG {
+                log_line("EVENT", now, &out, counter);
+            }
             last = Some(summary);
         }
-        if ticks.is_multiple_of(STATUS_EVERY_TICKS) {
+        if TEXT_LOG && ticks.is_multiple_of(STATUS_EVERY_TICKS) {
             log_line("STATUS", now, &out, counter);
             fsm_line(now, &spine.state());
             #[cfg(feature = "legacy-uart")]
             link_line(now, &spine.link().stats());
         }
-        if ticks % TIMING_EVERY_TICKS == TIMING_AT_TICK {
+        if TEXT_LOG && ticks % TIMING_EVERY_TICKS == TIMING_AT_TICK {
             timing_line(now, &timing);
+        }
+        #[cfg(any(feature = "json-log", feature = "wifi-status"))]
+        {
+            #[cfg(feature = "legacy-uart")]
+            let link = {
+                let l = spine.link();
+                Some((l.stats(), l.last_frame()))
+            };
+            #[cfg(not(feature = "legacy-uart"))]
+            let link = None;
+            let actuators = spine.actuators();
+            let (steer_counts, brake_counts) = (
+                actuators.steering_counts().unwrap_or(0),
+                actuators.brake_counts().unwrap_or(0),
+            );
+            let (dac, reverse) = (actuators.throttle_code(), actuators.reverse());
+            let channels = spine
+                .rc_channels()
+                .map_or(&[][..], |c| &c.0[..RC_CHANNELS_SHOWN]);
+            let snapshot = report::Snapshot {
+                now_ms: now,
+                out: &out,
+                report: spine.last_report(),
+                channels,
+                steer_counts,
+                brake_counts,
+                dac,
+                reverse,
+                link,
+                timing: &timing,
+            };
+            reporter.tick(ticks, &snapshot, |line| {
+                // A full queue drops the line whole: the reader sees the gap in `seq`.
+                #[cfg(feature = "json-log")]
+                let _ = trickle.push(line);
+                #[cfg(feature = "wifi-status")]
+                wifi::publish(line);
+            });
+        }
+        #[cfg(feature = "json-log")]
+        if let Some(chunk) = trickle.next_chunk(LOG_BYTES_PER_TICK) {
+            esp_println::Printer::write_bytes(chunk);
+        }
+        // A bus scan for /scan: after the tick's own transfers, and only while stopped.
+        #[cfg(feature = "wifi-status")]
+        {
+            if wifi::take_scan_request() {
+                scan.start();
+            }
+            let busy = out.armed || out.mode != Mode::Manual;
+            scan.step(&mut *i2c_bus.borrow_mut(), busy, SCAN_PER_TICK);
+            wifi::set_scan(&scan);
         }
         #[cfg(feature = "qemu")]
         {

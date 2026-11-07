@@ -1,0 +1,2 @@
+# The WiFi credentials (wifi-status): never in git. Copy src/wifi_secrets.rs.example.
+src/wifi_secrets.rs

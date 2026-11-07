@@ -4,7 +4,8 @@
 # usage: tools/esp32.sh tools          install Espressif's Rust and espflash (once)
 #        tools/esp32.sh build [args]   build it (args go to cargo: --no-default-features --features can)
 #        tools/esp32.sh flash [args]   build, flash it on the USB cable, show its log (args go to espflash)
-#        tools/esp32.sh check          build both links (and version 1 frames), with clippy; "skipped" without the toolchain
+#        tools/esp32.sh check          build both links (and version 1 frames), the JSON log and the WiFi
+#                                      status, with clippy; "skipped" without the toolchain
 #        tools/esp32.sh qemu-tools     download Espressif's QEMU into vendor/qemu (once; macOS arm64)
 #        tools/esp32.sh qemu-check [args]  build with --features qemu,uplink, boot it in QEMU, and
 #                                      check it brakes when the Motor-Pi's frames stop, its
@@ -176,11 +177,17 @@ case "${1:-}" in
     cargo clippy -q --release --locked --features link-v1 --target-dir target/v1 -- -D warnings
     cargo clippy -q --release --locked --features uplink --target-dir target/uplink -- -D warnings
     cargo clippy -q --release --locked --features qemu,uplink --target-dir target/qemu -- -D warnings
+    cargo clippy -q --release --locked --features json-log --target-dir target/json -- -D warnings
+    # The WiFi build with the example's made-up name and password: it checks the code,
+    # and is never flashed (README.md, "WiFi status").
+    AAV_WIFI_SECRETS=$BOARD/src/wifi_secrets.rs.example \
+      cargo clippy -q --release --locked --features json-log,wifi-status \
+      --target-dir target/wifi -- -D warnings
     cargo build -q --release --locked
-    echo "builds: the Motor-Pi UART link (version 2, the default; version 1; with the uplink), CAN, and the QEMU builds"
+    echo "builds: the Motor-Pi UART link (version 2, the default; version 1; with the uplink), CAN, the QEMU builds, the JSON log and the WiFi status"
     ;;
   *)
-    sed -n '2,13p' "$0" >&2
+    sed -n '2,14p' "$0" >&2
     exit 2
     ;;
 esac
