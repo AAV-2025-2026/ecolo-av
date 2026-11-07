@@ -292,7 +292,7 @@ DEFAULT_CONTROLLER = 'mppi'
 # The trial path followers (docs/trials.md, aav_track): each stands in for controller_server's
 # FollowPath with tracker:=<name>. 'none' keeps controller_server (CONTROLLERS) following.
 # Apart from CONTROLLERS, not in it: nav2_tuned treats anything not mppi as RPP.
-TRACKERS = ('none', 'pure_pursuit', 'stanley', 'lqr', 'mpc', 'mpc_full')
+TRACKERS = ('none', 'pure_pursuit', 'stanley', 'lqr', 'mpc', 'mpc_full', 'mpc_lag')
 DEFAULT_TRACKER = 'none'
 
 
@@ -402,7 +402,8 @@ def track_params(nav2, cfg, ego=None, max_speed=None):
     nav2: nav2.yaml as loaded (not tuned: nav2_tuned puts MPPI's block under FollowPath);
     cfg: vehicle.yaml (load()); ego: ego.yaml's ros__parameters, for its steering rate.
     The cruise speed is RPP's desired_linear_vel, or `max_speed` (sim_speed:=); the goal
-    and progress checks are controller_server's; speeding up is the velocity smoother's.
+    and progress checks are controller_server's; speeding up and slowing down are the
+    velocity smoother's.
     """
     server = nav2['controller_server']['ros__parameters']
     goal = server[server['goal_checker_plugins'][0]]
@@ -419,6 +420,7 @@ def track_params(nav2, cfg, ego=None, max_speed=None):
         'odom_topic': server['odom_topic'],
         'cruise_speed': float(max_speed) if max_speed else float(rpp['desired_linear_vel']),
         'acceleration': float(smoother['max_accel'][0]),
+        'deceleration': abs(float(smoother['max_decel'][0])),
         'max_brake': float(act['max_brake']),
         'lookahead_min': float(rpp['min_lookahead_dist']),
         'lookahead_max': float(rpp['max_lookahead_dist']),

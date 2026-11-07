@@ -21,6 +21,7 @@ and is **scored on the same routes**. It becomes the default only once it wins.
 > - **KISS-ICP into the local EKF** (`kiss_ekf:=true`), 1 Nov: its twist beside the wheels and IMU. Gazebo, 5 runs: **no clear win yet** (ekf_local 0.30-1.27 m per 100 m with it, 0.44-1.91 without; the spread is the Mac's load). Its covariance is now measured. [Results](#kiss-icp-into-the-local-ekf-1-nov).
 > - **The diffusion planner** (`planner:=diffusion`, `aav_diffusion_planner`), 2 Nov: a model draws 16 paths, a guard checks them, the lattice's path if none passes or it's late. Gazebo, 2 runs: **every leg**, 178 and 182 s a tour (the lattice 186 and 188 s); **63 % of plans from the model**, 37 % the lattice's (17 % late, 20 % no sample passed). [Results](#diffusion-2-nov-a-model-draws-the-lattice-guards).
 > - **3 Nov, everything for 0.2** (Gazebo, 3 runs each): every switch drives a leg; diffusion every leg, **73 %** of plans from the model; NDT into the EKF **17 → 1.8 cm**, every leg; voxels slower, and once drove through the post. **No default changed.** [Results](#3-nov-everything-for-02).
+> - **7 Nov, the lag-aware MPC** (`tracker:=mpc_lag`): plans steering and speed through the car's own lags; tells ego to keep its lead off. Pretend car: no speed overshoot (others 14 %), and with the lags doubled the U-turn at 2 m/s off by **0.17 m** (MPC 0.36, LQR 0.27). [Results](#lag-aware-mpc-7-nov-mpc_lag).
 > - The design: `docs/designs/2026-10-29_trials.md`.
 
 ## What is on trial
@@ -31,6 +32,7 @@ and is **scored on the same routes**. It becomes the default only once it wins.
 | LQR steering, gains by speed and bend, with a preview | our pure pursuit | `tracker:=lqr` |
 | MPC steering, within the steering's limits | our pure pursuit | `tracker:=mpc` |
 | MPC speed and steering together (sets its own speed) | MPC, MPPI | `tracker:=mpc_full` |
+| MPC through the car's lags (sets its own speed; lag-aware) | MPPI, RPP, MPC | `tracker:=mpc_lag` |
 | our pure pursuit (the control) | Nav2's RPP and MPPI | `tracker:=pure_pursuit` |
 | AMCL | the global EKF | `amcl:=true` |
 | NDT on a saved lidar map | the global EKF, and AMCL | `ndt:=true` (after `pixi run ndt-map drive`) |
@@ -521,6 +523,101 @@ U-turn was the planner's clockwise loop, to the south wall.
 2. `mpc_full` slows only when its model says the steering can't keep up. Should it also
    value slowing for the U-turn at 1 m/s (a cost on the steering's rate per second)?
 3. The planner's growing loops: replan less often in a U-turn, or keep the old path?
+
+## Lag-aware MPC, 7 Nov (`mpc_lag`)
+
+Ben, 7 Nov: "have the algorithms know about lag". Two parts: ego gets a **lead** that
+cancels the lag for every driver (another branch), and this tracker knows the lag
+itself. Only one may cancel it, or the car gets twice the correction.
+
+### What it knows
+
+```
+set speed ──> spine's PI ──> throttle, brake (lags) ──> speed (drag)
+steering  ──> dead time ──> motor (0.8 rad/s) ──> linkage (lag) ──> wheels ──> the car
+```
+
+| It models | From |
+|---|---|
+| the spine's speed loop (`default` or `smooth`) | spine-core's gains (as aav_gazebo's `SpeedLoop`) |
+| throttle and brake lags, drag, full brake | `vehicle.yaml` `actuators:` |
+| steering motor's rate, deadband, linkage lag, offset | `vehicle.yaml` `actuators:` |
+| dead times, and the commands already sent | `*_dead_time` (0 until measured), plus `latency` 0.1 s |
+| the car | the kinematic bicycle, in the path's frame |
+
+`latency` is the ROS chain's own delay (ego's 50 Hz ramp, the 20 Hz hold, the adapter).
+Without it the pretend car's U-turn at 2 m/s was off by 0.14 m; with it, 0.09 m.
+
+### How it plans (every 50 ms)
+
+1. Estimate the state: pose and speed measured; throttle, brake, motor, wheels and the
+   speed loop's integral from what it sent.
+2. Run last tick's plan through the model; linearise it (one numpy call a step).
+3. One QP (our OSQP-style solver), 1.5 s ahead, in steering **and** set speed.
+4. Send the first steering and set speed.
+
+**Hard limits:** full lock, the steering rate (the tighter of ego and the motor), the
+set speed's rise and fall (the smoother's 1.0 and 2.0 m/s²), 0 to cruise. **Soft:** the
+speed under the bend's and the goal's limit.
+
+### It tells ego (the `lag_aware` contract)
+
+`/drivers/nav/lag_aware` (`std_msgs/Bool`, reliable, transient local, depth 1): **true**
+while `mpc_lag` drives, **false** for every other tracker and when the node stops. MPPI
+and RPP publish nothing: ego keeps its lead on. The exact form is the ego branch's; to
+be checked when the two merge.
+
+### Results: the pretend car (ego, then Gazebo's actuator model)
+
+Worst off the path (m). "x2": the car's lags twice what the trackers were told.
+
+| Drive | Lags | pure pursuit | LQR | MPC | `mpc_full` | **`mpc_lag`** |
+|---|---|---:|---:|---:|---:|---:|
+| U-turn, 2 m/s | x1 | 0.38 | **0.08** | 0.09 | 0.12 | 0.09 |
+| U-turn, 2 m/s | x2 | 0.34 | 0.27 | 0.36 | **0.10** | 0.17 |
+| U-turn, 2 m/s | x3 | 0.31 | 0.70 | 0.70 | **0.30** | 0.50 |
+| U-turn, 1 m/s | x1 | 0.12 | 0.07 | **0.03** | 0.10 | 0.04 |
+| U-turn, 1 m/s | x2 | 0.10 | 0.05 | 0.10 | 0.07 | 0.05 |
+| 8 m bend, 3 m/s | x1 | 0.16 | 0.03 | 0.02 | 0.03 | **0.02** |
+| 8 m bend, 3 m/s | x2 | 0.13 | 0.04 | 0.04 | 0.02 | **0.02** |
+| Top speed (set: 1 m/s) | x1 | 1.14 | 1.14 | 1.14 | 1.15 | **1.00** |
+
+What it shows:
+
+- **Speed:** only `mpc_lag` sees the speed loop's 14 % overshoot coming, and eases
+  the set speed in. No overshoot at any lag.
+- **Steering, lags as told:** as good as MPC and LQR; no better.
+- **Lags doubled:** better than MPC and LQR (0.17 against 0.36 and 0.27 m), but
+  `mpc_full` is better still: it plans over distance and slows itself to swing.
+- **Lags tripled:** it falls behind `mpc_full` and pure pursuit. A model it trusts
+  that is wrong by 3x hurts: the car-day numbers (TODO 52b) matter.
+
+### Time
+
+| Where | Mean | Worst |
+|---|---:|---:|
+| Ben's Mac, quiet | 7 ms | 16 ms |
+| Ben's Mac, load 30 (other simulators) | 11-17 ms | 60-170 ms |
+| The Orin (estimate: 2-3 times slower in Python) | 15-20 ms | 40-50 ms |
+
+The tick is 50 ms. In Python it fits on average, but its worst ticks on the Orin
+would be close to a whole tick. **It should move to Rust** before it drives the car
+(CLAUDE.md: Rust where it pays off), with the shared car model's Rust twin: the same
+QP there is well under 1 ms.
+
+### Results: Gazebo
+
+Running (7 Nov): the lot tour against MPPI, RPP and MPC, with the lags as told and doubled.
+
+### Not done yet
+
+- The LQI speed loop (`speed_loop:=lqi`) isn't modelled; `mpc_lag` doesn't follow
+  `speed_loop:=` on its own (set `mpc_lag.speed_loop`).
+- Today's car runs the ESP32's open speed loop, not the spine's PI: not modelled.
+- Dead times act on the set speed, not after the speed loop (an approximation; they are 0
+  until measured).
+- `lag_model.py` is a stand-in for the shared car model (`aav_description`
+  `car_model.py`), the same spec; swap at the merge.
 
 ## Planners, 29 Oct: hybrid, lattice and smac2d
 

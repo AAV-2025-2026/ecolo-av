@@ -466,6 +466,8 @@ def test_track_params_are_nav2s_own_checks_and_speeds():
     assert p['progress_time'] == server['progress_checker']['movement_time_allowance']
     assert p['cruise_speed'] == server['FollowPath']['desired_linear_vel']
     assert p['rate_hz'] == server['controller_frequency']
+    smoother = nav2['velocity_smoother']['ros__parameters']
+    assert p['deceleration'] == -smoother['max_decel'][0] > 0
     assert p['odom_topic'] == '/localization/odom/local'
     assert p['stamped'] is True
     assert p['wheelbase'] == cfg['vehicle']['wheelbase']

@@ -20,10 +20,11 @@ controller_server keeps running; its own action is renamed follow_path_unused
 | `lqr` | -K x about the path's bend, K by speed and bend (Riccati), + a 2 s preview of the bends ahead | `trackers/lqr.py` |
 | `mpc` | a 1.5 s plan of steering, within full lock and the steering rate (scipy) | `trackers/mpc.py` |
 | `mpc_full` | a 9 m plan of speed and steering together, within the steering, throttle and brake (its own speed) | `trackers/mpc_full.py` |
+| `mpc_lag` | a 1.5 s plan of steering and set speed through the car's lags: the spine's speed loop, throttle, brake, the steering motor and linkage, dead times (its own speed; **lag-aware**) | `trackers/mpc_lag.py` |
 
 Every tracker drives with **one speed policy** (`speed.py`) and Nav2's **own checks**
-(`checks.py`), so a trial compares steering only. The exception is `mpc_full`: it plans
-its own speed (`Command.speed`), within the policy's limits.
+(`checks.py`), so a trial compares steering only. The exceptions are `mpc_full` and
+`mpc_lag`: they plan their own speed (`Command.speed`), within the policy's limits.
 
 ```sh
 pixi run sim world:=test_lot reversing:=false tracker:=lqr
@@ -38,7 +39,7 @@ pixi run measure controllers --trackers pure_pursuit lqr --tours lot --legs 1
 |---|---|
 | Action server | `/follow_path` (`nav2_msgs/action/FollowPath`): the newest path replaces the last without a stop |
 | Subscribes | `/localization/odom/local` (`nav_msgs/Odometry`); `/tf` (map -> odom, once per path) |
-| Publishes | `/cmd_vel_nav` (`geometry_msgs/TwistStamped`, as nav2.yaml's `enable_stamped_cmd_vel`), `/drivers/nav/track/status` (`diagnostic_msgs/DiagnosticStatus`: loop time, missed ticks, cross track, steering) |
+| Publishes | `/cmd_vel_nav` (`geometry_msgs/TwistStamped`, as nav2.yaml's `enable_stamped_cmd_vel`), `/drivers/nav/track/status` (`diagnostic_msgs/DiagnosticStatus`: loop time, missed ticks, cross track, steering), `/drivers/nav/lag_aware` (`std_msgs/Bool`, latched: true while the tracker models the lags itself, `mpc_lag`, so ego's lead stays off; false otherwise and as the node stops) |
 
 Results: succeeded; aborted with Nav2's codes `FAILED_TO_MAKE_PROGRESS`, `TF_ERROR`,
 `INVALID_PATH`, `UNKNOWN` (no odometry); canceled.
@@ -50,7 +51,7 @@ ego.yaml; nothing copied):
 |---|---|
 | `rate_hz`, `odom_topic`, `stamped` | controller_server's `controller_frequency`, `odom_topic`, `enable_stamped_cmd_vel` |
 | `cruise_speed` | RPP's `desired_linear_vel`, or `max_speed:=` (sim_speed) |
-| `acceleration` | the velocity smoother's `max_accel` |
+| `acceleration`, `deceleration` | the velocity smoother's `max_accel`, `max_decel` |
 | `max_brake` | vehicle.yaml `actuators.max_brake` (half is planned: `approach.planned_deceleration`) |
 | `lookahead_min`, `lookahead_max`, `lookahead_time`, `transform_tolerance` | RPP's |
 | `xy_goal_tolerance`, `yaw_goal_tolerance` | `general_goal_checker` |
@@ -59,9 +60,10 @@ ego.yaml; nothing copied):
 | `max_steering_rate` | the lower of vehicle.yaml `steer_rate` and ego.yaml `max_steering_rate` |
 
 From `config/track.yaml`: `lateral_accel` (1.0 m/s², slow for bends), `odom_timeout`, and
-each tracker's gains (`stanley.*`, `lqr.*`, `mpc.*`, `mpc_full.*`; every tracker's are declared).
-`mpc_full` also takes `cruise_speed`, `acceleration`, `max_brake`, `lateral_accel` and
-vehicle.yaml's `max_accel` (the throttle).
+each tracker's gains (`stanley.*`, `lqr.*`, `mpc.*`, `mpc_full.*`, `mpc_lag.*`; every
+tracker's are declared). `mpc_full` also takes `cruise_speed`, `acceleration`, `max_brake`,
+`lateral_accel` and vehicle.yaml's `max_accel` (the throttle). `mpc_lag` takes those,
+`deceleration`, and vehicle.yaml's whole `actuators:` section (`lag_model.CarParams`).
 
 **Live swap (sim only).** `live_swap` (default false; `sim.launch.py` sets it through
 `navigation.launch.py live_swap:=true`, the car never does): `ros2 param set /track
@@ -79,8 +81,9 @@ Modules (all but `track_node.py` have no ROS):
 | `checks.py` | `GoalCheck`, `ProgressCheck`: Nav2's SimpleGoalChecker and PoseProgressChecker |
 | `speed.py` | `SpeedPolicy`: cruise, `line.turn_speed_limit` for a bend ahead, `approach.Approach` to stop |
 | `trackers/__init__.py` | `State`, `Limits`, `Command`, `Tracker`, `SteerLag`, `make(name, limits, model)` |
-| `trackers/*.py` | the five trackers |
-| `qp.py` | a small QP solver (OSQP's ADMM, numpy) for `mpc_full` |
+| `trackers/*.py` | the six trackers |
+| `qp.py` | a small QP solver (OSQP's ADMM, numpy) for `mpc_full` and `mpc_lag` |
+| `lag_model.py` | the car with its lags, in the path's frame, on arrays: `CarParams` (vehicle.yaml), `SpeedLoopParams` (the spine's PI), `step()`. A stand-in for the shared car model (`aav_description` `car_model.py`), same spec |
 
 Built from: `aav_drive_to_point`'s `line.py` (`pursuit_curvature`, `turn_speed_limit`)
 and `approach.py`; `aav_ego`'s `vehicle_model.py` (`VehicleModel.lateral`, for LQR and
@@ -116,4 +119,6 @@ runs it). In Gazebo: `pixi run measure controllers --trackers ...`.
 | `test_speed.py` | cruise, slow before a bend, stop at the end |
 | `test_trackers.py` | each tracker on a pretend car (`sim_car.py`: ego's model, Gazebo's actuators): straight, a curve, a 1 m offset, at 1 and 3 m/s; the forward U-turn in a 14 m lane, at the planner's radius and at full lock; limits; LQR's schedule and preview; mpc_full's speed (slows to swing, stops at the end, throttle and brake); MPC's step times |
 | `test_qp.py` | the QP solver against hand answers and scipy's SLSQP |
+| `test_lag_model.py` | the model's spec (lags, rate, deadband, brake, bicycle); its speed loop and its car against aav_gazebo's |
+| `test_trackers.py` (mpc_lag) | no speed overshoot; the 2 m/s U-turn with vehicle.yaml's lags and with them doubled (`follow(lag_scale=2)`); the stop; the dead-time buffer; step time |
 | `test_track_node.py` | the node with ROS, on a free domain: a path to success, a newer path replacing the last without a stop, an empty path refused, a live swap refused without `live_swap` and carried out mid-path with it (skips without the built workspace) |

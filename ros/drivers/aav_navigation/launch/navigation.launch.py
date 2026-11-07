@@ -58,7 +58,8 @@ Trials (docs/trials.md), each beside the default and scored by pixi run measure 
                           /drivers/nav/diffusion/lattice_plan. diffusion_model:= (empty:
                           models/diffusion/planner.onnx), diffusion_provider:= (ONNX
                           Runtime's). car.launch.py refuses it
-  tracker:=pure_pursuit|stanley|lqr|mpc|mpc_full  aav_track's track node follows the path instead
+  tracker:=pure_pursuit|stanley|lqr|mpc|mpc_full|mpc_lag
+                          aav_track's track node follows the path instead
                           of controller_server: it serves follow_path (bt_navigator's
                           FollowPath) and publishes cmd_vel_nav; controller_server keeps
                           running (its costmaps, the trees' clear calls) with its own action

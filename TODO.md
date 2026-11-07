@@ -3,6 +3,12 @@
 The current work list, newest first. Tick items off as they land; each tick = a commit.
 Ben's messages, word for word: `docs/history/messages-*.md`.
 
+## 0.3: the algorithms know about lag (Ben, 7 Nov)
+
+| # | Task | Status |
+|---|---|---|
+| 132 | **The lag-aware MPC** (`tracker:=mpc_lag`, [results](docs/trials.md#lag-aware-mpc-7-nov-mpc_lag)): steering and set speed planned through the spine's speed loop, throttle, brake, the steering motor's rate and linkage, dead times and the commands already sent; one QP a tick. Tells ego on `/drivers/nav/lag_aware` (latched) so its lead stays off. `lag_scale:=2` in Gazebo for the robustness test | 🟡 built, pretend car scored (no speed overshoot; lags x2: 0.17 m against MPC's 0.36). Gazebo: running. Left: swap `lag_model.py` for the shared car model at its merge, and check the `lag_aware` form with ego's; move to Rust before the car (worst tick near 50 ms on the Orin, estimated); model the LQI and the ESP32's open loop |
+
 ## Saturday 7 November: the hardware debug plan
 
 Ben, 7 Nov: the Rust replaces the C++, WiFi pages too, with JSON instead of streaming text; graphs of steering, brake and throttle in `hw_panel`; debug one part of the car at a time.

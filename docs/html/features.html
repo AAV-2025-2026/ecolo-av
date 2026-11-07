@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">48 min read · 14 sections</div></header>
+<div class="meta">49 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -486,6 +486,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Ben</td>
 <td>2026-10-29</td>
 <td>built</td>
+</tr>
+<tr>
+<td><a href="trials.html#lag-aware-mpc-7-nov-mpc_lag">Lag-aware MPC</a> (<code>tracker:=mpc_lag</code>; <code>aav_track</code> <code>lag_model.py</code>; tells ego on <code>/drivers/nav/lag_aware</code>)</td>
+<td>Ben, 7 Nov: "have the algorithms know about lag". It plans the steering and the set speed through the car's own lags (the spine's speed loop, throttle, brake, the steering motor's rate and linkage, dead times, the commands already sent), so it steers early by as much as the car is late. A challenger to MPPI. While it drives, ego's lead stays off, so the lag isn't cancelled twice</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>sim</td>
 </tr>
 <tr>
 <td><a href="controllers.html#planners">Trial planners</a> (<code>planner:=</code> hybrid, lattice, smac2d, navfn or theta_star; the lattice on our own primitives, <code>pixi run python3 tools/lattice_primitives.py</code>, 16 headings or 32 with <code>lattice_headings:=32</code>)</td>

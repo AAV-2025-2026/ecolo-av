@@ -7,7 +7,7 @@
 <!-- Generated from docs/trials.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Trials: new path followers and localizers beside the main ones</h1>
-<div class="meta">63 min read · 17 sections</div></header>
+<div class="meta">69 min read · 18 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -103,7 +103,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#what-is-on-trial">What is on trial</a><a href="#where-a-tracker-sits">Where a tracker sits</a><a href="#fair-rules">Fair rules</a><a href="#run-it">Run it</a><a href="#results">Results</a><a href="#ndt-into-the-global-ekf-30-oct">NDT into the global EKF (30 Oct)</a><a href="#kiss-icp-into-the-local-ekf-1-nov">KISS-ICP into the local EKF (1 Nov)</a><a href="#scoring-a-localizer-fairly">Scoring a localizer fairly</a><a href="#scoring-an-odometry-fairly-kiss-icp-ekf_local">Scoring an odometry fairly (KISS-ICP, ekf_local)</a><a href="#before-a-winner-goes-on-the-car">Before a winner goes on the car</a><a href="#results-29-october">Results, 29 October</a><a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results, 29 October (afternoon): LQR rebuilt, and mpc_full</a><a href="#planners-29-oct-hybrid-lattice-and-smac2d">Planners, 29 Oct: hybrid, lattice and smac2d</a><a href="#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32">Planners, 30 Oct: reversing on, hybrid, lattice and lattice32</a><a href="#diffusion-2-nov-a-model-draws-the-lattice-guards">Diffusion, 2 Nov: a model draws, the lattice guards</a><a href="#voxels-30-oct-the-lidar-as-cubes">Voxels, 30 Oct: the lidar as cubes</a><a href="#3-nov-everything-for-02">3 Nov: everything, for 0.2</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#what-is-on-trial">What is on trial</a><a href="#where-a-tracker-sits">Where a tracker sits</a><a href="#fair-rules">Fair rules</a><a href="#run-it">Run it</a><a href="#results">Results</a><a href="#ndt-into-the-global-ekf-30-oct">NDT into the global EKF (30 Oct)</a><a href="#kiss-icp-into-the-local-ekf-1-nov">KISS-ICP into the local EKF (1 Nov)</a><a href="#scoring-a-localizer-fairly">Scoring a localizer fairly</a><a href="#scoring-an-odometry-fairly-kiss-icp-ekf_local">Scoring an odometry fairly (KISS-ICP, ekf_local)</a><a href="#before-a-winner-goes-on-the-car">Before a winner goes on the car</a><a href="#results-29-october">Results, 29 October</a><a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results, 29 October (afternoon): LQR rebuilt, and mpc_full</a><a href="#lag-aware-mpc-7-nov-mpc_lag">Lag-aware MPC, 7 Nov (mpc_lag)</a><a href="#planners-29-oct-hybrid-lattice-and-smac2d">Planners, 29 Oct: hybrid, lattice and smac2d</a><a href="#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32">Planners, 30 Oct: reversing on, hybrid, lattice and lattice32</a><a href="#diffusion-2-nov-a-model-draws-the-lattice-guards">Diffusion, 2 Nov: a model draws, the lattice guards</a><a href="#voxels-30-oct-the-lidar-as-cubes">Voxels, 30 Oct: the lidar as cubes</a><a href="#3-nov-everything-for-02">3 Nov: everything, for 0.2</a></nav>
 <div class="lead"><p>Ben, 29 Oct: "We want to make other nodes or plugins that we can test and then replace
 the main ones if they work." Each trial runs <strong>beside</strong> today's default, chosen at launch,
 and is <strong>scored on the same routes</strong>. It becomes the default only once it wins.</p>
@@ -126,6 +126,7 @@ and is <strong>scored on the same routes</strong>. It becomes the default only o
 <li><strong>KISS-ICP into the local EKF</strong> (<code>kiss_ekf:=true</code>), 1 Nov: its twist beside the wheels and IMU. Gazebo, 5 runs: <strong>no clear win yet</strong> (ekf_local 0.30-1.27 m per 100 m with it, 0.44-1.91 without; the spread is the Mac's load). Its covariance is now measured. <a href="#kiss-icp-into-the-local-ekf-1-nov">Results</a>.</li>
 <li><strong>The diffusion planner</strong> (<code>planner:=diffusion</code>, <code>aav_diffusion_planner</code>), 2 Nov: a model draws 16 paths, a guard checks them, the lattice's path if none passes or it's late. Gazebo, 2 runs: <strong>every leg</strong>, 178 and 182 s a tour (the lattice 186 and 188 s); <strong>63 % of plans from the model</strong>, 37 % the lattice's (17 % late, 20 % no sample passed). <a href="#diffusion-2-nov-a-model-draws-the-lattice-guards">Results</a>.</li>
 <li><strong>3 Nov, everything for 0.2</strong> (Gazebo, 3 runs each): every switch drives a leg; diffusion every leg, <strong>73 %</strong> of plans from the model; NDT into the EKF <strong>17 → 1.8 cm</strong>, every leg; voxels slower, and once drove through the post. <strong>No default changed.</strong> <a href="#3-nov-everything-for-02">Results</a>.</li>
+<li><strong>7 Nov, the lag-aware MPC</strong> (<code>tracker:=mpc_lag</code>): plans steering and speed through the car's own lags; tells ego to keep its lead off. Pretend car: no speed overshoot (others 14 %), and with the lags doubled the U-turn at 2 m/s off by <strong>0.17 m</strong> (MPC 0.36, LQR 0.27). <a href="#lag-aware-mpc-7-nov-mpc_lag">Results</a>.</li>
 <li>The design: <code>docs/designs/2026-10-29_trials.md</code>.</li>
 </ul>
 </blockquote></div>
@@ -158,6 +159,11 @@ and is <strong>scored on the same routes</strong>. It becomes the default only o
 <td>MPC speed and steering together (sets its own speed)</td>
 <td>MPC, MPPI</td>
 <td><code>tracker:=mpc_full</code></td>
+</tr>
+<tr>
+<td>MPC through the car's lags (sets its own speed; lag-aware)</td>
+<td>MPPI, RPP, MPC</td>
+<td><code>tracker:=mpc_lag</code></td>
 </tr>
 <tr>
 <td>our pure pursuit (the control)</td>
@@ -1244,6 +1250,204 @@ U-turn was the planner's clockwise loop, to the south wall.</p>
    value slowing for the U-turn at 1 m/s (a cost on the steering's rate per second)?</li>
 <li>The planner's growing loops: replan less often in a U-turn, or keep the old path?</li>
 </ol>
+</section>
+<section class="card"><h2 id="lag-aware-mpc-7-nov-mpc_lag">Lag-aware MPC, 7 Nov (<code>mpc_lag</code>)</h2>
+<p>Ben, 7 Nov: "have the algorithms know about lag". Two parts: ego gets a <strong>lead</strong> that
+cancels the lag for every driver (another branch), and this tracker knows the lag
+itself. Only one may cancel it, or the car gets twice the correction.</p>
+<h3 id="what-it-knows">What it knows</h3>
+<pre class="highlight"><code>set speed ──&gt; spine's PI ──&gt; throttle, brake (lags) ──&gt; speed (drag)
+steering  ──&gt; dead time ──&gt; motor (0.8 rad/s) ──&gt; linkage (lag) ──&gt; wheels ──&gt; the car</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>It models</th>
+<th>From</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>the spine's speed loop (<code>default</code> or <code>smooth</code>)</td>
+<td>spine-core's gains (as aav_gazebo's <code>SpeedLoop</code>)</td>
+</tr>
+<tr>
+<td>throttle and brake lags, drag, full brake</td>
+<td><code>vehicle.yaml</code> <code>actuators:</code></td>
+</tr>
+<tr>
+<td>steering motor's rate, deadband, linkage lag, offset</td>
+<td><code>vehicle.yaml</code> <code>actuators:</code></td>
+</tr>
+<tr>
+<td>dead times, and the commands already sent</td>
+<td><code>*_dead_time</code> (0 until measured), plus <code>latency</code> 0.1 s</td>
+</tr>
+<tr>
+<td>the car</td>
+<td>the kinematic bicycle, in the path's frame</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>latency</code> is the ROS chain's own delay (ego's 50 Hz ramp, the 20 Hz hold, the adapter).
+Without it the pretend car's U-turn at 2 m/s was off by 0.14 m; with it, 0.09 m.</p>
+<h3 id="how-it-plans-every-50-ms">How it plans (every 50 ms)</h3>
+<ol>
+<li>Estimate the state: pose and speed measured; throttle, brake, motor, wheels and the
+   speed loop's integral from what it sent.</li>
+<li>Run last tick's plan through the model; linearise it (one numpy call a step).</li>
+<li>One QP (our OSQP-style solver), 1.5 s ahead, in steering <strong>and</strong> set speed.</li>
+<li>Send the first steering and set speed.</li>
+</ol>
+<p><strong>Hard limits:</strong> full lock, the steering rate (the tighter of ego and the motor), the
+set speed's rise and fall (the smoother's 1.0 and 2.0 m/s²), 0 to cruise. <strong>Soft:</strong> the
+speed under the bend's and the goal's limit.</p>
+<h3 id="it-tells-ego-the-lag_aware-contract">It tells ego (the <code>lag_aware</code> contract)</h3>
+<p><code>/drivers/nav/lag_aware</code> (<code>std_msgs/Bool</code>, reliable, transient local, depth 1): <strong>true</strong>
+while <code>mpc_lag</code> drives, <strong>false</strong> for every other tracker and when the node stops. MPPI
+and RPP publish nothing: ego keeps its lead on. The exact form is the ego branch's; to
+be checked when the two merge.</p>
+<h3 id="results-the-pretend-car-ego-then-gazebos-actuator-model">Results: the pretend car (ego, then Gazebo's actuator model)</h3>
+<p>Worst off the path (m). "x2": the car's lags twice what the trackers were told.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Drive</th>
+<th>Lags</th>
+<th style="text-align: right;">pure pursuit</th>
+<th style="text-align: right;">LQR</th>
+<th style="text-align: right;">MPC</th>
+<th style="text-align: right;"><code>mpc_full</code></th>
+<th style="text-align: right;"><strong><code>mpc_lag</code></strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>U-turn, 2 m/s</td>
+<td>x1</td>
+<td style="text-align: right;">0.38</td>
+<td style="text-align: right;"><strong>0.08</strong></td>
+<td style="text-align: right;">0.09</td>
+<td style="text-align: right;">0.12</td>
+<td style="text-align: right;">0.09</td>
+</tr>
+<tr>
+<td>U-turn, 2 m/s</td>
+<td>x2</td>
+<td style="text-align: right;">0.34</td>
+<td style="text-align: right;">0.27</td>
+<td style="text-align: right;">0.36</td>
+<td style="text-align: right;"><strong>0.10</strong></td>
+<td style="text-align: right;">0.17</td>
+</tr>
+<tr>
+<td>U-turn, 2 m/s</td>
+<td>x3</td>
+<td style="text-align: right;">0.31</td>
+<td style="text-align: right;">0.70</td>
+<td style="text-align: right;">0.70</td>
+<td style="text-align: right;"><strong>0.30</strong></td>
+<td style="text-align: right;">0.50</td>
+</tr>
+<tr>
+<td>U-turn, 1 m/s</td>
+<td>x1</td>
+<td style="text-align: right;">0.12</td>
+<td style="text-align: right;">0.07</td>
+<td style="text-align: right;"><strong>0.03</strong></td>
+<td style="text-align: right;">0.10</td>
+<td style="text-align: right;">0.04</td>
+</tr>
+<tr>
+<td>U-turn, 1 m/s</td>
+<td>x2</td>
+<td style="text-align: right;">0.10</td>
+<td style="text-align: right;">0.05</td>
+<td style="text-align: right;">0.10</td>
+<td style="text-align: right;">0.07</td>
+<td style="text-align: right;">0.05</td>
+</tr>
+<tr>
+<td>8 m bend, 3 m/s</td>
+<td>x1</td>
+<td style="text-align: right;">0.16</td>
+<td style="text-align: right;">0.03</td>
+<td style="text-align: right;">0.02</td>
+<td style="text-align: right;">0.03</td>
+<td style="text-align: right;"><strong>0.02</strong></td>
+</tr>
+<tr>
+<td>8 m bend, 3 m/s</td>
+<td>x2</td>
+<td style="text-align: right;">0.13</td>
+<td style="text-align: right;">0.04</td>
+<td style="text-align: right;">0.04</td>
+<td style="text-align: right;">0.02</td>
+<td style="text-align: right;"><strong>0.02</strong></td>
+</tr>
+<tr>
+<td>Top speed (set: 1 m/s)</td>
+<td>x1</td>
+<td style="text-align: right;">1.14</td>
+<td style="text-align: right;">1.14</td>
+<td style="text-align: right;">1.14</td>
+<td style="text-align: right;">1.15</td>
+<td style="text-align: right;"><strong>1.00</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>What it shows:</p>
+<ul>
+<li><strong>Speed:</strong> only <code>mpc_lag</code> sees the speed loop's 14 % overshoot coming, and eases
+  the set speed in. No overshoot at any lag.</li>
+<li><strong>Steering, lags as told:</strong> as good as MPC and LQR; no better.</li>
+<li><strong>Lags doubled:</strong> better than MPC and LQR (0.17 against 0.36 and 0.27 m), but
+  <code>mpc_full</code> is better still: it plans over distance and slows itself to swing.</li>
+<li><strong>Lags tripled:</strong> it falls behind <code>mpc_full</code> and pure pursuit. A model it trusts
+  that is wrong by 3x hurts: the car-day numbers (TODO 52b) matter.</li>
+</ul>
+<h3 id="time">Time</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Where</th>
+<th style="text-align: right;">Mean</th>
+<th style="text-align: right;">Worst</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Ben's Mac, quiet</td>
+<td style="text-align: right;">7 ms</td>
+<td style="text-align: right;">16 ms</td>
+</tr>
+<tr>
+<td>Ben's Mac, load 30 (other simulators)</td>
+<td style="text-align: right;">11-17 ms</td>
+<td style="text-align: right;">60-170 ms</td>
+</tr>
+<tr>
+<td>The Orin (estimate: 2-3 times slower in Python)</td>
+<td style="text-align: right;">15-20 ms</td>
+<td style="text-align: right;">40-50 ms</td>
+</tr>
+</tbody>
+</table></div>
+<p>The tick is 50 ms. In Python it fits on average, but its worst ticks on the Orin
+would be close to a whole tick. <strong>It should move to Rust</strong> before it drives the car
+(CLAUDE.md: Rust where it pays off), with the shared car model's Rust twin: the same
+QP there is well under 1 ms.</p>
+<h3 id="results-gazebo">Results: Gazebo</h3>
+<p>Running (7 Nov): the lot tour against MPPI, RPP and MPC, with the lags as told and doubled.</p>
+<h3 id="not-done-yet">Not done yet</h3>
+<ul>
+<li>The LQI speed loop (<code>speed_loop:=lqi</code>) isn't modelled; <code>mpc_lag</code> doesn't follow
+  <code>speed_loop:=</code> on its own (set <code>mpc_lag.speed_loop</code>).</li>
+<li>Today's car runs the ESP32's open speed loop, not the spine's PI: not modelled.</li>
+<li>Dead times act on the set speed, not after the speed loop (an approximation; they are 0
+  until measured).</li>
+<li><code>lag_model.py</code> is a stand-in for the shared car model (<code>aav_description</code>
+  <code>car_model.py</code>), the same spec; swap at the merge.</li>
+</ul>
 </section>
 <section class="card"><h2 id="planners-29-oct-hybrid-lattice-and-smac2d">Planners, 29 Oct: hybrid, lattice and smac2d</h2>
 <p>What each planner is: <a href="controllers.html#planners">Controllers, Planners</a>.</p>

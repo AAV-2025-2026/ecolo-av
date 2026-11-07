@@ -1193,6 +1193,14 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>aav_track's debug, every tick while it follows a path (20 Hz) - name track, message the tracker's name; values tracker, loop_ms (this tick's work), loop_ms_max, missed_ticks (since the path came, by the node's clock), cross_track_m (+ left of the path), heading_error_rad, steer_rad, speed_mps, left_m (along the path to its end). Only with tracker:= on.</td>
 </tr>
 <tr>
+<td><code>/drivers/nav/lag_aware</code></td>
+<td><code>std_msgs/msg/Bool</code></td>
+<td><code>track</code></td>
+<td><code>ego</code></td>
+<td>-</td>
+<td>Latched (reliable, transient local, depth 1) - true while the path follower models the car's lags itself (aav_track tracker:=mpc_lag, docs/trials.md), so ego's lead (its cancelling of the lags for every driver) must stay off while /drivers/nav/cmd_vel drives; false for every other tracker. Sent when track starts and on each live swap. No publisher (controller_server's MPPI or RPP, every other driver) means not lag-aware. The pattern is /drivers/<driver>/lag_aware; ego's side, and the exact form, are the lead's (0.3, checked at its merge).</td>
+</tr>
+<tr>
 <td><code>/drivers/nav/route/destination</code></td>
 <td><code>geographic_msgs/msg/GeoPointStamped</code></td>
 <td>-</td>
