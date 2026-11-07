@@ -167,8 +167,18 @@ fn main() -> Result<()> {
         imu: node.create_publisher("gazebo/imu")?,
         navsat: node.create_publisher("gazebo/navsat")?,
         joints: node.create_publisher("joint_states")?,
-        lidar: node.create_publisher("sensors/lidar/points")?,
-        radar: node.create_publisher("gazebo/radar/points".best_effort().keep_last(5))?,
+        // Only the sensors this run has: a publisher with nothing behind it still shows in
+        // the graph, and the sensor mux would doubt a lidar nobody announces.
+        lidar: if params.lidar.get() {
+            Some(node.create_publisher("sensors/lidar/points")?)
+        } else {
+            None
+        },
+        radar: if params.radar.get() {
+            Some(node.create_publisher("gazebo/radar/points".best_effort().keep_last(5))?)
+        } else {
+            None
+        },
         logger: node.logger().clone(),
     };
 
@@ -448,8 +458,8 @@ struct Outputs {
     imu: Publisher<Imu>,
     navsat: Publisher<NavSatFix>,
     joints: Publisher<JointState>,
-    lidar: Publisher<PointCloud2>,
-    radar: Publisher<PointCloud2>,
+    lidar: Option<Publisher<PointCloud2>>,
+    radar: Option<Publisher<PointCloud2>>,
     logger: Logger,
 }
 
@@ -474,8 +484,16 @@ impl Outputs {
                     ..Default::default()
                 })?,
                 Output::Joints(j) => self.joints.publish(joints(ns, &j))?,
-                Output::Lidar(scan) => self.lidar.publish(cloud(ns, "lidar_link", &scan))?,
-                Output::Radar(scan) => self.radar.publish(cloud(ns, "radar_link", &scan))?,
+                Output::Lidar(scan) => {
+                    if let Some(lidar) = &self.lidar {
+                        lidar.publish(cloud(ns, "lidar_link", &scan))?;
+                    }
+                }
+                Output::Radar(scan) => {
+                    if let Some(radar) = &self.radar {
+                        radar.publish(cloud(ns, "radar_link", &scan))?;
+                    }
+                }
                 Output::Hit { x, y } => log_warn!(
                     &self.logger,
                     "the car hit something at ({x:.2}, {y:.2}) and stopped"
