@@ -76,7 +76,7 @@ topics:
   /drivers/scripted/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [scripted_driver]
-    sub: [twist_mux, language_drive]
+    sub: [twist_mux, language_drive, ego]
     note: Priority 50. Only while a /scripted_drive goal runs. language_drive (aav_language, plain-English driving) only reads the mux inputs' arrival times, to tell who drives.
   /drivers/replay/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
@@ -86,12 +86,12 @@ topics:
   /drivers/point/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [point_driver]
-    sub: [twist_mux, language_drive]
+    sub: [twist_mux, language_drive, ego]
     note: Priority 25 - below every person, test and script, above Nav2. Only while a /drive_to_point goal runs (aav_drive_to_point, pixi run drive-to-point; docs/a-to-b.md). Drives on GPS, so the stop-sign and sensor locks (30) hold it. It also reads /control/cmd_vel, to stop when someone else takes over.
   /drivers/nav/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [velocity_smoother, collision_monitor]
-    sub: [twist_mux, language_drive]
+    sub: [twist_mux, language_drive, ego]
     note: Priority 20. Nav2. From collision_monitor where the radar or the lidar runs (navigation.launch.py radar:=true or lidar:=true - the bench, the car with its radar part, Gazebo's road and test_lot worlds), else straight from velocity_smoother.
   /control/cmd_vel_smoothed:
     type: geometry_msgs/msg/TwistStamped
@@ -180,10 +180,30 @@ topics:
     pub: [collision_monitor]
     sub: []
     note: The radar and lidar points collision_monitor sees, for RViz; sent only while someone listens.
+  /drivers/scripted/lag_aware:
+    type: std_msgs/msg/Bool
+    pub: []
+    sub: [ego]
+    note: Latched (reliable, transient local, depth 1). true - this driver leads for the car's lag and dead times itself (a lag-aware tracker, such as aav_track's MPC or the Rust MPPI), so ego's own lead (lag_lead) turns off while its commands drive; false or never sent - ego may lead (docs/vehicle-model.md). Publish true when the lag-aware mode starts and false when it ends, once each (latched), and stamp every cmd_vel with now - ego knows whose command it obeys by matching /control/cmd_vel (twist_mux passes the winner's message on unchanged) against each lag-aware driver's last commands (stamp and twist), so a message re-stamped on the way can't match. ego watches the drivers in its lag_aware_drivers parameter (ego.yaml - scripted, point, nav, ai). No publisher yet.
+  /drivers/point/lag_aware:
+    type: std_msgs/msg/Bool
+    pub: []
+    sub: [ego]
+    note: Latched (reliable, transient local, depth 1). true - this driver leads for the car's lag and dead times itself (a lag-aware tracker, such as aav_track's MPC or the Rust MPPI), so ego's own lead (lag_lead) turns off while its commands drive; false or never sent - ego may lead (docs/vehicle-model.md). Publish true when the lag-aware mode starts and false when it ends, once each (latched), and stamp every cmd_vel with now - ego knows whose command it obeys by matching /control/cmd_vel (twist_mux passes the winner's message on unchanged) against each lag-aware driver's last commands (stamp and twist), so a message re-stamped on the way can't match. ego watches the drivers in its lag_aware_drivers parameter (ego.yaml - scripted, point, nav, ai). No publisher yet.
+  /drivers/nav/lag_aware:
+    type: std_msgs/msg/Bool
+    pub: []
+    sub: [ego]
+    note: Latched (reliable, transient local, depth 1). true - this driver leads for the car's lag and dead times itself (a lag-aware tracker, such as aav_track's MPC or the Rust MPPI), so ego's own lead (lag_lead) turns off while its commands drive; false or never sent - ego may lead (docs/vehicle-model.md). Publish true when the lag-aware mode starts and false when it ends, once each (latched), and stamp every cmd_vel with now - ego knows whose command it obeys by matching /control/cmd_vel (twist_mux passes the winner's message on unchanged) against each lag-aware driver's last commands (stamp and twist), so a message re-stamped on the way can't match. ego watches the drivers in its lag_aware_drivers parameter (ego.yaml - scripted, point, nav, ai). No publisher yet - aav_track's lag-aware trackers and the Rust MPPI driver will (both drive through Nav2, so this slot). Nav2 republishes their command (velocity_smoother, collision_monitor) with its own stamps; ego matches what reaches /drivers/nav/cmd_vel, so the whole Nav2 slot counts as lag-aware while this is true.
+  /drivers/ai/lag_aware:
+    type: std_msgs/msg/Bool
+    pub: []
+    sub: [ego]
+    note: Latched (reliable, transient local, depth 1). true - this driver leads for the car's lag and dead times itself (a lag-aware tracker, such as aav_track's MPC or the Rust MPPI), so ego's own lead (lag_lead) turns off while its commands drive; false or never sent - ego may lead (docs/vehicle-model.md). Publish true when the lag-aware mode starts and false when it ends, once each (latched), and stamp every cmd_vel with now - ego knows whose command it obeys by matching /control/cmd_vel (twist_mux passes the winner's message on unchanged) against each lag-aware driver's last commands (stamp and twist), so a message re-stamped on the way can't match. ego watches the drivers in its lag_aware_drivers parameter (ego.yaml - scripted, point, nav, ai). No publisher yet.
   /drivers/ai/cmd_vel:
     type: geometry_msgs/msg/TwistStamped
     pub: [control_interface]
-    sub: [twist_mux, language_drive]
+    sub: [twist_mux, language_drive, ego]
     note: Priority 10, the slot for a learned driver. Today the 2025-26 lane keeping (aav_lane_geometry) uses it.
   /safety/estop:
     type: std_msgs/msg/Bool
@@ -196,6 +216,12 @@ topics:
     sub: [ego, actuator_test, point_driver, hw_panel]
     live: [turtle, sim, car, bench]
     note: The one command ego obeys. v (m/s) and w (rad/s) in base_link.
+  /ego/trace:
+    type: nav_msgs/msg/Path
+    pub: [ego]
+    sub: []
+    live: [turtle, sim, car, bench]
+    note: "Where the car is going, like a tail but in front (Ben, 7 Nov) - ego's prediction over trace_horizon (2 s), 10 Hz (trace_rate_hz), a pose every 0.1 s from now (21 poses), frame base_link at the header's stamp (each pose stamped with its own time ahead). From the shared car model (aav_description car_model.py - the speed loop, dead times, lags, steering motor and bicycle), started from ego's twin of the car (its actuators as ego drove them, its speed the last /vehicle/odom), driven by a copy of ego with the request held (its lead, ramps and limits). base_link, not odom - ego needs no localization (stands, the turtle), and a driver turns it into odom with TF at the stamp. Every number is a guess until car tests 3.10-3.12 and 4.1-4.5. For drivers to match against their plan, and for screens. aav_ego trace_ahead.py."
   /ego/actuator_cmd:
     type: ackermann_msgs/msg/AckermannDriveStamped
     pub: [ego]
@@ -299,7 +325,7 @@ topics:
     type: nav_msgs/msg/Odometry
     drop_in: {min_hz: 45, frame: odom}
     pub: [spine_bridge, encoder_udp, turtlesim_adapter, gazebo_adapter, carla_adapter]
-    sub: [ekf_local, ekf_global, actuator_test, sensor_watchdog, gps_heading, legacy_uart_bridge, debug_hud, localization_health]
+    sub: [ekf_local, ekf_global, actuator_test, sensor_watchdog, gps_heading, legacy_uart_bridge, debug_hud, localization_health, ego]
     live: [turtle, sim, car, replay, bench]
     note: Twist only (vx, vy = 0, vyaw) in base_link, with covariances; pose covariance 1e3 (not measured). On the car, vx comes from the front wheel nodes when fresh, else from the spine's VEHICLE_FEEDBACK. With today's wiring (car.launch.py actuators:=uart, spine_bridge role:=sensors on the Orin) only from the two wheels while both are fresh, with no yaw rate (covariance 1e3 - the steering angle isn't on the bus). In Gazebo's spine profile spine_bridge publishes it from spine_sim's frames, as on the car; /vehicle/status, steering, throttle, brake and wheels likewise. legacy_uart_bridge reads it only with speed_loop.mode pi, to close its speed loop on vx.
   /vehicle/status:

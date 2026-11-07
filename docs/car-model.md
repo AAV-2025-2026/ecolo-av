@@ -59,6 +59,86 @@ and new yaw.
 `predict` gives a state every `dt` for `horizon` s, the first one `dt` ahead. The last
 command is held. The speed loop is copied, never advanced.
 
+## ego's lead
+
+The actuators answer late. ego can ask a little ahead, so the car answers about when the
+driver wanted (`aav_ego` `lag_lead.py`).
+
+```
+driver's request ──▶ filter (lag_lead_filter) ──▶ + T × its rate ──▶ ego's limits ──▶ car
+```
+
+| Lead | T |
+|---|---|
+| speeding up | `throttle_dead_time + throttle_lag` |
+| slowing | `brake_dead_time + brake_lag` |
+| steering | `steer_dead_time + steer_lag` |
+
+The car then answers as if its lag were `lag_lead_filter` (0.1 s), not T. A dead time
+can't be undone (it would need the future): it counts as more lag. The steering motor's
+rate limit isn't a lag: nothing undoes it.
+
+### When it runs
+
+| `lag_lead` | Simulator (`use_sim_time`) | Real car |
+|---|---|---|
+| `auto` (default) | **on** | off |
+| `on` | on | on: only after tests 3.10-3.12 and 4.1-4.5 |
+| `off` | off | off |
+
+Never while a lag-aware driver drives, whatever the setting. Change it live:
+`ros2 param set /ego lag_lead off`.
+
+### Still a safety lock
+
+| Rule | How |
+|---|---|
+| Every limit still applies | the lead runs **before** `max_speed`, the steering limit and rate, the slews, the jerk, the body |
+| Small | at most `lag_lead_max_speed` (0.3 m/s) and `lag_lead_max_steer` (0.1 rad) |
+| No change of direction | forward stays forward, reverse stays reverse |
+| A slow-down is never softened | while slowing, never above the request |
+| A stop is a stop | no fresh command: no lead |
+
+On the car model with today's guesses, the lead follows a speed ramp about 6% closer: the
+spine's speed loop is most of the lag, and the lead can't change that loop.
+
+## Lag-aware drivers: the contract
+
+A driver that leads for the lag itself (an MPC or MPPI that uses this model) tells ego,
+so the lag isn't led for twice.
+
+| Step | The driver does |
+|---|---|
+| 1 | publish `true` on `/drivers/<slot>/lag_aware` (`std_msgs/Bool`, latched: reliable, transient local, depth 1) when its lag-aware mode starts; `false` when it ends |
+| 2 | stamp every `TwistStamped` with now |
+| 3 | that's all: ego does the rest |
+
+How ego knows who is driving: twist_mux only publishes `/diagnostics`, not the winner. But
+it passes the winner's message on **unchanged**. So ego keeps each lag-aware driver's last
+50 commands and looks for the one on `/control/cmd_vel` (same stamp and twist).
+
+| Slot | Who will publish it |
+|---|---|
+| `nav` | `aav_track`'s lag-aware trackers, the Rust MPPI (both drive through Nav2) |
+| `scripted`, `point`, `ai` | nobody yet |
+
+The slots ego watches are its `lag_aware_drivers` parameter.
+
+## ego's trace
+
+Where the car is going, like a tail but in front (Ben, 7 Nov). `/ego/trace`,
+`nav_msgs/Path`, 10 Hz (`aav_ego` `trace_ahead.py`).
+
+| | |
+|---|---|
+| Horizon | 2 s, a pose every 0.1 s (21 poses) |
+| Frame | `base_link`, at the header's stamp |
+| Starts from | ego's twin of the car: the model, stepped with what ego sent, its speed the last `/vehicle/odom` |
+| Runs | a copy of ego (lead, ramps, limits) with the request held, into the car model |
+
+Why `base_link`: ego needs no localization (stands, the turtle). A driver turns the trace
+into `odom` with TF at the stamp, then matches it against its plan.
+
 ## Checks
 
 | Test | Checks |
@@ -66,6 +146,9 @@ command is held. The speed loop is copied, never advanced.
 | `aav_description/test/test_car_model.py` | dead times, the circle, braking, predict; the vectors are up to date |
 | `car-model/tests/vectors.rs` | the Rust gives the Python's states (1e-9; 1e-3 with a speed loop, which is f32 in Rust) |
 | `aav_gazebo/test/test_actuator_model.py` | Gazebo's car is unchanged |
+| `aav_ego/test/test_lag_lead.py` | the lead: when it runs, its limits, ego's limits after it |
+| `aav_ego/test/test_trace_ahead.py` | the trace and the twin |
+| `aav_ego/test/test_ego_node.py` | the node: `/ego/trace`; the lead off for a lag-aware driver |
 
 After changing either side:
 
