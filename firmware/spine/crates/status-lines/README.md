@@ -22,6 +22,7 @@ dependencies, only `core::fmt`.
 | `Line::write_to(&mut buf)` | the line into a byte slice, no newline; `Err(TooLong)` if it doesn't fit |
 | `LineBuf<N>` | a line in its own `N`-byte buffer: `set`, `as_str`, `as_bytes` |
 | `Spread` | the lowest and highest `Levels` between two status lines: `add` each tick, `take` at each line |
+| `Trickle<SLOTS, N>` | lines queued for a slow serial log: `push` a line (a full queue drops it whole: `Dropped`, counted in `dropped()`), `next_chunk(max)` each tick; a chunk never spans two lines |
 | `SCHEMA`, `MAX_LINE`, `MAX_CHANNELS` | 1; 768 bytes (the widest status line is 756); 14 |
 
 | Value | Written as |
@@ -36,6 +37,7 @@ dependencies, only `core::fmt`.
 - The fields come out in the contract's order, byte for byte as `golden.jsonl`.
 - Every line has `t`, `schema`, `seq` and `up_ms`, in that order.
 - Nothing allocates. A line too long for its buffer is an error, never a cut line.
+- `Trickle` never cuts or mixes lines: a line goes out whole, in order, or not at all.
 - Strings are escaped. Never pass a password, key or WiFi name: anyone on the WiFi
   reads the lines.
 - It reads no device: the board gives it what the tick already had.

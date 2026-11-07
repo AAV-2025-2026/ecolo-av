@@ -9,7 +9,8 @@
 //! A [`Line`] is one of them with its `seq` and `up_ms`. It is [`Display`](core::fmt::Display),
 //! so it can go straight to a log, or into a fixed buffer with [`Line::write_to`] or a
 //! [`LineBuf`] for a socket. Nothing allocates. [`Spread`] keeps the lowest and highest
-//! device values between two status lines.
+//! device values between two status lines; [`Trickle`] hands lines to a slow serial log a
+//! few bytes a tick.
 //!
 //! The lines are built from values the tick already has: this crate reads nothing.
 //! `golden.jsonl` beside the contract is the test: every line here is checked against it
@@ -18,10 +19,12 @@
 
 mod json;
 mod spread;
+mod trickle;
 
 use core::fmt::{self, Display, Formatter, Write};
 
 pub use spread::Spread;
+pub use trickle::{Dropped, Trickle};
 
 use json::{Float, Text};
 

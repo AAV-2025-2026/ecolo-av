@@ -26,6 +26,7 @@
 //! | [`spine_board`] | the loop: [`SpineBoard`] |
 //! | [`stand_in`] | stand-in devices on a bus, for a board with none wired (QEMU) |
 //! | [`timing`] | the longest gap between ticks, and how many came late |
+//! | [`scan`] | which I2C addresses answer, a few a tick, only while not armed |
 //!
 //! A board crate, in outline:
 //!
@@ -51,6 +52,7 @@ pub mod calibration;
 pub mod link;
 #[cfg(test)]
 mod rig;
+pub mod scan;
 pub mod spine_board;
 pub mod stand_in;
 pub mod timing;
@@ -63,6 +65,7 @@ pub use link::{
     CanLink, CommandLink, FrameVersion, LastFrame, LegacyLink, LinkStats, NoUplink, Report,
     UPLINK_PERIOD_MS,
 };
+pub use scan::{BusScan, ScanState};
 pub use spine_board::SpineBoard;
 pub use stand_in::{DeviceTargets, StandInBus};
 pub use timing::TickTiming;
