@@ -7,7 +7,7 @@ Four raylib programs in one package, `ros/hud/aav_hud`, each also its own ROS no
 | [The HUD](#the-hud-in-rust-raylib) | `hud` | the small ~7" touchscreen | speed, GO / STOP, the e-stop button, the camera, the topics |
 | [The map window](#the-map-window-big-screen) | `map` | the big ~15" monitor | Nav2's map over Ottawa's streets, the plan, place search |
 | [The debug HUD](#the-debug-hud) (the seeing screen) | `debug_hud` | a laptop, or the Orin's screen | the lidar's cubes in 3D, NDT's map and match from above, where each localizer puts the car; key L: every sensor |
-| [The hardware panel](#the-hardware-panel) | `hw_panel` | the Orin's screen, or a wired laptop | every sensor's number, and simple buttons for the actuators (Gazebo and the bench for now) |
+| [The hardware panel](#the-hardware-panel) | `hw_panel` | the Orin's screen, or a wired laptop | every sensor's number, and simple buttons for the actuators (Gazebo and the bench for now); the steering calibration; the graphs of the Pi-to-ESP32 path |
 
 An easter egg hides in three of them: [the little robot](#the-little-robot-easter-egg).
 
@@ -897,12 +897,83 @@ check must find:
 
 ![The check stopped by a stiff spot at 2800 (--demo-bind 2800)](img/hw-panel-calibration-stopped.png)
 
+### The graphs page
+
+Tab twice (or the GRAPHS tab). One question: **does the Pi pass ego's commands on to the
+ESP32?** Design: [the ESP32 debug link](designs/2026-11-07_esp32-debug-link_brief.md),
+"The plan now" (Ben, 7 Nov: graphs in `hw_panel`).
+
+![The graphs page (--demo): every hop OK, steering, brake and throttle over 60 s](img/hw-panel-graphs.png)
+
+```text
+ego ──► mux ──► Pi wrote ──► ESP32 got
+/ego/actuator_cmd   /control/car/actuator_cmd   /control/car/link_frame   the ESP32's status lines
+```
+
+**The hop chain.** Each hop gets one word:
+
+| Word | Means |
+|---|---|
+| OK | fresh, its value changed in the last 60 s, and it matched the hop before |
+| DIFFERENT | it didn't match, or frames were bad, skipped or failed to write |
+| STALE | heard, but not for over a second |
+| NO DATA | nothing in 60 s |
+| NOT TESTED | the value never changed, or nothing to compare with. **A parked car is NOT TESTED, never OK** |
+
+| Hop | Compared with | How |
+|---|---|---|
+| ego | nothing | fresh and changing |
+| mux | ego | paired by the header's stamp (the mux copies it): equal |
+| Pi wrote | mux | it must change when the mux's does, the same way (correlation 0.5 or more): no key pairs them |
+| ESP32 got | Pi wrote | paired by counter and check byte: equal within the JSON's rounding (0.01) |
+
+Ego has no brake value, so only the ESP32 hop tests the brake.
+
+**The graphs.** Steering, brake and throttle, in the frame's own units (-1..1), over the
+last 60 s. Two lines each, told apart by style and a label at the end:
+
+| Line | From |
+|---|---|
+| Pi wrote (a line) | `/control/car/link_frame`, a sample (10 a second) |
+| ESP32 (dots) | the ESP32's status lines (`rx`, with `--esp32`); without them, the uplink's brake and throttle outputs (`/vehicle/brake`, `/vehicle/throttle`'s command), labelled "what it drives, not what it got" |
+
+Beside each: now, avg, low and high for both lines. A gap where status lines were lost,
+a red line where the board restarted. Below: the IMU's turn rate as a small graph, and the
+IMU and GPS rows from their own topics.
+
+**The status strip** is the real proof of the wire (review 2, M2): frames the Pi wrote
+(and their rise in 60 s), write failures, the ESP32's own `frames`, `bad`, `skipped` and
+`repeats`, the uplink's frames, lost and bad, and status lines lost. The graphs only
+sample: the page says "sampled N frames", never "every frame".
+
+**FREEZE (P)** keeps a copy to read while the car carries on; press again to go live. An
+e-stop freezes it by itself, to read what led to it.
+
+**The ESP32's own lines (`--esp32`).** Read only:
+
+```bash
+hw_panel --esp32 ws://192.168.4.1:81/             # beside ROS
+ros2 launch aav_hud hw_panel.launch.py esp32:=ws://192.168.4.1:81/
+hw_panel --demo --page graphs                     # a pretend path, every hop OK
+```
+
+| Rule | Why |
+|---|---|
+| Its own thread, its own queue | a slow board never slows the window; a full queue drops lines, and the gap in `seq` shows |
+| Sends only the WebSocket's opening, a pong or a close | it never commands anything |
+| Feeds the graphs and the strip only | never the buttons, the gate or the calibration page's rules |
+| Tries again every 2 s; 5 s silent is lost | the board sends a heartbeat each second |
+| `ws://` only | no TLS (`wss://`) |
+
+The lines' format is `firmware/status/README.md`; the reader is tested on its
+`golden.jsonl`.
+
 ### How it's built
 
 | Part | What it does |
 |---|---|
-| `crates/panel-core` | the logic, no ROS, no raylib: `buttons`, `gate`, `rules` (safety.py's), `state` (every sensor's number), `config`, `vehicle`; the calibration page's `calibration`, `steering_limits` (steering_limits.py's, on shared vectors) and `sweep` (the lock-to-lock check). `cargo test -p panel-core` |
-| `crates/panel-app` | the window (raylib) and the node (rclrs): the 10 ms timer sends the buttons' command and the calibration request (heartbeat-gated) and the e-stop burst |
+| `crates/panel-core` | the logic, no ROS, no raylib: `buttons`, `gate`, `rules` (safety.py's), `state` (every sensor's number), `config`, `vehicle`; the calibration page's `calibration`, `steering_limits` (steering_limits.py's, on shared vectors) and `sweep` (the lock-to-lock check); the graphs page's `graphs` (the lines, the numbers, the verdicts, FREEZE), `esp32` (the status lines) and `ws` (the WebSocket's frames). `cargo test -p panel-core` |
+| `crates/panel-app` | the window (raylib) and the node (rclrs): the 10 ms timer sends the buttons' command and the calibration request (heartbeat-gated) and the e-stop burst; `esp32.rs` reads the ESP32's WebSocket on its own thread |
 | `config/hw_panel.yaml` | every topic name, the steps (0.1 m/s, 0.05 rad), the creep, the caps (1.0, 0.3 m/s); the calibration page's jog step and range, and the check's speed and stops |
 
 ### Tested (29 October, Ben's Mac)

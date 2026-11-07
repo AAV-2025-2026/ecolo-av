@@ -22,6 +22,8 @@ use hud_core::{
 use crate::{
     buttons::Command,
     calibration::{Raw, Situation as CalSituation},
+    esp32::{Heartbeat, Status, StatusLine},
+    graphs::{Channel, Drive, Graphs, PiFrame, UplinkHealth},
     rules::{source_kind, Kind},
     vehicle::SpeedWheels,
 };
@@ -166,6 +168,48 @@ pub enum Update {
     SteeringRaw(Raw),
     /// `/vehicle/steering_actuator/calibration`: the bridge's line.
     CalibrationLine(String),
+    /// `/ego/actuator_cmd`.
+    EgoCommand(Drive),
+    /// `/control/car/actuator_cmd`: the output mux's.
+    CarCommand(Drive),
+    /// `/control/car/link_frame`: a frame the Pi wrote.
+    LinkFrame(PiFrame),
+    /// `/vehicle/esp32/uplink_health`.
+    UplinkHealth(UplinkHealth),
+    /// The ESP32's WebSocket (`--esp32`): read only.
+    Esp32(Esp32News),
+}
+
+/// News from the ESP32's WebSocket.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Esp32News {
+    /// Trying to reach this address.
+    Connecting(String),
+    Connected,
+    Line(StatusLine),
+    /// A line that couldn't be read, and why.
+    Unreadable(String),
+    /// The connection failed or ended, and why; it tries again.
+    Lost(String),
+}
+
+/// The ESP32's WebSocket, as the panel sees it.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Esp32Link {
+    Connecting(String),
+    Connected,
+    Lost(String),
+}
+
+/// What the ESP32's status lines said last.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Esp32Seen {
+    pub link: Esp32Link,
+    pub status: Option<(Instant, Box<Status>)>,
+    pub heartbeat: Option<(Instant, Heartbeat)>,
+    /// Lines that couldn't be read, and the last one's why.
+    pub unreadable: u64,
+    pub last_problem: Option<String>,
 }
 
 /// Messages counted over this long for a rate.
@@ -199,6 +243,10 @@ pub struct PanelState {
     pub steering_raw: Option<Raw>,
     /// The bridge's last calibration line, and when.
     pub calibration_line: Option<(Instant, String)>,
+    /// The GRAPHS page's last 60 s.
+    pub graphs: Graphs,
+    /// The ESP32's WebSocket, once `--esp32` asked for it.
+    pub esp32: Option<Esp32Seen>,
 }
 
 impl PanelState {
@@ -224,6 +272,8 @@ impl PanelState {
             estop_sent: None,
             steering_raw: None,
             calibration_line: None,
+            graphs: Graphs::default(),
+            esp32: None,
         }
     }
 
@@ -253,10 +303,16 @@ impl PanelState {
             Update::Throttle(a) => {
                 self.throttle = Some(a);
                 self.heard(Row::Throttle, now);
+                let command = f64::from(a.command);
+                self.graphs
+                    .record_uplink_output(now, Channel::Throttle, command);
             }
             Update::Brake(a) => {
                 self.brake = Some(a);
                 self.heard(Row::Brake, now);
+                let command = f64::from(a.command);
+                self.graphs
+                    .record_uplink_output(now, Channel::Brake, command);
             }
             Update::Wheels(w) => {
                 self.wheels = Some(w);
@@ -265,6 +321,7 @@ impl PanelState {
             Update::Imu(i) => {
                 self.imu = Some(i);
                 self.heard(Row::Imu, now);
+                self.graphs.record_imu_yaw(now, i.gyro[2].to_degrees());
             }
             Update::Gps(f) => {
                 self.gps = Some(f);
@@ -295,6 +352,39 @@ impl PanelState {
                 self.heard(Row::SteeringRaw, now);
             }
             Update::CalibrationLine(line) => self.calibration_line = Some((now, line)),
+            Update::EgoCommand(d) => self.graphs.record_ego(now, d),
+            Update::CarCommand(d) => self.graphs.record_mux(now, d),
+            Update::LinkFrame(f) => self.graphs.record_pi(now, f),
+            Update::UplinkHealth(h) => self.graphs.record_uplink(now, h),
+            Update::Esp32(news) => self.esp32_news(news, now),
+        }
+    }
+
+    fn esp32_news(&mut self, news: Esp32News, now: Instant) {
+        let seen = self.esp32.get_or_insert_with(|| Esp32Seen {
+            link: Esp32Link::Connecting(String::new()),
+            status: None,
+            heartbeat: None,
+            unreadable: 0,
+            last_problem: None,
+        });
+        match news {
+            Esp32News::Connecting(url) => seen.link = Esp32Link::Connecting(url),
+            Esp32News::Connected => seen.link = Esp32Link::Connected,
+            Esp32News::Lost(why) => seen.link = Esp32Link::Lost(why),
+            Esp32News::Unreadable(why) => {
+                seen.unreadable += 1;
+                seen.last_problem = Some(why);
+            }
+            Esp32News::Line(line) => {
+                self.graphs.record_esp32(now, &line);
+                match line {
+                    StatusLine::Status(s) => seen.status = Some((now, s)),
+                    StatusLine::Heartbeat(h) => seen.heartbeat = Some((now, h)),
+                    StatusLine::Unknown(u) => seen.last_problem = Some(u.to_string()),
+                    StatusLine::Event(_) => {}
+                }
+            }
         }
     }
 
@@ -633,6 +723,40 @@ mod tests {
             why,
             vec![NotReady::SpeedUnknown(SpeedUnknown::Never), NotReady::NoRaw]
         );
+    }
+
+    #[test]
+    fn the_esp32s_news_reaches_the_graphs_and_its_own_state() {
+        use crate::esp32::parse_line;
+        let t = Instant::now();
+        let mut s = state();
+        assert!(s.esp32.is_none(), "nothing until --esp32");
+        s.apply(Update::Esp32(Esp32News::Connecting("ws://h:81/".into())), t);
+        assert_eq!(
+            s.esp32.as_ref().map(|e| &e.link),
+            Some(&Esp32Link::Connecting("ws://h:81/".into()))
+        );
+        s.apply(Update::Esp32(Esp32News::Connected), t);
+        let golden = include_str!("../../../../../../firmware/status/golden.jsonl");
+        for line in golden.lines() {
+            let l = parse_line(line).expect("golden");
+            s.apply(Update::Esp32(Esp32News::Line(l)), t);
+        }
+        s.apply(Update::Esp32(Esp32News::Unreadable("not JSON".into())), t);
+        let e = s.esp32.as_ref().expect("seen");
+        assert_eq!(e.link, Esp32Link::Connected);
+        assert!(e.status.is_some() && e.heartbeat.is_some());
+        assert_eq!(e.unreadable, 1);
+        let c = s.graphs.counts(t);
+        assert_eq!(
+            c.esp32.map(|(total, _)| total.frames),
+            Some(0),
+            "the last line's"
+        );
+        assert_eq!(c.lines_lost, 0);
+        // Nothing here changes what the buttons or the calibration page see.
+        assert_eq!(s.speed(t), Speed::Unknown(SpeedUnknown::Never));
+        assert!(!s.estop_on());
     }
 
     fn status(speed: f32) -> Update {

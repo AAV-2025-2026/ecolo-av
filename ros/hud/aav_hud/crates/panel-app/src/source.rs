@@ -5,6 +5,8 @@ use std::time::Instant;
 
 use panel_core::{buttons::Command, calibration::Request, state::Update};
 
+use crate::esp32::Esp32Reader;
+
 /// A source of [`Update`]s, and a sink for the buttons.
 pub trait DataSource {
     /// A short label for the corner: "ROS" or "DEMO".
@@ -24,5 +26,36 @@ pub trait DataSource {
     /// Whether the source has stopped (Ctrl-C, or the ROS node failed): the window closes.
     fn has_stopped(&self) -> bool {
         false
+    }
+}
+
+/// A source with the ESP32's status lines beside it (`--esp32`): their news joins the
+/// other's; the buttons and the e-stop go to the other only.
+pub struct WithEsp32 {
+    pub inner: Box<dyn DataSource>,
+    pub esp32: Esp32Reader,
+}
+
+impl DataSource for WithEsp32 {
+    fn label(&self) -> &'static str {
+        self.inner.label()
+    }
+
+    fn drain(&mut self, now: Instant) -> Vec<Update> {
+        let mut news = self.inner.drain(now);
+        news.extend(self.esp32.drain());
+        news
+    }
+
+    fn press_estop(&mut self) {
+        self.inner.press_estop();
+    }
+
+    fn frame_drawn(&mut self, command: Option<Command>, calibration: Option<Request>) {
+        self.inner.frame_drawn(command, calibration);
+    }
+
+    fn has_stopped(&self) -> bool {
+        self.inner.has_stopped()
     }
 }

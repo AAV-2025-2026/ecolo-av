@@ -28,6 +28,9 @@ the three marks ──► steering_limits ──► the lines to copy;  CHECK �
 | `calibration` | the steering calibration page: `readiness(&Situation)` -> every `NotReady`; `allowance` -> `SoftwareAllows` (on a measured speed, or a person's word) or `NotAllowed`; `CalPage`: `press(CalPress)`, `tick()` -> `Option<Request>` (`Limp`, `Jog(counts)`, `Off`), the marks, `limits()`; `FirmwareState` (ActuatorRaw's byte); `result_file` (the lines a person copies) |
 | `steering_limits` | `compute(&Marks)` -> `Limits` (equal limits, sign, gain, warnings) or `MeasurementError`; `firmware_steering`, `vehicle_yaml`, `report`: `aav_legacy`'s `steering_limits.py`, ported |
 | `easter_egg` | the little robot (hud-core's `robot`): `watch(...)` -> `Watch` (still? an e-stop or a warning? the screen's fingerprint); `PassWatch::just_passed` (a check just PASSED: it drives across) |
+| `graphs` | the GRAPHS page: `Graphs` (60 s of ego's and the mux's commands, the Pi's frames, the ESP32's `rx`, the uplink's counts, the IMU's yaw), `line()` -> `Point`s (gaps at lost lines and restarts), `Stats` (now, avg, low, high), `hops()` -> a `HopReport` per `Hop` (`Verdict`: OK, DIFFERENT, STALE, NO DATA, NOT TESTED), `counts()` (the status strip), `Freezer` (FREEZE, and at an e-stop) |
+| `esp32` | the ESP32's JSON status lines (`firmware/status/`): `parse_line` -> `StatusLine` (`Heartbeat`, `Status` with `Rx`, `Event`, `Unknown`); tested on `golden.jsonl` |
+| `ws` | just enough WebSocket (RFC 6455) to read them: `Url`, `request`, `check_answer`, `Decoder` -> `Message`, `client_frame` (a pong or a close only) |
 | `sweep` | `Sweep::start`, `step()` -> the jog target, `outcome()`: `Passed`, or `Stopped` with the leg, why (`Stop`: resistance, no movement, not arrived, position lost, the firmware) and where |
 
 It builds on [`hud-core`](../hud-core/README.md) (`health`, `origin`, `vehicle`, `gps`,
@@ -57,6 +60,12 @@ It builds on [`hud-core`](../hud-core/README.md) (`health`, `origin`, `vehicle`,
   limits, and it won't start with the wheels outside them.
 - The check stops, and holds where the wheels are, at the first sign of resistance.
 - Nothing here writes vehicle.yaml or the firmware: `result_file` is for a person to copy.
+- The GRAPHS page only reads. A hop is OK only when its value changed in the window and
+  matched the hop before: ego and the mux pair by stamp, the Pi's frames and the ESP32's
+  `rx` by counter and check byte; the Pi must follow the mux (correlation 0.5 or more).
+  A parked car is NOT TESTED, never OK. "Sampled N frames", never "every frame": counts
+  prove the wire.
+- `esp32` and `golden.jsonl` change together (`firmware/status/README.md`).
 - The little robot is not still while the car moves, the buttons ask for speed, CENTRE
   runs or the check sweeps; an e-stop, a STALE sensor or a zero is a warning (`easter_egg`).
 

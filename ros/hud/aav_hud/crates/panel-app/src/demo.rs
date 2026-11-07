@@ -7,6 +7,11 @@
 //! Jog: the firmware's rules (300 counts a second, 400 to 3500). `--demo-bind COUNTS`
 //! puts a stiff spot there (the motor can't push past it, away from straight), so the
 //! lock-to-lock check finds resistance.
+//!
+//! The GRAPHS page's pretend path (`PretendLink`): ego drives a slow steering sweep and
+//! a speed that stops for 3 s every 20 s; the mux passes it on, the Pi writes frames
+//! (10 a second sampled), and the ESP32's status lines say what it got: every hop OK.
+//! With `--esp32`, the real board's lines come instead of the pretend ones.
 
 use std::time::{Duration, Instant};
 
@@ -20,7 +25,12 @@ use hud_core::{
 use panel_core::{
     buttons::Command,
     calibration::{FirmwareState, Raw, Refusal, Request},
-    state::{Actuator, ImuReading, Row, Update, Wheels},
+    esp32::{
+        BoardMode, BoardState, Extremes, Heartbeat, LinkCounts, Out, Positions, Rx, Status,
+        StatusLine, Tick,
+    },
+    graphs::{Drive, PiFrame, UplinkHealth},
+    state::{Actuator, Esp32News, ImuReading, Row, Update, Wheels},
 };
 
 use crate::source::DataSource;
@@ -170,6 +180,163 @@ impl Steering {
     }
 }
 
+/// The legacy bridge's mapping, near enough: full lock and full throttle.
+const MAX_STEER: f64 = 0.5;
+const FULL_SPEED: f64 = 3.0;
+const HOLD_BRAKE: f64 = 0.3;
+
+/// The GRAPHS page's pretend path: ego, the mux, the Pi's frames, the ESP32's lines.
+struct PretendLink {
+    counter: u8,
+    written: u32,
+    seq: u64,
+    /// The last frame written: what the board got.
+    last: Option<PiFrame>,
+    /// Pretend status lines (not with `--esp32`: the real board's come).
+    lines: bool,
+}
+
+/// A stand-in for the frame's CRC-8: different values, a different byte.
+fn check_byte(counter: u8, steering: f64, speed: f64, accel: f64) -> u8 {
+    [steering, speed, accel]
+        .iter()
+        .flat_map(|v| ((v * 1000.0).round() as i32).to_le_bytes())
+        .fold(counter, |c, b| c.rotate_left(3) ^ b)
+}
+
+impl PretendLink {
+    /// What ego asks `t` s in: rad, m/s.
+    fn ego(t: f64) -> (f64, f64) {
+        let steering = 0.3 * (t * 0.45).sin() + 0.08 * (t * 1.7).sin();
+        let stopped = (t % 20.0) > 9.0 && (t % 20.0) < 12.0;
+        let speed = if stopped {
+            0.0
+        } else {
+            0.4 + 0.25 * (t * 0.3).sin()
+        };
+        (steering, speed)
+    }
+
+    fn news(&mut self, t: f64, tick: u64, news: &mut Vec<Update>) {
+        let (steering, speed) = Self::ego(t);
+        let stamp_ns = (t * 1e9) as u64 + 1;
+        let drive = Drive {
+            stamp_ns,
+            speed,
+            steering,
+        };
+        news.push(Update::EgoCommand(drive));
+        news.push(Update::CarCommand(drive));
+        self.counter = self.counter.wrapping_add(1);
+        self.written += 1;
+        // The bridge's mapping (legacy_protocol.to_legacy), roughly.
+        let s = (steering / MAX_STEER).clamp(-1.0, 1.0);
+        let (v, accel) = if speed < 0.05 {
+            (0.0, -HOLD_BRAKE)
+        } else {
+            ((speed / FULL_SPEED).clamp(0.031, 1.0), 0.0)
+        };
+        let frame = PiFrame {
+            version: 2,
+            counter: self.counter,
+            check: check_byte(self.counter, s, v, accel),
+            armed: true,
+            estop: false,
+            steering: s,
+            speed: v,
+            accel,
+            written: self.written,
+            write_errors: 0,
+        };
+        // A sample, 10 a second (link_frame_rate_hz).
+        if tick.is_multiple_of(6) {
+            news.push(Update::LinkFrame(frame));
+            self.last = Some(frame);
+        }
+        if tick.is_multiple_of(60) {
+            news.push(Update::UplinkHealth(UplinkHealth {
+                fresh: true,
+                frames: self.written,
+                lost: 0,
+                bad: 0,
+            }));
+        }
+        if !self.lines {
+            return;
+        }
+        if tick.is_multiple_of(60) {
+            self.seq += 1;
+            news.push(Update::Esp32(Esp32News::Line(StatusLine::Heartbeat(
+                Heartbeat {
+                    seq: self.seq,
+                    up_ms: (t * 1000.0) as u64,
+                    boot_id: "demo0001".into(),
+                    build: "demo".into(),
+                    features: "legacy-uart,wifi-status".into(),
+                    last_reset: "PowerOn".into(),
+                },
+            ))));
+        }
+        // Its status lines, 10 a second, a little after the frames.
+        if tick % 6 == 3 {
+            let Some(f) = self.last else { return };
+            let round = |x: f64| (x * 1000.0).round() / 1000.0;
+            let steer_counts = (1985.0 + f.steering * 1300.0) as u16;
+            let brake_counts = if f.accel < -0.05 { 2200 } else { 400 };
+            let dac = (f.speed * 700.0) as u16;
+            let extremes = Extremes {
+                steer_counts,
+                brake_counts,
+                dac,
+            };
+            self.seq += 1;
+            news.push(Update::Esp32(Esp32News::Line(StatusLine::Status(
+                Box::new(Status {
+                    seq: self.seq,
+                    up_ms: (t * 1000.0) as u64,
+                    rx: Some(Rx {
+                        v: f.version,
+                        counter: f.counter,
+                        check: f.check,
+                        steer: round(f.steering),
+                        speed: round(f.speed),
+                        accel: round(f.accel),
+                        age_ms: 12,
+                    }),
+                    out: Out {
+                        steer_counts,
+                        brake_counts,
+                        dac,
+                        reverse: false,
+                    },
+                    low: Some(extremes),
+                    high: Some(extremes),
+                    pos: Positions {
+                        steer: Some(steer_counts),
+                        brake: None,
+                    },
+                    link: LinkCounts {
+                        frames: self.written,
+                        bad: 0,
+                        skipped: 0,
+                        repeats: 2,
+                    },
+                    state: BoardState {
+                        mode: BoardMode::Computer,
+                        armed: true,
+                        estop: false,
+                        faults: 0,
+                    },
+                    tick: Tick {
+                        worst_gap_us: 10_840,
+                        overruns: 0,
+                    },
+                }),
+            ))));
+        }
+    }
+}
+
 /// The pretend car.
 pub struct Demo {
     start: Instant,
@@ -181,11 +348,13 @@ pub struct Demo {
     announced: bool,
     ticks: u64,
     steering_actuator: Steering,
+    link: PretendLink,
 }
 
 impl Demo {
-    /// `bind`: a stiff spot in the steering, counts (`--demo-bind`).
-    pub fn new(now: Instant, bind: Option<u16>) -> Self {
+    /// `bind`: a stiff spot in the steering, counts (`--demo-bind`). `esp32_lines`:
+    /// pretend status lines (false when the real board's come, `--esp32`).
+    pub fn new(now: Instant, bind: Option<u16>, esp32_lines: bool) -> Self {
         Self {
             start: now,
             last: now,
@@ -196,6 +365,13 @@ impl Demo {
             announced: false,
             ticks: 0,
             steering_actuator: Steering::new(bind),
+            link: PretendLink {
+                counter: 0,
+                written: 0,
+                seq: 0,
+                last: None,
+                lines: esp32_lines,
+            },
         }
     }
 
@@ -303,6 +479,7 @@ impl DataSource for Demo {
             }
         }
         news.push(Update::Estop(self.estop));
+        self.link.news(t, self.ticks, &mut news);
         news.push(Update::SteeringRaw(self.steering_actuator.raw()));
         if self.ticks.is_multiple_of(30) {
             news.push(Update::CalibrationLine(self.steering_actuator.line()));
@@ -333,7 +510,7 @@ mod tests {
     #[test]
     fn the_pretend_car_follows_the_buttons_and_stops_without_them() {
         let t = Instant::now();
-        let mut demo = Demo::new(t, None);
+        let mut demo = Demo::new(t, None, true);
         let ahead = Command::from_steering(0.3, 0.0, WHEELBASE);
         for i in 1..=20 {
             let at = t + Duration::from_millis(100 * i);
@@ -391,5 +568,33 @@ mod tests {
             s.step(now, 0.02, false);
         }
         assert_eq!(s.raw().position, Some(2600));
+    }
+}
+
+#[cfg(test)]
+mod link_tests {
+    use super::*;
+    use panel_core::state::PanelState;
+
+    /// The pretend path, 30 s at 60 frames a second: every hop OK.
+    #[test]
+    fn the_pretend_path_passes_every_hop() {
+        let t0 = Instant::now();
+        let mut demo = Demo::new(t0, None, true);
+        let mut state = PanelState::new(Duration::from_secs(1));
+        let mut now = t0;
+        for i in 1..=1800u64 {
+            now = t0 + Duration::from_micros(i * 16_667);
+            for u in demo.drain(now) {
+                state.apply(u, now);
+            }
+        }
+        let hops = state.graphs.hops(now, Duration::from_secs(1));
+        for h in &hops {
+            assert_eq!(h.verdict.word(), "OK", "{h:#?}");
+        }
+        let c = state.graphs.counts(now);
+        assert_eq!(c.lines_lost, 0);
+        assert!(c.esp32.is_some_and(|(_, d)| d.frames > 1000));
     }
 }

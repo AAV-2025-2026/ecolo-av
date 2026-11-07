@@ -209,7 +209,7 @@ impl Ui {
         let right_end = self.check_column(d, cal, position, right_x, SECTION_Y + 38.0, col_w);
 
         let keys = "keys: L limp   H hold   Left Right step   1 2 3 mark left centre right   \
-                    K check   W save   O end   Tab drive page   E e-stop";
+                    K check   W save   O end   Tab next page   E e-stop";
         let keys = fit(&self.font, keys, w - 2.0 * MARGIN, 15.0);
         if !f.hide_keys {
             self.text(d, &keys, MARGIN, h - 26.0, 15.0, t.dim);
