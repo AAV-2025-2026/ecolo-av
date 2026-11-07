@@ -3,6 +3,7 @@
 The plan for the first time the Rust program (`firmware/spine/boards/esp32-umod`) goes onto
 the car's ESP32 control board. Do it with Ben, **wheels off the ground**, with the C++
 ready to go back on. What the program is: [Rust firmware](rust-firmware.md).
+Its safety rules (boot, release, lost links, what each failure does): [ESP32 safety](esp32-safety.md).
 
 [[untested]] Nothing here has been done on a board yet. The emulator has (next section).
 
