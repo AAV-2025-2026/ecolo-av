@@ -135,6 +135,7 @@ PAGES = [
     ('can-plan.md', 'CAN plan', "Today's wiring (CAN for sensors), and the KEFC plan"),
     ('rust-firmware.md', 'Rust firmware', 'Rust on the chips: layers, frameworks, toolchains'),
     ('esp32-bench.md', 'ESP32 first flash', 'The Rust ESP32 on the bench: flash, check, undo'),
+    ('esp32-cpp-parity.md', 'ESP32 C++ parity', 'Every behaviour of the C++ ESP32, and where the Rust has it'),
     ('platforms.md', 'Platforms', 'Ubuntu, the Orin and Pis, networking'),
     ('bandwidth.md', 'Bandwidth', 'How much data each sensor sends, and which wires have room'),
     ('car-install.md', 'From a USB stick', 'Our Jazzy on the car offline, no sudo: the kit'),

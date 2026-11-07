@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The ESP32: every C++ behaviour, and the Rust&#x27;s · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/esp32-cpp-parity.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>The ESP32: every C++ behaviour, and the Rust&#x27;s</h1>
+<div class="meta">15 min read · 12 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="release-0.2.html">The 0.2 guide</a>
+<a href="whats-new.html">What&#x27;s new</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-evening.html">Tonight: drive as is</a>
+<a href="car-day.html">Car day</a>
+<a href="car-setup.html">Car setup</a>
+<a href="tests.html">Every test</a>
+<a href="know-the-car.html">Know the car</a>
+<a href="measure-the-car.html">Measure the car</a>
+<span class="sep">Learn:</span>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-speed.html">Learn: speed</a>
+<a href="learn-lidar.html">Learn: lidar</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
+<a href="maps-and-position.html">Maps and position</a>
+<span class="sep">Reference:</span>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="path-followers.html">Path followers</a>
+<a href="switches.html">Switches</a>
+<a href="trials.html">Trials</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="hardware-debug.html">Hardware debug</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="geofence.html">The geofence</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a class="here" href="esp32-cpp-parity.html">ESP32 C++ parity</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#how-to-read-the-tables">How to read the tables</a><a href="#the-count">The count</a><a href="#three-behaviours-behind-features">Three behaviours behind features</a><a href="#boot">Boot</a><a href="#the-motor-pis-frames">The Motor-Pi&#x27;s frames</a><a href="#the-rc">The RC</a><a href="#the-devices">The devices</a><a href="#the-status-line-and-the-page">The status line and the page</a><a href="#wifi-and-the-update">WiFi and the update</a><a href="#the-update-over-wifi-wifi-update">The update over WiFi (wifi-update)</a><a href="#settings-the-config-line-states">Settings the CONFIG line states</a><a href="#what-was-run">What was run</a></nav>
+<div class="lead"><p>The 2025-26 team's C++ (<code>firmware/legacy/aav_umod_esp32/src/</code>) drives the car today. The
+Rust (<code>firmware/spine/boards/esp32-umod</code>) replaces it. Ben, 7 Nov: "we should have all the
+features from c++ version at a minimum … We don't know why they made their choice so it's
+best to assume it was for good reasons."</p>
+<p>This page lists every behaviour of the C++, and where the Rust has it.</p>
+<p><span class="badge b-untested">untested</span> Nothing here has run on a board. The QEMU checks have (last section).</p></div>
+<section class="card"><h2 id="how-to-read-the-tables">How to read the tables</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Mark</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Built</strong></td>
+<td>the Rust does it, in the default build or behind the feature named</td>
+</tr>
+<tr>
+<td><strong>Gap</strong></td>
+<td>the Rust doesn't, and why</td>
+</tr>
+<tr>
+<td><strong>Not needed</strong></td>
+<td>the Rust doesn't, on purpose; the reason cites the code</td>
+</tr>
+</tbody>
+</table></div>
+<p>The C++ paths are under <code>src/</code> (<code>modules/</code> dropped). The Rust paths are under
+<code>firmware/spine/</code>.</p>
+</section>
+<section class="card"><h2 id="the-count">The count</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Built</th>
+<th>Gap</th>
+<th>Not needed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>42</td>
+<td>0</td>
+<td>16</td>
+</tr>
+</tbody>
+</table></div>
+<p>No gap is left. Three of the C++'s behaviours change how the car moves, so they are
+<strong>off by default</strong>, behind features (next section).</p>
+</section>
+<section class="card"><h2 id="three-behaviours-behind-features">Three behaviours behind features</h2>
+<p>The default build keeps the team's choices. These features give the C++'s instead.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>The C++</th>
+<th>The default build</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cpp-stop-centre</code></td>
+<td>a safe stop centres the wheels (<code>jrkSafeStop</code>)</td>
+<td>holds them where they are (<code>ESTOP_STEERING = Hold</code>)</td>
+</tr>
+<tr>
+<td><code>cpp-rc-steering</code></td>
+<td>RC right turns go 1950 counts from centre, left 1550</td>
+<td>the same on both sides, 1550</td>
+</tr>
+<tr>
+<td><code>cpp-throttle-ramp</code></td>
+<td>the DAC moves 6 codes up or 12 down a <strong>frame</strong> (50 Hz: 300 up, 600 down a second); a brake demand or a stop cuts it at once</td>
+<td>600 up a second; down at once</td>
+</tr>
+<tr>
+<td><code>cpp-parity</code></td>
+<td>all three</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>cpp-throttle-ramp</code> is for the UART link only (a <code>compile_error!</code> on CAN).</p>
+<div class="admonition note">
+<p class="admonition-title">A finding</p>
+<p>The C++ ramp is called once a frame, not once a loop. So on the Motor-Pi's link it
+rose at <strong>300 codes a second</strong>, half the Rust default's 600.</p>
+</div>
+</section>
+<section class="card"><h2 id="boot">Boot</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What the C++ does</th>
+<th>Where</th>
+<th>Rust today</th>
+<th>Mark</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>USB log at 115200 baud</td>
+<td><code>main.cpp:setup</code></td>
+<td>UART0 at 115200 (<code>main.rs</code>)</td>
+<td>Built</td>
+</tr>
+<tr>
+<td>waits 1 s before anything</td>
+<td><code>main.cpp:setup</code> (<code>delay(1000)</code>)</td>
+<td>no wait: throttle 0 and brake on at once</td>
+<td>Not needed: <code>SpineBoard::init</code> makes the car safe first; a slow Jrk is tried again every tick (<code>spine-board/src/actuators.rs</code>)</td>
+</tr>
+<tr>
+<td>banner <code>=== ESP32: AAV Controller ===</code></td>
+<td><code>main.cpp:setup</code></td>
+<td>the same, with <code>(Rust, spine-esp32-umod 0.1.0)</code></td>
+<td>Built (<code>boot_pin_lines</code>)</td>
+</tr>
+<tr>
+<td>status LED on; red, green, blue off</td>
+<td><code>main.cpp:setup</code></td>
+<td>the same; then the status LED blinks (slowly while the computer drives)</td>
+<td>Built (<code>main.rs</code>, <code>Leds</code>)</td>
+</tr>
+<tr>
+<td><code>Serial1 (ROS UART) @ GPIO16/17</code> line</td>
+<td><code>main.cpp:setup</code></td>
+<td>the same, with <code>115200 8N1</code></td>
+<td>Built (<code>boot_pin_lines</code>)</td>
+</tr>
+<tr>
+<td><code>iBUS Serial2 @ GPIO32/33</code> line</td>
+<td><code>main.cpp:setup</code></td>
+<td><code>iBUS Serial2 @ GPIO32, 115200</code> (TX unused)</td>
+<td>Built</td>
+</tr>
+<tr>
+<td><code>I2C -&gt; SDA:21 SCL:22</code> line</td>
+<td><code>main.cpp:setup</code></td>
+<td>the same, with <code>100 kHz</code></td>
+<td>Built</td>
+</tr>
+<tr>
+<td>I2C start retried for 3 s</td>
+<td><code>main.cpp:setup</code></td>
+<td>esp-hal's I2C can't fail to start</td>
+<td>Not needed: <code>I2c::new</code> takes the pins; a missing device is a fault per tick</td>
+</tr>
+<tr>
+<td>PCA9555: all outputs, all high; <code>PCA9555 ready</code></td>
+<td><code>main.cpp:setup</code></td>
+<td>the same; the line</td>
+<td>Built (<code>Actuators::init</code>, <code>cpp_log::boot_devices</code>)</td>
+</tr>
+<tr>
+<td>DAC looked for 3 s; <code>DAC OK</code> or <code>WARNING: DAC not found — no throttle</code></td>
+<td><code>main.cpp:setup</code>, <code>dac.cpp:detectDAC</code></td>
+<td>probed once; the same lines</td>
+<td>Built (<code>DeviceCheck</code>, <code>cpp_log</code>). Not retried: the DAC is written every tick, and a missing one is the <code>THROTTLE_DAC</code> fault</td>
+</tr>
+<tr>
+<td>DAC 0 at boot</td>
+<td><code>main.cpp:setup</code></td>
+<td>the same</td>
+<td>Built (<code>Actuators::init</code>)</td>
+</tr>
+<tr>
+<td>steering Jrk pinged, centred (1950); its line</td>
+<td><code>main.cpp:setup</code>, <code>jrk_g2.cpp:jrkPing</code></td>
+<td>the same; <code>JRK STEER (0x05) OK - centred (1950)</code></td>
+<td>Built</td>
+</tr>
+<tr>
+<td>brake Jrk pinged, full on (3500); its line</td>
+<td><code>main.cpp:setup</code></td>
+<td>the same; <code>JRK BRAKE (0x04) OK - engaged (3500)</code></td>
+<td>Built</td>
+</tr>
+<tr>
+<td>a missing Jrk is never written again</td>
+<td><code>jrk_g2.cpp:setSteer</code> (<code>if (!jrk_steer_ok) return</code>)</td>
+<td>written every tick; its fault stops the car</td>
+<td>Not needed: a fault the car can't see is worse (<code>spine-board</code> README, "Changed on purpose")</td>
+</tr>
+<tr>
+<td>red LED on if the DAC is missing</td>
+<td><code>main.cpp:setup</code></td>
+<td>red on for any fault</td>
+<td>Built (<code>THROTTLE_DAC</code> lights it)</td>
+</tr>
+<tr>
+<td><code>Ready — SwA: RC_EN …</code> line</td>
+<td><code>main.cpp:setup</code></td>
+<td><code>Ready - CH6 mode: RC direct above 1500 …</code>, from the RC map</td>
+<td>Built (<code>cpp_log::RcReady</code>)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-motor-pis-frames">The Motor-Pi's frames</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What the C++ does</th>
+<th>Where</th>
+<th>Rust today</th>
+<th>Mark</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>13-byte frames: three floats and a sum</td>
+<td><code>ros2_handler.cpp:handleROS2Messages</code></td>
+<td>the same, and versions 2 to 4</td>
+<td>Built (<code>legacy-link</code>)</td>
+</tr>
+<tr>
+<td>a bad sum slides one byte and tries again</td>
+<td>the same</td>
+<td>the same</td>
+<td>Built (<code>legacy-link</code>, the parser)</td>
+</tr>
+<tr>
+<td>a value outside -1..1: frame rejected, throttle a step down</td>
+<td>the same</td>
+<td>the same: throttle 0, through the ramp if on</td>
+<td>Built (<code>LegacyLink::take_v1</code>)</td>
+</tr>
+<tr>
+<td>steering: 1950 counts a unit right, 1550 left</td>
+<td>the same</td>
+<td>the same</td>
+<td>Built (<code>Frame::targets</code>)</td>
+</tr>
+<tr>
+<td>brake below -0.05: <code>clamp(\|accel\| × 3500, 400, 3500)</code>, DAC cut</td>
+<td>the same</td>
+<td>the same</td>
+<td>Built (<code>Frame::targets</code>)</td>
+</tr>
+<tr>
+<td>no brake: brake released (400)</td>
+<td>the same</td>
+<td>the same</td>
+<td>Built</td>
+</tr>
+<tr>
+<td>speed below 0.03: no throttle</td>
+<td>the same</td>
+<td>the same</td>
+<td>Built (<code>SPEED_DEADBAND</code>)</td>
+</tr>
+<tr>
+<td>throttle <code>\|speed\| × 700</code>, capped at 700</td>
+<td>the same</td>
+<td>the same</td>
+<td>Built (<code>DAC_CAP</code>)</td>
+</tr>
+<tr>
+<td>direction pin, then 1 ms, then the ramp</td>
+<td>the same</td>
+<td>direction only with the DAC at 0</td>
+<td>Built, safer (<code>spine-board</code> README, "Changed on purpose")</td>
+</tr>
+<tr>
+<td>the DAC ramp, 6 up and 12 down a frame</td>
+<td><code>dac.cpp:writeDACRamped</code></td>
+<td>600 up a second, down at once</td>
+<td>Built behind <code>cpp-throttle-ramp</code> (<code>legacy_link::DacRamp</code>)</td>
+</tr>
+<tr>
+<td>no command timeout: the last frame holds</td>
+<td><code>main.cpp:loop</code></td>
+<td>stop after 100 ms</td>
+<td>Not needed: the 100 ms watchdog is a rule (<code>spine-core</code>)</td>
+</tr>
+<tr>
+<td><code>ROS: steer=… DAC=…</code>, <code>DBG: …</code> each frame</td>
+<td><code>ros2_handler.cpp</code></td>
+<td>none</td>
+<td>Not needed: 50 lines a second would hold the tick (<code>TextLog</code>); <code>STATUS</code> says it 5 times a second</td>
+</tr>
+<tr>
+<td><code>ROS: BRAKE ENGAGED — DAC cut</code> each frame</td>
+<td>the same</td>
+<td>a <code>FAULT</code> or <code>EVENT</code> line on change</td>
+<td>Not needed: the event line on a change says it once</td>
+</tr>
+<tr>
+<td><code>ROS: packet rejected — out of range</code></td>
+<td>the same</td>
+<td>counted in <code>LINK</code> and <code>HEALTH</code> (<code>bad=</code>)</td>
+<td>Built (as a count)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-rc">The RC</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What the C++ does</th>
+<th>Where</th>
+<th>Rust today</th>
+<th>Mark</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RC mode while CH6 reads 1500 to 2200</td>
+<td><code>main.cpp:loop</code></td>
+<td><code>RcMap::TODAY.direct_above</code> 1500</td>
+<td>Built (<code>ibus</code>)</td>
+</tr>
+<tr>
+<td>channels usable only between 100 and 2200</td>
+<td><code>rc_handler.cpp:handleRCMode</code></td>
+<td><code>valid_above</code>, <code>valid_below</code></td>
+<td>Built</td>
+</tr>
+<tr>
+<td>gear: forward below 1200, reverse above 1800, brake between</td>
+<td>the same</td>
+<td><code>forward_below</code>, <code>reverse_above</code></td>
+<td>Built</td>
+</tr>
+<tr>
+<td>gear brake: brake full, DAC down</td>
+<td>the same</td>
+<td><code>RC_GEAR_BRAKE = FullBrake</code></td>
+<td>Built</td>
+</tr>
+<tr>
+<td>throttle only past -0.05 of the stick</td>
+<td>the same</td>
+<td>the same</td>
+<td>Built (<code>ibus/src/rc.rs</code>)</td>
+</tr>
+<tr>
+<td>steering: 1950 counts right, 1550 left</td>
+<td>the same</td>
+<td>1550 both sides</td>
+<td>Built behind <code>cpp-rc-steering</code> (<code>steer_right_gain</code>)</td>
+</tr>
+<tr>
+<td>RC throttle up to 1023, capped at 700</td>
+<td>the same, <code>writeDACRamped</code></td>
+<td>capped by <code>MAX_SPEED</code>, 1 m/s</td>
+<td>Not needed: one forward limit for every driver (<code>spine</code> README, #23)</td>
+</tr>
+<tr>
+<td>RC idle: brake released, coasting</td>
+<td>the same</td>
+<td><code>rc_stop_brake</code> 0.33 for 1 s, then released</td>
+<td>Not needed: the team's #23 rule replaced it (<code>spine-core</code>)</td>
+</tr>
+<tr>
+<td>lost RC in RC mode: safe stop, <code>RC: No valid signal - SAFE STOP</code></td>
+<td>the same</td>
+<td>the <code>RC_LOST</code> fault; a <code>FAULT … set=RC_LOST</code> line</td>
+<td>Built (<code>cpp_log::FaultChange</code>)</td>
+</tr>
+<tr>
+<td>a safe stop centres the wheels</td>
+<td><code>jrk_g2.cpp:jrkSafeStop</code></td>
+<td>held</td>
+<td>Built behind <code>cpp-stop-centre</code></td>
+</tr>
+<tr>
+<td>ROS frames not read in RC mode</td>
+<td><code>main.cpp:loop</code></td>
+<td>read and counted; RC wins</td>
+<td>Not needed: the C++ then ran stale frames from the UART's buffer when RC let go</td>
+</tr>
+<tr>
+<td><code>RC FWD: …</code>, <code>RC BRAKE: …</code> each loop</td>
+<td><code>rc_handler.cpp</code></td>
+<td>none</td>
+<td>Not needed: about 1000 lines a second</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-devices">The devices</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What the C++ does</th>
+<th>Where</th>
+<th>Rust today</th>
+<th>Mark</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jrk target clamped to 400..3500</td>
+<td><code>jrk_g2.cpp:setSteer</code>, <code>setBrake</code></td>
+<td>the same</td>
+<td>Built (<code>Calibration::TODAY</code>)</td>
+</tr>
+<tr>
+<td>Jrk errors read after each target; <code>JRK STEER ERR: 0x…</code></td>
+<td>the same</td>
+<td>read once a tick; a <code>JRK STEER ERR t=… flags=0x…</code> line on change; a fault</td>
+<td>Built (<code>Actuators::jrk_errors</code>, <code>cpp_log::JrkErrorLine</code>)</td>
+</tr>
+<tr>
+<td><code>ERROR: DAC did not acknowledge!</code></td>
+<td><code>dac.cpp:writeDAC</code></td>
+<td>the <code>THROTTLE_DAC</code> fault; its <code>FAULT</code> line</td>
+<td>Built</td>
+</tr>
+<tr>
+<td>DAC code: 10 bits, two bytes</td>
+<td><code>dac.cpp:writeDAC</code></td>
+<td>the same</td>
+<td>Built (<code>ad5311</code>)</td>
+</tr>
+<tr>
+<td><code>DAC hw write: …</code> each write</td>
+<td><code>dac.cpp:writeDACRamped</code></td>
+<td>none</td>
+<td>Not needed: one a frame or a loop; <code>STATUS</code> has the throttle</td>
+</tr>
+<tr>
+<td><code>JRK SAFE STOP</code> line</td>
+<td><code>jrk_g2.cpp:jrkSafeStop</code></td>
+<td>the <code>FAULT</code> and <code>EVENT</code> lines</td>
+<td>Built</td>
+</tr>
+<tr>
+<td>I2C at 100 kHz</td>
+<td>Arduino's <code>Wire</code> default</td>
+<td><code>I2C_KHZ</code> 100</td>
+<td>Built</td>
+</tr>
+<tr>
+<td>the unused <code>JRK_STEER_*</code> constants</td>
+<td><code>hardware_configs.h</code></td>
+<td>none</td>
+<td>Not needed: nothing in the C++ reads them</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-status-line-and-the-page">The status line and the page</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What the C++ does</th>
+<th>Where</th>
+<th>Rust today</th>
+<th>Mark</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>STATUS:steer,speed,accel \| STR:OK BRK:OK</code> every 200 ms</td>
+<td><code>web_handler.cpp:publishStatus</code>, <code>main.cpp:loop</code></td>
+<td>the same line, every 200 ms, text log</td>
+<td>Built (<code>cpp_log::CppStatus</code>)</td>
+</tr>
+<tr>
+<td>…and after every frame and RC loop</td>
+<td><code>ros2_handler.cpp</code>, <code>rc_handler.cpp</code></td>
+<td>none</td>
+<td>Not needed: a flood; 200 ms is enough to read</td>
+</tr>
+<tr>
+<td>the status page on <code>/</code> and <code>/status</code></td>
+<td><code>web_handler.cpp:handleStatus</code></td>
+<td><code>/</code> and <code>/status</code>, with graphs (<code>wifi-status</code>)</td>
+<td>Built</td>
+</tr>
+<tr>
+<td>the log as a WebSocket on port 81</td>
+<td><code>websoc_serial.h</code>, <code>main.cpp</code></td>
+<td><code>/log</code> on port 80; the JSON lines on <code>/ws</code></td>
+<td>Built (another port)</td>
+</tr>
+<tr>
+<td>early boot lines sent to the WebSocket</td>
+<td><code>main.cpp:setup</code></td>
+<td>none</td>
+<td>Not needed: no client can be on yet; <code>CONFIG</code> and <code>DEVICES</code> repeat every 10 s</td>
+</tr>
+<tr>
+<td><code>/scan</code>: every address, named, as text; <code>Found: 0x05 &lt;- JRK steer</code> lines</td>
+<td><code>web_handler.cpp:handleScan</code></td>
+<td><code>/scan</code> as JSON with <code>names</code>; the same log lines; only while stopped</td>
+<td>Built (<code>BusScan</code>, <code>cpp_log::ScanFound</code>)</td>
+</tr>
+<tr>
+<td><code>OTA -&gt; http://…/update</code>, <code>Scan -&gt; …</code> lines</td>
+<td><code>main.cpp:setup</code></td>
+<td>the same lines</td>
+<td>Built</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="wifi-and-the-update">WiFi and the update</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What the C++ does</th>
+<th>Where</th>
+<th>Rust today</th>
+<th>Mark</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WiFi credentials from an untracked file</td>
+<td><code>main.cpp</code>, <code>secrets.h</code></td>
+<td><code>src/wifi_secrets.rs</code> (untracked)</td>
+<td>Built</td>
+</tr>
+<tr>
+<td>joins for 10 s, blocking the boot</td>
+<td><code>main.cpp:setup</code></td>
+<td>joins in the background, again and again</td>
+<td>Not needed: the tick never waits on the WiFi (board README)</td>
+</tr>
+<tr>
+<td>green LED: WiFi joined; red: it failed</td>
+<td><code>main.cpp:setup</code></td>
+<td>green: the computer drives; red: a fault</td>
+<td>Not needed: the car-day build has no WiFi; the LEDs say what drives</td>
+</tr>
+<tr>
+<td><strong>firmware update</strong> over WiFi, <code>/update</code></td>
+<td><code>main.cpp</code> (<code>HTTPUpdateServer</code>)</td>
+<td><code>/update</code> on port 8080, behind <code>wifi-update</code></td>
+<td>Built (below)</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-update-over-wifi-wifi-update">The update over WiFi (<code>wifi-update</code>)</h2>
+<p>The C++'s <code>/update</code> takes any file from anyone, at any time, while the car drives. Ours
+takes one only when all of these hold:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>the feature <code>wifi-update</code> is on: off by default, never in the car-day build</td>
+<td><code>Cargo.toml</code>, <code>tools/car_day_build.sh</code> (<code>tools/tests/test_esp32_settings.py</code>)</td>
+</tr>
+<tr>
+<td>the password, in the <code>X-Update-Password</code> header, matches the untracked secrets file's; 12 characters at least; never the example's; 10 s lockout after a wrong one</td>
+<td><code>app-update/src/gate.rs</code> (<code>Guard</code>)</td>
+</tr>
+<tr>
+<td>the car is parked: nobody driving, not armed, throttle 0, brake full on; checked before, at every 4 KB, and before the switch</td>
+<td><code>app-update/src/gate.rs</code> (<code>may_update</code>)</td>
+</tr>
+<tr>
+<td>the file is an ESP32 app image: the magic, the chip, the segments, the checksum, the SHA-256, our app's name, it fits the slot</td>
+<td><code>app-update/src/image.rs</code> (<code>ImageCheck</code>)</td>
+</tr>
+<tr>
+<td>written to the other OTA slot, then read back (CRC-32), then the slot's SHA-256 checked on flash</td>
+<td><code>boards/esp32-umod/src/update.rs</code></td>
+</tr>
+<tr>
+<td>the boot switches only then; the reboot waits 1 s, and only while parked</td>
+<td>the same</td>
+</tr>
+</tbody>
+</table></div>
+<p>How to use it (bench only, wheels off the ground):</p>
+<ol>
+<li>Flash <code>partitions-ota.csv</code> once over USB: the default table has no OTA slots, and
+   the update says <code>409</code> without them.</li>
+<li>Make the file: <code>espflash save-image --chip esp32 &lt;the ELF&gt; app.bin</code>.</li>
+<li><code>curl -H "X-Update-Password: …" --data-binary @app.bin http://&lt;ip&gt;:8080/update</code>.</li>
+<li>The reply says the bytes, the version and the slot; the board restarts.</li>
+</ol>
+<div class="admonition warning">
+<p class="admonition-title">Limits</p>
+<ul>
+<li>The password crosses the WiFi in plain HTTP. Use the bench network only.</li>
+<li>Each 4 KB erase holds the tick about 45 ms (esp-storage turns interrupts off).
+  The car is parked, so nothing moves, but the <code>TICK</code> line shows it. A slow flash
+  chip's erase (up to 400 ms) trips the 100 ms watchdog: the chip restarts into the
+  old program, which is still the one to boot.</li>
+<li>No browser form: <code>curl</code> only.</li>
+</ul>
+</div>
+</section>
+<section class="card"><h2 id="settings-the-config-line-states">Settings the CONFIG line states</h2>
+<p>Ben, 7 Nov: "It would be worth knowing its settings including steering limits and speed
+limits and braking pressure limits, communication rates…". The <code>CONFIG</code> line (text, JSON,
+and WiFi <code>/config</code>) states each one, from the constants the code runs with. Every key, and
+where it comes from: the board README, "What the CONFIG line says".</p>
+</section>
+<section class="card"><h2 id="what-was-run">What was run</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cargo test</code> (the crates)</td>
+<td>passed</td>
+</tr>
+<tr>
+<td><code>tools/esp32.sh check</code></td>
+<td>fmt, clippy on 13 mixes, the default build and the <code>json-log,wifi-update</code> link: passed</td>
+</tr>
+<tr>
+<td><code>tools/esp32.sh qemu-check</code></td>
+<td>PASS</td>
+</tr>
+<tr>
+<td><code>tools/esp32.sh first-check --qemu</code></td>
+<td>SAFE TO GO ON</td>
+</tr>
+<tr>
+<td>a real <code>wifi-update</code> image (874 KB) through <code>ImageCheck</code></td>
+<td>passed</td>
+</tr>
+</tbody>
+</table></div>
+<p>Untested: anything on the board; the update's flash writes and the switch; the WiFi; the
+three <code>cpp-*</code> features in QEMU.</p></section>
+<nav class="prevnext"><a class="prev" href="esp32-bench.html"><small>Previous</small>← ESP32 first flash</a>
+<a class="next" href="platforms.html"><small>Next</small>Platforms →</a></nav>
+</main>
+<footer>Source: <code>docs/esp32-cpp-parity.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>
