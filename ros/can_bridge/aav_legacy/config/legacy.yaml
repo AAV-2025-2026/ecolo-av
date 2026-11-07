@@ -25,6 +25,9 @@ legacy_uart_bridge:
     # Pi's RX, and the Rust firmware is flashed with --features uplink (docs/esp32-bench.md).
     uplink: false
     uplink_timeout: 0.2         # s without a frame: the uplink is stale (they come at 50 Hz)
+    # /control/car/link_frame: a sample of the frames really written, and counts of them all
+    # (tools/link_check.py). Any frame version, uplink or not. 0.0: no samples.
+    link_frame_rate_hz: 10.0
     # Finding the steering actuator's ends and centre from the hardware panel (limp, jog;
     # docs/actuator-tests.md). none, stands (the car on stands, wheels off the ground) or
     # bench (the ESP32 on a desk). The hardware lead's to set, for that session only; it
