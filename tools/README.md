@@ -140,6 +140,7 @@ Each lands outside git, checksum pinned where the script says.
 | `elf2uf2.py` | a Pico 2 program into a UF2 file | (pico.sh build) |
 | `esp32.sh` | the ESP32 board's Rust: tools, build, flash, check, QEMU | `esp <tools, build, flash, qemu-tools, qemu-check>` |
 | `esp32_qemu.py` | the ESP32 firmware in QEMU: heartbeat, uplink, RC modes | (`esp qemu-check`) |
+| `esp32_status_sim.py` | a pretend ESP32 with `wifi-status` on 127.0.0.1:8765: its page, `/status.json`, `/scan` and the WebSocket of status lines (`firmware/status`), moving; read only, standard library | - |
 | `legacy_firmware.sh` | today's C++ ESP32 firmware, with PlatformIO | `-e firmware legacy-esp32` |
 
 ### Data and analysis

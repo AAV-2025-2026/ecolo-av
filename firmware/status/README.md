@@ -57,3 +57,5 @@ Each reader's and writer's own tests read `golden.jsonl`. `tools/test.sh` runs t
 | Who | Side | Test |
 |---|---|---|
 | `firmware/spine/crates/status-lines` | writes (the ESP32) | `cargo test -p status-lines`: each line, byte for byte |
+| `tools/esp32_status_sim.py` | writes (a pretend board, for the page and readers) | `tools/tests/test_esp32_status_sim.py`: the golden lines' fields |
+| `firmware/spine/boards/esp32-umod/page.html` | reads (the WebSocket) | none yet: tried by hand against the sim |
