@@ -15,6 +15,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "app-update"
+version = "0.1.0"
+
+[[package]]
 name = "embedded-can"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

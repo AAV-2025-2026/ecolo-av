@@ -27,6 +27,8 @@ members = [
     "crates/spine-board",
     # The ESP32's JSON status lines (firmware/status), into a fixed buffer.
     "crates/status-lines",
+    # The checks around the ESP32's firmware update over WiFi (wifi-update).
+    "crates/app-update",
 ]
 
 [workspace.package]

@@ -13,24 +13,26 @@ is tested on a laptop, without a board. The board programs are in `boards/`:
   spine-core, aav-inputs,    jrk-g2, ad5311, pca9555,     -->  spine-board -->  boards/esp32-umod
   ibus, legacy-link,         mcp2515, hd44780                                    boards/pico2
   wheel-encoder, sentinel,                                                       boards/wheel-encoder-pico2
-  wheel-core, status-lines                                                       boards/sentinel-pico2
+  wheel-core, status-lines,                                                      boards/sentinel-pico2
+  app-update
 ```
 
 ## Interface
 
 | Crate | What it is | Tests |
 |---|---|---|
-| [`spine-core`](./crates/spine-core/README.md) | the spine's logic: modes, arming, the 100 ms watchdog, the speed loop (closed, or open with no wheel speed), the encoder, the CAN frames, open-loop commands, the state machine and the hardware test mode (`fsm`), and the three choices still open (below) | 120 |
+| [`spine-core`](./crates/spine-core/README.md) | the spine's logic: modes, arming, the 100 ms watchdog, the speed loop (closed, or open with no wheel speed), the encoder, the CAN frames, open-loop commands, the state machine and the hardware test mode (`fsm`), and the three choices still open (below) | 142 |
 | [`wheel-core`](./crates/wheel-core/README.md) | the front wheel nodes' logic: Hall sensor pulses to speed, and the WHEEL_SPEED frame | 9 |
-| [`legacy-link`](./crates/legacy-link/README.md) | the 2025-26 UART link: the Motor-Pi's 13-byte frames, and the targets the C++ set for them; versions 2 and 3 (the heartbeat; the steering calibration's rules, `SteerCal`) and the uplink | 110 |
+| [`legacy-link`](./crates/legacy-link/README.md) | the 2025-26 UART link: the Motor-Pi's 13-byte frames, and the targets the C++ set for them; versions 2 and 3 (the heartbeat; the steering calibration's rules, `SteerCal`) and the uplink | 121 |
 | [`aav-inputs`](./crates/aav-inputs/README.md) | clean inputs: debounced switches, an e-stop that trips at once, counting with a lockout | 9 |
 | [`jrk-g2`](./crates/jrk-g2/README.md) | the Pololu Jrk G2 motor controllers (steering, brake), over I2C | 15 |
 | [`ad5311`](./crates/ad5311/README.md) | the throttle DAC, over I2C | 10 |
 | [`pca9555`](./crates/pca9555/README.md) | the I/O expander (the direction output), over I2C | 6 |
 | [`mcp2515`](./crates/mcp2515/README.md) | the CAN controller a Pico 2 needs, over SPI: bit timing from the crystal, filters, send, receive, error state | 34 |
-| [`ibus`](./crates/ibus/README.md) | the FlySky RC receiver's iBUS frames | 25 |
-| [`spine-board`](./crates/spine-board/README.md) | the glue: spine-core's outputs to the devices, the devices to its inputs, the `Board` trait a board program implements, and the `CommandLink` trait: CAN or the UART; the tick's timing; what a status line needs; an I2C bus scan; the Pi link's verdict and the boot device check | 109 |
-| [`status-lines`](./crates/status-lines/README.md) (7 Nov) | the ESP32's JSON status lines (`firmware/status`): `hb`, `status`, `event`, `health`, `config`, `devices`, into a fixed buffer, byte for byte as `golden.jsonl`; a few bytes a tick to a slow log | 16 |
+| [`ibus`](./crates/ibus/README.md) | the FlySky RC receiver's iBUS frames | 26 |
+| [`spine-board`](./crates/spine-board/README.md) | the glue: spine-core's outputs to the devices, the devices to its inputs, the `Board` trait a board program implements, and the `CommandLink` trait: CAN or the UART; the tick's timing; what a status line needs; an I2C bus scan; the Pi link's verdict and the boot device check | 119 |
+| [`status-lines`](./crates/status-lines/README.md) (7 Nov) | the ESP32's JSON status lines (`firmware/status`): `hb`, `status`, `event`, `health`, `config`, `devices`, into a fixed buffer, byte for byte as `golden.jsonl`; a few bytes a tick to a slow log | 20 |
+| [`app-update`](./crates/app-update/README.md) (7 Nov) | the checks around the ESP32's firmware update over WiFi (`wifi-update`): a streaming check of an ESP32 app image, a CRC-32 for the read-back, whether the car is parked, the update password's guard | 7 |
 | [`wheel-encoder`](./crates/wheel-encoder/README.md) (15 Oct) | two spoke sensors, counted the 2025-26 way (the spine and the wheel encoder share it), and the wheel encoder's UDP packet | 12 |
 | [`sentinel`](./crates/sentinel/README.md) (15 Oct) | the status display's logic: its I2C packet, its 13 LCD pages, the knob, the beeps, the matrix | 40 |
 | [`hd44780`](./crates/hd44780/README.md) (15 Oct) | the sentinel's 16x2 character LCD, on six GPIO pins | 5 |

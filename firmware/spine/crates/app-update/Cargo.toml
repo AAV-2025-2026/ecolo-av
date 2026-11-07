@@ -1,0 +1,10 @@
+[package]
+name = "app-update"
+description = "The checks around a firmware update over WiFi (the ESP32's wifi-update): a streaming check of an ESP32 app image, a CRC-32 for the read-back, whether the car is parked, and the update password's guard."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# no_std, no allocator, no dependencies.
+[dependencies]
