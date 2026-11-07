@@ -296,6 +296,21 @@ test lot and 15 ms on the campus (Ben's Mac, 4 threads).</p>
 <td>0.23 m (3 Nov)</td>
 </tr>
 <tr>
+<td><code>--speed-steps</code> (-0.5, 1, 2 m/s): overshoot</td>
+<td>15.8, 15.2, 10.1 %; within 5 % after 10.9-13.3 s</td>
+<td>15.9, 15.2, 10.1 %; 11-13 s (TODO 27)</td>
+</tr>
+<tr>
+<td><code>--drive-to-point</code>, 1 m/s</td>
+<td>7 of 8 pass, B within 0.11-0.34 m; the +150° leg refused (B inside the tightest turn from where the last leg stopped)</td>
+<td>pass (0.2)</td>
+</tr>
+<tr>
+<td><code>--drive-to-point</code>, 3 m/s</td>
+<td>3 of 4 pass, B within 0.05-0.12 m; one leg held by the sensor watchdog (a stale sensor on the loaded Mac)</td>
+<td>pass (0.2)</td>
+</tr>
+<tr>
 <td>Real-time factor</td>
 <td>0.71-1.00 under that load</td>
 <td>not run here: its renderer didn't load in this worktree</td>

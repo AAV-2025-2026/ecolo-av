@@ -76,6 +76,9 @@ When the cameras come in, `gazebo.launch.py` sets `gazebo_adapter`'s `cameras` t
 | `sim-check`: start-up, contract, lidar, scan, scripted drive, EKF vs truth (0.05-0.20 m), wheels vs IMU | pass | pass |
 | `--lidar-obstacle` (the post) | pass: stopped 0.20 m before it | pass |
 | `--obstacle` (the box) | stopped **0.33 m** before it; then the goal failed: a TF lookup ran late on the loaded Mac | 0.23 m (3 Nov) |
+| `--speed-steps` (-0.5, 1, 2 m/s): overshoot | 15.8, 15.2, 10.1 %; within 5 % after 10.9-13.3 s | 15.9, 15.2, 10.1 %; 11-13 s (TODO 27) |
+| `--drive-to-point`, 1 m/s | 7 of 8 pass, B within 0.11-0.34 m; the +150° leg refused (B inside the tightest turn from where the last leg stopped) | pass (0.2) |
+| `--drive-to-point`, 3 m/s | 3 of 4 pass, B within 0.05-0.12 m; one leg held by the sensor watchdog (a stale sensor on the loaded Mac) | pass (0.2) |
 | Real-time factor | 0.71-1.00 under that load | not run here: its renderer didn't load in this worktree |
 
 ## Not there yet
