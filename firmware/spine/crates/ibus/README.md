@@ -28,6 +28,7 @@ A 32-byte frame comes about every 7 ms.
 | `RcMap::TODAY` | today's channels and switch points (below); also `RcMap::default()` |
 | `RcMap::THREE_POSITION` | the same, with the mode switch's middle as RC via ROS (TODO 48, proposed) |
 | `RcMap`'s public fields | build your own map: channels `mode_switch`, `throttle`, `steering`, `gear`; usable range `valid_above`, `valid_below`; mode switch `direct_above`, `via_ros_above` (`Option`); gear switch `forward_below`, `reverse_above`; sticks `centre`, `half_travel`, `throttle_deadband` |
+| `RcMap::steer_right_gain` | right turns (the stick below centre) times this, then clamped to -1: 1.0 in `TODAY`; `legacy_link::STEER_RIGHT_PER_LEFT` gives the C++'s (the ESP32's `cpp-rc-steering`, 7 Nov) |
 | `RcMap::switch(value)` | the `spine_core::RcSwitch` for a mode-switch value: computer, via ROS or direct |
 | `RcMap::rc_input(&channels)` | the `spine_core::RcInput`: mode switch, throttle and steering (each -1 to 1), and whether the gear switch is on brake |
 | `decode`, `encode`, `checksum` | one frame, without a parser |

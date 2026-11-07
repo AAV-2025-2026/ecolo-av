@@ -931,6 +931,19 @@ impl<const N: usize> LineBuf<N> {
         Ok(())
     }
 
+    /// Replace what it holds with any one line of text (a text log line). On [`TooLong`]
+    /// it holds nothing.
+    pub fn set_text(&mut self, text: &impl Display) -> Result<(), TooLong> {
+        self.len = 0;
+        let mut w = SliceWriter {
+            buf: &mut self.buf,
+            len: 0,
+        };
+        write!(w, "{text}").map_err(|_| TooLong)?;
+        self.len = w.len;
+        Ok(())
+    }
+
     /// The line, without a newline; empty if none.
     pub fn as_str(&self) -> &str {
         // `set` only keeps what `write_to` checked.

@@ -24,7 +24,7 @@ dependencies, only `core::fmt`.
 | `Config::text(now_ms)` | the same settings as the text `CONFIG t=… key=value …` line on the cable; an unknown value is `none` |
 | `Body::Devices(DeviceList)` | `devices` (7 Nov): `answered`, `expected`, and a `list` of `DeviceSeen`: `name`, `address`, `answered`, `feedback` |
 | `Line::write_to(&mut buf)` | the line into a byte slice, no newline; `Err(TooLong)` if it doesn't fit |
-| `LineBuf<N>` | a line in its own `N`-byte buffer: `set`, `as_str`, `as_bytes` |
+| `LineBuf<N>` | a line in its own `N`-byte buffer: `set`, `set_text` (any `Display`: a text log line), `as_str`, `as_bytes` |
 | `Spread` | the lowest and highest `Levels` between two status lines: `add` each tick, `take` at each line |
 | `Trickle<SLOTS, N>` | lines queued for a slow serial log: `push` a line, or `push_text` any one line of text (a full queue drops it whole: `Dropped`, counted in `dropped()`), `next_chunk(max)` each tick; a chunk never spans two lines |
 | `SCHEMA`, `MAX_LINE`, `MAX_CHANNELS` | 1; 1408 bytes (the widest status line is 783, a config line about 1100, under 1400 at its widest); 14 |

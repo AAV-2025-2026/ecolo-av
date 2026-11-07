@@ -16,8 +16,9 @@ use crate::spine_board::Every;
 use core::convert::Infallible;
 use embedded_io::{Read, ReadReady, Write};
 use legacy_link::{
-    Ask, CalRequest, Counts, DriveMode, Frame, FrameError, FrameV4, Heartbeat, ModeSwitch, Parser,
-    ParserV4, Situation, SteerCal, SteeringDrive, Sticks, Targets, Throttle, Uplink, WheelSpeed,
+    Ask, CalRequest, Counts, DacRamp, DriveMode, Frame, FrameError, FrameV4, Heartbeat, ModeSwitch,
+    Parser, ParserV4, Situation, SteerCal, SteeringDrive, Sticks, Targets, Throttle, Uplink,
+    WheelSpeed,
 };
 use spine_core::protocol::{decode_incoming, EstopCmd, FrameError as CanError, Incoming, Mode};
 use spine_core::{DirectCmd, Inputs, Outputs, RcInput, RcSwitch, SpeedReport};
@@ -238,6 +239,8 @@ pub struct LegacyLink<U, T = NoUplink> {
     steer_cal: SteerCal,
     /// The latest frame's e-stop flag.
     frame_estop: bool,
+    /// With [`LegacyLink::with_cpp_ramp`]: the C++'s DAC ramp, a step a command.
+    ramp: Option<DacRamp>,
 }
 
 impl<U: Read + ReadReady> LegacyLink<U, NoUplink> {
@@ -274,7 +277,20 @@ impl<U: Read + ReadReady, T: Write> LegacyLink<U, T> {
             sequence: 0,
             steer_cal: SteerCal::new(limits.min.min(limits.max), limits.max.max(limits.min)),
             frame_estop: false,
+            ramp: None,
         }
+    }
+
+    /// The C++'s DAC ramp too (`writeDACRamped`, `legacy_link::DacRamp`): each command
+    /// moves the throttle at most 6 codes up and 12 down, so an idle frame (|speed| under
+    /// 3 %) or a frame turned down lets the throttle fall a step at a time instead of at
+    /// once: the car coasts down as it did on the C++. A stop (a brake demand, `armed`
+    /// clear, the steering calibration) still cuts it at once, as the C++ cut it for a
+    /// brake demand; so do a change of direction and every stop the spine makes. Off by
+    /// default: the board's `cpp-throttle-ramp` feature.
+    pub fn with_cpp_ramp(mut self) -> Self {
+        self.ramp = Some(DacRamp::new());
+        self
     }
 
     /// What the link has seen since boot.
@@ -366,7 +382,19 @@ impl<U: Read + ReadReady, T: Write> LegacyLink<U, T> {
     }
 
     /// The tick's command: a stop in any frame this tick wins, so an arming edge isn't lost.
-    fn give(&mut self, cmd: DirectCmd, inputs: &mut Inputs) {
+    fn give(&mut self, mut cmd: DirectCmd, inputs: &mut Inputs) {
+        if let Some(ramp) = &mut self.ramp {
+            let turning = self.last.is_some_and(|last| last.reverse != cmd.reverse);
+            if cmd.stop || turning {
+                ramp.cut();
+            }
+            let code = if cmd.stop {
+                0
+            } else {
+                ramp.toward(self.cal.throttle.code(cmd.throttle))
+            };
+            cmd.throttle = self.cal.throttle.fraction(code);
+        }
         self.last = Some(cmd);
         if inputs.direct_cmd.is_none_or(|old| !old.stop) {
             inputs.direct_cmd = Some(cmd);
@@ -693,6 +721,37 @@ mod tests {
         assert_eq!(targets(&inputs.direct_cmd.unwrap()), (2725, 400, 0));
         // With nothing before it, nothing.
         assert_eq!(receive(&mut link(), &bad).direct_cmd, None);
+    }
+
+    #[test]
+    fn with_the_cpp_ramp_the_throttle_moves_a_step_a_frame() {
+        let mut l = link().with_cpp_ramp();
+        let code = |l: &mut LegacyLink<FakeUart>, s, v, a| {
+            targets(&receive(l, &frame(s, v, a)).direct_cmd.unwrap()).2
+        };
+        // Up 6 a frame toward 350, as writeDACRamped.
+        assert_eq!(code(&mut l, 0.0, 0.5, 0.0), 6);
+        assert_eq!(code(&mut l, 0.0, 0.5, 0.0), 12);
+        for _ in 0..100 {
+            code(&mut l, 0.0, 0.5, 0.0);
+        }
+        assert_eq!(code(&mut l, 0.0, 0.5, 0.0), 350);
+        // An idle frame: down 12, not to 0; the brake stays released.
+        let idle = receive(&mut l, &frame(0.0, 0.0, 0.0)).direct_cmd.unwrap();
+        assert_eq!(targets(&idle), (1950, 400, 338));
+        assert!(!idle.stop);
+        // Out of range: one step down too, the rest kept.
+        let mut bad = [0u8; 13];
+        bad[..4].copy_from_slice(&2.0f32.to_le_bytes());
+        bad[12] = bad[..12].iter().fold(0u8, |s, &b| s.wrapping_add(b));
+        assert_eq!(targets(&receive(&mut l, &bad).direct_cmd.unwrap()).2, 326);
+        // A brake demand cuts it at once, and it rises from 0 again.
+        assert_eq!(code(&mut l, 0.0, 0.5, -1.0), 0);
+        assert_eq!(code(&mut l, 0.0, 0.5, 0.0), 6);
+        // So does a change of direction.
+        assert_eq!(code(&mut l, 0.0, -0.5, 0.0), 6);
+        // Without it, the frame's code at once (the default).
+        assert_eq!(code(&mut link(), 0.0, 0.5, 0.0), 350);
     }
 
     #[test]

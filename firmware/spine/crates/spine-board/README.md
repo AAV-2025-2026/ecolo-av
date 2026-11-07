@@ -81,6 +81,9 @@ The order of the writes, every tick:
 | `BusScan`, `ScanState` | which I2C addresses answer (0x01 to 0x77): `start()`, then `step(&mut i2c, armed, n)` after each tick probes `n` addresses with no data, none while armed; `found()` |
 | `LinkHealth::new(timeout_ms)`, `update(now_ms, &stats)`, `LinkReport`, `LinkVerdict` | the Pi link judged on the board, each tick, by the spine's own 100 ms rule: `NoFramesYet`, `Ok`, `Stale` (frames stopped), `CounterFrozen` (frames come, the Orin's counter doesn't move: the mux is not running), `BadFrames` (bad frames or stray bytes in the last `BAD_WINDOW_MS`, 3 s); with the age of the last frame and whether the counter moves. Reporting only (7 Nov) |
 | `DeviceCheck::run(&mut i2c, &addresses)`, `Device`, `Found`, `feedback_name` | which of the four devices answer, once at boot: a probe with no data each, and each Jrk's feedback mode (a RAM setting). Never reads the error registers, which would clear them (7 Nov) |
+| `LegacyLink::with_cpp_ramp()` | the 2025-26 C++'s DAC ramp on this link: 6 codes up and 12 down a frame, cut on a stop or a change of direction (`legacy_link::DacRamp`). Off unless asked: the ESP32's `cpp-throttle-ramp` (7 Nov) |
+| `Actuators::jrk_errors()`, `ErrorFlags` | each Jrk's error flags from the tick's own read (`None`: the read failed); no extra read (7 Nov) |
+| `cpp_log` | the C++'s log lines, from what the tick has: `boot_devices`, `RcReady`, `CppStatus` (`STATUS:… \| STR:OK BRK:OK`), `FaultChange` (`FAULT … set=… cleared=…`), `JrkErrorLine`, `scan_label` and `ScanFound` (`Found: 0x05 <- JRK steer`) (7 Nov) |
 | `StandInBus`, `DeviceTargets` | stand-in devices on an I2C bus for a board with none wired (the ESP32 in QEMU); not for the car |
 
 It depends on `spine-core`, `aav-inputs`, `wheel-encoder`, `legacy-link`, `jrk-g2`,

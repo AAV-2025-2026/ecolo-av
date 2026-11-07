@@ -679,3 +679,12 @@ fn names_are_the_contracts() {
     .collect();
     assert_eq!(names, ["computer", "via_ros", "direct", "no_signal"]);
 }
+
+#[test]
+fn a_line_buffer_takes_a_text_line_too() {
+    let mut lb = LineBuf::<16>::new();
+    lb.set_text(&format_args!("TICK t={}", 5)).unwrap();
+    assert_eq!(lb.as_str(), "TICK t=5");
+    assert_eq!(lb.set_text(&"x".repeat(17)), Err(TooLong));
+    assert!(lb.is_empty());
+}

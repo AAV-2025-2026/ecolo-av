@@ -72,8 +72,8 @@ pub use steer_cal::{
     CAL_TIMEOUT_MS, COUNTS_MAX,
 };
 pub use targets::{
-    Targets, Throttle, BRAKE_BELOW, BRAKE_FULL, BRAKE_RELEASED, DAC_CAP, SPEED_DEADBAND,
-    STEER_CENTRE,
+    DacRamp, Targets, Throttle, ACCEL_STEP, BRAKE_BELOW, BRAKE_FULL, BRAKE_RELEASED, DAC_CAP,
+    DECEL_STEP, SPEED_DEADBAND, STEER_CENTRE, STEER_RIGHT_PER_LEFT,
 };
 pub use uplink::{
     Counts, DriveMode, ModeSwitch, Sticks, Uplink, KIND_STATUS, UPLINK_LEN, UPLINK_V2_LEN,
