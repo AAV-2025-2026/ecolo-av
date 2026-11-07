@@ -7,5 +7,6 @@ imu_node:
     port: /dev/aav/imu          # udev name (tools/udev/99-aav.rules); was /dev/ttyUSB0
     baud_rate: 115200
     frame_id: imu_link
-    gyro_stddev: 0.0025         # rad/s. MEASURED 2026-11-06, stationary ~2 min, 24k samples @200Hz (gyro_z read 0 — yaw-rate axis dead, to investigate)
+    gyro_stddev: 0.0025         # rad/s. MEASURED 2026-11-06, stationary ~2 min, 24k samples @200Hz (max of x/y; gyro_z is live but quiet, ~0.001 near the gyro's resolution; an earlier reading of exactly 0 was a transient)
     accel_stddev: 0.061         # m/s^2. MEASURED 2026-11-06, stationary ~2 min, 24k samples @200Hz
+
