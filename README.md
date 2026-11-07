@@ -152,6 +152,7 @@ Add `--demo` to any of the four for pretend data: no ROS, no car, no build.
 | `actuator-test` | the actuator tests, on stands and in a lot: `actuator-test --list`. The preflight on stands, every sensor checked: `actuator-test preflight --stands` |
 | `calibrate-camera` | calibrate a streamed camera: `calibrate-camera board` prints the checkerboard |
 | `doctor` | can this computer join the car's ROS network? Says what to fix |
+| `link-check` | did the Motor Pi's frames reach the ESP32? `link-check <bag> --esp32 <file>`: PASS, FAIL or NOT TESTED; a parked car is never a PASS ([docs](docs/hardware-debug.md)) |
 
 ### Before car day
 
