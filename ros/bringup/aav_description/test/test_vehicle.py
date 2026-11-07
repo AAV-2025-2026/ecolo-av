@@ -565,3 +565,13 @@ def test_the_committed_lattice_fits_the_car():
     wider = dict(v, max_steering_angle=v['max_steering_angle'] * 0.8)
     assert 'turning radius' in vehicle.lattice_problems(meta, wider, 0.25)[0]
     assert 'cells' in vehicle.lattice_problems(meta, v, 0.05)[0]
+
+
+def test_mppi_keeps_enough_path_for_its_futures_at_a_higher_speed():
+    nav2 = yaml.safe_load(NAV2_YAML.read_text())
+    v = vehicle.load(CONFIG)['vehicle']
+    tuned = vehicle.nav2_tuned(nav2, v, max_speed=2.5, controller='mppi')
+    follow = tuned['controller_server']['ros__parameters']['FollowPath']
+    ahead = follow['time_steps'] * follow['model_dt'] * follow['vx_max']
+    assert follow['vx_max'] == 2.5
+    assert follow['prune_distance'] > ahead

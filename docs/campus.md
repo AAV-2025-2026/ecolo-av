@@ -10,7 +10,8 @@ pixi run dev-window --live --ndt-map maps/ndt/campus.pcd   # in a second termina
 ```
 
 Click a road or lot on the map, then confirm, as in any world. The car starts in lot P4,
-because the datum itself is on a station shelter.
+because the datum itself is on a station shelter. It drives at up to 2.5 m/s here, in Gazebo
+only: the real car's limit stays 1 m/s.
 
 ## What's real and what's guessed
 
@@ -77,7 +78,7 @@ campus: NDT is watched, and doesn't steer the estimate.
 | Finding | What to do |
 |---|---|
 | With `reversing` on, the car backs a long way to a goal behind it, at 0.5 m/s | use `reversing:=false` here; a decision for later (TODO 122) |
-| MPPI stays near 1 m/s even with `sim_speed:=3`; RPP reached 2.8 m/s | TODO 123 |
+| MPPI stayed near 1 m/s at any `sim_speed`: its 3 m of path was shorter than its futures | fixed: the path now grows with the speed. Campus default 2.5 m/s (mean 2.2) |
 | The car wiggles: the turn rate flips about once a second | TODO 124 |
 | Kerbs sit at Nav2's 0.3 m floor | TODO 119: test it now this world exists |
 | A lot's middle is far from anything | the lidar sees little there: NDT may lose the fit |

@@ -152,7 +152,7 @@
       <sensor name="chase_camera" type="camera">
         <pose>-7.0 0 3.5 0 0.28 0</pose>
         <always_on>1</always_on>
-        <update_rate>10</update_rate>
+        <update_rate>30</update_rate>
         <topic>/aav/chase_camera/image</topic>
         <gz_frame_id>base_link</gz_frame_id>
         <camera>

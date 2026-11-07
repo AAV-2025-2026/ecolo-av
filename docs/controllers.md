@@ -510,6 +510,23 @@ Scored by `measure controllers` and `measure atob`. The design: `docs/designs/20
 on branch `trials` (Tentative; `git show trials:docs/designs/2026-10-29_trials.md`).
 **Nothing in it is built yet.**
 
+## Which rides best: sway
+
+Ben, 5 Nov: a line "that doesn't make you want to throw up". Every report now opens with a table:
+reached every goal first, then the least **sway**.
+
+| Score | What it means |
+|---|---|
+| Sway (m/s²) | The sideways push a passenger feels, minus its 4 s average: a steady corner counts almost nothing, a wobble counts in full |
+| Left-right changes per 100 m | How often the car swaps its turn direction |
+
+```bash
+pixi run measure controllers --tours campus --speed 2.5 --controllers mppi rpp \
+  --trackers pure_pursuit stanley lqr mpc mpc_full
+```
+
+The campus tour runs only when asked for. Results are in `log/controller-compare/`.
+
 ## Planners
 
 The **planner** draws the path; the **follower** (MPPI, RPP, a tracker) drives it. Nav2

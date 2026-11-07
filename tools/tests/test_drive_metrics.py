@@ -601,3 +601,57 @@ def test_an_odometry_on_a_short_leg_or_none_says_nan():
     assert math.isnan(row['local_drift_per_100m'])
     assert row['local_drift_max_m'] == pytest.approx(0.0)
     assert math.isnan(m.odometry_row('kiss', truth, [])['kiss_drift_max_m'])
+
+
+def line_track(wobble, seconds=40.0, speed=2.0, hz=20.0):
+    """Return a true track along x: its heading swings by `wobble` rad, once every 2 s."""
+    track = []
+    x = y = 0.0
+    for i in range(int(seconds * hz)):
+        t = i / hz
+        yaw = wobble * math.sin(math.pi * t)
+        x += speed * math.cos(yaw) / hz
+        y += speed * math.sin(yaw) / hz
+        track.append((t, x, y, yaw))
+    return track
+
+
+def test_a_straight_drive_has_no_sway():
+    swing, flips = m.sway(line_track(0.0))
+    assert swing == pytest.approx(0.0, abs=1e-9)
+    assert flips == 0.0
+
+
+def test_a_wobble_is_sway_and_a_bigger_one_is_worse():
+    small, small_flips = m.sway(line_track(0.05))
+    big, _ = m.sway(line_track(0.2))
+    assert big > 3.0 * small > 0.0
+    # One full swing a 2 s at 2 m/s: two changes every 4 m.
+    assert small_flips == pytest.approx(50.0, rel=0.15)
+
+
+def test_a_long_steady_corner_is_not_sway():
+    track = []
+    for i in range(800):
+        t = i / 20.0
+        yaw = 0.2 * t
+        track.append((t, 10.0 * math.sin(yaw), 10.0 * (1.0 - math.cos(yaw)), yaw))
+    assert m.sway(track)[0] < 0.01
+
+
+def test_too_short_a_track_has_no_sway_number():
+    assert math.isnan(m.sway(line_track(0.1, seconds=1.0))[0])
+
+
+def test_the_best_ride_reached_every_goal_then_swayed_least():
+    leg = {'reached': True, 'driven_m': 100.0, 'time_s': 50.0, 'sway_mps2': 0.2,
+           'sway_flips_per_100m': 4.0, 'off_path_mean_m': 0.1, 'off_path_max_m': 0.3}
+    smooth = m.comfort([leg, {**leg, 'sway_mps2': 0.1}])
+    assert smooth['sway_mps2'] == pytest.approx(0.15)
+    assert smooth['speed_mps'] == pytest.approx(2.0)
+    rough = m.comfort([leg, {**leg, 'sway_mps2': 0.9}])
+    failed = m.comfort([{**leg, 'reached': False, 'sway_mps2': 0.01}, leg])
+    never = m.comfort([None, None])
+    ranked = sorted([never, failed, rough, smooth], key=m.comfort_order)
+    assert ranked == [smooth, rough, failed, never]
+

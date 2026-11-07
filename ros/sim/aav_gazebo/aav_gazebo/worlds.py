@@ -38,6 +38,8 @@ CAMPUS_NDT_MIN_SCORE = 1.5
 # every hit on it would count as an obstacle, or as a wall for NDT. NDT looks above it. The
 # screen's cubes look below it, so the kerb and the grass show as the lidar's rings.
 CAMPUS_NDT_FLOOR = 0.45
+# m/s: the campus's roads are long. The car's own limit stays 1 m/s; this is Gazebo only.
+CAMPUS_SPEED = '2.5'
 CAMPUS_CUBE_FLOOR = 0.12
 
 

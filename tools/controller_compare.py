@@ -11,6 +11,9 @@ Each drives the test lot, headless, and is measured against where the car really
     pixi run measure controllers --tours lot --legs 1   (only the first leg: a quick check)
     pixi run measure controllers --reversing        (Nav2 may reverse: the car's reversing:=true)
     pixi run measure controllers --plans            (keep every plan, not just each leg's first)
+    pixi run measure controllers --tours campus --speed 2.5 --trackers pure_pursuit stanley
+                    Carleton's roads; every report opens with which rides best: reached every
+                    goal, then the least sideways swing (drive_metrics.sway)
 
 The trials (docs/trials.md):
     pixi run measure controllers --trackers pure_pursuit stanley lqr mpc --runs 3
@@ -130,6 +133,13 @@ TOURS = {
     ]},
     'obstacle': {'obstacle': True, 'legs': [
         ('past the box', 30.0, 0.0, 0.0),
+    ]},
+    # Carleton (pixi run campus): only when asked for, at the campus's speed. Long roads and real
+    # bends, where a wobble shows.
+    'campus': {'obstacle': False, 'world': worlds.CAMPUS, 'legs': [
+        ('out of the lot', 73.0, -38.0, 45.0),
+        ('along the road', 165.0, -111.0, -40.0),
+        ('round the bend', 139.0, -190.0, -100.0),
     ]},
 }
 BOX = 1.0               # m: the bench's obstacle, a cube (aav_gazebo models/obstacle)
@@ -684,7 +694,8 @@ def session(tour, follower, args, out_dir, body, used, run=1):
     kind, controller, planner, label = follower
     tag = f'{label}-{run}' if args.runs > 1 else label
     log_path = os.path.join(out_dir, f'sim-{tour}-{tag}.log')
-    command = ['ros2', 'launch', 'aav_bringup', 'sim.launch.py', 'world:=test_lot',
+    command = ['ros2', 'launch', 'aav_bringup', 'sim.launch.py',
+               f'world:={plan.get("world", "test_lot")}',
                'gui:=false', 'rviz:=false',
                f'tracker:={controller}' if kind == 'tracker' else f'controller:={controller}',
                # Forward only, as on the car (the sim's default lets Nav2 reverse; MPPI
@@ -822,7 +833,8 @@ def report(results, args, started):
     runs = ('One run each' if args.runs == 1 else
             f'{args.runs} runs each: every run, then the mean and its spread (SD)')
     lines = [f'# Controller comparison, {started:%Y-%m-%d %H:%M}', '',
-             f"Gazebo's test lot, headless, on this computer; Nav2 and ego at up to "
+             f"Gazebo ({', '.join(args.tours)}), headless, on this computer; "
+             'Nav2 and ego at up to '
              f'{args.speed or 1.0:g} m/s, ' +
              ('reversing allowed' if args.reversing else 'forward only') +
              (', AMCL beside the EKF' if args.amcl else '') +
@@ -855,6 +867,14 @@ def report(results, args, started):
                 for c, r in columns]
         lines += [f'## {tour}: the whole tour', '',
                   drive_metrics.table(rows, columns=drive_metrics.OVERALL), '']
+    for tour in args.tours:
+        # Least sideways swing first, of those that reached every goal: which rides best.
+        columns = list(dict.fromkeys(c for t, _, c, *_ in results if t == tour))
+        rows = [(c, drive_metrics.comfort([row for t, _, c2, row, *_ in results
+                                           if t == tour and c2 == c])) for c in columns]
+        rows.sort(key=lambda r: drive_metrics.comfort_order(r[1]))
+        lines += [f'## {tour}: which rides best', '',
+                  drive_metrics.table(rows, columns=drive_metrics.COMFORT), '']
     for tour in args.tours if args.kiss_icp else []:
         lines += [f'## {tour}: odometry over the whole tour', '',
                   drive_metrics.table(tour_odometry(results, tour, args.runs),
@@ -902,8 +922,25 @@ def tour_odometry(results, tour, runs):
     return out
 
 
+def open_picture(results, tour, args):
+    """Return an SVG of a tour with no drawing of its world: the tracks, framed by themselves."""
+    runs = [r for r in results if r[0] == tour and r[5] and r[5].get('track')]
+    tracks = []
+    for controller in dict.fromkeys(r[2] for r in runs):
+        line = [(x, y) for r in runs if r[2] == controller for _, x, y, *_ in r[5]['track']]
+        tracks.append((f'{controller}: where the car went', COLOURS.get(controller, 'black'),
+                       [line], False))
+    marks = [(x, y, name) for name, x, y, _ in tour_legs(tour, args)]
+    xs = [p[0] for _, _, lines, _ in tracks for p in lines[0]] + [m[0] for m in marks]
+    ys = [p[1] for _, _, lines, _ in tracks for p in lines[0]] + [m[1] for m in marks]
+    return drive_metrics.svg((min(xs) - 5, min(ys) - 5, max(xs) + 5, max(ys) + 5), tracks, (),
+                             marks, scale=3.0)
+
+
 def picture(results, tour, args):
     """Return an SVG of one tour on the test lot: each controller's track, the first plans."""
+    if 'world' in TOURS[tour]:
+        return open_picture(results, tour, args)
     with open(MAP_SPEC) as f:
         spec = yaml.safe_load(f)
     (ox, oy), (w, h), wall = spec['origin'], spec['size'], spec.get('border', 0.0)
@@ -966,7 +1003,8 @@ def main():
     parser.add_argument('--kiss-ekf', action='store_true',
                         help="as --kiss-icp, and ekf_local takes KISS-ICP's twist "
                              '(kiss_ekf:=true)')
-    parser.add_argument('--tours', nargs='+', choices=list(TOURS), default=list(TOURS))
+    parser.add_argument('--tours', nargs='+', choices=list(TOURS),
+                        default=[t for t in TOURS if 'world' not in TOURS[t]])
     parser.add_argument('--speed', type=float, default=None,
                         help="m/s, up to 5: sim_speed:= (the car's own top speed: 1.0)")
     parser.add_argument('--reversing', action='store_true',
