@@ -30,7 +30,7 @@ def test_its_lines_have_the_golden_lines_fields():
         gold.setdefault(line['t'], line)
     got = lines(sim.Board(rate_hz=10), 300)   # 30 s: a mode change too
     kinds = {line['t'] for line in got}
-    assert kinds == {'hb', 'status', 'event'}
+    assert kinds == {'hb', 'status', 'event', 'health', 'config', 'devices'}
     for line in got:
         assert keys(line) == keys(gold[line['t']]), line
         assert line['schema'] == 1
@@ -62,6 +62,17 @@ def test_the_values_stay_in_the_cars_ranges():
             assert line['low']['dac'] <= line['out']['dac'] <= line['high']['dac']
 
 
+def test_the_link_verdict_follows_the_mode():
+    got = lines(sim.Board(rate_hz=10), 250)   # 25 s: computer, then RC
+    status = [line for line in got if line['t'] == 'status']
+    verdicts = {(s['state']['mode'], s['link']['verdict']) for s in status}
+    assert verdicts == {('computer', 'ok'), ('rc', 'counter_frozen')}
+    health = [line for line in got if line['t'] == 'health']
+    assert len(health) == 25
+    assert {h['link'] for h in health} == {'ok', 'counter_frozen'}
+    assert sum(line['t'] == 'config' for line in got) == 3   # at start, 10 s, 20 s
+
+
 def test_the_accept_key_is_rfc_6455s_example():
     assert sim.accept_key('dGhlIHNhbXBsZSBub25jZQ==') == 's3pPLMBiTxaQ9kYGzzhZRbK+xOo='
 
@@ -85,6 +96,11 @@ def test_the_server_gives_the_page_status_and_a_websocket():
         status = await get('/status.json')
         body = json.loads(status.split(b'\r\n\r\n', 1)[1])
         assert body['t'] == 'status'
+        await asyncio.sleep(1.0)
+        health = json.loads((await get('/health')).split(b'\r\n\r\n', 1)[1])
+        assert health['t'] == 'health' and health['link'] == 'ok'
+        config = json.loads((await get('/config')).split(b'\r\n\r\n', 1)[1])
+        assert config['t'] == 'config' and config['idle_brake'] == 1.0
         assert (await get('/nothing')).startswith(b'HTTP/1.1 404')
 
         r, w = await asyncio.open_connection('127.0.0.1', port)

@@ -9,12 +9,16 @@ hw_panel later) can be tried without a board:
 |---|---|
 | `/` | the board's own page, `firmware/spine/boards/esp32-umod/page.html` |
 | `/status.json` | the latest `status` line |
+| `/health` | the latest `health` line: the Pi link's verdict, the devices, the faults |
+| `/config` | the latest `config` line: the build and the numbers it runs with |
 | `/scan` | a made-up scan that finds today's four devices |
-| `/ws` | a WebSocket of `hb`, `status` and `event` lines (`firmware/status`) |
+| `/ws` | a WebSocket of the lines (`firmware/status`): `hb`, `status`, `event`, `health`, ... |
 
 The lines start from `firmware/status/golden.jsonl` and move: the steering sweeps, the
 brake comes on and off, the throttle ramps, the positions follow a little late, and the
-mode changes now and then. `--lose` drops a line now and then, to see the gaps.
+mode changes now and then: 20 s of the computer driving (the Pi link OK), then 5 s of RC
+with the Orin's counter frozen (the page's banner says COUNTER FROZEN). `--lose` drops a
+line now and then, to see the gaps.
 
 It listens on 127.0.0.1 only, and reads nothing it is sent: like the board, it is read
 only. Python's standard library only.
@@ -59,6 +63,9 @@ class Board:
         lines = golden()
         self.hb = next(line for line in lines if line['t'] == 'hb')
         self.status = next(line for line in lines if line['t'] == 'status')
+        self.config = next(line for line in lines if line['t'] == 'config')
+        self.devices = next(line for line in lines if line['t'] == 'devices')
+        self.health = next(line for line in lines if line['t'] == 'health')
         self.rate_hz = rate_hz
         self.lose_every = lose_every
         self.seq = 0
@@ -69,6 +76,8 @@ class Board:
         self.mode = 'computer'
         self.pos = {'steer': 1950.0, 'brake': 3500.0}
         self.latest: Optional[str] = None
+        self.latest_health: Optional[str] = None
+        self.latest_config: Optional[str] = None
 
     def _line(self, body: dict) -> Optional[str]:
         """Give a line its number; None if this one is 'lost' (the seq still moves on)."""
@@ -85,9 +94,16 @@ class Board:
         period_ms = round(1000 / self.rate_hz)
         self.up_ms += period_ms
         t = self.up_ms / 1000
-        if self.up_ms // 1000 != (self.up_ms - period_ms) // 1000:
+        new_second = self.up_ms // 1000 != (self.up_ms - period_ms) // 1000
+        if new_second:
             hb = dict(self.hb, features='legacy-uart,wifi-status', build='sim')
             yield from filter(None, [self._line(hb)])
+        if self.up_ms == period_ms or self.up_ms // 10_000 != (self.up_ms - period_ms) // 10_000:
+            config = self._line(dict(self.config, build='sim'))
+            if config:
+                self.latest_config = config
+                yield config
+            yield from filter(None, [self._line(self.devices)])
         # The mode: the computer drives for 20 s, then RC for 5 s.
         mode = 'computer' if t % 25 < 20 else 'rc'
         if mode != self.mode:
@@ -101,8 +117,15 @@ class Board:
         # The positions follow, a little behind, as a Jrk does.
         for key, target in (('steer', steer), ('brake', brake)):
             self.pos[key] += (target - self.pos[key]) * min(1.0, 4.0 / self.rate_hz)
-        self.counter = (self.counter + 5) % 256
+        # The Orin's counter moves while the computer drives; in the RC phase it is frozen,
+        # the frames still coming (the Pi alive, the Orin's mux not).
+        frozen = self.mode != 'computer'
+        if not frozen:
+            self.counter = (self.counter + 5) % 256
         self.frames += 5
+        repeats = self.status['link']['repeats'] + (5 if frozen else 0)
+        self.status['link']['repeats'] = repeats
+        verdict = 'counter_frozen' if frozen else 'ok'
         s = copy.deepcopy(self.status)
         s['rx'].update(counter=self.counter, check=(self.counter * 37) % 256,
                        steer=round((steer - 1950) / 1550, 3), speed=round(dac / 700, 3),
@@ -111,13 +134,21 @@ class Board:
         s['low'].update(steer_counts=steer - 6, brake_counts=brake, dac=max(0, dac - 6))
         s['high'].update(steer_counts=steer + 6, brake_counts=brake, dac=dac)
         s['pos'].update(steer=round(self.pos['steer']), brake=round(self.pos['brake']))
-        s['link'].update(frames=self.frames)
+        s['link'].update(frames=self.frames, verdict=verdict)
         s['state'].update(mode=self.mode)
         s['rc']['switch'] = 'computer' if self.mode == 'computer' else 'direct'
         line = self._line(s)
         if line:
             self.latest = line
             yield line
+        if new_second:
+            h = copy.deepcopy(self.health)
+            h.update(link=verdict, counter_moving=not frozen, frames=self.frames,
+                     repeats=repeats, mode=self.mode, build='sim')
+            health = self._line(h)
+            if health:
+                self.latest_health = health
+                yield health
 
 
 # --- the server: HTTP GET and a WebSocket, nothing more ---------------------------------
@@ -175,6 +206,12 @@ class Server:
         elif path == '/status.json':
             await self.reply(writer, '200 OK', 'application/json',
                              (self.board.latest or '{}').encode())
+        elif path == '/health':
+            await self.reply(writer, '200 OK', 'application/json',
+                             (self.board.latest_health or '{}').encode())
+        elif path == '/config':
+            await self.reply(writer, '200 OK', 'application/json',
+                             (self.board.latest_config or '{}').encode())
         elif path == '/scan':
             await self.reply(writer, '200 OK', 'application/json',
                              b'{"scan":"done","found":[4,5,12,32]}')
