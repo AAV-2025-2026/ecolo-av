@@ -3,6 +3,14 @@
 The current work list, newest first. Tick items off as they land; each tick = a commit.
 Ben's messages, word for word: `docs/history/messages-*.md`.
 
+## Saturday 7 November: release 0.3, our own simulator
+
+Ben, 7 Nov: replace Gazebo with our own Rust simulator, every sensor. The core (world, car, lidar, IMU, GPS, wheels, clock, TF) and the cameras are built side by side.
+
+| # | Task | Status |
+|---|---|---|
+| 135 | **The simulator's cameras** ([page](docs/own-simulator-cameras.md), `aav_sim_cameras`): Bevy offscreen, Gazebo's four camera topics, `CameraRenderer` for the core. Left: feed it the core's world and truth; read Gazebo's SDF worlds; a no-GPU path for CI; compare with Gazebo's pictures; the detector on its pictures | ✅ built, test world only. ⬜ merge with the core |
+
 ## Saturday 7 November: the hardware debug plan
 
 Ben, 7 Nov: the Rust replaces the C++, WiFi pages too, with JSON instead of streaming text; graphs of steering, brake and throttle in `hw_panel`; debug one part of the car at a time.

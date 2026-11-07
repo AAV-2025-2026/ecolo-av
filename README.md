@@ -126,6 +126,7 @@ Add `--demo` to any of the four for pretend data: no ROS, no car, no build.
 | `debug-hud` | the debug screen: the lidar's cubes, the localizers, every sensor |
 | `hw-panel` | the hardware panel: every sensor's number, and simple buttons (hold Space to drive) for Gazebo or the bench, beside `sim` or `demo --debug` (this computer only) |
 | `dev-window` | the developer window (Bevy): Ben's layout. Pretend data; `--live` beside `demo` or `sim`; `--watch` listens only |
+| `sim-cameras` | our simulator's cameras (Bevy, offscreen): the timing check; `--ros` publishes Gazebo's camera topics (this computer only) |
 | `rviz` | RViz with the driving layout: map, costmaps, path, car |
 | `graph` | a live picture of the nodes and topics |
 

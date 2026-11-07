@@ -115,6 +115,8 @@ PAGES = [
     ('sim-and-car.md', 'Sim and the car', "What's simulated, what's real, and why"),
     ('full-simulation.md', 'Full simulation',
      'The whole car in Gazebo: the pipeline, the actuators'),
+    ('own-simulator-cameras.md', "Our simulator's cameras",
+     'Bevy draws the car cameras offscreen, on the same topics as Gazebo'),
     ('carla.md', 'CARLA', "Photo-real towns and Carleton's streets: UE5 vs UE4, the twin"),
     ('bench.md', 'Bench mode', "The car's software on one computer, with stand-ins"),
     ('actuator-tests.md', 'Actuator tests', 'Measure how the car moves: on stands, in a lot'),
