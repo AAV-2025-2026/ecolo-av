@@ -654,4 +654,3 @@ def test_the_best_ride_reached_every_goal_then_swayed_least():
     never = m.comfort([None, None])
     ranked = sorted([never, failed, rough, smooth], key=m.comfort_order)
     assert ranked == [smooth, rough, failed, never]
-

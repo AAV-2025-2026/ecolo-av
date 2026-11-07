@@ -17,7 +17,7 @@ firmware/status/README.md).
 |---|---|
 | Log | lines came in at all |
 | Build | the CONFIG line's build is this checkout's commit (or --build) |
-| Features | `legacy-uart` (`uplink`, `json-log`, `wifi-status` allowed), never `qemu` (or exactly --features) |
+| Features | `legacy-uart`; `uplink`, `json-log`, `wifi-status` allowed; never `qemu` |
 | Last reset | a power-on, not a watchdog, a panic or a brown-out |
 | Devices | all four I2C devices answered at boot (the DEVICES line) |
 | Brake | at IDLE_BRAKE, as the CONFIG line says, in every status line |
