@@ -20,13 +20,14 @@ dependencies, only `core::fmt`.
 | `Body::Status(Status)` | `status`: `rx` (`Rx`, or `null`), `out` (`Out`), `low`, `high` (`Levels`), `pos` (`Positions`), `link` (`LinkCounts`), `rc` (`Rc`, `Switch`), `state` (`State`, `Mode`), `tick` (`Tick`) |
 | `Body::Event(Event)` | `event`: `what`, `from`, `to`; each a `Value`: `Text`, `Flag` or `Number` |
 | `Body::Health(Health)` | `health` (7 Nov): `link` (a `Verdict`, or `null`), `age_ms`, `counter_moving`, the link's counts, `devices` (answered, expected, missing), `faults`, `mode`, `last_reset`, `build`, `boot_id` |
-| `Body::Config(Config)` | `config` (7 Nov): the build, features, version, link, frame version, tick, watchdog, command timeout, `idle_brake`, `full_throttle_speed`, `i2c_khz`, `Addresses`, `SteeringLimits`, `BrakeLimits`, the full-throttle code, `last_reset` |
+| `Body::Config(Config)` | `config` (7 Nov): the build, features, version, link, frame version, tick, watchdog, command timeout, `idle_brake`, `full_throttle_speed`, `i2c_khz`, `Addresses`, `SteeringLimits`, `BrakeLimits`, the full-throttle code, `last_reset`; then `SteeringSettings`, `BrakeSettings` (inside `steering` and `brake`), `SpeedSettings`, `Timeouts`, `Rates` |
+| `Config::text(now_ms)` | the same settings as the text `CONFIG t=… key=value …` line on the cable; an unknown value is `none` |
 | `Body::Devices(DeviceList)` | `devices` (7 Nov): `answered`, `expected`, and a `list` of `DeviceSeen`: `name`, `address`, `answered`, `feedback` |
 | `Line::write_to(&mut buf)` | the line into a byte slice, no newline; `Err(TooLong)` if it doesn't fit |
 | `LineBuf<N>` | a line in its own `N`-byte buffer: `set`, `as_str`, `as_bytes` |
 | `Spread` | the lowest and highest `Levels` between two status lines: `add` each tick, `take` at each line |
-| `Trickle<SLOTS, N>` | lines queued for a slow serial log: `push` a line (a full queue drops it whole: `Dropped`, counted in `dropped()`), `next_chunk(max)` each tick; a chunk never spans two lines |
-| `SCHEMA`, `MAX_LINE`, `MAX_CHANNELS` | 1; 832 bytes (the widest status line is 783); 14 |
+| `Trickle<SLOTS, N>` | lines queued for a slow serial log: `push` a line, or `push_text` any one line of text (a full queue drops it whole: `Dropped`, counted in `dropped()`), `next_chunk(max)` each tick; a chunk never spans two lines |
+| `SCHEMA`, `MAX_LINE`, `MAX_CHANNELS` | 1; 1408 bytes (the widest status line is 783, a config line about 1100, under 1400 at its widest); 14 |
 
 | Value | Written as |
 |---|---|

@@ -3,6 +3,12 @@
 /// The link's speed: 115200 baud, 8N1 (`main.cpp`: `Serial1.begin(115200, ...)`).
 pub const BAUD: u32 = 115_200;
 
+/// How many frames a second the Motor-Pi sends: `legacy_uart_bridge`'s `rate_hz`
+/// (`ros/can_bridge/aav_legacy/config/legacy.yaml`; `tools/tests/test_esp32_settings.py`
+/// checks the two match). The board only reports it: what it acts on is the 100 ms
+/// command timeout, which lets four frames in a row go missing.
+pub const FRAME_HZ: u32 = 50;
+
 /// Bytes in a version 1 frame. There is no header: the checksum is the only way to find
 /// a frame.
 pub const FRAME_LEN: usize = 13;

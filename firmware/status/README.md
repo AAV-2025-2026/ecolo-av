@@ -16,7 +16,7 @@ place.
 | `status` | 5 to 20 times a second | The Pi's last frame, what went to each device, low and high since the last line, positions, link counts, RC, state, tick timing |
 | `event` | At each change | What changed, from and to |
 | `health` | Once a second | Is it working: the Pi link's verdict, the age of its last frame, the counter moving, the link's counts, the devices at boot (answered, expected, missing), faults, mode, last reset, build, boot ID. `/health` serves the latest |
-| `config` | 250 ms after boot, then every 10 s | The build, features, version, link and frame version, tick, watchdog and command timeout (ms), `idle_brake`, `full_throttle_speed`, the I2C speed (`null`: stand-ins in QEMU), the four addresses, the steering's min, centre and max, the brake's released and full, the full-throttle DAC code, last reset. `/config` serves the latest |
+| `config` | 250 ms after boot, then every 10 s | The build, features, version, link and frame version, tick, watchdog and command timeout (ms), `idle_brake`, `full_throttle_speed`, the I2C speed (`null`: stand-ins in QEMU), the four addresses, the steering's min, centre and max, the brake's released and full, the full-throttle DAC code, last reset; then every other setting that decides how the car moves and talks (7 Nov, the table below). `/config` serves the latest |
 | `devices` | 350 ms after boot, then every 10 s | Which I2C devices answered at boot (`answered`, `expected`), and each one's `name`, `address`, `answered` and `feedback` (a Jrk's feedback mode: `none`, `analog`, `frequency`, `other`, `unknown`; `null` for the others) |
 
 | Field in `status` | Means |
@@ -29,6 +29,22 @@ place.
 | `rc` | `switch`, and the raw channels |
 | `state` | `mode`, `armed`, `estop`, `faults` |
 | `tick` | `worst_gap_us`: the longest gap between ticks since boot. `overruns`: ticks later than 10 ms |
+
+The `config` line's settings (7 Nov). Each comes from the constant the firmware runs with;
+`null` where the build has no such thing (CAN has no UART, say). New keys were added at the
+end of `steering` and `brake`, and as three groups after `last_reset`: no key moved.
+
+| Where | Keys |
+|---|---|
+| `steering` | `min`, `centre`, `max` (counts); `counts_per_rad`; `max_angle_rad`; `rate_rad_s` (the spine's slew); `cal_rate` (counts/s) and `cal_timeout_ms` (the steering calibration, version 3 frames); `on_stop` (`hold` or `centre`) |
+| `brake` | `released`, `full` (counts); `stop`, `overspeed`, `rc_stop` (0..1); `rc_stop_ms`; `rc_gear` (`full_brake` or `speed_zero`) |
+| `speed` | `max_forward`, `max_reverse` (m/s); `cap_code`, `reverse_cap_code` (the DAC code an open-loop command can reach: the limit over `full_throttle_speed`); `frame_dac_cap` (the UART frame's scale, the C++'s `DAC_MAX_CAP`); `rise_per_s` (DAC codes/s); `max_accel`, `max_decel` (m/s²); `overspeed_margin` (m/s) |
+| `timeouts` | `rc_lost_ms`, `speed_lost_ms`, `overspeed_ms`, `estop_release_ms`, `bad_frames_ms` |
+| `rates` | `uart_baud`, `frame_hz` (what the Motor-Pi sends), `uplink_ms`, `can_kbit`, `ibus_baud`, `jrk_write_ms`, `dac_write_ms` (each device gets its target every tick), `status_ms` |
+
+The text `CONFIG` line on the cable has the same settings, flat, after `last_reset`
+(`steer_counts_per_rad=… max_speed=… uart_baud=…`); an unknown value there is `none`, never
+`0`.
 
 | Value | Can be |
 |---|---|

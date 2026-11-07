@@ -28,7 +28,7 @@ The lines `pixi run esp first-check` reads (`docs/esp32-bench.md`, 2a):
 
 | Line | Says |
 |---|---|
-| `CONFIG t=… build=… features=… link=uart frame=2 tick_ms=10 watchdog_ms=100 cmd_timeout_ms=100 idle_brake=1.00 full_throttle_speed=3.00 i2c_khz=100 steering_jrk=0x05 … steer_centre=1950 … brake_full=3500 … last_reset=ChipPowerOn` | the build and the numbers it runs with |
+| `CONFIG t=… build=… features=… link=uart frame=2 tick_ms=10 watchdog_ms=100 cmd_timeout_ms=100 idle_brake=1.00 full_throttle_speed=3.00 i2c_khz=100 steering_jrk=0x05 … steer_centre=1950 … brake_full=3500 … last_reset=ChipPowerOn steer_counts_per_rad=3100.0 … max_speed=1.00 … throttle_cap_code=233 … rc_lost_ms=100 … uart_baud=115200 frame_hz=50 uplink_ms=20 …` | the build and every setting it runs with (below, "Settings"); about 1 KB, so it goes out 96 bytes a tick and never holds the tick |
 | `DEVICES 4/4 answered t=… steering=0x05,answered,analog brake=0x04,answered,analog dac=0x0c,answered expander=0x20,answered` | which devices answered at boot; a Jrk's feedback mode, or `unknown` |
 | `HEALTH t=… link=ok age_ms=12 counter_moving=yes frames=… bad=… skipped=… repeats=… devices=4/4 faults=0x0000 mode=Manual armed=false` | the Pi link's verdict (`ok`, `no_frames`, `stale`, `counter_frozen`, `bad_frames`; `can` on CAN), judged on the board by the 100 ms rule |
 
@@ -144,7 +144,34 @@ In `src/main.rs`:
 | `FULL_THROTTLE_SPEED` | 3.0 m/s | the open loop's scale; `legacy.yaml`'s guess (Q4) |
 | `IDLE_BRAKE` | 1.0 | the C++ kept the brake on while nobody drives; Ben decides |
 
-What differs from the C++, and what Ben must decide: `docs/rust-firmware.md`.
+What differs from the C++, and what Ben must decide: `docs/rust-firmware.md`; every C++
+behaviour, and where the Rust has it: `docs/esp32-cpp-parity.md`.
+
+### What the CONFIG line says, and where each value comes from
+
+`board_config` in `src/main.rs` fills it from the constants the code runs with, never a
+copy. Today's default build:
+
+| Area | Keys (text form) | Today | From |
+|---|---|---|---|
+| Steering | `steer_min`, `steer_centre`, `steer_max` | 400, 1950, 3500 counts | `Calibration::TODAY.steering` |
+| | `steer_counts_per_rad`, `steer_max_rad`, `steer_rate_rad_s` | 3100, 0.5 rad, 0.6 rad/s | the calibration; `SpineConfig` (`MAX_STEERING_ANGLE`) |
+| | `steer_cal_rate`, `steer_cal_timeout_ms`, `steer_on_stop` | 300 counts/s, 100 ms, `hold` | `legacy_link::CAL_RATE`, `CAL_TIMEOUT_MS`; `ESTOP_STEERING` |
+| Speed | `max_speed`, `max_reverse_speed` | 1.0, 0.5 m/s | `MAX_SPEED`, `MAX_REVERSE_SPEED` |
+| | `throttle_cap_code`, `reverse_cap_code` | 233, 117 of 1023 | `SpineConfig::open_loop_throttle_cap`, the code the spine caps at |
+| | `throttle_full_code`, `frame_dac_cap`, `dac_rise_per_s` | 700, 700, 600 codes/s | the calibration (`full_code`, the DAC's own limit); `legacy_link::DAC_CAP` |
+| | `full_throttle_speed`, `max_accel`, `max_decel`, `overspeed_margin` | 3.0 m/s, 1.5, 2.5 m/s², 0.25 m/s | `FULL_THROTTLE_SPEED`; `SpineConfig` |
+| Brake | `brake_released`, `brake_full` | 400, 3500 counts | the calibration |
+| | `idle_brake`, `brake_stop`, `brake_overspeed` | 1.0, 1.0, 0.5 | `IDLE_BRAKE` here; `SpineConfig` |
+| | `brake_rc_stop`, `rc_stop_ms`, `rc_gear` | 0.33 for 1000 ms, `full_brake` | `SpineConfig` (#23), `RC_GEAR_BRAKE` |
+| Timeouts | `cmd_timeout_ms`, `watchdog_ms` | 100, 100 ms | `SpineConfig`; `WATCHDOG_MS` |
+| | `rc_lost_ms`, `speed_lost_ms`, `overspeed_ms`, `estop_release_ms`, `bad_frames_ms` | 100, 300, 2000, 50, 3000 ms | the calibration; `SpineConfig`; `OVERSPEED_WINDOW_MS`; `BAD_WINDOW_MS` |
+| Rates | `uart_baud`, `frame`, `frame_hz`, `uplink_ms` | 115200, version 2, 50 Hz, 20 ms | `legacy_link::BAUD`, `FRAME_HZ`; `UPLINK_PERIOD_MS` |
+| | `ibus_baud`, `i2c_khz`, `can_kbit` | 115200, 100 kHz, `none` | `ibus::BAUD`; `I2C_KHZ`; `can::KBIT` |
+| | `tick_ms`, `jrk_write_ms`, `dac_write_ms`, `status_ms` | 10, 10, 10, 200 ms | `TICK`: every device gets its target every tick |
+
+An unknown value is `none` in the text form and `null` in JSON (`i2c_khz` in QEMU,
+`uart_baud` on CAN).
 
 ## WiFi status (`wifi-status`)
 
