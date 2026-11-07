@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">46 min read · 14 sections</div></header>
+<div class="meta">47 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -1230,6 +1230,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <tr>
 <td><a href="hardware-debug.html">Link check</a> (<code>pixi run link-check</code>; the bridge's <code>/control/car/link_frame</code>, <code>/vehicle/esp32/uplink_health</code>, <code>/vehicle/throttle</code>)</td>
 <td>The hardware debug plan (7 Nov) asks whether the Pi passes its messages to the ESP32 correctly. The bridge reports what it really wrote, decoded from the bytes, and counts every frame; the check sets those counts against the ESP32's (<code>frames</code>, <code>bad</code>, <code>skipped</code>), knowing a frame by its counter and check byte, never the counter alone. A parked car is NOT TESTED, never a PASS</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="esp32-bench.html#walk-me-through-it-pixi-run-esp-walk">Walk me through it</a> (<code>pixi run esp walk</code>)</td>
+<td>Ben, 7 Nov: "reading isn't my strong suit. I need you to walk me through it": the first flash of the Rust ESP32 is scary, so the whole bench page comes one short step at a time, in bold colour and spoken aloud (macOS <code>say</code>). It runs the copy of the C++, the build, the flash (only once <code>flash</code> is typed) and the first check, says each row ("Brake: pass. The brake is on.") and the board's settings, asks the hands-on checks one by one, rolls back on a STOP or a no, and writes a record in <code>bench-logs/</code>. <code>--dry-run</code> runs nothing</td>
 <td>Ben</td>
 <td>2026-11-07</td>
 <td>built</td>
