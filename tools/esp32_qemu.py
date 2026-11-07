@@ -808,6 +808,26 @@ def rc_table(results: List[RcResult]) -> str:
     return '\n'.join(rows)
 
 
+def run_idle(qemu: Path, flash: Path, seconds: float, log: Path) -> int:
+    """
+    Boot the firmware and send it nothing for `seconds`: the board just flashed, the Pi off.
+
+    Save its log for `tools/esp32_first_check.py --file` (`tools/esp32.sh first-check --qemu`).
+    """
+    with tempfile.TemporaryDirectory(prefix='esp-qemu-', dir='/tmp') as tmp:
+        fw = Firmware(qemu, flash, Path(tmp))
+        try:
+            fw.wait_for(lambda ln: ln.kind == 'STATUS' or '"t":"status"' in ln.text,
+                        timeout=30)
+            time.sleep(seconds)
+            lines = fw.snapshot()
+        finally:
+            fw.stop()
+    log.write_text(''.join(f'{ln.text}\n' for ln in lines))
+    print(f'{len(lines)} log lines in {seconds:.0f} s, saved in {log}')
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[1])
     ap.add_argument('--qemu', type=Path, required=True, help='qemu-system-xtensa')
@@ -816,7 +836,14 @@ def main(argv=None) -> int:
                     help='cycles, their gaps in turn: silence, frozen, bad_crc')
     ap.add_argument('--no-rc', action='store_true', help='skip the RC modes after the cycles')
     ap.add_argument('--log', type=Path, help='save the firmware log here')
+    ap.add_argument('--idle', type=float, metavar='SECONDS',
+                    help='only boot it and send nothing for this long, then save the log '
+                    '(--log): for the first check')
     args = ap.parse_args(argv)
+    if args.idle:
+        if not args.log:
+            ap.error('--idle needs --log')
+        return run_idle(args.qemu, args.flash, args.idle, args.log)
     try:
         results, uplink, rc, clock, lines, ups = run(args.qemu, args.flash, args.cycles,
                                                      rc=not args.no_rc)

@@ -4,6 +4,11 @@
 # usage: tools/esp32.sh tools          install Espressif's Rust and espflash (once)
 #        tools/esp32.sh build [args]   build it (args go to cargo: --no-default-features --features can)
 #        tools/esp32.sh flash [args]   build, flash it on the USB cable, show its log (args go to espflash)
+#        tools/esp32.sh first-check [port] [args]  after the first flash: read the board's log
+#                                      on the USB cable for 30 s, and say SAFE TO GO ON or STOP
+#                                      (tools/esp32_first_check.py; --file <log> reads a saved one)
+#        tools/esp32.sh first-check --qemu [args]  the same on the QEMU build's log: boot it
+#                                      idle for 35 s, then check; "skipped" without the tools
 #        tools/esp32.sh check          build both links (and version 1 frames), the JSON log and the WiFi
 #                                      status, with clippy; "skipped" without the toolchain
 #        tools/esp32.sh qemu-tools     download Espressif's QEMU into vendor/qemu (once; macOS arm64)
@@ -147,6 +152,29 @@ case "${1:-}" in
   qemu-tools)
     qemu_tools
     ;;
+  first-check)
+    shift
+    if [[ "${1:-}" != --qemu ]]; then
+      exec python3 tools/esp32_first_check.py "$@"
+    fi
+    shift
+    if ! have_toolchain || [[ ! -x $QEMU_BIN ]]; then
+      echo "skipped: needs the Xtensa Rust (pixi run esp tools) and QEMU (pixi run esp qemu-tools)"
+      exit 0
+    fi
+    # The qemu-check's build: stand-in devices, so the features say qemu.
+    build -q --features qemu,uplink --target-dir target/qemu
+    image=$BOARD/target/qemu/flash.bin
+    "$TOOLS/espflash" save-image --chip esp32 --merge --flash-size 4mb \
+      "$BOARD/target/qemu/xtensa-esp32-none-elf/release/spine-esp32-umod" "$image" \
+      >/dev/null 2>&1
+    qemu_env
+    log=$(mktemp "${TMPDIR:-/tmp}/esp32-first-check.XXXXXX")
+    # shellcheck disable=SC2064
+    trap "rm -f '$log'" EXIT
+    python3 tools/esp32_qemu.py --qemu "$QEMU_BIN" --flash "$image" --idle 35 --log "$log"
+    python3 tools/esp32_first_check.py --file "$log" --features legacy-uart,qemu,uplink "$@"
+    ;;
   qemu-check)
     shift
     if ! have_toolchain || [[ ! -x $QEMU_BIN ]]; then
@@ -187,7 +215,7 @@ case "${1:-}" in
     echo "builds: the Motor-Pi UART link (version 2, the default; version 1; with the uplink), CAN, the QEMU builds, the JSON log and the WiFi status"
     ;;
   *)
-    sed -n '2,14p' "$0" >&2
+    sed -n '2,19p' "$0" >&2
     exit 2
     ;;
 esac
