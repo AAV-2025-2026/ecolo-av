@@ -17,6 +17,7 @@ The launch files use this so the car's measurements live in one file:
                        controller)                              # RewrittenYaml can't write
     vehicle.ego_params(vehicle.load())          # ego: the whole file (the actuators too)
     vehicle.track_params(nav2, cfg, ego, max_speed)  # aav_track: a trial tracker (tracker:=)
+    vehicle.mppi_lag_params(nav2, cfg, ego, max_speed)  # aav_mppi_lag: MPPI with the lag
     vehicle.centre_of_mass(v, front, rear, front_lifted, lift)   # from the scales (M7, M7b)
     vehicle.wheel_angles(v, centre)  # each front wheel's angle for a centre (bicycle) angle
     vehicle.centre_angle(v, inner, outer)       # the reverse: from M5's two measured angles
@@ -292,7 +293,9 @@ DEFAULT_CONTROLLER = 'mppi'
 # The trial path followers (docs/trials.md, aav_track): each stands in for controller_server's
 # FollowPath with tracker:=<name>. 'none' keeps controller_server (CONTROLLERS) following.
 # Apart from CONTROLLERS, not in it: nav2_tuned treats anything not mppi as RPP.
-TRACKERS = ('none', 'pure_pursuit', 'stanley', 'lqr', 'mpc', 'mpc_full')
+# mppi_lag is aav_mppi_lag's node (Rust), not aav_track's: Nav2's MPPI ported, on a car
+# model with the actuators' lag (docs/mppi-lag.md).
+TRACKERS = ('none', 'pure_pursuit', 'stanley', 'lqr', 'mpc', 'mpc_full', 'mppi_lag')
 DEFAULT_TRACKER = 'none'
 
 
@@ -434,6 +437,81 @@ def track_params(nav2, cfg, ego=None, max_speed=None):
         'max_steering_rate': rate,
         'stamped': bool(server.get('enable_stamped_cmd_vel', False)),
     }
+
+
+# vehicle.yaml's actuator keys aav_mppi_lag's lag model takes (as actuators.<key>). The dead
+# times are optional there: 0 when unset.
+MPPI_LAG_ACTUATORS = ('max_accel', 'throttle_deadband', 'throttle_lag', 'max_brake',
+                      'brake_lag', 'drag', 'steer_rate', 'steer_lag', 'steer_offset',
+                      'steer_deadband', 'throttle_dead_time', 'brake_dead_time',
+                      'steer_dead_time')
+# nav2.yaml's MPPI settings it takes under the same name, and their types.
+MPPI_LAG_SAME = {'time_steps': int, 'model_dt': float, 'batch_size': int,
+                 'iteration_count': int, 'temperature': float, 'gamma': float,
+                 'vx_std': float, 'transform_tolerance': float, 'retry_attempt_limit': int}
+# ego.yaml's limits it models in front of the car (as ego.<key>).
+MPPI_LAG_EGO = ('max_acceleration', 'max_deceleration', 'max_steering_rate',
+                'min_speed_for_steering')
+
+
+def critic_value(key, value):
+    """Return a critic setting as its node declares it: cost_power whole, other numbers float."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return value
+    return int(value) if key in ('cost_power', 'offset_from_furthest',
+                                 'trajectory_point_step') else float(value)
+
+
+def mppi_lag_params(nav2, cfg, ego=None, max_speed=None):
+    """
+    Return aav_mppi_lag's parameters: Nav2's MPPI block, its checks, and the car's lag.
+
+    nav2: nav2.yaml as loaded; cfg: vehicle.yaml (load()); ego: ego.yaml's
+    ros__parameters. MPPI's settings and critics are nav2.yaml's own (the MPPI block, as
+    controller:=mppi runs it), the goal and progress checks controller_server's, the
+    outline and inflation the local costmap's, the actuators vehicle.yaml's, the ramps
+    ego's. `max_speed` (sim_speed:=) sets vx_max and stretches prune_distance as
+    nav2_tuned does for Nav2's MPPI. Forward only: vx_min 0.
+    """
+    server = nav2['controller_server']['ros__parameters']
+    mppi = server['MPPI']
+    goal = server[server['goal_checker_plugins'][0]]
+    progress = server[server['progress_checker_plugins'][0]]
+    local = nav2['local_costmap']['local_costmap']['ros__parameters']
+    v, act = cfg['vehicle'], cfg['actuators']
+    speed = float(max_speed) if max_speed else float(mppi['vx_max'])
+    ahead = float(mppi['time_steps']) * float(mppi['model_dt']) * speed
+    out = {name: kind(mppi[name]) for name, kind in MPPI_LAG_SAME.items() if name in mppi}
+    out.update({
+        'rate_hz': float(server['controller_frequency']),
+        'odom_topic': server['odom_topic'],
+        'vx_max': speed,
+        'vx_min': 0.0,
+        'prune_distance': max(float(mppi.get('prune_distance', 1.5)), ahead * 1.2),
+        'critics': list(mppi['critics']),
+        'xy_goal_tolerance': float(goal['xy_goal_tolerance']),
+        'yaw_goal_tolerance': float(goal['yaw_goal_tolerance']),
+        'progress_radius': float(progress['required_movement_radius']),
+        'progress_angle': float(progress.get('required_movement_angle', math.inf)),
+        'progress_time': float(progress['movement_time_allowance']),
+        'wheelbase': float(v['wheelbase']),
+        'max_steering_angle': float(v['max_steering_angle']),
+        'footprint': [float(c) for xy in footprint_points(v) for c in xy],
+        'footprint_padding': float(local.get('footprint_padding', 0.0)),
+        'inflation_radius': float(local['inflation_layer']['inflation_radius']),
+        'cost_scaling_factor': float(local['inflation_layer']['cost_scaling_factor']),
+        'track_unknown_space': bool(local.get('track_unknown_space', False)),
+    })
+    for key in MPPI_LAG_ACTUATORS:
+        out[f'actuators.{key}'] = float(act.get(key, 0.0))
+    for key in MPPI_LAG_EGO:
+        if ego and key in ego:
+            out[f'ego.{key}'] = float(ego[key])
+    # Each critic's own settings, under its name, as Nav2 reads them.
+    for critic in mppi['critics']:
+        for key, value in (mppi.get(critic) or {}).items():
+            out[f'{critic}.{key}'] = critic_value(key, value)
+    return out
 
 
 def nav2_rewrites(v, reversing=False, planner='hybrid'):

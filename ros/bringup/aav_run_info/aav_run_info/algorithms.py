@@ -20,7 +20,7 @@ CONTROLLERS = {
     'mppi': 'MPPI (Nav2 controller_server)',
     'rpp': 'Regulated Pure Pursuit (Nav2 controller_server)',
 }
-TRACKERS = ('none', 'pure_pursuit', 'stanley', 'lqr', 'mpc', 'mpc_full')
+TRACKERS = ('none', 'pure_pursuit', 'stanley', 'lqr', 'mpc', 'mpc_full', 'mppi_lag')
 # How a trial localizer is used: not at all, scored beside the EKFs, or fused into one.
 USES = ('off', 'scored', 'fused')
 
@@ -62,8 +62,9 @@ def rows(c):
     """Return the run's algorithms as (what, which) pairs, in the order a person reads them."""
     if c.nav:
         planner = PLANNERS[c.planner]
+        package = 'aav_mppi_lag' if c.tracker == 'mppi_lag' else 'aav_track'
         follower = (CONTROLLERS[c.controller] if c.tracker == 'none'
-                    else f'{c.tracker} (aav_track, trial)')
+                    else f'{c.tracker} ({package}, trial)')
     else:
         planner = follower = 'off (no Nav2: nav:=false)'
     sensors = (['voxels: the lidar as 0.25 m cubes (trial)'] if c.voxels

@@ -7,7 +7,7 @@
 <!-- Generated from docs/switches.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Switches: what you can swap in the simulated car</h1>
-<div class="meta">8 min read · 6 sections</div></header>
+<div class="meta">9 min read · 6 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -57,6 +57,7 @@
 <a href="path-followers.html">Path followers</a>
 <a class="here" href="switches.html">Switches</a>
 <a href="trials.html">Trials</a>
+<a href="mppi-lag.html">MPPI with lag</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -208,6 +209,11 @@ the U-turn. The real car takes only <code>hybrid</code> or <code>lattice</code> 
 <td><code>tracker:=mpc_full</code></td>
 <td>ours: MPC that plans the speed too</td>
 <td>10 of 12</td>
+</tr>
+<tr>
+<td><code>tracker:=mppi_lag</code></td>
+<td>ours: Nav2's MPPI in Rust, knowing the steering and pedals lag (<a href="mppi-lag.html">page</a>)</td>
+<td>7 Nov, a loaded computer: 0.13 m off the path while it drove (Nav2's MPPI 0.20 m), but it gave up when the odometry stalled; <a href="mppi-lag.html#in-gazebo">not fair yet</a></td>
 </tr>
 </tbody>
 </table></div>

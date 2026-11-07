@@ -152,7 +152,7 @@ TRACK_EVERY = 0.5       # s between the saved track's points
 MAP_SPEC = os.path.join(ROOT, 'ros', 'drivers', 'aav_navigation', 'maps',
                         'example_lot.spec.yaml')
 COLOURS = {'rpp': '#1f6fb4', 'mppi': '#e8590c', 'pure_pursuit': '#2b8a3e', 'stanley': '#862e9c',
-           'lqr': '#c92a2a', 'mpc': '#e67700', 'mpc_full': '#5f3dc4',
+           'lqr': '#c92a2a', 'mpc': '#e67700', 'mpc_full': '#5f3dc4', 'mppi_lag': '#0b7285',
            # --planners: a column is a planner's name when one follower drives them all.
            'hybrid': '#e8590c', 'lattice': '#1f6fb4', 'smac2d': '#2b8a3e',
            'navfn': '#862e9c', 'theta_star': '#c92a2a', 'lattice32': '#5f3dc4'}
@@ -161,7 +161,14 @@ PLAN_TIME = 15.0        # s (wall) for the planner alone to answer, before each 
 NDT_MAP = os.path.join(ROOT, 'maps', 'ndt', 'test_lot.pcd')
 NDT_CONFIG = os.path.join(ROOT, 'ros', 'localization', 'aav_ndt', 'config', 'ndt.yaml')
 # The process to time for each kind of follower (its command line, in the run's group).
-PROCESS = {'controller': 'controller_server', 'tracker': 'lib/aav_track/track'}
+PROCESS = {'controller': 'controller_server', 'tracker': 'lib/aav_track/track',
+           # tracker:=mppi_lag runs aav_mppi_lag's Rust node, not aav_track's.
+           'mppi_lag': 'lib/aav_mppi_lag/mppi_lag'}
+
+
+def follower_process(kind, controller):
+    """Return the command-line piece of the process to time for this follower."""
+    return PROCESS['mppi_lag'] if controller == 'mppi_lag' else PROCESS[kind]
 
 
 def seconds(stamp):
@@ -752,7 +759,8 @@ def session(tour, follower, args, out_dir, body, used, run=1):
             for name, x, y, heading in tour_legs(tour, args):
                 leg, notes = drive_leg(rec, launch.pid, (x, y, math.radians(heading)),
                                        args.speed or 1.0, body, obstacle,
-                                       PROCESS[kind], args.amcl, args.ndt,
+                                       follower_process(kind, controller), args.amcl,
+                                       args.ndt,
                                        lock if planner else None, args.kiss_icp)
                 row = drive_metrics.summary(leg)
                 # t, x, y, yaw: where the car was, and where the global EKF put it.
