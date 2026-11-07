@@ -66,6 +66,7 @@ fn driving() -> Line<'static> {
                 bad: 0,
                 skipped: 0,
                 repeats: 3,
+                verdict: Some(Verdict::Ok),
             },
             rc: Rc {
                 switch: Switch::Computer,
@@ -101,7 +102,10 @@ fn stopped() -> Line<'static> {
             low: Levels::from(&out),
             high: Levels::from(&out),
             pos: Positions::default(),
-            link: LinkCounts::default(),
+            link: LinkCounts {
+                verdict: Some(Verdict::NoFrames),
+                ..LinkCounts::default()
+            },
             rc: Rc {
                 switch: Switch::NoSignal,
                 channels: &[],
@@ -132,9 +136,118 @@ fn event() -> Line<'static> {
     }
 }
 
+fn config() -> Line<'static> {
+    Line {
+        seq: 816,
+        up_ms: 40420,
+        body: Body::Config(Config {
+            build: "abc1234",
+            features: "legacy-uart,wifi-status",
+            version: "0.1.0",
+            link: "uart",
+            frame_version: Some(2),
+            tick_ms: 10,
+            watchdog_ms: 100,
+            cmd_timeout_ms: 100,
+            idle_brake: 1.0,
+            full_throttle_speed: 3.0,
+            i2c_khz: Some(100),
+            addresses: Addresses {
+                steering: 0x05,
+                brake: 0x04,
+                dac: 0x0C,
+                expander: 0x20,
+            },
+            steering: SteeringLimits {
+                min: 400,
+                centre: 1950,
+                max: 3500,
+            },
+            brake: BrakeLimits {
+                released: 400,
+                full: 3500,
+            },
+            throttle_full_code: 700,
+            last_reset: "PowerOn",
+        }),
+    }
+}
+
+const TODAYS_DEVICES: [DeviceSeen<'static>; 4] = [
+    DeviceSeen {
+        name: "steering",
+        address: 0x05,
+        answered: true,
+        feedback: Some("analog"),
+    },
+    DeviceSeen {
+        name: "brake",
+        address: 0x04,
+        answered: true,
+        feedback: Some("none"),
+    },
+    DeviceSeen {
+        name: "dac",
+        address: 0x0C,
+        answered: true,
+        feedback: None,
+    },
+    DeviceSeen {
+        name: "expander",
+        address: 0x20,
+        answered: true,
+        feedback: None,
+    },
+];
+
+fn devices() -> Line<'static> {
+    Line {
+        seq: 817,
+        up_ms: 40430,
+        body: Body::Devices(DeviceList {
+            devices: &TODAYS_DEVICES,
+        }),
+    }
+}
+
+fn health() -> Line<'static> {
+    Line {
+        seq: 818,
+        up_ms: 40500,
+        body: Body::Health(Health {
+            link: Some(Verdict::Ok),
+            age_ms: Some(18),
+            counter_moving: Some(true),
+            counts: LinkCounts {
+                frames: 12040,
+                bad: 0,
+                skipped: 0,
+                repeats: 3,
+                verdict: Some(Verdict::Ok),
+            },
+            devices_answered: 4,
+            devices_expected: 4,
+            missing: &[],
+            faults: 0,
+            mode: Mode::Computer,
+            last_reset: "PowerOn",
+            build: "abc1234",
+            boot_id: 0xa1b2_c3d4,
+        }),
+    }
+}
+
 #[test]
 fn each_line_is_the_golden_one_byte_for_byte() {
-    let lines = [heartbeat(), driving(), stopped(), event()];
+    let lines = [
+        heartbeat(),
+        driving(),
+        stopped(),
+        event(),
+        config(),
+        devices(),
+        health(),
+    ];
     let golden = golden();
     assert_eq!(
         golden.len(),
@@ -209,6 +322,7 @@ fn the_widest_status_line_fits_max_line() {
                 bad: u32::MAX,
                 skipped: u32::MAX,
                 repeats: u32::MAX,
+                verdict: Some(Verdict::CounterFrozen),
             },
             rc: Rc {
                 switch: Switch::NoSignal,
@@ -229,7 +343,7 @@ fn the_widest_status_line_fits_max_line() {
     let text = line.to_string();
     assert_eq!(
         text.len(),
-        756,
+        783,
         "the widest line: change MAX_LINE's note too"
     );
     let written = std::format!(r#""ch":[{}]"#, ["65535"; MAX_CHANNELS].join(","));
@@ -294,7 +408,84 @@ fn text_is_escaped() {
 }
 
 #[test]
+fn health_and_devices_say_what_is_missing_and_what_isnt_judged() {
+    let Body::Health(mut h) = health().body else {
+        unreachable!()
+    };
+    h.link = None;
+    h.age_ms = None;
+    h.counter_moving = None;
+    h.devices_answered = 2;
+    h.missing = &["steering", "dac"];
+    let text = Line {
+        seq: 1,
+        up_ms: 2,
+        body: Body::Health(h),
+    }
+    .to_string();
+    assert!(
+        text.contains(r#""link":null,"age_ms":null,"counter_moving":null,"#),
+        "{text}"
+    );
+    assert!(
+        text.contains(r#""answered":2,"expected":4,"missing":["steering","dac"]}"#),
+        "{text}"
+    );
+    let mut list = TODAYS_DEVICES;
+    list[0].answered = false;
+    list[0].feedback = None;
+    let text = Line {
+        seq: 1,
+        up_ms: 2,
+        body: Body::Devices(DeviceList { devices: &list }),
+    }
+    .to_string();
+    assert!(text.contains(r#""answered":3,"expected":4,"#), "{text}");
+    assert!(
+        text.contains(r#"{"name":"steering","address":5,"answered":false,"feedback":null}"#),
+        "{text}"
+    );
+}
+
+#[test]
+fn a_config_on_can_in_qemu_writes_nulls_and_fits() {
+    let Body::Config(mut c) = config().body else {
+        unreachable!()
+    };
+    c.link = "can";
+    c.frame_version = None;
+    c.i2c_khz = None;
+    let line = Line {
+        seq: u32::MAX,
+        up_ms: u32::MAX,
+        body: Body::Config(c),
+    };
+    let text = line.to_string();
+    assert!(
+        text.contains(r#""link":"can","frame_version":null,"#),
+        "{text}"
+    );
+    assert!(text.contains(r#""i2c_khz":null,"#), "{text}");
+    let mut buf = [0; MAX_LINE];
+    assert!(line.write_to(&mut buf).is_ok());
+}
+
+#[test]
 fn names_are_the_contracts() {
+    let names: Vec<_> = [
+        Verdict::NoFrames,
+        Verdict::Ok,
+        Verdict::Stale,
+        Verdict::CounterFrozen,
+        Verdict::BadFrames,
+    ]
+    .iter()
+    .map(|v| v.name())
+    .collect();
+    assert_eq!(
+        names,
+        ["no_frames", "ok", "stale", "counter_frozen", "bad_frames"]
+    );
     let names: Vec<_> = [Mode::Stopped, Mode::Rc, Mode::Computer, Mode::Test]
         .iter()
         .map(|m| m.name())

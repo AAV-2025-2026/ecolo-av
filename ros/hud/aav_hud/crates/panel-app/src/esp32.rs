@@ -253,7 +253,7 @@ mod tests {
             .iter()
             .filter(|n| matches!(n, Esp32News::Line(_)))
             .count();
-        assert_eq!(lines, 4, "{news:?}");
+        assert_eq!(lines, 7, "{news:?}");
         let back = board
             .join()
             .map_err(|_| anyhow::anyhow!("the board panicked"))??;

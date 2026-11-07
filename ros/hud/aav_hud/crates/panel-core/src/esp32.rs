@@ -269,9 +269,18 @@ mod tests {
     #[test]
     fn every_golden_line_reads() {
         let lines = golden();
-        assert_eq!(lines.len(), 4);
+        assert_eq!(lines.len(), 7);
         let seqs: Vec<u64> = lines.iter().map(StatusLine::seq).collect();
-        assert_eq!(seqs, vec![812, 813, 814, 815]);
+        assert_eq!(seqs, vec![812, 813, 814, 815, 816, 817, 818]);
+        // config, devices and health (7 Nov): kinds this panel doesn't read yet.
+        let kinds: Vec<&str> = lines[4..]
+            .iter()
+            .map(|l| match l {
+                StatusLine::Unknown(u) => u.kind.as_str(),
+                other => panic!("{other:?}"),
+            })
+            .collect();
+        assert_eq!(kinds, ["config", "devices", "health"]);
         match &lines[0] {
             StatusLine::Heartbeat(h) => {
                 assert_eq!((h.up_ms, h.boot_id.as_str()), (40210, "a1b2c3d4"));
