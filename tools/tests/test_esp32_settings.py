@@ -1,4 +1,5 @@
-"""The ESP32's settings line (CONFIG / config) against the files it copies or must match.
+"""
+The ESP32's settings line (CONFIG / config) against the files it copies or must match.
 
 | Check | Against |
 |---|---|
