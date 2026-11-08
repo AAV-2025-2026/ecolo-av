@@ -10,10 +10,11 @@ This page is the first piece. Nav2 stays the default, and stays on the car.
 >   clearing, the inflation round the car's outline. A local window and a global map.
 > - **Same input as Nav2:** made from the same tuned `nav2.yaml` blocks.
 > - **Same output as Nav2:** in the sim, stopped at the post, **every one of 40,000 cells
->   the same** as Nav2's local costmap (2 runs of 2).
+>   the same** as Nav2's local costmap (5 runs of 5).
 > - **Lighter:** our two costmaps 4-5 % of a core; Nav2's local one alone 7-9 %.
-> - **Not a winner yet:** with ours, MPPI went round the box 3 of 3, but 1 lidar-obstacle
->   run of 3 didn't reach its goal ([scores](#the-scores-8-nov)). Nav2's: 3 of 3.
+> - **Scores:** with ours, MPPI went round the box 3 of 3. The lidar-obstacle leg: 2 of 3
+>   at first; **3 of 3 once the recovery cleared ours too** ([scores](#the-scores-8-nov)).
+>   Nav2's: 3 of 3 each.
 > - **Fast:** 0.4 ms an update without ROS; about 0.5 ms in the sim.
 > - **With `tracker:=mppi_lag`**, MPPI reads ours instead of Nav2's.
 
@@ -36,6 +37,12 @@ odometry, /tf ────┤
 | `/drivers/nav/costmap/local_raw` | nav2_msgs/Costmap (0-255) | `mppi_lag` |
 | `/drivers/nav/costmap/global`, `global_raw` | the same, the whole map | the planner, next |
 | `/drivers/nav/costmap/status` | DiagnosticStatus | update time, what it waits for |
+| `/drivers/nav/costmap/clear_entirely_local`, `_global` | service, Nav2's ClearEntireCostmap | the recovery: forget every mark |
+
+**The recovery clears ours too.** When stuck, Nav2's behaviour trees call
+`local_costmap/clear_entirely_local_costmap`. With `costmap:=own` and
+`tracker:=mppi_lag`, the launch file points that call at our local costmap, the one MPPI
+reads. The global clear stays Nav2's: the planner still reads Nav2's global costmap.
 
 ## What it does, layer by layer
 
@@ -78,9 +85,20 @@ Our simulator, the road world, `tracker:=mppi_lag`, 3 runs each, on a quiet Mac 
 | 3 | 0.26 m; to the goal | **did not stop**: it steered past the post (2.5 m beyond its near side); then to the goal |
 
 - In every run the **stop zone** (collision_monitor) stopped the car first, both costmaps.
-- Run 2's cause is not found. A suspect: when stuck, Nav2's behaviour tree **clears
-  Nav2's costmap**, not ours, so a stale mark in ours would stay. Not proved.
+- Run 2: when stuck, Nav2's behaviour tree **cleared Nav2's costmap**, not ours, so a
+  stale mark in ours could stay. Not proved, but fixed: the recovery now clears ours too.
 - Run 3: MPPI is random; with Nav2's costmap it never steered round the post (0 of 3).
+
+**Again, with the clear service** (3 more runs, ours):
+
+| Run | Ours, with the recovery clearing it |
+|---|---|
+| 4 | stopped 0.64 m short; drove on to the goal (the recovery cleared ours once) |
+| 5 | 0.15 m; to the goal (cleared 3 times) |
+| 6 | 0.18 m; to the goal (cleared 5 times) |
+
+3 of 3 reached the goal, all stopped by the stop zone first, and the grid was the same as
+Nav2's in every cell each time. Three runs can't prove run 2's stall is gone for good.
 
 ### Plan around: did it go round?
 
@@ -116,17 +134,19 @@ Our local update: **0.50-0.55 ms** on average, 0.58 ms at the 95th percentile.
 
 - **The grid is right:** cell for cell the same as Nav2's when both see the same scan.
 - **It is lighter:** both of ours together use about half the CPU of Nav2's local one.
-- **Not a winner yet:** 1 run of 3 didn't finish the lidar-obstacle leg (run 2), and Nav2's
-  costmap finished 3 of 3. Nav2 stays the default.
+- **As good on these legs, once it can be cleared:** 3 of 3 since the clear service, as
+  Nav2's. Not yet a winner: six runs a leg is little, it went past the post once (run 3),
+  and the radar and cameras are untested. Nav2 stays the default.
 
 ## Without ROS
 
-`cargo test -p costmap`: 30 tests.
+`cargo test -p costmap`: 31 tests.
 
 | Test | Checks |
 |---|---|
 | a post ahead | lethal at the post, inscribed within 0.25 m, Nav2's cost 1 m out (26) |
 | the post taken away | the next scan's rays clear it |
+| clearing | the recovery forgets a mark no ray reaches |
 | the window rolls | a mark stays on the same ground as the car drives on |
 | the map through map → odom | a wall lands in the right cells |
 | the global costmap | the map's own cells, unknown kept, 3 m of gentle inflation (119 at 1 m) |
@@ -138,9 +158,8 @@ Our local update: **0.50-0.55 ms** on average, 0.58 ms at the 95th percentile.
   should read `/drivers/nav/costmap/global_raw`.
 - **The global costmap's size:** the campus map is large; ours rebuilds it all each second
   (27 ms for 500 m × 500 m without ROS). Fine now; only the changed part if it grows.
-- **No `clear_entirely` service:** Nav2's behaviour trees clear its costmaps when stuck.
-  Ours clears marks only by the next rays. The suspect for run 2; the navigator step
-  will need it (our navigator will call ours).
+- **The global clear:** ours serves it, but the trees still clear Nav2's global costmap
+  (the planner's). Our planner and navigator should call ours.
 - **Radar, cubes and cameras** (point clouds, placed by `/tf_static`'s mounts): built,
   but untested; the sim's runs had the lidar's scan alone.
 - **On the car:** untested. Nav2 stays there.

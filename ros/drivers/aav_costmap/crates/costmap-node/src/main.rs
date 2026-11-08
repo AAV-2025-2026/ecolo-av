@@ -20,7 +20,12 @@
 //!             drivers/nav/costmap/status  diagnostic_msgs/DiagnosticStatus, at each
 //!                                         publish: the update times (ms), the lethal
 //!                                         cells, what it is waiting for
-//! Serves      nothing; calls nothing.
+//! Serves      drivers/nav/costmap/clear_entirely_local, .../clear_entirely_global
+//!                                         nav2_msgs/srv/ClearEntireCostmap: forget every
+//!                                         mark, as Nav2's clear_entirely_* do. With
+//!                                         costmap:=own and tracker:=mppi_lag the launch
+//!                                         file points bt_navigator's local clear here
+//! Calls       nothing.
 //! Parameters  local, global: each a JSON block (aav_description's
 //!             vehicle.costmap_params, from nav2.yaml); empty: that costmap doesn't run.
 //!             odom_topic, map_topic, base_frame, and the topic names above.
@@ -45,6 +50,9 @@ use ros_env::builtin_interfaces::msg::Time;
 use ros_env::diagnostic_msgs::msg::{DiagnosticStatus, KeyValue};
 use ros_env::geometry_msgs::msg::{Point, Pose as PoseMsg, Quaternion};
 use ros_env::nav2_msgs::msg::{Costmap as CostmapMsg, CostmapMetaData};
+use ros_env::nav2_msgs::srv::{
+    ClearEntireCostmap, ClearEntireCostmap_Request, ClearEntireCostmap_Response,
+};
 use ros_env::nav_msgs::msg::{MapMetaData, OccupancyGrid, Odometry};
 use ros_env::sensor_msgs::msg::{LaserScan, PointCloud2};
 use ros_env::std_msgs::msg::Header;
@@ -80,6 +88,7 @@ fn main() -> Result<()> {
     let local_topic = text_param("local_topic", "/drivers/nav/costmap/local")?;
     let global_topic = text_param("global_topic", "/drivers/nav/costmap/global")?;
     let status_topic = text_param("status_topic", "/drivers/nav/costmap/status")?;
+    let clear_prefix = text_param("clear_prefix", "/drivers/nav/costmap/clear_entirely_")?;
 
     let mut maps = Vec::new();
     for (name, json, topic) in [
@@ -99,6 +108,7 @@ fn main() -> Result<()> {
             update_ms: 0.0,
             worst_ms: 0.0,
             updates: 0,
+            clears: 0,
             waiting: String::new(),
             grid_pub: node.create_publisher(topic.as_str())?,
             raw_pub: node.create_publisher(format!("{topic}_raw").as_str())?,
@@ -116,6 +126,7 @@ fn main() -> Result<()> {
         }
     }
     let rates: Vec<f64> = maps.iter().map(|m| m.spec.update_hz).collect();
+    let names: Vec<&'static str> = maps.iter().map(|m| m.spec.name).collect();
 
     let core = Core {
         maps,
@@ -159,11 +170,21 @@ fn main() -> Result<()> {
             )?)),
         }
     }
-    for (i, hz) in rates.into_iter().enumerate() {
+    for (i, (hz, name)) in rates.into_iter().zip(names).enumerate() {
         let period = Duration::from_secs_f64(1.0 / hz.max(0.1));
         keep.push(Box::new(worker.create_timer_repeating(
             period.node_time(),
             move |s: &mut Core| s.tick(i),
+        )?));
+        // Nav2's ClearEntireCostmap, for the behaviour trees' recovery (the launch file
+        // points bt_navigator's local clear here when mppi_lag reads ours).
+        let service = format!("{clear_prefix}{name}");
+        keep.push(Box::new(worker.create_service::<ClearEntireCostmap, _>(
+            service.as_str(),
+            move |s: &mut Core, _: ClearEntireCostmap_Request| {
+                s.clear(i);
+                ClearEntireCostmap_Response::default()
+            },
         )?));
     }
 
@@ -344,6 +365,8 @@ struct One {
     update_ms: f64,
     worst_ms: f64,
     updates: u64,
+    /// How often a recovery cleared it.
+    clears: u64,
     waiting: String,
     grid_pub: Publisher<OccupancyGrid>,
     raw_pub: Publisher<CostmapMsg>,
@@ -380,6 +403,14 @@ fn bare(frame: &str) -> &str {
 impl Core {
     fn stamp(&self) -> Time {
         self.clock.now().to_ros_msg().unwrap_or_default()
+    }
+
+    /// A recovery asked: forget costmap i's marks.
+    fn clear(&mut self, i: usize) {
+        let one = &mut self.maps[i];
+        one.spec.costmap.clear();
+        one.clears += 1;
+        log_info!(&self.logger, "{} costmap cleared (asked)", one.spec.name);
     }
 
     fn on_map(&mut self, msg: &OccupancyGrid) {
@@ -739,6 +770,7 @@ impl Core {
             kv("update_ms", &format!("{:.2}", one.update_ms)),
             kv("worst_ms", &format!("{:.2}", one.worst_ms)),
             kv("updates", &one.updates.to_string()),
+            kv("clears", &one.clears.to_string()),
             kv("lethal_cells", &lethal.to_string()),
             kv("cells", &format!("{}x{}", g.width, g.height)),
         ];

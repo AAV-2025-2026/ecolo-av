@@ -121,6 +121,21 @@ fn a_post_taken_away_is_cleared_by_the_next_scan() {
 }
 
 #[test]
+fn clearing_forgets_a_mark_no_ray_can_reach() {
+    let mut c = local();
+    let car = Pose2::IDENTITY;
+    let with = seen_from(&car, scan(Some((6.0, 0.0, 0.25))));
+    c.update(&car, None, &[vec![vec![&with]]]);
+    // The sensor goes silent: the mark stays, update after update...
+    c.update(&car, None, &[vec![vec![]]]);
+    assert_eq!(c.grid().cost_at(5.8, 0.0, 0), LETHAL);
+    // ...until the recovery clears the costmap, as Nav2's behaviour tree does.
+    c.clear();
+    c.update(&car, None, &[vec![vec![]]]);
+    assert!(c.grid().data.iter().all(|&v| v == FREE));
+}
+
+#[test]
 fn a_mark_stays_on_the_ground_as_the_window_rolls() {
     let mut c = local();
     let start = Pose2::IDENTITY;

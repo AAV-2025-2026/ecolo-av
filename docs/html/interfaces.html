@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">100 min read · 4 sections</div></header>
+<div class="meta">101 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -1453,6 +1453,18 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 </tr>
 </thead>
 <tbody>
+<tr>
+<td><code>/drivers/nav/costmap/clear_entirely_local</code></td>
+<td><code>nav2_msgs/srv/ClearEntireCostmap</code></td>
+<td><code>costmap</code></td>
+<td>Only with costmap:=own (aav_costmap). Forgets every mark in our local costmap, as Nav2's /local_costmap/clear_entirely_local_costmap does for its own; the map comes back at the next update, the sensors' marks as they see them again. With tracker:=mppi_lag too (mppi_lag reads ours), navigation.launch.py remaps bt_navigator's local clear here, so the behaviour trees' recovery clears the costmap the follower reads.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/costmap/clear_entirely_global</code></td>
+<td><code>nav2_msgs/srv/ClearEntireCostmap</code></td>
+<td><code>costmap</code></td>
+<td>The same for our global costmap. Nothing calls it yet - the trees' global clear stays Nav2's, whose global costmap the planner reads (the navigator step will call ours).</td>
+</tr>
 <tr>
 <td><code>/spine/arm</code></td>
 <td><code>std_srvs/srv/SetBool</code></td>

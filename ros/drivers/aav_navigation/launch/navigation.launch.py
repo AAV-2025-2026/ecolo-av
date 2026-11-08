@@ -275,6 +275,9 @@ def nodes(context):
     # planner:=diffusion: its node answers compute_path_to_pose (bt_navigator's trees ask
     # it) and publishes /plan; planner_server's lattice, renamed, is its fallback.
     diffusion = planner == 'diffusion'
+    # costmap:=own: aav_costmap beside Nav2's costmaps; own_local: the follower reads ours.
+    costmap = vehicle.check_costmap(LaunchConfiguration('costmap').perform(context))
+    own_local = costmap == 'own' and tracker == 'mppi_lag'
     servers = [
         ('nav2_map_server', 'map_server', []),
         ('nav2_planner', 'planner_server', [
@@ -288,7 +291,12 @@ def nodes(context):
             [('follow_path', 'follow_path_unused')] if tracker != 'none' else
             [('optimal_trajectory', '/drivers/nav/local_plan')])),
         ('nav2_behaviors', 'behavior_server', [('cmd_vel', 'cmd_vel_nav')]),
-        ('nav2_bt_navigator', 'bt_navigator', []),
+        # costmap:=own with tracker:=mppi_lag: the follower reads our local costmap, so the
+        # trees' recovery clears ours (aav_costmap serves Nav2's ClearEntireCostmap). The
+        # global clear stays Nav2's: the planner still reads Nav2's global costmap.
+        ('nav2_bt_navigator', 'bt_navigator',
+         [('local_costmap/clear_entirely_local_costmap',
+           '/drivers/nav/costmap/clear_entirely_local')] if own_local else []),
         ('nav2_waypoint_follower', 'waypoint_follower', []),
         ('nav2_velocity_smoother', 'velocity_smoother',
          [('cmd_vel', 'cmd_vel_nav'), ('cmd_vel_smoothed', smoothed)]),
@@ -354,7 +362,6 @@ def nodes(context):
         actions.append(Node(package='aav_ghost', executable='ghost_obstacle',
                             name='ghost_obstacle', output='screen',
                             parameters=[config, {'use_sim_time': use_sim_time}]))
-    costmap = vehicle.check_costmap(LaunchConfiguration('costmap').perform(context))
     if costmap == 'own':
         # aav_costmap (Rust): our own local and global costmaps, beside Nav2's, from the
         # same tuned nav2.yaml (the same layers and sources). Not a lifecycle node.

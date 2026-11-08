@@ -116,6 +116,15 @@ impl Costmap {
         self.settings.rolling || self.map.is_some()
     }
 
+    /// Forget every mark (Nav2's `ClearEntireCostmap`: each layer reset). The map comes
+    /// back with the next update; the sensors' marks only as they see them again.
+    pub fn clear(&mut self) {
+        for layer in &mut self.layers {
+            layer.grid.data.fill(layer.default);
+        }
+        self.master.data.fill(default(&self.settings));
+    }
+
     fn resize_layers(&mut self) {
         for layer in &mut self.layers {
             layer.grid = self.master.like(layer.default);

@@ -32,6 +32,7 @@ pixi run sim-check --costmap own --tracker mppi_lag --lidar-obstacle --plan-arou
 |---|---|
 | Subscribes | `/map` (transient local); `/localization/odom/local`; `/tf` (map -> odom); `/tf_static` (sensor mounts); each layer's sources from nav2.yaml (`/sensors/lidar/scan`; the radar, cubes, camera points and ghost where they run), best effort |
 | Publishes | `/drivers/nav/costmap/local`, `/global` (OccupancyGrid); `/drivers/nav/costmap/local_raw`, `/global_raw` (nav2_msgs/Costmap); `/drivers/nav/costmap/status` (DiagnosticStatus) |
+| Serves | `/drivers/nav/costmap/clear_entirely_local`, `_global` (nav2_msgs/srv/ClearEntireCostmap): forget every mark. With `tracker:=mppi_lag`, `bt_navigator`'s local clear is remapped here |
 | Parameters | `local`, `global`: one JSON block each, made by `aav_description`'s `vehicle.costmap_params` from the tuned nav2.yaml; `odom_topic`, `map_topic`, `base_frame`, the topic names |
 
 ## Invariants
@@ -43,7 +44,7 @@ pixi run sim-check --costmap own --tracker mppi_lag --lidar-obstacle --plan-arou
 
 ## Side Effects
 
-- Publishes the topics above. Nothing else.
+- Publishes the topics above and serves the two clear services. Nothing else.
 
 ## Verification
 

@@ -510,7 +510,7 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 </tr>
 <tr>
 <td><a href="own-costmap.html">Our own costmap</a> (<code>aav_costmap</code>, <code>costmap:=own</code>; <code>tracker:=mppi_lag</code> then reads it)</td>
-<td>Ben, 8 Nov: move off Nav2 to our own versions one piece at a time, the costmap first. Nav2's layers (the map, the sensors' marks with ray clearing, inflation round the car's outline) ported to Rust, local and global, from the same nav2.yaml blocks. In our simulator, stopped at a post, 100 % of its 40,000 cells matched Nav2's; 4-5 % of a core for both against 7-9 % for Nav2's local one. MPPI on it went round the box 3 of 3, but 1 lidar-obstacle run of 3 didn't reach its goal: Nav2 stays the default</td>
+<td>Ben, 8 Nov: move off Nav2 to our own versions one piece at a time, the costmap first. Nav2's layers (the map, the sensors' marks with ray clearing, inflation round the car's outline) ported to Rust, local and global, from the same nav2.yaml blocks. In our simulator, stopped at a post, 100 % of its 40,000 cells matched Nav2's; 4-5 % of a core for both against 7-9 % for Nav2's local one. MPPI on it went round the box 3 of 3; the lidar-obstacle leg 2 of 3, then 3 of 3 once the behaviour trees' recovery cleared ours too. Nav2 stays the default</td>
 <td>Ben</td>
 <td>2026-11-08</td>
 <td>sim</td>
