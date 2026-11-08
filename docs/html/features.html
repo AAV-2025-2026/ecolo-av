@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">55 min read · 14 sections</div></header>
+<div class="meta">56 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -335,6 +335,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Steers back to the lane's centre: on the bench, from 0.3 m off to within 5 cm</td>
 <td>the 2025-26 team</td>
 <td>2026-10-10</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="perception.html">Lane drives, scored</a> (<code>measure lane</code>): a long lane-keeping drive on the road world or a campus road, Gazebo or ours; the campus's painted roads now have white edge lines</td>
+<td>Ben, 7 Nov: lane following for 0.3. Lateral error from the lane's centre by the truth, the time the lane is lost, and the speed: one number per run to compare finders and simulators</td>
+<td>Ben</td>
+<td>2026-11-08</td>
 <td>sim</td>
 </tr>
 <tr>
@@ -1011,9 +1018,9 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 </tr>
 <tr>
 <td><a href="own-simulator.html">Our own simulator in Rust</a> (<code>aav_simulator</code>, <code>sim simulator:=own</code>)</td>
-<td>Ben, 7 Nov: "merge in everything from gazebo so its standalone in rust". Gazebo's worlds, car, lidar, radar stand-in, IMU, GPS, wheels and clock on Gazebo's own topics, so the stack runs unchanged; no GPU, a seed repeats every sensor, and the car stops at what it hits. Cameras plug in separately. Gazebo stays the default until ours passes the same checks</td>
+<td>Ben, 7 Nov: "merge in everything from gazebo so its standalone in rust". Gazebo's worlds, car, lidar, radar stand-in, IMU, GPS, wheels and clock on Gazebo's own topics, so the stack runs unchanged; no GPU, a seed repeats every sensor, and the car stops at what it hits. Its cameras are <code>aav_sim_cameras</code>, started beside it. Since 8 Nov each wheel finds the ground: slopes tilt the car, a 0.3 m kerb stops it</td>
 <td>Ben</td>
-<td>2026-11-07</td>
+<td>2026-11-08</td>
 <td>sim</td>
 </tr>
 <tr>
@@ -1053,10 +1060,10 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 </tr>
 <tr>
 <td><a href="own-simulator-cameras.html">Our simulator's cameras</a> (<code>aav_sim_cameras</code>, <code>pixi run sim-cameras</code>)</td>
-<td>Ben, 7 Nov: replace Gazebo with our own Rust simulator, every sensor. Bevy draws each car camera offscreen with Gazebo's picture, lens, rate and frame, so the detector and stop-sign watcher can't tell them apart; the core simulator plugs it in through one trait</td>
+<td>Ben, 7 Nov: replace Gazebo with our own Rust simulator, every sensor. Bevy draws each car camera offscreen with Gazebo's picture, lens, rate and frame, so the detector and stop-sign watcher can't tell them apart. Joined to the core (8 Nov): they draw the same world files (test lot, road, campus: boxes, cylinders, planes, OBJ meshes and their pictures), so <code>simulator:=own</code> runs perception, lane and faults</td>
 <td>Ben</td>
-<td>2026-11-07</td>
-<td>built</td>
+<td>2026-11-08</td>
+<td>sim</td>
 </tr>
 </tbody>
 </table></div>
@@ -1145,9 +1152,9 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 </tr>
 <tr>
 <td><a href="campus.html">The campus</a> (<code>pixi run campus</code>, <code>world:=campus</code>): Carleton from OpenStreetMap: a Gazebo world with bump-mapped pavement, kerbs, grass, trees and buildings; one Nav2 map of the whole campus; a guessed NDT map</td>
-<td>Practice on the real place's shapes while the hardware catches up, then replace the guess with real drives. Runs in Gazebo only: not yet checked against the real campus</td>
+<td>Practice on the real place's shapes while the hardware catches up, then replace the guess with real drives. Painted roads have a yellow centre line and white edge lines (8 Nov), for lane keeping. Runs in Gazebo and in ours: not yet checked against the real campus</td>
 <td>Ben</td>
-<td>2026-11-05</td>
+<td>2026-11-08</td>
 <td>sim</td>
 </tr>
 <tr>

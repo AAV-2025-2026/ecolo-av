@@ -36,7 +36,12 @@ you read by hand are for checking it.
 | `maps/campus/campus.sdf`, `meshes/`, `textures/` | the world: 355,000 triangles, bump-mapped |
 | `maps/campus/campus.pgm`, `.yaml` | one Nav2 map: 1.6 x 1.6 km at 0.25 m (6400 x 6400 cells) |
 | `maps/campus/place.yaml` | where the car starts, what went in, the credit |
+| `maps/campus/lanes.yaml` | the painted roads' centre lines and widths: `measure lane` scores lane keeping by them |
 | `maps/ndt/campus.pcd` | NDT's map, **a guess**: points on the same shapes |
+
+**The paint (8 Nov):** big roads (trunk to tertiary) have a dashed yellow centre line and a
+solid white line 0.5 m in from each edge, so the lane finder sees both sides of its lane.
+Other roads have none.
 
 **The shape (Ben, 5 Nov):** everything that isn't pavement is a foot up, held in by a concrete
 kerb, with grass on top.

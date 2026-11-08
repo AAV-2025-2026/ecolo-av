@@ -2,7 +2,8 @@
 
 Ben, 7 Nov: "merge in everything from gazebo so its standalone in rust". This page is the
 simulator's **core**: the world, the car, the lidar, the radar, the IMU, the GPS, the wheels
-and the clock. The cameras are their own part. The plan: [the design](designs/2026-11-05_own-simulator.md).
+and the clock. The cameras are their own program ([its page](own-simulator-cameras.md)),
+started beside it. The plan: [the design](designs/2026-11-05_own-simulator.md).
 
 ```sh
 pixi run sim simulator:=own world:=test_lot gui:=false rviz:=false
@@ -34,7 +35,7 @@ It replaces `gz sim` **and** its bridges. Every node above them is the same one 
 | `/joint_states` | 100 Hz | Gazebo sends 1 kHz; the car's wheels 100 Hz |
 | `/sensors/lidar/points` | 10 Hz, 1800 x 16, 0.5-100 m, 3 cm | yes: packed as Gazebo's, organised, `inf` misses |
 | `/gazebo/radar/points` | 10 Hz, 61 x 3, 0.3-8.4 m, 5 cm | yes |
-| cameras, chase camera | none yet | the cameras' crate plugs in |
+| the three car cameras, the chase camera | 10 Hz, 640 x 360 | yes: `aav_sim_cameras` draws the same world file |
 
 ## The worlds
 
@@ -52,6 +53,7 @@ test lot and 15 ms on the campus (Ben's Mac, 4 threads).
 |---|---|
 | Today | `gazebo_adapter`'s actuator model, then Gazebo's AckermannSteering (±10 m/s², the wheels steer at once), then the bicycle |
 | Hitting things | the outline (`vehicle.yaml` `body:`) stops at what it meets, at 0.35, 0.8 and 1.3 m up, as Gazebo's physics does. The log says "the car hit something" |
+| The ground (8 Nov) | each wheel finds the ground below it (a ray straight down). The car rides up a slope and tilts on it; a step up to 0.1 m (`ground_step`) it rolls up; a higher one (a 0.3 m kerb) stops it, as a wall does. The truth carries the height and tilt, so the cameras follow |
 | The trait | `sim-core` `CarModel`: `step`, `state`, `reset`, `hold`. The shared `car-model` crate goes in behind it at the merge |
 | `ActuatorCar` | the actuator model itself, to `car-model`'s rules (exact lags, rate-limited motor, deadband, dead time). Tested; not wired in yet |
 
@@ -64,8 +66,35 @@ test lot and 15 ms on the campus (Ben's Mac, 4 threads).
 | The cameras' world | `World::shapes` | every shape as SDF draws it: box, cylinder, plane, mesh file; pose; colour |
 | Placing things | `/vehicle/sim/spawn_entity`, `delete_entity` | `simulation_interfaces`: an SDF model, a pose |
 
-When the cameras come in, `gazebo.launch.py` sets `gazebo_adapter`'s `cameras` to true, so
-`/system/source` announces them.
+With `simulator:=own`, `gazebo.launch.py` starts the cameras (`sim_cameras --ros --pose truth
+--world <the world>`) and sets `gazebo_adapter`'s `cameras` to true, so `/system/source`
+announces them, as with Gazebo.
+
+## Head to head, with the cameras (8 Nov, Ben's Mac, quiet: load 4-15)
+
+The same `sim-check` legs on both, one run after the other, nothing else running.
+
+| Check | Ours | Gazebo |
+|---|---|---|
+| `sim-check` (start-up, contract, sensors, all 3 cameras, lidar, scan, scripted drive, EKF, wheels) x 3 | **3 of 3 pass**; 43-49 s a run; EKF vs truth 0.11-0.40 m | 2 of 3: once the EKF never came up in 120 s; 45-46 s; 0.10-0.14 m |
+| `--obstacle` (the box) | pass: 0.36 m before it, goal reached after | pass: 0.28 m |
+| `--lidar-obstacle` (the post) | pass: 0.33 m | pass: 0.25 m |
+| `--speed-steps`: overshoot | 15.9, 15.2, 10.1 %; within 5 % after 10.9-13.3 s | the same to 0.1 % and 0.1 s |
+| Those three legs together | 4 min 5 s | 4 min 22 s |
+| `--lane-only` (road) | pass: within 5 cm in 5.4 s, overshoot 3 cm | pass: 5.1 s, 5 cm |
+| `measure lane`, a campus road, 120 s | 171 m, error mean 4 cm, lane lost in 0-1 % | 60 m, ended in the other lane, lost in 68 % |
+| `drop-in`, road world | every camera, the lidar, the radar at 10 Hz: pass. `/perception/voxels/cubes` silent (the voxels trial is off) | not run |
+| `--perception` (RF-DETR and the stop-sign lock) | **fail**: the detector saw the sign but the lock never came on while driving | pass: locked at 68 px, stood 3.9 m before it |
+
+**The stop sign on ours, what we know:** parked 6 m from it (`start_x:=19`), RF-DETR finds
+it (score 0.93, 62 px tall: the watcher wants 55) and the lock comes on. Still pictures
+along the road: 0.84-0.94 from 19 m to 4 m away. Gazebo's box at the same place is taller
+(68 px against our 52). While driving, the lock never came on. [[untested]] why.
+
+**Can ours be the default?** Not yet: one leg fails (`--perception`). Every other leg
+passes on ours as on Gazebo, the numbers agree, and ours started every time. After the
+stop sign: run `--faults`, `--drive-to-point` and `--perception` three times each, then
+switch `DEFAULT_SIMULATOR`.
 
 ## Results (7 Nov, Ben's Mac, other agents running: load 30-40)
 
@@ -85,9 +114,9 @@ When the cameras come in, `gazebo.launch.py` sets `gazebo_adapter`'s `cameras` t
 
 | Missing | Why it matters |
 |---|---|
-| Cameras | another part (`aav_sim_cameras`); until then `perception`, `lane`, `faults` need Gazebo |
 | Ours as the default | after the same checks pass on a quiet computer, and Gazebo's spread is measured |
-| Kerbs and slopes | the car stays on flat ground: a 0.3 m kerb neither lifts nor stops it (the outline is felt from 0.35 m up) |
+| Obstacles placed while running, in the pictures | the rays see a spawned box; the cameras don't draw it yet |
+| Hills in a world | the ground works on any mesh; none of our worlds has a slope yet |
 | The car's own body in the lidar | Gazebo's lidar may see the car; ours doesn't |
 | The Bevy window drawing ours | the window reads the same topics, so it works as with Gazebo; not run yet |
 | `ActuatorCar` driving the node | the Python actuator model stays in front, as with Gazebo |
