@@ -172,6 +172,7 @@ where that goes wrong.
 | 4.24 | **Stop for something behind** | a cone 3 m behind, Nav2 told to back up past it | stops before it: collision_monitor's box behind the bumper (Gazebo: 0.75 m short, `sim-check --rear-obstacle`; 3 Nov: 0.78 m) | 🔧 |
 | 4.25 | **Rolling back** (the known flaw) | on a gentle slope, drive forward, stop, let it roll back by hand on the brake | written down: how far the EKF thinks it went **forward**, and whether the watchdog noticed (it compares speeds, not directions: maybe not). Too far: wait for H5 before reversing on slopes | 🔧 |
 | 4.26 | **The U-turn** | Nav2, a goal behind the car in a 14 m lane of cones (Gazebo's "turn back" leg) | a three-point turn: forward, back about 9 m, forward; no cone touched | 🔧 in Gazebo, 16 of 16 legs with the lattice (30 Oct) |
+| 4.27 | **The diffusion planner's trial** (0.3; [car day A12](car-day.md#a12-the-diffusion-planners-trial)): refused without `diffusion_trial:=true` and above 0.5 m/s; on stands, then a goal ahead, round a cone, and the U-turn | `car.launch.py diffusion_trial:=true`: ego and Nav2 at 0.5 m/s at most; the guard and the lattice behind it; every lock as always | the refusals happen (D.1-D.2); never over 0.5 m/s; no cone touched; the share from the model written down | 🔧 the refusals ✅ in `test_navigation_launch.py`; not run on the car |
 
 Nav2's map stays `empty.yaml`: the sensors see obstacles live. A map made from the lidar
 needs a tool we don't have yet.

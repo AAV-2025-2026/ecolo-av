@@ -93,6 +93,7 @@ Our stack runs in **ROS domain 42**, so it never mixes with theirs (domain 0).
 | A9 | The keyboard, then the **joystick**, on stands | [session 9](#session-9-the-first-drive-on-stands), [A9b](#a9b-the-joystick-on-stands) | safety driver, e-stop person, laptop person | A8 |
 | A10 ✍ | **The ground, at walking pace** | [A10](#a10-the-ground-at-walking-pace) | all five | A6-A9 passed |
 | A11 | The car tests and the lot's map | [Know the car](know-the-car.md) | all five | A10 |
+| A12 ✍ | **The diffusion planner's trial** (0.3), its own day; not run yet | [A12](#a12-the-diffusion-planners-trial) | safety driver, e-stop person, laptop person, approver | A11; 4.23-4.26 with the lattice |
 | any | The camera Pi; CAN, read-only; Foxglove | sessions [5](#session-5-the-camera-pi), [7](#session-7-can-read-only), [8](#session-8-foxglove-from-a-laptop) | 1 each | A5 |
 | all day | What to record | [session 10](#session-10-what-to-record) | laptop person | |
 | B1-B4 | Day B | [Day B](#day-b-upgrades-and-the-reflash) | laptop person, hardware lead, approver | Day A done; a restore proven |
@@ -786,6 +787,90 @@ the deadman but **no timeout anywhere**: we don't use it.
 | 3 | 10 m straight, slowly | it drives straight (or the pull written down) | |
 
 Then the car tests and the map: [Know the car](know-the-car.md) (A11), bagged with the lidar.
+
+## A12 · The diffusion planner's trial (0.3) {#a12-the-diffusion-planners-trial}
+
+Ben, 7 Nov: "We want diffusion." Allowed on the car in 0.3 as a **trial**: low speed,
+behind the guard and the locks. **Not run yet.** Its own day, after A11 and after
+the lattice has driven the same goals on the ground ([4f](tests.md#4f-reversing-and-the-u-turn)).
+
+**Who:** the safety driver, the e-stop person, the laptop person, the approver.
+**How long:** 90 min. 🔒 A10 passed; 4.23-4.26 passed with the lattice.
+
+### What holds it
+
+| Layer | What | Changed for the trial? |
+|---|---|---|
+| The switch | `diffusion_trial:=true`; without it `planner:=diffusion` is **refused** on the car | new |
+| The speed | **0.5 m/s at most** for ego, Nav2 and the geofence; `max_speed:=` above 0.5 is **refused** | new |
+| The guard | G1-G8 on every path the model draws; the lattice's path if none passes, or after 150 ms | no |
+| Below it | MPPI, collision_monitor (front and back), twist_mux's locks, ego, the geofence, the watchdog, the spine | **no** |
+| A person | the joystick or keyboard outranks Nav2; the Kar-Tech stop | no |
+
+Why 0.5 m/s: walking pace; the car's own reverse limit, so forwards and backwards alike;
+at ego's 2 m/s² it stops in 6 cm, plus 15 cm for a 0.3 s stale command. Half of ego's
+own 1.0 m/s cap, never above it.
+
+### Before: the Orin's timing (no driving)
+
+| # | Do (on the Orin) | You should see | If not |
+|---|---|---|---|
+| 1 | Copy `models/diffusion/planner.onnx` (and `planner_fp16.onnx`) from the laptop into `~/aav-jazzy/aav/models/diffusion/` | the files there | `pixi run diffusion train` on the laptop first |
+| 2 | Make the model's Python (below): NVIDIA's ONNX Runtime, which sees JetPack's TensorRT | `~/ort-venv/bin/python -c "import onnxruntime as o; print(o.get_available_providers())"` lists `TensorrtExecutionProvider` | no internet, or it fails: no trial today (the car kit has no ONNX Runtime) |
+| 3 | The CPU: `cd ~/aav-jazzy/aav && ~/ort-venv/bin/python ros/drivers/aav_diffusion_planner/training/measure.py` | a table: crop, model, guard, total against 2, 50, 10, 100 ms | write the table down |
+| 4 | The GPU: the same with `--provider TensorrtExecutionProvider` | the first start builds TensorRT's engine (minutes) into `models/diffusion/engines/`, where the node finds it; then the table, `ran on TensorrtExecutionProvider` | `ran on CPUExecutionProvider`: no GPU in that ONNX Runtime; try `--provider CUDAExecutionProvider` |
+| 5 | Pick: the total's 95th percentile under 100 ms, and the worst under 150 | write down the engine; the Python is `~/ort-venv/bin/python` | over 150 on every engine: **no trial**; every plan would be the lattice's anyway |
+
+The model's Python, once (needs internet; the index is NVIDIA's Jetson AI Lab, as for
+[4d](#4d-rf-detrs-tensorrt-engine)):
+
+```bash
+python3 -m venv --system-site-packages ~/ort-venv
+~/ort-venv/bin/pip install numpy onnxruntime-gpu --index-url https://pypi.jetson-ai-lab.io/jp6/cu126
+```
+
+(JetPack 7.2 after the reflash: that index's `jp7` folder, if NVIDIA has one; check first.)
+
+### On stands
+
+| ☐ | Before |
+|---|---|
+| ☐ | all four wheels off the ground; the e-stop person ready |
+| ☐ | the Orin's timing above done; the engine written down |
+
+| Where | Run |
+|---|---|
+| the Orin | `~/aav-jazzy/aav.sh ros2 launch aav_bringup car.launch.py machine:=orin diffusion_trial:=true stands:=true diffusion_provider:=<engine> diffusion_python:=$HOME/ort-venv/bin/python` |
+| the laptop | `pixi run hud`; `ros2 topic echo /drivers/nav/diffusion/status` |
+
+| # | Test | Expect | If not |
+|---|---|---|---|
+| D.1 | The same command **without** `diffusion_trial:=true` but with `planner:=diffusion` | refused at once: "a trial: on the car only with diffusion_trial:=true" | it starts: **stop**, no trial |
+| D.2 | With `max_speed:=0.8` | refused: "at most 0.5 m/s" | it starts: **stop**, no trial |
+| D.3 | The launch log | `diffusion_planner: 16 samples, budget 150 ms`, `worker up` | `worker none`: every plan the lattice's (the trial proves nothing): fix the model or Python |
+| D.4 | A goal 10 m ahead in RViz | the wheels turn forward, never over 0.5 m/s (the HUD) | faster: **e-stop** |
+| D.5 | `status` while it plans | `source: model` or `lattice`, and why; `model_and_guard_ms` under 150 | every plan `late`: the engine is too slow |
+| D.6 | The HUD's e-stop, then the joystick's trigger | brakes at once; the person drives | |
+
+### On the ground
+
+| ☐ | Before |
+|---|---|
+| ☐ | the stands passed (D.1-D.6) |
+| ☐ | an empty lot, cones for a 14 m lane; the safety driver in the seat; the e-stop person beside it, the Kar-Tech stop in hand; a person on the joystick |
+| ☐ | recording: `tools/record.sh --lidar diffusion` |
+
+`✍ Signed (approver): ________ at __:__`
+
+| # | Test | Expect | If not |
+|---|---|---|---|
+| D.7 | A goal 15 m straight ahead | it drives there at walking pace; `status` says how many plans came from the model | swerves or stops short: Kar-Tech stop, write down `status` |
+| D.8 | A goal round one cone | it drives round it, no cone touched | |
+| D.9 | The U-turn: a goal behind the car in the cone lane (4.26) | forward, back, forward; never over 0.5 m/s; no cone touched | |
+| D.10 | The same goals with the lattice (no `diffusion_trial`) | the times, to compare | |
+
+**Stop point:** D.1-D.3 pass on stands, or no trial. Any cone touched: stop, and the
+record goes to the team before another run.
 
 ## Any time on Day A, after A5
 

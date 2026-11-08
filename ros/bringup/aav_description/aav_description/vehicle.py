@@ -357,18 +357,61 @@ def default_planner(reversing):
     return DEFAULT_PLANNER if reversing else FORWARD_ONLY_PLANNER
 
 
-def check_planner(planner, real=False):
+# The diffusion planner's car trial (Ben, 7 Nov: "We want diffusion", in 0.3, low speed,
+# behind the guard and the locks). Only with car.launch.py diffusion_trial:=true, and then
+# ego and Nav2 are held to DIFFUSION_TRIAL_SPEED at most. 0.5 m/s: walking pace, the car's
+# own reverse limit (max_reverse_speed), so forwards and backwards are alike; at ego's
+# 2 m/s^2 the car stops in 0.06 m, plus 0.15 m for a 0.3 s stale command. Half of ego's
+# 1.0 m/s; never above it. The planner only draws the path: the guard (G1-G8) checks each,
+# the lattice is the fallback, and MPPI, collision_monitor, twist_mux's locks, ego, the
+# geofence and the spine's watchdog are the same as for the lattice.
+TRIAL_CAR_PLANNERS = ('diffusion',)
+DIFFUSION_TRIAL_SPEED = 0.5
+
+
+def diffusion_trial_speed(max_speed):
+    """
+    Return the diffusion car trial's top speed (m/s) from car.launch.py's max_speed:=.
+
+    Empty: DIFFUSION_TRIAL_SPEED. Above it, at or under 0, or not a number: ValueError.
+    """
+    text = str(max_speed).strip()
+    if not text:
+        return DIFFUSION_TRIAL_SPEED
+    try:
+        speed = float(text)
+    except ValueError:
+        raise ValueError(f'max_speed:={text}: a number of m/s, at most '
+                         f'{DIFFUSION_TRIAL_SPEED}') from None
+    if not 0.0 < speed <= DIFFUSION_TRIAL_SPEED:
+        raise ValueError(f'max_speed:={text}: the diffusion trial drives at most '
+                         f'{DIFFUSION_TRIAL_SPEED} m/s on the car (above 0); leave it empty '
+                         f'for {DIFFUSION_TRIAL_SPEED}')
+    return speed
+
+
+def check_planner(planner, real=False, trial=False):
     """
     Return the planner's name (lower case), or raise ValueError saying what to pick.
 
     real: the launch drives the real car (data source REAL, car.launch.py). There only
     CAR_PLANNERS, whose paths keep to the turning radius: a corner from a grid planner is
     a path the car can't drive, and the safest answer is not to offer it at all.
+    trial: car.launch.py diffusion_trial:=true, which lets TRIAL_CAR_PLANNERS (the
+    diffusion planner, with the guard and the lattice behind it) on the car too, and only
+    those; car.launch.py then holds the speed to DIFFUSION_TRIAL_SPEED.
     """
     name = str(planner).strip().lower()
     if name not in PLANNERS:
         raise ValueError(f'planner:={planner}: pick one of {", ".join(PLANNERS)}')
-    if real and name not in CAR_PLANNERS:
+    if trial and name not in TRIAL_CAR_PLANNERS:
+        raise ValueError(f'diffusion_trial:=true is for planner:=diffusion only, not '
+                         f'planner:={name}')
+    if real and name in TRIAL_CAR_PLANNERS and not trial:
+        raise ValueError(f'planner:={name} is a trial: on the car only with '
+                         f'diffusion_trial:=true (and at most {DIFFUSION_TRIAL_SPEED} m/s). '
+                         f'Otherwise: {", ".join(CAR_PLANNERS)}')
+    if real and name not in CAR_PLANNERS + (TRIAL_CAR_PLANNERS if trial else ()):
         raise ValueError(f"planner:={name} ignores the car's turning radius: a trial for "
                          f'sim and bench only. On the car: {", ".join(CAR_PLANNERS)}')
     return name

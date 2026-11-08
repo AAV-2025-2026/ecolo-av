@@ -436,8 +436,39 @@ def test_the_sim_passes_any_planner_and_the_car_only_car_shaped_ones():
                               planner='lattice')['planner'] == 'lattice'
     assert sent_to_navigation(CAR, machine='all', planner='lattice')['planner'] == 'lattice'
     for planner in set(vehicle.PLANNERS) - set(vehicle.CAR_PLANNERS):
-        with pytest.raises(ValueError, match='turning radius'):
+        with pytest.raises(ValueError, match='turning radius|diffusion_trial'):
             sent_to_navigation(CAR, machine='all', planner=planner)
+
+
+def test_the_car_refuses_diffusion_without_the_trial_switch():
+    with pytest.raises(ValueError, match='diffusion_trial:=true'):
+        sent_to_navigation(CAR, machine='all', planner='diffusion')
+    with pytest.raises(ValueError, match='diffusion_trial:=true'):
+        sent_to_navigation(CAR, machine='all', planner='diffusion', diffusion_trial='false')
+    # The switch is for the diffusion planner only: no other planner rides on it.
+    for planner in set(vehicle.PLANNERS) - {'diffusion'}:
+        with pytest.raises(ValueError, match='planner:=diffusion only'):
+            sent_to_navigation(CAR, machine='all', planner=planner, diffusion_trial='true')
+
+
+def test_the_diffusion_trial_holds_the_car_to_its_speed():
+    for asked, held in (('', '0.5'), ('0.3', '0.3'), ('0.5', '0.5')):
+        context = context_for(CAR, machine='all', planner='diffusion',
+                              diffusion_trial='true', max_speed=asked)
+        CAR.launch_setup(context)
+        # Every included file (ego, the geofence, Nav2) reads this one cap.
+        assert context.launch_configurations['max_speed'] == held
+        sent = sent_to_navigation(CAR, machine='all', planner='diffusion',
+                                  diffusion_trial='true', max_speed=asked)
+        assert sent['planner'] == 'diffusion' and sent['max_speed'] == held
+    # The switch alone picks the diffusion planner.
+    assert sent_to_navigation(CAR, machine='all', diffusion_trial='true')['planner'] == (
+        'diffusion')
+    # Faster than the trial's cap, or nonsense: refused before anything starts.
+    for asked in ('0.6', '1.0', '0', '-0.3', 'fast'):
+        with pytest.raises(ValueError, match='max_speed'):
+            sent_to_navigation(CAR, machine='all', planner='diffusion',
+                               diffusion_trial='true', max_speed=asked)
 
 
 def test_the_scan_unless_voxels_is_asked_for():

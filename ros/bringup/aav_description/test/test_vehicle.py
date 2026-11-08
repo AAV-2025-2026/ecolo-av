@@ -509,9 +509,11 @@ def test_planners_lattice_by_default_hybrid_forward_only_and_only_car_shaped_one
     assert vehicle.check_planner(' Lattice ') == 'lattice'
     assert vehicle.check_planner('navfn') == 'navfn'
     assert vehicle.check_planner('lattice', real=True) == 'lattice'
-    for name in ('smac2d', 'navfn', 'theta_star', 'diffusion'):
+    for name in ('smac2d', 'navfn', 'theta_star'):
         with pytest.raises(ValueError, match='turning radius'):
             vehicle.check_planner(name, real=True)
+    with pytest.raises(ValueError, match='a trial'):
+        vehicle.check_planner('diffusion', real=True)
     with pytest.raises(ValueError, match='pick one of'):
         vehicle.check_planner('rrt')
 
@@ -583,3 +585,21 @@ def test_mppi_keeps_enough_path_for_its_futures_at_a_higher_speed():
     ahead = follow['time_steps'] * follow['model_dt'] * follow['vx_max']
     assert follow['vx_max'] == 2.5
     assert follow['prune_distance'] > ahead
+
+
+def test_the_diffusion_car_trial_needs_its_switch_and_a_low_speed():
+    # Refused on the car without the switch; with it, the diffusion planner and only it.
+    with pytest.raises(ValueError, match='diffusion_trial'):
+        vehicle.check_planner('diffusion', real=True)
+    assert vehicle.check_planner('diffusion', real=True, trial=True) == 'diffusion'
+    with pytest.raises(ValueError, match='planner:=diffusion only'):
+        vehicle.check_planner('lattice', real=True, trial=True)
+    assert vehicle.check_planner('diffusion') == 'diffusion'        # sim and bench, as before
+    # The speed: walking pace, the reverse limit, below ego's own cap.
+    v = vehicle.load(CONFIG)['vehicle']
+    assert vehicle.DIFFUSION_TRIAL_SPEED <= float(v['max_reverse_speed'])
+    assert vehicle.diffusion_trial_speed('') == vehicle.DIFFUSION_TRIAL_SPEED
+    assert vehicle.diffusion_trial_speed(' 0.3 ') == 0.3
+    for bad in ('0.51', '1.0', '0', '-1', 'fast'):
+        with pytest.raises(ValueError, match='max_speed'):
+            vehicle.diffusion_trial_speed(bad)

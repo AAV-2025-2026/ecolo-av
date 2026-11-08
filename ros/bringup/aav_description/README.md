@@ -50,7 +50,8 @@ Many values are still `TODO measure` (docs/car_measurements.md).
 | `nav2_rewrites(v, reversing)`, `nav2_tuned(...)` | Nav2's settings from the car |
 | `plan_turning_radius(v)`, `s_bend_length(radius, offset)`, `final_approach(v)` | the planner's radius; the room ahead an S-bend needs; how near the goal Nav2 keeps its path (TODO 17) |
 | `ego_params(cfg)`, `spine_params(v)` | ego's and `spine_bridge`'s parameters |
-| `check_planner(name, real)`, `lattice_problems(meta, v, resolution)` | a planner's name, checked (only `CAR_PLANNERS` with `real`); what's wrong with a lattice primitives file for this car and map |
+| `check_planner(name, real, trial)`, `lattice_problems(meta, v, resolution)` | a planner's name, checked (only `CAR_PLANNERS` with `real`; with `trial`, car.launch.py's `diffusion_trial:=true`, `TRIAL_CAR_PLANNERS` only); what's wrong with a lattice primitives file for this car and map |
+| `diffusion_trial_speed(max_speed)` | the diffusion car trial's top speed: empty gives `DIFFUSION_TRIAL_SPEED` (0.5 m/s); above it is refused |
 | `lattice_file_name(headings)` | the primitives file for 16 headings (the default) or 32 (`LATTICE_HEADINGS`, `lattice_headings:=`) |
 | `check_tracker(name, reversing)`, `track_params(nav2, cfg, ego, max_speed)` | a trial tracker's name, checked; `aav_track`'s parameters from nav2.yaml, vehicle.yaml and ego.yaml |
 | `obstacle_heights(v)`, `centre_of_mass(...)` | the lidar's height band; centre of mass from the scales |
@@ -60,9 +61,11 @@ Constants: `SELF_MARGIN`, `SENSOR_HALF_SIZE` (m), `STOP_ZONE_AHEAD`, `STOP_ZONE_
 `CONTROLLERS = ('rpp', 'mppi')` with `DEFAULT_CONTROLLER = 'mppi'` (the default of
 `sim.launch.py`'s `controller`); `TRACKERS = ('none', 'pure_pursuit', 'stanley', 'lqr',
 'mpc', 'mpc_full')` with `DEFAULT_TRACKER = 'none'` (`tracker:=`, `docs/trials.md`), kept apart from
-`CONTROLLERS`; `PLANNERS = ('hybrid', 'lattice', 'smac2d', 'navfn', 'theta_star')` with
+`CONTROLLERS`; `PLANNERS = ('hybrid', 'lattice', 'smac2d', 'navfn', 'theta_star', 'diffusion')` with
 `DEFAULT_PLANNER = 'lattice'` and `FORWARD_ONLY_PLANNER = 'hybrid'` (`default_planner(reversing)` picks), `CAR_PLANNERS = ('hybrid', 'lattice')` (the ones that keep to
-the turning radius) and `PLANNER_BLOCKS` (each one's block in `nav2.yaml`).
+the turning radius), `TRIAL_CAR_PLANNERS = ('diffusion',)` with `DIFFUSION_TRIAL_SPEED = 0.5`
+(m/s: the car trial's cap, behind `diffusion_trial:=true`) and `PLANNER_BLOCKS` (each
+one's block in `nav2.yaml`).
 
 ### URDF (`urdf/`)
 
