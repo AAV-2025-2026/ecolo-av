@@ -168,13 +168,12 @@ class DiffusionPlanner(Node):
                                     callback_group=group)
         self.worker = None
         self.worker_lock = threading.Lock()
-        self.start_worker()
+        # The action first, then the model in the background: bt_navigator gives up on a
+        # server it can't see within a second, and with our own simulator it came up while
+        # the model still loaded (8 Nov). Until the worker is up, every plan is the lattice's.
         ActionServer(self, ComputePathToPose, 'compute_path_to_pose', self.execute,
                      cancel_callback=lambda _: CancelResponse.ACCEPT, callback_group=group)
-        self.get_logger().info(
-            f'diffusion_planner: {self.samples} samples, budget {self.budget_ms:.0f} ms, '
-            f'reversing {self.limits.reversing}, model {self.model}, '
-            f'worker {"up" if self.worker else "none: every plan is the lattice"}')
+        threading.Thread(target=self.start_worker, daemon=True).start()
 
     def start_worker(self):
         why = ('no learn environment at ' + self.python if not os.path.isfile(self.python)
@@ -183,17 +182,21 @@ class DiffusionPlanner(Node):
             self.get_logger().error(f'{why}: the lattice plans alone (pixi install --locked '
                                     '-e learn; pixi run diffusion train)')
             return
-        self.worker = Worker(self.python, self.model, self.provider)
+        worker = Worker(self.python, self.model, self.provider)
         # The first call loads the model: not in a real plan's budget. TensorRT builds its
         # engine then, minutes on the Orin the first time (measure diffusion builds it first).
         noise = np.zeros((self.samples, window.POINTS, window.CHANNELS), np.float32)
-        paths, _, why = self.worker.sample(np.zeros((window.SIZE, window.SIZE)),
-                                           np.zeros(window.COND), noise,
-                                           LOAD_SECONDS.get(self.provider, 60.0))
+        paths, _, why = worker.sample(np.zeros((window.SIZE, window.SIZE)),
+                                      np.zeros(window.COND), noise,
+                                      LOAD_SECONDS.get(self.provider, 60.0))
         if paths is None:
             self.get_logger().error(f'the model worker: {why}; the lattice plans alone')
-            self.worker.close()
-            self.worker = None
+            worker.close()
+            return
+        self.worker = worker
+        self.get_logger().info(
+            f'diffusion_planner: {self.samples} samples, budget {self.budget_ms:.0f} ms, '
+            f'reversing {self.limits.reversing}, model {self.model}, worker up')
 
     def on_costmap(self, msg):
         if abs(yaw_of(msg.info.origin)) > 1e-6:

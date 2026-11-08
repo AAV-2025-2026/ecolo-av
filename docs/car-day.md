@@ -851,7 +851,7 @@ python3 -m venv --system-site-packages ~/ort-venv
 |---|---|---|---|
 | D.1 | The same command **without** `diffusion_trial:=true` but with `planner:=diffusion` | refused at once: "a trial: on the car only with diffusion_trial:=true" | it starts: **stop**, no trial |
 | D.2 | With `max_speed:=0.8` | refused: "at most 0.5 m/s" | it starts: **stop**, no trial |
-| D.3 | The launch log | `diffusion_planner: 16 samples, budget 150 ms`, `worker up` | `worker none`: every plan the lattice's (the trial proves nothing): fix the model or Python |
+| D.3 | The launch log | within a minute: `diffusion_planner: 16 samples, budget 150 ms, ... worker up` | `the lattice plans alone`: every plan the lattice's (the trial proves nothing): fix the model or Python |
 | D.4 | A goal 10 m ahead in RViz | the wheels turn forward, never over 0.5 m/s (the HUD) | faster: **e-stop** |
 | D.5 | `status` while it plans | `source: model` or `lattice`, and why; `model_and_guard_ms` under 150 | every plan `late`: the engine is too slow |
 | D.6 | The HUD's e-stop, then the joystick's trigger | brakes at once; the person drives | |
