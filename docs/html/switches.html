@@ -7,7 +7,7 @@
 <!-- Generated from docs/switches.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Switches: what you can swap in the simulated car</h1>
-<div class="meta">9 min read · 6 sections</div></header>
+<div class="meta">10 min read · 6 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -60,6 +60,7 @@
 <a href="trials.html">Trials</a>
 <a href="mppi-lag.html">MPPI with lag</a>
 <a href="own-costmap.html">Our own costmap</a>
+<a href="own-planner.html">Our own planner</a>
 <a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
@@ -341,6 +342,10 @@ KISS-ICP needs its own environment once: <code>pixi install --locked -e kiss</co
 <tr>
 <td><code>costmap:=own</code></td>
 <td>our own costmaps (Rust) beside Nav2's; <code>tracker:=mppi_lag</code> then reads ours. 8 Nov: the same grid as Nav2's, half the CPU; with its clear service, the obstacle legs 3 of 3 as Nav2's (<a href="own-costmap.html">page</a>)</td>
+</tr>
+<tr>
+<td><code>planner:=own</code></td>
+<td>our own planner (Rust: Nav2's lattice ported) answers the behaviour trees, Nav2's lattice beside it; with <code>costmap:=own</code> it plans on our global costmap. 8 Nov: the test lot 12 of 12 as Nav2's, about 20 % slower on the campus's long legs (<a href="own-planner.html">page</a>)</td>
 </tr>
 </tbody>
 </table></div>

@@ -60,6 +60,7 @@
 <a href="trials.html">Trials</a>
 <a href="mppi-lag.html">MPPI with lag</a>
 <a class="here" href="own-costmap.html">Our own costmap</a>
+<a href="own-planner.html">Our own planner</a>
 <a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
@@ -461,8 +462,9 @@ Nav2's in every cell each time. Three runs can't prove run 2's stall is gone for
 </section>
 <section class="card"><h2 id="whats-missing-for-the-planner-step">What's missing for the planner step</h2>
 <ul>
-<li><strong>The planner</strong> reads Nav2's global costmap today (<code>planner_server</code>). Our planner (next)
-  should read <code>/drivers/nav/costmap/global_raw</code>.</li>
+<li><strong>The planner</strong> reads Nav2's global costmap (<code>planner_server</code>). Our planner
+  (<a href="own-planner.html">page</a>, <code>planner:=own</code>) reads <code>/drivers/nav/costmap/global_raw</code> when
+  <code>costmap:=own</code> is on too.</li>
 <li><strong>The global costmap's size:</strong> the campus map is large; ours rebuilds it all each second
   (27 ms for 500 m × 500 m without ROS). Fine now; only the changed part if it grows.</li>
 <li><strong>The global clear:</strong> ours serves it, but the trees still clear Nav2's global costmap
@@ -472,7 +474,7 @@ Nav2's in every cell each time. Three runs can't prove run 2's stall is gone for
 <li><strong>On the car:</strong> untested. Nav2 stays there.</li>
 </ul></section>
 <nav class="prevnext"><a class="prev" href="mppi-lag.html"><small>Previous</small>← MPPI with lag</a>
-<a class="next" href="stopping.html"><small>Next</small>How the car stops →</a></nav>
+<a class="next" href="own-planner.html"><small>Next</small>Our own planner →</a></nav>
 </main>
 <footer>Source: <code>docs/own-costmap.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

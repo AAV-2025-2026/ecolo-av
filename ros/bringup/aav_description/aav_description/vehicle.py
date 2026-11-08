@@ -336,9 +336,17 @@ def check_costmap(costmap):
 # diffusion (aav_diffusion_planner, a trial: docs/designs/2026-11-02_diffusion-planner.md):
 # a model draws the path and a guard checks it, with the lattice behind it in planner_server
 # as the fallback (TRIAL_PLANNERS: the planner each stands on). Sim and bench only.
-PLANNERS = ('hybrid', 'lattice', 'smac2d', 'navfn', 'theta_star', 'diffusion')
+# own (aav_planner, a trial: docs/own-planner.md): Nav2's State Lattice ported to Rust,
+# on the same primitives file and penalties; bt_navigator's trees call it, and
+# planner_server keeps running the lattice beside it (navigate_through_poses, and the
+# head-to-head in controller_compare). Sim and bench only.
+PLANNERS = ('hybrid', 'lattice', 'smac2d', 'navfn', 'theta_star', 'diffusion', 'own')
 CAR_PLANNERS = ('hybrid', 'lattice')
-TRIAL_PLANNERS = {'diffusion': 'lattice'}
+TRIAL_PLANNERS = {'diffusion': 'lattice', 'own': 'lattice'}
+# planner:=own: our planner's action; bt_navigator's compute_path_to_pose is pointed here.
+OWN_PLANNER_ACTION = '/drivers/nav/planner/compute_path_to_pose'
+# ... and planner_server's own /plan goes here (ours publishes /plan).
+OWN_PLANNER_NAV2_PLAN = '/drivers/nav/planner/nav2_plan'
 # The lattice is the default (Ben, 1 Nov): with reversing on, every leg of the lot tour,
 # 29 s quicker than Hybrid-A* (docs/trials.md, 30 Oct). Forward only it lost the U-turn
 # (29 Oct), so a car that may not reverse takes Hybrid-A* (FORWARD_ONLY_PLANNER).
@@ -346,7 +354,8 @@ DEFAULT_PLANNER = 'lattice'
 FORWARD_ONLY_PLANNER = 'hybrid'
 # Each planner's block in nav2.yaml's planner_server (GridBased is hybrid's own).
 PLANNER_BLOCKS = {'hybrid': 'GridBased', 'lattice': 'Lattice', 'smac2d': 'Smac2D',
-                  'navfn': 'NavFn', 'theta_star': 'ThetaStar', 'diffusion': 'Lattice'}
+                  'navfn': 'NavFn', 'theta_star': 'ThetaStar', 'diffusion': 'Lattice',
+                  'own': 'Lattice'}
 
 
 def server_planner(planner):
@@ -538,6 +547,49 @@ COSTMAP_SOURCE_DEFAULTS = {
     'obstacle_min_range': 0.0, 'obstacle_max_range': 2.5,
     'raytrace_min_range': 0.0, 'raytrace_max_range': 3.0,
     'inf_is_valid': False, 'observation_persistence': 0.0,
+}
+
+
+# The Lattice block's keys our planner reads (aav_planner's lattice-planner Settings).
+OWN_PLANNER_KEYS = (
+    'lattice_filepath', 'allow_reverse_expansion', 'allow_unknown', 'tolerance',
+    'max_iterations', 'max_on_approach_iterations', 'max_planning_time',
+    'terminal_checking_interval', 'reverse_penalty', 'change_penalty',
+    'non_straight_penalty', 'cost_penalty', 'retrospective_penalty', 'rotation_penalty',
+    'analytic_expansion_ratio', 'analytic_expansion_max_length',
+    'analytic_expansion_max_cost', 'analytic_expansion_max_cost_override',
+    'lookup_table_size', 'smooth_path')
+
+
+def planner_params(tuned, v, costmap='nav2'):
+    """
+    Return aav_planner's settings (planner:=own) as a dict, from the tuned nav2.yaml.
+
+    tuned: nav2.yaml after nav2_tuned with planner:=own (the Lattice block, the file and
+    reversing filled in, is planner_server's GridBased); v: vehicle.yaml's `vehicle`;
+    costmap: which global costmap it plans on (nav2 or own). The same block, the car's
+    outline and padding, and the global costmap's inflation, so ours plans as Nav2's does.
+    """
+    block = tuned['planner_server']['ros__parameters']['GridBased']
+    out = {k: block[k] for k in OWN_PLANNER_KEYS if k in block}
+    gc = tuned['global_costmap']['global_costmap']['ros__parameters']
+    out['footprint'] = footprint_points(v)
+    out['footprint_padding'] = float(gc.get('footprint_padding', 0.01))
+    out['inflation'] = None
+    for plugin in gc['plugins']:
+        layer = gc.get(plugin, {})
+        if (layer.get('plugin', '').endswith('InflationLayer') and
+                layer.get('enabled', True)):
+            out['inflation'] = {'radius': float(layer.get('inflation_radius', 0.55)),
+                                'scaling': float(layer.get('cost_scaling_factor', 10.0))}
+    return out
+
+
+# planner:=own: each global costmap's raw topic, its partial updates, and whether it is
+# latched (Nav2 sends the whole map once, then only the changed parts).
+GLOBAL_COSTMAP_TOPICS = {
+    'nav2': ('/global_costmap/costmap_raw', '/global_costmap/costmap_raw_updates', True),
+    'own': ('/drivers/nav/costmap/global_raw', '', False),
 }
 
 

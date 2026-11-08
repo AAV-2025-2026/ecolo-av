@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">101 min read · 4 sections</div></header>
+<div class="meta">103 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -60,6 +60,7 @@
 <a href="trials.html">Trials</a>
 <a href="mppi-lag.html">MPPI with lag</a>
 <a href="own-costmap.html">Our own costmap</a>
+<a href="own-planner.html">Our own planner</a>
 <a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
@@ -1258,10 +1259,26 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/plan</code></td>
 <td><code>nav_msgs/msg/Path</code></td>
-<td><code>planner_server</code>, <code>diffusion_planner</code></td>
+<td><code>planner_server</code>, <code>diffusion_planner</code>, <code>planner</code></td>
 <td><code>map</code>, <code>debug_hud</code>, <code>dev_window</code>, <code>look_ahead</code>, <code>behaviour</code></td>
 <td>-</td>
-<td>The planned path, for RViz/Foxglove, and the map window (map, aav_hud) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives. Which planner makes it is navigation.launch.py planner:= (docs/controllers.md, Planners) - hybrid (SmacPlannerHybrid, the default) or lattice (SmacPlannerLattice, our own primitives) keep to the car's turning radius; smac2d, navfn and theta_star, trials in sim and bench only, don't. Always the plugin GridBased, so the behaviour trees never change. With planner:=diffusion (aav_diffusion_planner, a trial) diffusion_planner publishes it - the path it returned, the model's or the lattice's - and planner_server's own goes to /drivers/nav/diffusion/lattice_plan.</td>
+<td>The planned path, for RViz/Foxglove, and the map window (map, aav_hud) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives. Which planner makes it is navigation.launch.py planner:= (docs/controllers.md, Planners) - hybrid (SmacPlannerHybrid, the default) or lattice (SmacPlannerLattice, our own primitives) keep to the car's turning radius; smac2d, navfn and theta_star, trials in sim and bench only, don't. Always the plugin GridBased, so the behaviour trees never change. With planner:=diffusion (aav_diffusion_planner, a trial) diffusion_planner publishes it - the path it returned, the model's or the lattice's - and planner_server's own goes to /drivers/nav/diffusion/lattice_plan. With planner:=own (aav_planner, a trial) our planner node publishes it - each path it returns - and planner_server's own goes to /drivers/nav/planner/nav2_plan.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/planner/nav2_plan</code></td>
+<td><code>nav_msgs/msg/Path</code></td>
+<td><code>planner_server</code></td>
+<td>-</td>
+<td>-</td>
+<td>Only with planner:=own - planner_server's own /plan, renamed - Nav2's lattice's path, when something still asks it (navigate_through_poses, controller_compare's head-to-head).</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/planner/status</code></td>
+<td><code>diagnostic_msgs/msg/DiagnosticStatus</code></td>
+<td><code>planner</code></td>
+<td>-</td>
+<td>-</td>
+<td>Only with planner:=own - one a plan. name planner; level OK (a path) or ERROR (none - message why, values error_code and failures). values search_ms, total_ms (with smoothing), iterations, length_m, cusps, poses, plans and failures since the node started.</td>
 </tr>
 <tr>
 <td><code>/drivers/nav/diffusion/lattice_plan</code></td>
@@ -1333,15 +1350,15 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>costmap</code></td>
 <td>-</td>
 <td>-</td>
-<td>Only with costmap:=own. Our global costmap - map frame, the map's own size and cells, the static map (unknown kept), the radar and lidar layers when the planner sees them (plan_around), inflation (3 m, scaling 1.0). 1 Hz. Nothing plans on it yet - the planner step comes next (docs/own-costmap.md).</td>
+<td>Only with costmap:=own. Our global costmap - map frame, the map's own size and cells, the static map (unknown kept), the radar and lidar layers when the planner sees them (plan_around), inflation (3 m, scaling 1.0). 1 Hz. Nav2's planner_server keeps its own; our planner (planner:=own) plans on this one when costmap:=own (docs/own-planner.md).</td>
 </tr>
 <tr>
 <td><code>/drivers/nav/costmap/global_raw</code></td>
 <td><code>nav2_msgs/msg/Costmap</code></td>
 <td><code>costmap</code></td>
+<td><code>planner</code></td>
 <td>-</td>
-<td>-</td>
-<td>The same grid as /drivers/nav/costmap/global, raw costs (0-255).</td>
+<td>The same grid as /drivers/nav/costmap/global, raw costs (0-255). aav_planner's planner plans on it with planner:=own and costmap:=own (with costmap:=nav2 it reads Nav2's /global_costmap/costmap_raw and its _raw_updates instead).</td>
 </tr>
 <tr>
 <td><code>/drivers/nav/costmap/status</code></td>
@@ -1580,6 +1597,12 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>nav2_msgs/action/ComputePathToPose</code></td>
 <td><code>planner_server</code></td>
 <td>Nav2's own - one path from the car to a pose, planner_id GridBased (whichever planner:= runs). With planner:=diffusion diffusion_planner serves it instead, and planner_server's own is renamed /compute_path_to_pose_lattice, which diffusion_planner calls for each plan (the fallback). bt_navigator calls it every second while it drives; controller_compare (tools/controller_compare.py --planners) calls it once before each leg, to score the planner alone - its planning_time, the path's length and tightest turn. Planning only, nothing moves.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/planner/compute_path_to_pose</code></td>
+<td><code>nav2_msgs/action/ComputePathToPose</code></td>
+<td><code>planner</code></td>
+<td>Only with planner:=own (aav_planner, a trial; docs/own-planner.md). Our planner - Nav2's State Lattice in Rust, the same primitives file, penalties and smoothing - one path from the car (map -&gt; odom -&gt; base_link on /tf, or the goal's start with use_start) to a map pose, on the global costmap costmap:= picks. navigation.launch.py remaps bt_navigator's compute_path_to_pose here, so the trees call ours; planner_server's /compute_path_to_pose keeps answering beside it (controller_compare asks both from the same spot). Error codes as Nav2's (203-208). Planning only, nothing moves.</td>
 </tr>
 <tr>
 <td><code>/navigate_to_pose</code></td>

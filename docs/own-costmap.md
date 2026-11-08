@@ -154,8 +154,9 @@ Our local update: **0.50-0.55 ms** on average, 0.58 ms at the 95th percentile.
 
 ## What's missing for the planner step
 
-- **The planner** reads Nav2's global costmap today (`planner_server`). Our planner (next)
-  should read `/drivers/nav/costmap/global_raw`.
+- **The planner** reads Nav2's global costmap (`planner_server`). Our planner
+  ([page](own-planner.md), `planner:=own`) reads `/drivers/nav/costmap/global_raw` when
+  `costmap:=own` is on too.
 - **The global costmap's size:** the campus map is large; ours rebuilds it all each second
   (27 ms for 500 m × 500 m without ROS). Fine now; only the changed part if it grows.
 - **The global clear:** ours serves it, but the trees still clear Nav2's global costmap

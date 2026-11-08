@@ -8,6 +8,7 @@ bench) lets Nav2 plan, follow and back up in reverse, at vehicle.yaml's max_reve
 """
 
 import importlib.util
+import json
 import os
 
 from aav_description import vehicle
@@ -367,13 +368,34 @@ def test_the_sim_passes_the_trials_on_and_checks_them():
 
 # planner:= (docs/controllers.md, Planners): each planner behind the one plugin name the
 # behaviour trees ask for. Lattice reads the map's file, so these tests give a real one.
+def test_own_planner_takes_the_trees_compute_path_to_pose():
+    assert 'planner' not in nav_nodes()
+    nodes = nav_nodes(planner='own', reversing='true')
+    # The trees ask ours; planner_server keeps its action, its /plan moves aside.
+    assert ('compute_path_to_pose', vehicle.OWN_PLANNER_ACTION) in remaps(
+        nodes['bt_navigator'])
+    assert ('plan', vehicle.OWN_PLANNER_NAV2_PLAN) in remaps(nodes['planner_server'])
+    p = given(nodes['planner'])
+    s = json.loads(p['settings'])
+    assert s['allow_reverse_expansion'] is True
+    assert s['lattice_filepath'].endswith('lattice_ackermann.json')
+    assert p['costmap_topic'] == '/global_costmap/costmap_raw'
+    assert p['costmap_latched'] == 'true'
+    # With our costmaps too, it plans on our global one.
+    p = given(nav_nodes(planner='own', costmap='own')['planner'])
+    assert p['costmap_topic'] == '/drivers/nav/costmap/global_raw'
+    assert p['costmap_updates_topic'] == ''
+
+
 PLUGINS = {'hybrid': 'nav2_smac_planner::SmacPlannerHybrid',
            'lattice': 'nav2_smac_planner::SmacPlannerLattice',
            'smac2d': 'nav2_smac_planner::SmacPlanner2D',
            'navfn': 'nav2_navfn_planner::NavfnPlanner',
            'theta_star': 'nav2_theta_star_planner::ThetaStarPlanner',
            # The trial stands on the lattice: planner_server runs it, as the fallback.
-           'diffusion': 'nav2_smac_planner::SmacPlannerLattice'}
+           'diffusion': 'nav2_smac_planner::SmacPlannerLattice',
+           # Ours (aav_planner) answers the trees; planner_server runs the lattice beside it.
+           'own': 'nav2_smac_planner::SmacPlannerLattice'}
 
 
 def planner_settings(**args):

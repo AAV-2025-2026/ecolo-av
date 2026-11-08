@@ -76,6 +76,9 @@ bench's argument names:
                       the lattice's path when it fails (aav_diffusion_planner, a trial:
                       pixi install --locked -e learn, pixi run diffusion train first);
                       diffusion_model:=<.onnx> another model
+                      planner:=own: our own planner (aav_planner: Nav2's lattice in
+                      Rust) answers the trees, Nav2's lattice beside it
+                      (docs/own-planner.md)
   tracker:=lqr        a trial path follower (aav_track: pure_pursuit, stanley, lqr or mpc)
                       in controller_server's place, on Nav2's same planner, smoother and
                       collision_monitor. Forward only: with reversing:=false (docs/trials.md)

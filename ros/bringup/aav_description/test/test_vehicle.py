@@ -583,7 +583,7 @@ def test_planners_lattice_by_default_hybrid_forward_only_and_only_car_shaped_one
     assert vehicle.check_planner(' Lattice ') == 'lattice'
     assert vehicle.check_planner('navfn') == 'navfn'
     assert vehicle.check_planner('lattice', real=True) == 'lattice'
-    for name in ('smac2d', 'navfn', 'theta_star', 'diffusion'):
+    for name in ('smac2d', 'navfn', 'theta_star', 'diffusion', 'own'):
         with pytest.raises(ValueError, match='turning radius'):
             vehicle.check_planner(name, real=True)
     with pytest.raises(ValueError, match='pick one of'):
@@ -625,6 +625,31 @@ def test_the_diffusion_trial_stands_on_the_lattice():
                               lattice_file='/x/l.json')['planner_server'][
                                   'ros__parameters']['GridBased']
     assert grid['plugin'].endswith('SmacPlannerLattice') and grid['allow_reverse_expansion']
+
+
+def test_our_planner_reads_the_lattice_block_the_car_and_the_inflation():
+    # planner:=own: aav_planner gets Nav2's own Lattice block, so both plan alike.
+    assert vehicle.server_planner('own') == 'lattice'
+    assert 'own' not in vehicle.CAR_PLANNERS
+    nav2 = yaml.safe_load(NAV2_YAML.read_text())
+    v = vehicle.load(CONFIG)['vehicle']
+    for reversing in (False, True):
+        tuned = vehicle.nav2_tuned(nav2, v, reversing=reversing, planner='own',
+                                   lattice_file='/x/l.json')
+        p = vehicle.planner_params(tuned, v)
+        lattice = nav2['planner_server']['ros__parameters']['Lattice']
+        assert p['lattice_filepath'] == '/x/l.json'
+        assert p['allow_reverse_expansion'] is reversing
+        for key in ('reverse_penalty', 'change_penalty', 'non_straight_penalty',
+                    'cost_penalty', 'retrospective_penalty', 'tolerance',
+                    'analytic_expansion_max_length', 'smooth_path'):
+            assert p[key] == lattice[key], key
+        assert p['footprint'] == vehicle.footprint_points(v)
+        inflation = nav2['global_costmap']['global_costmap']['ros__parameters'][
+            'inflation_layer']
+        assert p['inflation'] == {'radius': inflation['inflation_radius'],
+                                  'scaling': inflation['cost_scaling_factor']}
+    assert set(vehicle.GLOBAL_COSTMAP_TOPICS) == set(vehicle.COSTMAPS)
 
 
 def test_lattice_needs_its_file_and_reverses_only_with_reversing():

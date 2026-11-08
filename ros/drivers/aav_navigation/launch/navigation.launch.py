@@ -58,6 +58,14 @@ Trials (docs/trials.md), each beside the default and scored by pixi run measure 
                           /drivers/nav/diffusion/lattice_plan. diffusion_model:= (empty:
                           models/diffusion/planner.onnx), diffusion_provider:= (ONNX
                           Runtime's). car.launch.py refuses it
+                          own (aav_planner): our own planner, Nav2's State Lattice ported to
+                          Rust (the same primitives file and penalties). Its planner node
+                          serves /drivers/nav/planner/compute_path_to_pose and publishes
+                          /plan; bt_navigator's compute_path_to_pose is remapped to it.
+                          planner_server keeps the lattice beside it (navigate_through_poses
+                          still uses it), its /plan renamed /drivers/nav/planner/nav2_plan.
+                          It plans on the global costmap costmap:= picks. car.launch.py
+                          refuses it (docs/own-planner.md)
   tracker:=pure_pursuit|stanley|lqr|mpc|mpc_full  aav_track's track node follows the path instead
                           (tracker:=mppi_lag: aav_mppi_lag's mppi_lag node, Nav2's MPPI
                           with the actuators' lag; docs/mppi-lag.md)
@@ -275,6 +283,8 @@ def nodes(context):
     # planner:=diffusion: its node answers compute_path_to_pose (bt_navigator's trees ask
     # it) and publishes /plan; planner_server's lattice, renamed, is its fallback.
     diffusion = planner == 'diffusion'
+    # planner:=own: aav_planner answers the trees' compute_path_to_pose and publishes /plan.
+    own_planner = planner == 'own'
     # costmap:=own: aav_costmap beside Nav2's costmaps; own_local: the follower reads ours.
     costmap = vehicle.check_costmap(LaunchConfiguration('costmap').perform(context))
     own_local = costmap == 'own' and tracker == 'mppi_lag'
@@ -282,7 +292,8 @@ def nodes(context):
         ('nav2_map_server', 'map_server', []),
         ('nav2_planner', 'planner_server', [
             ('compute_path_to_pose', 'compute_path_to_pose_lattice'),
-            ('plan', '/drivers/nav/diffusion/lattice_plan')] if diffusion else []),
+            ('plan', '/drivers/nav/diffusion/lattice_plan')] if diffusion else
+         [('plan', vehicle.OWN_PLANNER_NAV2_PLAN)] if own_planner else []),
         # With a trial tracker, it keeps running but its FollowPath goes unused: rcl_action
         # resolves action names with the node's remappings, as topics are.
         # MPPI's chosen future (visualize: true in nav2.yaml) is the screens' faint line,
@@ -294,9 +305,12 @@ def nodes(context):
         # costmap:=own with tracker:=mppi_lag: the follower reads our local costmap, so the
         # trees' recovery clears ours (aav_costmap serves Nav2's ClearEntireCostmap). The
         # global clear stays Nav2's: the planner still reads Nav2's global costmap.
+        # planner:=own: the trees' ComputePathToPose goes to our planner (rcl_action
+        # resolves action client names with the node's remappings too).
         ('nav2_bt_navigator', 'bt_navigator',
-         [('local_costmap/clear_entirely_local_costmap',
-           '/drivers/nav/costmap/clear_entirely_local')] if own_local else []),
+         ([('local_costmap/clear_entirely_local_costmap',
+            '/drivers/nav/costmap/clear_entirely_local')] if own_local else []) +
+         ([('compute_path_to_pose', vehicle.OWN_PLANNER_ACTION)] if own_planner else [])),
         ('nav2_waypoint_follower', 'waypoint_follower', []),
         ('nav2_velocity_smoother', 'velocity_smoother',
          [('cmd_vel', 'cmd_vel_nav'), ('cmd_vel_smoothed', smoothed)]),
@@ -371,6 +385,18 @@ def nodes(context):
             package='aav_costmap', executable='costmap', name='costmap', output='screen',
             parameters=[{'local': json.dumps(blocks['local']),
                          'global': json.dumps(blocks['global']),
+                         'use_sim_time': use_sim_time}]))
+    if own_planner:
+        # aav_planner (Rust): Nav2's lattice ported, from the same tuned Lattice block, the
+        # car's outline and the global costmap's inflation. Not a lifecycle node.
+        with open(source) as f:
+            settings = vehicle.planner_params(yaml.safe_load(f), v, costmap)
+        topic, updates, latched = vehicle.GLOBAL_COSTMAP_TOPICS[costmap]
+        actions.append(Node(
+            package='aav_planner', executable='planner', name='planner', output='screen',
+            parameters=[{'settings': json.dumps(settings), 'costmap_topic': topic,
+                         'costmap_updates_topic': updates,
+                         'costmap_latched': str(latched).lower(),
                          'use_sim_time': use_sim_time}]))
     if tracker != 'none':
         # Not a lifecycle node: it serves follow_path from the start. Nav2's own numbers
