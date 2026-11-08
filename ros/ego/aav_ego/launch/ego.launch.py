@@ -1,7 +1,10 @@
 """
 ego: /control/cmd_vel (TwistStamped from twist_mux) -> /ego/actuator_cmd (AckermannDriveStamped).
 
-  ros2 launch aav_ego ego.launch.py [use_sim_time:=false] [max_speed:=0.3]
+  ros2 launch aav_ego ego.launch.py [use_sim_time:=false] [max_speed:=0.3] [look_ahead:=true]
+
+look_ahead (true) also starts look_ahead: the squiggly line's numbers for the screens
+(/ego/plan_ahead, /ego/ahead; look_ahead_node.py). It only listens and publishes those two.
 
 max_speed (m/s) caps the forward speed below config/ego.yaml's, for a first drive on
 stands; empty (the default) keeps ego.yaml's. It can only lower the cap, never raise it.
@@ -54,7 +57,11 @@ def ego_node(context):
             raise ValueError(f'sim_max_speed:={sim} must be above 0 and at most '
                              f'{SIM_MAX_SPEED} m/s')
         params.append({'max_speed': limit})
-    return [Node(package='aav_ego', executable='ego', name='ego', parameters=params)]
+    nodes = [Node(package='aav_ego', executable='ego', name='ego', parameters=params)]
+    if context.launch_configurations.get('look_ahead', 'true').strip().lower() == 'true':
+        nodes.append(Node(package='aav_ego', executable='look_ahead', name='look_ahead',
+                          parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time')}]))
+    return nodes
 
 
 def generate_launch_description():
@@ -65,5 +72,7 @@ def generate_launch_description():
         DeclareLaunchArgument('sim_max_speed', default_value='',
                               description='m/s: a higher cap, in a simulator only '
                                           '(sim.launch.py sim_speed:=)'),
+        DeclareLaunchArgument('look_ahead', default_value='true',
+                              description='also start look_ahead (the squiggly line)'),
         OpaqueFunction(function=ego_node),
     ])
