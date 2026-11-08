@@ -59,6 +59,7 @@
 <a href="switches.html">Switches</a>
 <a href="trials.html">Trials</a>
 <a href="mppi-lag.html">MPPI with lag</a>
+<a href="own-costmap.html">Our own costmap</a>
 <a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
@@ -119,7 +120,8 @@
 </ul>
 <p>Nav2's planner searches the grid for a path the car can drive. Its controller follows that
 path and slows down near high-cost cells. <code>nav2_costmap_2d</code> builds the grids from layers.
-The settings are in <code>ros/drivers/aav_navigation/config/nav2.yaml</code>.</p></div>
+The settings are in <code>ros/drivers/aav_navigation/config/nav2.yaml</code>.
+Our own costmap, in Rust, runs beside Nav2's as a trial: <a href="own-costmap.html">Our own costmap</a>.</p></div>
 <section class="card"><h2 id="the-two-costmaps">The two costmaps</h2>
 <div class="table-wrap"><table>
 <thead>

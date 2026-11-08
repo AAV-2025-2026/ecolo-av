@@ -52,6 +52,8 @@ if command -v cargo >/dev/null; then
   (cd ros/sim/aav_simulator && cargo test -q --locked -p sim-core --features shared)
   echo "== ros/drivers/aav_mppi_lag: MPPI with the lag, its critics, the closed-loop runs"
   (cd ros/drivers/aav_mppi_lag && cargo test -q --locked -p mppi-lag --features shared)
+  echo "== ros/drivers/aav_costmap: our own costmap's layers and hand-made scenes"
+  (cd ros/drivers/aav_costmap && cargo test -q --locked -p costmap)
   # Only the logic: the window (raylib) needs a screen's libraries, and colcon builds it.
   echo "== ros/hud/aav_hud: the HUD's state, GPS, e-stop and formatting; the map's maths; the hardware panel's buttons"
   (cd ros/hud/aav_hud && cargo test -q --locked -p hud-core -p map-core -p debug-core -p panel-core)

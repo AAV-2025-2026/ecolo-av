@@ -1,0 +1,769 @@
+//! costmap: our own local and global costmaps, beside Nav2's (a trial).
+//!
+//! Subscribes  /map                        nav_msgs/OccupancyGrid, transient local: the
+//!                                         static layer
+//!             localization/odom/local     nav_msgs/Odometry (odom_topic): the car in odom,
+//!                                         kept 2 s to place each scan at its own stamp
+//!             /tf                         tf2_msgs/TFMessage: map -> odom
+//!             /tf_static                  tf2_msgs/TFMessage: each sensor's mount
+//!             each source's topic         sensor_msgs/LaserScan or PointCloud2, best
+//!                                         effort, as nav2.yaml's layers name them (the
+//!                                         lidar scan; the radar, the cubes, the cameras'
+//!                                         points where they run)
+//! Publishes   drivers/nav/costmap/local   nav_msgs/OccupancyGrid, odom, at the local
+//!                                         block's publish_frequency (Nav2's 0-100 table)
+//!             drivers/nav/costmap/local_raw  nav2_msgs/Costmap: the same, Nav2's raw
+//!                                         costs (0-255), for aav_mppi_lag
+//!                                         (costmap_topic)
+//!             drivers/nav/costmap/global, .../global_raw  the same for the global one,
+//!                                         map frame, the map's size
+//!             drivers/nav/costmap/status  diagnostic_msgs/DiagnosticStatus, at each
+//!                                         publish: the update times (ms), the lethal
+//!                                         cells, what it is waiting for
+//! Serves      nothing; calls nothing.
+//! Parameters  local, global: each a JSON block (aav_description's
+//!             vehicle.costmap_params, from nav2.yaml); empty: that costmap doesn't run.
+//!             odom_topic, map_topic, base_frame, and the topic names above.
+//!
+//! navigation.launch.py costmap:=own starts it. Nav2's own costmaps keep running. The
+//! maths is the `costmap` crate; this file only moves messages.
+
+use std::{
+    any::Any,
+    collections::{HashMap, VecDeque},
+    sync::Arc,
+    time::{Duration, Instant},
+};
+
+use anyhow::{anyhow, bail, Context as _, Result};
+use costmap::{
+    cost::{occupancy, LETHAL},
+    footprint, Costmap, Observation, ObstacleLayer, Pose2, Settings, Source, StaticMap, Transform3,
+};
+use rclrs::*;
+use ros_env::builtin_interfaces::msg::Time;
+use ros_env::diagnostic_msgs::msg::{DiagnosticStatus, KeyValue};
+use ros_env::geometry_msgs::msg::{Point, Pose as PoseMsg, Quaternion};
+use ros_env::nav2_msgs::msg::{Costmap as CostmapMsg, CostmapMetaData};
+use ros_env::nav_msgs::msg::{MapMetaData, OccupancyGrid, Odometry};
+use ros_env::sensor_msgs::msg::{LaserScan, PointCloud2};
+use ros_env::std_msgs::msg::Header;
+use ros_env::tf2_msgs::msg::TFMessage;
+use serde_json::Value;
+
+/// How long the odometry is kept, s: a scan is placed at its own stamp.
+const ODOM_KEPT: f64 = 2.0;
+/// Messages kept per sensor topic: enough for the radar's 0.2 s persistence.
+const KEPT_PER_TOPIC: usize = 8;
+
+fn main() -> Result<()> {
+    let context = Context::default_from_env()?;
+    let mut executor = context.create_basic_executor();
+    let node = executor.create_node("costmap")?;
+
+    let mut handles: Vec<Box<dyn Any>> = Vec::new();
+    let mut text_param = |name: &str, default: &str| -> Result<String> {
+        let p = node
+            .declare_parameter::<Arc<str>>(name)
+            .default(default.into())
+            .read_only()
+            .with_context(|| format!("parameter {name} (text)"))?;
+        let value = p.get().to_string();
+        handles.push(Box::new(p));
+        Ok(value)
+    };
+    let local_json = text_param("local", "")?;
+    let global_json = text_param("global", "")?;
+    let odom_topic = text_param("odom_topic", "/localization/odom/local")?;
+    let map_topic = text_param("map_topic", "/map")?;
+    let base_frame = text_param("base_frame", "base_link")?;
+    let local_topic = text_param("local_topic", "/drivers/nav/costmap/local")?;
+    let global_topic = text_param("global_topic", "/drivers/nav/costmap/global")?;
+    let status_topic = text_param("status_topic", "/drivers/nav/costmap/status")?;
+
+    let mut maps = Vec::new();
+    for (name, json, topic) in [
+        ("local", &local_json, &local_topic),
+        ("global", &global_json, &global_topic),
+    ] {
+        if json.trim().is_empty() {
+            continue;
+        }
+        let block: Value =
+            serde_json::from_str(json).with_context(|| format!("parameter {name}: JSON"))?;
+        let spec = Spec::build(name, &block).with_context(|| format!("the {name} costmap"))?;
+        log_info!(node.logger(), "{}", spec.describe());
+        maps.push(One {
+            spec,
+            last_publish: None,
+            update_ms: 0.0,
+            worst_ms: 0.0,
+            updates: 0,
+            waiting: String::new(),
+            grid_pub: node.create_publisher(topic.as_str())?,
+            raw_pub: node.create_publisher(format!("{topic}_raw").as_str())?,
+        });
+    }
+    if maps.is_empty() {
+        bail!("neither local nor global is set: nothing to do");
+    }
+
+    // Every topic any source reads, once, and its kind.
+    let mut topics: Vec<(String, Kind)> = Vec::new();
+    for input in maps.iter().flat_map(|m| m.spec.inputs.iter().flatten()) {
+        if !topics.iter().any(|(name, _)| *name == input.topic) {
+            topics.push((input.topic.clone(), input.kind));
+        }
+    }
+    let rates: Vec<f64> = maps.iter().map(|m| m.spec.update_hz).collect();
+
+    let core = Core {
+        maps,
+        status: node.create_publisher(status_topic.as_str())?,
+        clock: node.get_clock(),
+        logger: node.logger().clone(),
+        base_frame,
+        raw: HashMap::new(),
+        odom: VecDeque::new(),
+        map_from_odom: None,
+        mounts: HashMap::new(),
+    };
+    let worker = node.create_worker(core);
+    // Held until exit: rclrs drops a subscription or timer with its handle.
+    let mut keep: Vec<Box<dyn Any>> = vec![
+        Box::new(worker.create_subscription(
+            map_topic.as_str().keep_last(1).reliable().transient_local(),
+            |s: &mut Core, msg: OccupancyGrid| s.on_map(&msg),
+        )?),
+        Box::new(
+            worker.create_subscription(odom_topic.as_str(), |s: &mut Core, msg: Odometry| {
+                s.on_odom(&msg)
+            })?,
+        ),
+        Box::new(worker.create_subscription("/tf", |s: &mut Core, msg: TFMessage| s.on_tf(&msg))?),
+        Box::new(worker.create_subscription(
+            "/tf_static".keep_last(100).reliable().transient_local(),
+            |s: &mut Core, msg: TFMessage| s.on_tf_static(&msg),
+        )?),
+    ];
+    for (topic, kind) in topics {
+        let name = topic.clone();
+        match kind {
+            Kind::Scan => keep.push(Box::new(worker.create_subscription(
+                topic.as_str().best_effort(),
+                move |s: &mut Core, msg: LaserScan| s.on_scan(&name, &msg),
+            )?)),
+            Kind::Cloud => keep.push(Box::new(worker.create_subscription(
+                topic.as_str().best_effort(),
+                move |s: &mut Core, msg: PointCloud2| s.on_cloud(&name, &msg),
+            )?)),
+        }
+    }
+    for (i, hz) in rates.into_iter().enumerate() {
+        let period = Duration::from_secs_f64(1.0 / hz.max(0.1));
+        keep.push(Box::new(worker.create_timer_repeating(
+            period.node_time(),
+            move |s: &mut Core| s.tick(i),
+        )?));
+    }
+
+    let commands = Arc::clone(executor.commands());
+    ctrlc::set_handler(move || commands.halt_spinning())?;
+    executor.spin(SpinOptions::default()).first_error()?;
+    drop((keep, handles));
+    Ok(())
+}
+
+/// A source's message type.
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum Kind {
+    Scan,
+    Cloud,
+}
+
+/// Where a source's messages come from.
+#[derive(Debug, Clone)]
+struct Input {
+    topic: String,
+    kind: Kind,
+    /// s: messages older than the newest by more than this are left out (0: newest only).
+    persistence: f64,
+}
+
+/// One message from a sensor, in its own frame.
+struct Raw {
+    stamp: f64,
+    frame: String,
+    points: Vec<[f64; 3]>,
+    /// A scan's inf rays, as points just short of its range; none for a cloud.
+    inf_points: Vec<[f64; 3]>,
+}
+
+/// One costmap, as its block in the parameters describes it.
+struct Spec {
+    name: &'static str,
+    frame: String,
+    costmap: Costmap,
+    /// inputs[layer][source].
+    inputs: Vec<Vec<Input>>,
+    update_hz: f64,
+    publish_hz: f64,
+}
+
+fn num(v: &Value, key: &str) -> Result<f64> {
+    v[key]
+        .as_f64()
+        .ok_or_else(|| anyhow!("{key}: a number is needed"))
+}
+
+fn flag(v: &Value, key: &str) -> Result<bool> {
+    v[key]
+        .as_bool()
+        .ok_or_else(|| anyhow!("{key}: true or false is needed"))
+}
+
+fn text(v: &Value, key: &str) -> Result<String> {
+    v[key]
+        .as_str()
+        .map(str::to_owned)
+        .ok_or_else(|| anyhow!("{key}: text is needed"))
+}
+
+impl Spec {
+    /// From vehicle.costmap_params' block.
+    fn build(name: &'static str, spec: &Value) -> Result<Self> {
+        let outline: Vec<(f64, f64)> = spec["footprint"]
+            .as_array()
+            .and_then(|corners| {
+                corners
+                    .iter()
+                    .map(|p| Some((p[0].as_f64()?, p[1].as_f64()?)))
+                    .collect()
+            })
+            .ok_or_else(|| anyhow!("footprint: a list of [x, y] is needed"))?;
+        let inflation = match &spec["inflation"] {
+            Value::Null => None,
+            i => Some((num(i, "radius")?, num(i, "scaling")?)),
+        };
+        let settings = Settings {
+            rolling: flag(spec, "rolling")?,
+            width: num(spec, "width")?,
+            height: num(spec, "height")?,
+            resolution: num(spec, "resolution")?,
+            track_unknown: flag(spec, "track_unknown")?,
+            footprint: footprint::padded(&outline, num(spec, "footprint_padding")?),
+            inflation,
+            static_layer: flag(spec, "static_layer")?,
+        };
+        let probe = Costmap::new(settings.clone(), Vec::new());
+        let mut layers = Vec::new();
+        let mut inputs = Vec::new();
+        for l in spec["layers"].as_array().into_iter().flatten() {
+            let mut sources = Vec::new();
+            let mut ins = Vec::new();
+            for s in l["sources"].as_array().into_iter().flatten() {
+                let kind = match text(s, "data_type")?.as_str() {
+                    "LaserScan" => Kind::Scan,
+                    "PointCloud2" => Kind::Cloud,
+                    other => bail!("data_type {other}: LaserScan or PointCloud2 only"),
+                };
+                ins.push(Input {
+                    topic: text(s, "topic")?,
+                    kind,
+                    persistence: num(s, "observation_persistence")?,
+                });
+                sources.push(Source {
+                    name: text(s, "name")?,
+                    marking: flag(s, "marking")?,
+                    clearing: flag(s, "clearing")?,
+                    min_obstacle_height: num(s, "min_obstacle_height")?,
+                    max_obstacle_height: num(s, "max_obstacle_height")?,
+                    obstacle_min_range: num(s, "obstacle_min_range")?,
+                    obstacle_max_range: num(s, "obstacle_max_range")?,
+                    raytrace_min_range: num(s, "raytrace_min_range")?,
+                    raytrace_max_range: num(s, "raytrace_max_range")?,
+                    inf_is_valid: flag(s, "inf_is_valid")?,
+                });
+            }
+            let mut layer = ObstacleLayer::new(
+                &text(l, "name")?,
+                sources,
+                probe.grid(),
+                settings.track_unknown,
+            );
+            layer.min_obstacle_height = num(l, "min_obstacle_height")?;
+            layer.max_obstacle_height = num(l, "max_obstacle_height")?;
+            layer.footprint_clearing = flag(l, "footprint_clearing")?;
+            layers.push(layer);
+            inputs.push(ins);
+        }
+        Ok(Spec {
+            name,
+            frame: text(spec, "global_frame")?,
+            costmap: Costmap::new(settings, layers),
+            inputs,
+            update_hz: num(spec, "update_frequency")?,
+            publish_hz: num(spec, "publish_frequency")?,
+        })
+    }
+
+    fn describe(&self) -> String {
+        let s = self.costmap.settings();
+        let size = if s.rolling {
+            format!(
+                "a {} m x {} m window of {} m cells",
+                s.width, s.height, s.resolution
+            )
+        } else {
+            "the map's size and cells".to_owned()
+        };
+        let layers: Vec<&str> = self
+            .costmap
+            .layers()
+            .iter()
+            .map(|l| l.name.as_str())
+            .collect();
+        format!(
+            "{} costmap in {}: {size}; static map {}; obstacle layers [{}]; inflation {:?}; \
+             update {} Hz, publish {} Hz",
+            self.name,
+            self.frame,
+            s.static_layer,
+            layers.join(", "),
+            s.inflation,
+            self.update_hz,
+            self.publish_hz
+        )
+    }
+}
+
+/// One costmap, its publishers, and how its updates went.
+struct One {
+    spec: Spec,
+    last_publish: Option<Instant>,
+    update_ms: f64,
+    worst_ms: f64,
+    updates: u64,
+    waiting: String,
+    grid_pub: Publisher<OccupancyGrid>,
+    raw_pub: Publisher<CostmapMsg>,
+}
+
+struct Core {
+    maps: Vec<One>,
+    status: Publisher<DiagnosticStatus>,
+    clock: Clock,
+    logger: Logger,
+    base_frame: String,
+    /// Each sensor topic's newest messages, newest last.
+    raw: HashMap<String, VecDeque<Raw>>,
+    /// base_link in odom, by stamp, oldest first.
+    odom: VecDeque<(f64, Pose2)>,
+    /// odom's pose in map (the map -> odom transform).
+    map_from_odom: Option<Pose2>,
+    /// Each fixed frame's parent and its mount in it (/tf_static).
+    mounts: HashMap<String, (String, Transform3)>,
+}
+
+fn seconds(t: &Time) -> f64 {
+    f64::from(t.sec) + f64::from(t.nanosec) * 1e-9
+}
+
+fn yaw_of(q: &Quaternion) -> f64 {
+    (2.0 * (q.w * q.z + q.x * q.y)).atan2(1.0 - 2.0 * (q.y * q.y + q.z * q.z))
+}
+
+fn bare(frame: &str) -> &str {
+    frame.trim_start_matches('/')
+}
+
+impl Core {
+    fn stamp(&self) -> Time {
+        self.clock.now().to_ros_msg().unwrap_or_default()
+    }
+
+    fn on_map(&mut self, msg: &OccupancyGrid) {
+        let i = &msg.info;
+        for one in &mut self.maps {
+            let track = one.spec.costmap.settings().track_unknown;
+            match StaticMap::from_occupancy(
+                (i.origin.position.x, i.origin.position.y),
+                f64::from(i.resolution),
+                i.width as usize,
+                i.height as usize,
+                &msg.data,
+                track,
+            ) {
+                Some(map) => one.spec.costmap.set_map(map),
+                None => log_warn!(&self.logger, "the map's size and data disagree: ignored"),
+            }
+        }
+    }
+
+    fn on_odom(&mut self, msg: &Odometry) {
+        let p = &msg.pose.pose;
+        let pose = Pose2::new(p.position.x, p.position.y, yaw_of(&p.orientation));
+        let t = seconds(&msg.header.stamp);
+        if !(pose.x.is_finite() && pose.y.is_finite() && pose.yaw.is_finite()) {
+            return;
+        }
+        // A clock that went back (a sim restarted): start again.
+        if self.odom.back().is_some_and(|(last, _)| t < *last) {
+            self.odom.clear();
+        }
+        self.odom.push_back((t, pose));
+        while self
+            .odom
+            .front()
+            .is_some_and(|(first, _)| t - first > ODOM_KEPT)
+        {
+            self.odom.pop_front();
+        }
+    }
+
+    fn on_tf(&mut self, msg: &TFMessage) {
+        for t in &msg.transforms {
+            if bare(&t.header.frame_id) == "map" && bare(&t.child_frame_id) == "odom" {
+                let r = &t.transform;
+                self.map_from_odom = Some(Pose2::new(
+                    r.translation.x,
+                    r.translation.y,
+                    yaw_of(&r.rotation),
+                ));
+            }
+        }
+    }
+
+    fn on_tf_static(&mut self, msg: &TFMessage) {
+        for t in &msg.transforms {
+            let r = &t.transform;
+            self.mounts.insert(
+                bare(&t.child_frame_id).to_owned(),
+                (
+                    bare(&t.header.frame_id).to_owned(),
+                    Transform3 {
+                        translation: [r.translation.x, r.translation.y, r.translation.z],
+                        rotation: [r.rotation.x, r.rotation.y, r.rotation.z, r.rotation.w],
+                    },
+                ),
+            );
+        }
+    }
+
+    /// A frame's mount in base_link, through /tf_static's chain.
+    fn mount(&self, frame: &str) -> Option<Transform3> {
+        let mut acc = Transform3::IDENTITY;
+        let mut f = bare(frame);
+        for _ in 0..16 {
+            if f == self.base_frame {
+                return Some(acc);
+            }
+            let (parent, t) = self.mounts.get(f)?;
+            acc = t.then(&acc);
+            f = parent;
+        }
+        None
+    }
+
+    /// base_link in odom at time t: between the two nearest odometry poses, or the
+    /// nearest end.
+    fn pose_at(&self, t: f64) -> Option<Pose2> {
+        let (first, last) = (self.odom.front()?, self.odom.back()?);
+        if t <= first.0 {
+            return Some(first.1);
+        }
+        if t >= last.0 {
+            return Some(last.1);
+        }
+        let i = self.odom.partition_point(|(s, _)| *s <= t);
+        let (a, b) = (&self.odom[i - 1], &self.odom[i]);
+        let k = if b.0 > a.0 {
+            (t - a.0) / (b.0 - a.0)
+        } else {
+            0.0
+        };
+        Some(a.1.lerp(&b.1, k))
+    }
+
+    fn keep_raw(&mut self, topic: &str, raw: Raw) {
+        let list = self.raw.entry(topic.to_owned()).or_default();
+        list.push_back(raw);
+        while list.len() > KEPT_PER_TOPIC {
+            list.pop_front();
+        }
+    }
+
+    fn on_scan(&mut self, topic: &str, msg: &LaserScan) {
+        let points = |ranges: &[f32], inf_is_valid| {
+            costmap::obstacle::scan_points(
+                f64::from(msg.angle_min),
+                f64::from(msg.angle_increment),
+                f64::from(msg.range_min),
+                f64::from(msg.range_max),
+                ranges,
+                inf_is_valid,
+            )
+        };
+        // The inf rays apart: only a source with inf_is_valid takes them.
+        let infs: Vec<f32> = msg
+            .ranges
+            .iter()
+            .map(|&r| if r == f32::INFINITY { r } else { f32::NAN })
+            .collect();
+        let raw = Raw {
+            stamp: seconds(&msg.header.stamp),
+            frame: msg.header.frame_id.clone(),
+            points: points(&msg.ranges, false),
+            inf_points: points(&infs, true),
+        };
+        self.keep_raw(topic, raw);
+    }
+
+    fn on_cloud(&mut self, topic: &str, msg: &PointCloud2) {
+        let field = |name: &str| {
+            msg.fields
+                .iter()
+                .find(|f| f.name == name && f.datatype == 7) // FLOAT32
+                .map(|f| f.offset as usize)
+        };
+        let (Some(x), Some(y), Some(z)) = (field("x"), field("y"), field("z")) else {
+            log_warn!(
+                self.logger.throttle(Duration::from_secs(10)),
+                "{topic}: no float32 x, y, z: ignored"
+            );
+            return;
+        };
+        let step = msg.point_step as usize;
+        let read = |p: &[u8], at: usize| -> Option<f64> {
+            let b: [u8; 4] = p.get(at..at + 4)?.try_into().ok()?;
+            let v = if msg.is_bigendian {
+                f32::from_be_bytes(b)
+            } else {
+                f32::from_le_bytes(b)
+            };
+            Some(f64::from(v))
+        };
+        let points = if step == 0 {
+            Vec::new()
+        } else {
+            msg.data
+                .chunks_exact(step)
+                .filter_map(|p| Some([read(p, x)?, read(p, y)?, read(p, z)?]))
+                .filter(|p| p.iter().all(|v| v.is_finite()))
+                .collect()
+        };
+        let raw = Raw {
+            stamp: seconds(&msg.header.stamp),
+            frame: msg.header.frame_id.clone(),
+            points,
+            inf_points: Vec::new(),
+        };
+        self.keep_raw(topic, raw);
+    }
+
+    /// One update of costmap i, and its publish when due.
+    fn tick(&mut self, i: usize) {
+        let started = Instant::now();
+        let in_map = self.maps[i].spec.frame == "map";
+        let Some(odom_pose) = self.odom.back().map(|(_, p)| *p) else {
+            self.maps[i].waiting = "odometry".to_owned();
+            return;
+        };
+        let robot = if in_map {
+            match self.map_from_odom {
+                Some(m) => m.then(&odom_pose),
+                None => {
+                    self.maps[i].waiting = "map -> odom".to_owned();
+                    return;
+                }
+            }
+        } else {
+            odom_pose
+        };
+        if !self.maps[i].spec.costmap.ready() {
+            self.maps[i].waiting = "the map".to_owned();
+            return;
+        }
+        // Each source's observations, in this costmap's frame.
+        let mut missing = Vec::new();
+        let mut owned: Vec<Vec<Vec<Observation>>> = Vec::new();
+        for (layer, inputs) in self.maps[i]
+            .spec
+            .costmap
+            .layers()
+            .iter()
+            .zip(&self.maps[i].spec.inputs)
+        {
+            let mut per_source = Vec::new();
+            for (source, input) in layer.sources.iter().zip(inputs) {
+                let list = self.observations(input, source, in_map, &mut missing);
+                per_source.push(list);
+            }
+            owned.push(per_source);
+        }
+        let observations: Vec<Vec<Vec<&Observation>>> = owned
+            .iter()
+            .map(|l| l.iter().map(|s| s.iter().collect()).collect())
+            .collect();
+        let map_from_frame = if in_map {
+            Some(Pose2::IDENTITY)
+        } else {
+            self.map_from_odom
+        };
+        let one = &mut self.maps[i];
+        one.spec
+            .costmap
+            .update(&robot, map_from_frame.as_ref(), &observations);
+        let ms = started.elapsed().as_secs_f64() * 1e3;
+        one.update_ms = ms;
+        one.worst_ms = one.worst_ms.max(ms);
+        one.updates += 1;
+        one.waiting = missing.join(", ");
+        let due = one.last_publish.is_none_or(|t| {
+            t.elapsed().as_secs_f64() >= 1.0 / one.spec.publish_hz.max(0.01) - 1e-3
+        });
+        if due {
+            one.last_publish = Some(Instant::now());
+            if let Err(e) = self.publish(i) {
+                log_warn!(
+                    self.logger.throttle(Duration::from_secs(5)),
+                    "publishing the {} costmap: {e}",
+                    self.maps[i].spec.name
+                );
+            }
+        }
+    }
+
+    /// A source's messages within its persistence, in this costmap's frame.
+    fn observations(
+        &self,
+        input: &Input,
+        source: &Source,
+        in_map: bool,
+        missing: &mut Vec<String>,
+    ) -> Vec<Observation> {
+        let Some(list) = self.raw.get(&input.topic).filter(|l| !l.is_empty()) else {
+            missing.push(input.topic.clone());
+            return Vec::new();
+        };
+        let newest = list.back().map_or(0.0, |r| r.stamp);
+        let wanted: Vec<&Raw> = if input.persistence > 0.0 {
+            list.iter()
+                .filter(|r| newest - r.stamp <= input.persistence)
+                .collect()
+        } else {
+            list.back().into_iter().collect()
+        };
+        let mut out = Vec::new();
+        for raw in wanted {
+            let Some(mount) = self.mount(&raw.frame) else {
+                missing.push(format!("{} -> {}", self.base_frame, raw.frame));
+                continue;
+            };
+            let Some(odom_pose) = self.pose_at(raw.stamp) else {
+                continue;
+            };
+            let base = match (in_map, self.map_from_odom) {
+                (false, _) => odom_pose,
+                (true, Some(m)) => m.then(&odom_pose),
+                (true, None) => continue,
+            };
+            let whole = Transform3::from_pose2(&base).then(&mount);
+            let infs = if source.inf_is_valid {
+                raw.inf_points.as_slice()
+            } else {
+                &[]
+            };
+            let points = raw
+                .points
+                .iter()
+                .chain(infs)
+                .map(|&p| whole.apply(p))
+                .collect();
+            out.push(Observation {
+                origin: whole.translation,
+                points,
+            });
+        }
+        out
+    }
+
+    fn publish(&self, i: usize) -> Result<()> {
+        let one = &self.maps[i];
+        let g = one.spec.costmap.grid();
+        let stamp = self.stamp();
+        let header = Header {
+            stamp: stamp.clone(),
+            frame_id: one.spec.frame.clone(),
+        };
+        let origin = PoseMsg {
+            position: Point {
+                x: g.origin_x,
+                y: g.origin_y,
+                z: 0.0,
+            },
+            orientation: Quaternion {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+                w: 1.0,
+            },
+        };
+        one.raw_pub.publish(CostmapMsg {
+            header: header.clone(),
+            metadata: CostmapMetaData {
+                map_load_time: stamp.clone(),
+                update_time: stamp.clone(),
+                layer: "master".to_owned(),
+                resolution: g.resolution as f32,
+                size_x: g.width as u32,
+                size_y: g.height as u32,
+                origin: origin.clone(),
+            },
+            data: g.data.clone(),
+        })?;
+        one.grid_pub.publish(OccupancyGrid {
+            header,
+            info: MapMetaData {
+                map_load_time: stamp,
+                resolution: g.resolution as f32,
+                width: g.width as u32,
+                height: g.height as u32,
+                origin,
+            },
+            data: g.data.iter().map(|&c| occupancy(c)).collect(),
+        })?;
+        let lethal = g.data.iter().filter(|&&c| c == LETHAL).count();
+        let mut values = vec![
+            kv("costmap", one.spec.name),
+            kv("update_ms", &format!("{:.2}", one.update_ms)),
+            kv("worst_ms", &format!("{:.2}", one.worst_ms)),
+            kv("updates", &one.updates.to_string()),
+            kv("lethal_cells", &lethal.to_string()),
+            kv("cells", &format!("{}x{}", g.width, g.height)),
+        ];
+        values.push(kv("waiting_for", &one.waiting));
+        self.status.publish(DiagnosticStatus {
+            level: if one.waiting.is_empty() { 0 } else { 1 },
+            name: format!("costmap {}", one.spec.name),
+            message: if one.waiting.is_empty() {
+                format!(
+                    "{} costmap: {:.2} ms an update",
+                    one.spec.name, one.update_ms
+                )
+            } else {
+                format!("{} costmap: waiting for {}", one.spec.name, one.waiting)
+            },
+            hardware_id: String::new(),
+            values,
+        })?;
+        Ok(())
+    }
+}
+
+fn kv(key: &str, value: &str) -> KeyValue {
+    KeyValue {
+        key: key.to_owned(),
+        value: value.to_owned(),
+    }
+}

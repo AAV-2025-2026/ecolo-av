@@ -310,6 +310,22 @@ def check_tracker(tracker, reversing=False):
     return name
 
 
+# Whose costmaps (costmap:=, docs/own-costmap.md): nav2 (the default, and the car's) or own
+# (aav_costmap, a trial beside Nav2's). Each one's raw local costmap, for aav_mppi_lag.
+COSTMAPS = ('nav2', 'own')
+DEFAULT_COSTMAP = 'nav2'
+COSTMAP_RAW_TOPICS = {'nav2': '/local_costmap/costmap_raw',
+                      'own': '/drivers/nav/costmap/local_raw'}
+
+
+def check_costmap(costmap):
+    """Return the costmap's name (lower case), or raise ValueError saying what to pick."""
+    name = str(costmap).strip().lower()
+    if name not in COSTMAPS:
+        raise ValueError(f'costmap:={costmap}: pick one of {", ".join(COSTMAPS)}')
+    return name
+
+
 # Nav2's planners (planner:=, docs/controllers.md "Planners"), each under the one plugin name
 # the behaviour trees ask for, GridBased. hybrid (SmacPlannerHybrid, the default) and lattice
 # (SmacPlannerLattice, on our own primitives: tools/lattice_primitives.py) keep to the car's
@@ -511,6 +527,79 @@ def mppi_lag_params(nav2, cfg, ego=None, max_speed=None):
     for critic in mppi['critics']:
         for key, value in (mppi.get(critic) or {}).items():
             out[f'{critic}.{key}'] = critic_value(key, value)
+    return out
+
+
+# Nav2's own defaults for what nav2.yaml leaves out (costmap_2d's ObstacleLayer and
+# ObservationBuffer, Jazzy), so our costmap reads a block as Nav2 does.
+COSTMAP_SOURCE_DEFAULTS = {
+    'topic': '', 'data_type': 'LaserScan', 'marking': True, 'clearing': False,
+    'min_obstacle_height': 0.0, 'max_obstacle_height': 2.0,
+    'obstacle_min_range': 0.0, 'obstacle_max_range': 2.5,
+    'raytrace_min_range': 0.0, 'raytrace_max_range': 3.0,
+    'inf_is_valid': False, 'observation_persistence': 0.0,
+}
+
+
+def costmap_params(tuned, v, radar=False, camera=False):
+    """
+    Return aav_costmap's two blocks, {'local': {...}, 'global': {...}}, from nav2.yaml.
+
+    tuned: nav2.yaml after nav2_tuned (its layers as Nav2 runs them); v: vehicle.yaml's
+    `vehicle`. radar and camera turn on the local costmap's obstacle_layer and
+    camera_layer, as the launch file's rewrites do for Nav2. Each block holds only what
+    our costmap reads, in plain types, with Nav2's defaults filled in: the frame, the
+    window, the rates, the car's outline (vehicle.yaml's) and padding, the static map,
+    the inflation, and each enabled obstacle layer with its sources.
+    """
+    enabled = {'obstacle_layer': radar, 'camera_layer': camera}
+    out = {}
+    for name in ('local', 'global'):
+        block = tuned[f'{name}_costmap'][f'{name}_costmap']['ros__parameters']
+        spec = {
+            'global_frame': block.get('global_frame', 'map'),
+            'rolling': bool(block.get('rolling_window', False)),
+            'width': float(block.get('width', 5)),
+            'height': float(block.get('height', 5)),
+            'resolution': float(block.get('resolution', 0.05)),
+            'track_unknown': bool(block.get('track_unknown_space', False)),
+            'update_frequency': float(block.get('update_frequency', 5.0)),
+            'publish_frequency': float(block.get('publish_frequency', 1.0)),
+            'footprint': footprint_points(v),
+            'footprint_padding': float(block.get('footprint_padding', 0.01)),
+            'static_layer': False, 'inflation': None, 'layers': [],
+        }
+        for plugin in block['plugins']:
+            layer = block.get(plugin, {})
+            kind = layer.get('plugin', '').split('::')[-1]
+            if not enabled.get(plugin, layer.get('enabled', True)):
+                continue
+            if kind == 'StaticLayer':
+                spec['static_layer'] = True
+            elif kind == 'InflationLayer':
+                spec['inflation'] = {'radius': float(layer.get('inflation_radius', 0.55)),
+                                     'scaling': float(layer.get('cost_scaling_factor', 10.0))}
+            elif kind in ('ObstacleLayer', 'VoxelLayer'):
+                sources = []
+                for source in str(layer.get('observation_sources', '')).split():
+                    s = dict(COSTMAP_SOURCE_DEFAULTS, **layer.get(source, {}))
+                    sources.append({'name': source, 'topic': s['topic'],
+                                    'data_type': s['data_type'],
+                                    'marking': bool(s['marking']),
+                                    'clearing': bool(s['clearing']),
+                                    'inf_is_valid': bool(s['inf_is_valid']),
+                                    **{k: float(s[k]) for k in (
+                                        'min_obstacle_height', 'max_obstacle_height',
+                                        'obstacle_min_range', 'obstacle_max_range',
+                                        'raytrace_min_range', 'raytrace_max_range',
+                                        'observation_persistence')}})
+                spec['layers'].append({
+                    'name': plugin,
+                    'min_obstacle_height': float(layer.get('min_obstacle_height', 0.0)),
+                    'max_obstacle_height': float(layer.get('max_obstacle_height', 2.0)),
+                    'footprint_clearing': bool(layer.get('footprint_clearing_enabled', True)),
+                    'sources': sources})
+        out[name] = spec
     return out
 
 

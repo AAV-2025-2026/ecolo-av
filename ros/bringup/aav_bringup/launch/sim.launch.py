@@ -7,7 +7,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [map:=false] [foxglove:=false] [chase_camera:=true]
       [obstacle:=false] [start_x:=0.0] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true] [radar:=true]
       [actuator_model:=true] [speed_loop:=default|smooth|lqi] [sim_speed:=]
-      [reversing:=true] [controller:=mppi] [planner:=lattice] [tracker:=none]
+      [reversing:=true] [controller:=mppi] [planner:=lattice] [tracker:=none] [costmap:=nav2]
       [amcl:=false] [voxels:=false]
       [ndt:=false] [ndt_ekf:=false] [ndt_map:=maps/ndt/test_lot.pcd] [kiss_icp:=false]
       [kiss_ekf:=false]
@@ -79,7 +79,9 @@ bench's argument names:
   tracker:=lqr        a trial path follower (aav_track: pure_pursuit, stanley, lqr or mpc)
                       in controller_server's place, on Nav2's same planner, smoother and
                       collision_monitor. Forward only: with reversing:=false (docs/trials.md)
-  behaviour:=true     the behaviour states and a speed cap on Nav2 from the stopping law
+  costmap:=own        our own costmaps beside Nav2's (aav_costmap, a trial); with
+                      tracker:=mppi_lag, mppi_lag reads ours (docs/own-costmap.md)
+  behaviour:=true    the behaviour states and a speed cap on Nav2 from the stopping law
                       (aav_behaviour, a trial: docs/stopping.md)
   amcl:=true          stock AMCL beside the global EKF, scored only (docs/trials.md): only
                       in world:=test_lot with nav:=true and the lidar, from the start pose
@@ -308,6 +310,7 @@ def launch_setup(context):
                                max_speed=sim_speed,
                                reversing=str(flag['reversing']).lower(),
                                controller=controller, tracker=tracker, planner=planner,
+                               costmap=vehicle.check_costmap(arg('costmap')),
                                lattice_headings=arg('lattice_headings'),
                                diffusion_model=arg('diffusion_model'),
                                # A trial tracker may be swapped live here (the debug
@@ -515,6 +518,9 @@ def generate_launch_description():
         DeclareLaunchArgument('behaviour', default_value='false',
                               description='true: the behaviour states and a speed cap on '
                                           'Nav2 (aav_behaviour, a trial)'),
+        DeclareLaunchArgument('costmap', default_value=vehicle.DEFAULT_COSTMAP,
+                              description="nav2 or own: our own costmaps beside Nav2's "
+                                          '(aav_costmap, a trial; docs/own-costmap.md)'),
         DeclareLaunchArgument('tracker', default_value=vehicle.DEFAULT_TRACKER,
                               description="a trial path follower in controller_server's "
                                           'place: ' + ', '.join(vehicle.TRACKERS) +

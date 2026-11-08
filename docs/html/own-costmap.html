@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Our own costmap · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/own-costmap.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Our own costmap</h1>
+<div class="meta">8 min read · 6 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="release-0.2.html">The 0.2 guide</a>
+<a href="whats-new.html">What&#x27;s new</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-evening.html">Tonight: drive as is</a>
+<a href="car-day.html">Car day</a>
+<a href="car-setup.html">Car setup</a>
+<a href="rollout.html">Rolling out on the car</a>
+<a href="tests.html">Every test</a>
+<a href="know-the-car.html">Know the car</a>
+<span class="sep">Learn:</span>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-speed.html">Learn: speed</a>
+<a href="learn-lidar.html">Learn: lidar</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
+<span class="sep">Reference:</span>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="path-followers.html">Path followers</a>
+<a href="switches.html">Switches</a>
+<a href="trials.html">Trials</a>
+<a href="mppi-lag.html">MPPI with lag</a>
+<a class="here" href="own-costmap.html">Our own costmap</a>
+<a href="stopping.html">How the car stops</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="own-simulator.html">Our own simulator</a>
+<a href="own-simulator-cameras.html">Our simulator&#x27;s cameras</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="hardware-debug.html">Hardware debug</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="car-model.html">One car model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="geofence.html">The geofence</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="esp32-safety.html">ESP32 safety rules</a>
+<a href="esp32-cpp-parity.html">ESP32 C++ parity</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#how-it-fits">How it fits</a><a href="#what-it-does-layer-by-layer">What it does, layer by layer</a><a href="#try-it">Try it</a><a href="#the-scores-8-nov">The scores (8 Nov)</a><a href="#without-ros">Without ROS</a><a href="#whats-missing-for-the-planner-step">What&#x27;s missing for the planner step</a></nav>
+<div class="lead"><p>Ben, 8 Nov: move off Nav2 to <strong>our own versions, one piece at a time</strong>, each beside Nav2
+until it wins. The order: the costmap, then a path planner in Rust, then the navigator.
+This page is the first piece. Nav2 stays the default, and stays on the car.</p>
+<blockquote>
+<p><strong>The short version</strong></p>
+<ul>
+<li><strong>Switch:</strong> <code>costmap:=own</code>. Package <code>aav_costmap</code> (Rust).</li>
+<li>
+<p><strong>What it is:</strong> Nav2's costmap layers ported: the map, the sensors' marks with ray
+  clearing, the inflation round the car's outline. A local window and a global map.</p>
+</li>
+<li>
+<p><strong>Same input as Nav2:</strong> made from the same tuned <code>nav2.yaml</code> blocks.</p>
+</li>
+<li>
+<p><strong>Same output as Nav2:</strong> in the sim, stopped at the post, <strong>every one of 40,000 cells
+  the same</strong> as Nav2's local costmap (2 runs of 2).</p>
+</li>
+<li>
+<p><strong>Lighter:</strong> our two costmaps 4-5 % of a core; Nav2's local one alone 7-9 %.</p>
+</li>
+<li>
+<p><strong>Not a winner yet:</strong> with ours, MPPI went round the box 3 of 3, but 1 lidar-obstacle
+  run of 3 didn't reach its goal (<a href="#the-scores-8-nov">scores</a>). Nav2's: 3 of 3.</p>
+</li>
+<li>
+<p><strong>Fast:</strong> 0.4 ms an update without ROS; about 0.5 ms in the sim.</p>
+</li>
+<li><strong>With <code>tracker:=mppi_lag</code></strong>, MPPI reads ours instead of Nav2's.</li>
+</ul>
+</blockquote></div>
+<section class="card"><h2 id="how-it-fits">How it fits</h2>
+<pre class="highlight"><code>/map ─────────────┐
+/sensors/lidar/scan (and radar, cubes, cameras where they run)
+odometry, /tf ────┤
+                  ▼
+              costmap ──▶ /drivers/nav/costmap/local   (+ _raw)  odom, 20 m window, 5 Hz
+                      ──▶ /drivers/nav/costmap/global  (+ _raw)  map, the map's size, 1 Hz
+                      ──▶ /drivers/nav/costmap/status
+   local_raw ──▶ mppi_lag (tracker:=mppi_lag)      Nav2's costmaps keep running beside</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Topic</th>
+<th>Type</th>
+<th>For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/drivers/nav/costmap/local</code></td>
+<td>OccupancyGrid (0-100)</td>
+<td>screens, RViz</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/costmap/local_raw</code></td>
+<td>nav2_msgs/Costmap (0-255)</td>
+<td><code>mppi_lag</code></td>
+</tr>
+<tr>
+<td><code>/drivers/nav/costmap/global</code>, <code>global_raw</code></td>
+<td>the same, the whole map</td>
+<td>the planner, next</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/costmap/status</code></td>
+<td>DiagnosticStatus</td>
+<td>update time, what it waits for</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="what-it-does-layer-by-layer">What it does, layer by layer</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>What it does</th>
+<th>Nav2's</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>static map</td>
+<td><code>/map</code>'s cells: 100 is lethal, unknown kept only in the global one</td>
+<td><code>StaticLayer</code></td>
+</tr>
+<tr>
+<td>obstacles</td>
+<td>each scan point marks a lethal cell (within 12 m, 0.3-2 m high); each ray clears the cells it passes (to 15 m); the car's own cells are cleared</td>
+<td><code>ObstacleLayer</code></td>
+</tr>
+<tr>
+<td>inflation</td>
+<td>cost falls away from each lethal cell: inscribed inside 0.25 m, then 252 × e^(-k(d - 0.25)) out to 2 m (local) or 3 m (global)</td>
+<td><code>InflationLayer</code></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>The rolling window</strong> moves in whole cells, so a mark stays on the same ground.</li>
+<li><strong>Scans are placed where the car was</strong> when the scan was taken (odometry kept 2 s).</li>
+<li><strong>One change from Nav2:</strong> the inflation finds the nearest obstacle exactly (a distance
+  transform), not by Nav2's brushfire. The costs are the same.</li>
+<li><strong>Not ported:</strong> Nav2's 3D voxel layer, range sensors, filters. <code>nav2.yaml</code> uses none.</li>
+</ul>
+</section>
+<section class="card"><h2 id="try-it">Try it</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>To</th>
+<th>Run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>See it</td>
+<td><code>pixi run sim costmap:=own tracker:=mppi_lag</code>, then show <code>/drivers/nav/costmap/local</code></td>
+</tr>
+<tr>
+<td>Score it</td>
+<td><code>pixi run sim-check --legs-only --costmap own --tracker mppi_lag --lidar-obstacle --plan-around</code></td>
+</tr>
+<tr>
+<td>The same with Nav2's</td>
+<td>the same, <code>--costmap nav2</code></td>
+</tr>
+<tr>
+<td>Test the maths</td>
+<td><code>cd ros/drivers/aav_costmap &amp;&amp; cargo test -p costmap</code></td>
+</tr>
+<tr>
+<td>Time it</td>
+<td><code>cargo run --release -p costmap --example timing</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-scores-8-nov">The scores (8 Nov)</h2>
+<p>Our simulator, the road world, <code>tracker:=mppi_lag</code>, 3 runs each, on a quiet Mac (M4 Max).</p>
+<ul>
+<li><strong>Lidar obstacle:</strong> a post 15 m ahead in the lane, radar off, the planner blind to it.
+  The car must stop. Then the post goes and it must drive on.</li>
+<li><strong>Plan around:</strong> a 1 m box in the lane; the planner sees it. The car must go round.</li>
+</ul>
+<h3 id="lidar-obstacle-where-it-stopped">Lidar obstacle: where it stopped</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Run</th>
+<th>Nav2's costmap</th>
+<th>Ours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>stopped 0.71 m short; drove on to the goal</td>
+<td>stopped 0.20 m short; drove on to the goal</td>
+</tr>
+<tr>
+<td>2</td>
+<td>0.17 m; to the goal</td>
+<td>0.21 m; <strong>did not reach the goal</strong>: after the post went it drove 6 m on, then "no progress" until Nav2 gave up</td>
+</tr>
+<tr>
+<td>3</td>
+<td>0.26 m; to the goal</td>
+<td><strong>did not stop</strong>: it steered past the post (2.5 m beyond its near side); then to the goal</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>In every run the <strong>stop zone</strong> (collision_monitor) stopped the car first, both costmaps.</li>
+<li>Run 2's cause is not found. A suspect: when stuck, Nav2's behaviour tree <strong>clears
+  Nav2's costmap</strong>, not ours, so a stale mark in ours would stay. Not proved.</li>
+<li>Run 3: MPPI is random; with Nav2's costmap it never steered round the post (0 of 3).</li>
+</ul>
+<h3 id="plan-around-did-it-go-round">Plan around: did it go round?</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Run</th>
+<th>Nav2's costmap</th>
+<th>Ours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>round, <strong>2.43 m</strong> clear</td>
+<td>round, <strong>2.29 m</strong> clear</td>
+</tr>
+<tr>
+<td>2</td>
+<td>2.35 m</td>
+<td>2.48 m</td>
+</tr>
+<tr>
+<td>3</td>
+<td>2.42 m</td>
+<td>2.11 m</td>
+</tr>
+</tbody>
+</table></div>
+<p>All six reached the goal 30 m on, never stood still, and the stop zone never fired.</p>
+<h3 id="the-same-grid">The same grid?</h3>
+<p>While the car stood at the post, the probe took Nav2's local costmap and ours at once:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Run</th>
+<th>Cells the same</th>
+<th>Lethal cells (Nav2, ours, both)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>100.0 %</strong> of 40,000</td>
+<td>6, 6, 6</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>100.0 %</strong> of 40,000</td>
+<td>6, 6, 6</td>
+</tr>
+<tr>
+<td>3</td>
+<td>94.6 % (the car was moving: the two updates came from different scans)</td>
+<td>15, 16, 10</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="cpu">CPU</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Process</th>
+<th>Holds</th>
+<th>CPU (of one core)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>controller_server</code></td>
+<td>Nav2's local costmap (with <code>mppi_lag</code> it does nothing else)</td>
+<td>7-9 %</td>
+</tr>
+<tr>
+<td><code>planner_server</code></td>
+<td>Nav2's global costmap and the planner</td>
+<td>6-8 %</td>
+</tr>
+<tr>
+<td><code>costmap</code> (ours)</td>
+<td>our local <strong>and</strong> global costmaps</td>
+<td><strong>4-5 %</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Our local update: <strong>0.50-0.55 ms</strong> on average, 0.58 ms at the 95th percentile.</p>
+<h3 id="the-verdict">The verdict</h3>
+<ul>
+<li><strong>The grid is right:</strong> cell for cell the same as Nav2's when both see the same scan.</li>
+<li><strong>It is lighter:</strong> both of ours together use about half the CPU of Nav2's local one.</li>
+<li><strong>Not a winner yet:</strong> 1 run of 3 didn't finish the lidar-obstacle leg (run 2), and Nav2's
+  costmap finished 3 of 3. Nav2 stays the default.</li>
+</ul>
+</section>
+<section class="card"><h2 id="without-ros">Without ROS</h2>
+<p><code>cargo test -p costmap</code>: 30 tests.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a post ahead</td>
+<td>lethal at the post, inscribed within 0.25 m, Nav2's cost 1 m out (26)</td>
+</tr>
+<tr>
+<td>the post taken away</td>
+<td>the next scan's rays clear it</td>
+</tr>
+<tr>
+<td>the window rolls</td>
+<td>a mark stays on the same ground as the car drives on</td>
+</tr>
+<tr>
+<td>the map through map → odom</td>
+<td>a wall lands in the right cells</td>
+</tr>
+<tr>
+<td>the global costmap</td>
+<td>the map's own cells, unknown kept, 3 m of gentle inflation (119 at 1 m)</td>
+</tr>
+<tr>
+<td>the distance transform</td>
+<td>exact against brute force</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="whats-missing-for-the-planner-step">What's missing for the planner step</h2>
+<ul>
+<li><strong>The planner</strong> reads Nav2's global costmap today (<code>planner_server</code>). Our planner (next)
+  should read <code>/drivers/nav/costmap/global_raw</code>.</li>
+<li><strong>The global costmap's size:</strong> the campus map is large; ours rebuilds it all each second
+  (27 ms for 500 m × 500 m without ROS). Fine now; only the changed part if it grows.</li>
+<li><strong>No <code>clear_entirely</code> service:</strong> Nav2's behaviour trees clear its costmaps when stuck.
+  Ours clears marks only by the next rays. The suspect for run 2; the navigator step
+  will need it (our navigator will call ours).</li>
+<li><strong>Radar, cubes and cameras</strong> (point clouds, placed by <code>/tf_static</code>'s mounts): built,
+  but untested; the sim's runs had the lidar's scan alone.</li>
+<li><strong>On the car:</strong> untested. Nav2 stays there.</li>
+</ul></section>
+<nav class="prevnext"><a class="prev" href="mppi-lag.html"><small>Previous</small>← MPPI with lag</a>
+<a class="next" href="stopping.html"><small>Next</small>How the car stops →</a></nav>
+</main>
+<footer>Source: <code>docs/own-costmap.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

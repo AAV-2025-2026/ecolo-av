@@ -59,6 +59,7 @@
 <a class="here" href="switches.html">Switches</a>
 <a href="trials.html">Trials</a>
 <a href="mppi-lag.html">MPPI with lag</a>
+<a href="own-costmap.html">Our own costmap</a>
 <a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
@@ -336,6 +337,10 @@ KISS-ICP needs its own environment once: <code>pixi install --locked -e kiss</co
 <tr>
 <td><code>voxels:=true</code></td>
 <td>Nav2 sees the lidar as 0.25 m cubes, not a flat scan (a trial: <a href="trials.html#voxels-30-oct-the-lidar-as-cubes">Trials</a>)</td>
+</tr>
+<tr>
+<td><code>costmap:=own</code></td>
+<td>our own costmaps (Rust) beside Nav2's; <code>tracker:=mppi_lag</code> then reads ours. 8 Nov: the same grid as Nav2's, half the CPU, but 1 lidar-obstacle run of 3 didn't finish (<a href="own-costmap.html">page</a>)</td>
 </tr>
 </tbody>
 </table></div>

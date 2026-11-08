@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">98 min read · 4 sections</div></header>
+<div class="meta">100 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -59,6 +59,7 @@
 <a href="switches.html">Switches</a>
 <a href="trials.html">Trials</a>
 <a href="mppi-lag.html">MPPI with lag</a>
+<a href="own-costmap.html">Our own costmap</a>
 <a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
@@ -1309,6 +1310,46 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>-</td>
 <td>-</td>
 <td>Only with behaviour:=true, 5 Hz - for the screens. name behaviour; message STATE and why; level OK, or WARN with a warning or in ASK. values state (DRIVE, APPROACH, STOPPED, WAIT, GO, ASK), reason (sign, obstacle, fence, goal, a lock's name, the e-stop), cap_mps (what /drivers/nav/speed_limit carries), left_m (to the binding stop's final stop, inf for none), warnings (sign passed, no lock; sign lost; odometry stale).</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/costmap/local</code></td>
+<td><code>nav_msgs/msg/OccupancyGrid</code></td>
+<td><code>costmap</code></td>
+<td>-</td>
+<td>-</td>
+<td>Only with navigation.launch.py costmap:=own (sim.launch.py passes it). Our local costmap, Nav2's local_costmap rebuilt in Rust from the same nav2.yaml block - odom, a 20 m x 20 m window of 0.1 m cells rolling with the car, the static map, the same obstacle layers and sources (the lidar scan; the radar, cameras, ghost and cubes where they run), inflation with the car's padded outline. Updated at the block's update_frequency (5 Hz), sent at its publish_frequency (2 Hz). Values as Nav2's publisher writes them - 0 free, 1-98 inflated, 99 inscribed, 100 lethal, -1 unknown. Nav2's /local_costmap/costmap keeps running beside it.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/costmap/local_raw</code></td>
+<td><code>nav2_msgs/msg/Costmap</code></td>
+<td><code>costmap</code></td>
+<td><code>mppi_lag</code></td>
+<td>-</td>
+<td>The same grid as /drivers/nav/costmap/local, with Nav2's raw costs (0 free, 1-252 inflated, 253 inscribed, 254 lethal, 255 unknown), as Nav2's /local_costmap/costmap_raw sends them. aav_mppi_lag's mppi_lag reads it instead of Nav2's when both tracker:=mppi_lag and costmap:=own (its costmap_topic).</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/costmap/global</code></td>
+<td><code>nav_msgs/msg/OccupancyGrid</code></td>
+<td><code>costmap</code></td>
+<td>-</td>
+<td>-</td>
+<td>Only with costmap:=own. Our global costmap - map frame, the map's own size and cells, the static map (unknown kept), the radar and lidar layers when the planner sees them (plan_around), inflation (3 m, scaling 1.0). 1 Hz. Nothing plans on it yet - the planner step comes next (docs/own-costmap.md).</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/costmap/global_raw</code></td>
+<td><code>nav2_msgs/msg/Costmap</code></td>
+<td><code>costmap</code></td>
+<td>-</td>
+<td>-</td>
+<td>The same grid as /drivers/nav/costmap/global, raw costs (0-255).</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/costmap/status</code></td>
+<td><code>diagnostic_msgs/msg/DiagnosticStatus</code></td>
+<td><code>costmap</code></td>
+<td>-</td>
+<td>-</td>
+<td>Only with costmap:=own. One message per costmap each time it is sent. name 'costmap local' or 'costmap global'; level OK (0), or WARN (1) while it waits for something; values costmap (local, global), update_ms (the last update's time, wall clock), worst_ms, updates, lethal_cells, cells (width x height), waiting_for (odometry, map -&gt; odom, the map, a silent sensor topic, a sensor frame with no mount in /tf_static; empty when nothing is missing).</td>
 </tr>
 <tr>
 <td><code>/drivers/nav/route/destination</code></td>

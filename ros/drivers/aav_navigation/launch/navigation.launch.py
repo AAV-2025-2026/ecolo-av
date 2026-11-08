@@ -7,7 +7,7 @@ Nav2 as one more driver: goals in, /drivers/nav/cmd_vel (TwistStamped) out to tw
       [reversing:=false] [max_speed:=] [controller:=mppi] [planner:=lattice]
       [diffusion_model:=] [diffusion_provider:=CPUExecutionProvider]
       [plan_around:=true] [behaviour:=false]
-      [tracker:=none] [live_swap:=false] [amcl:=false] [amcl_x:=0.0] [amcl_y:=0.0]
+      [tracker:=none] [costmap:=nav2] [live_swap:=false] [amcl:=false] [amcl_x:=0.0] [amcl_y:=0.0]
       [amcl_yaw:=0.0] [amcl_map:=]
       [use_sim_time:=false]
       [autostart:=true]
@@ -67,6 +67,11 @@ Trials (docs/trials.md), each beside the default and scored by pixi run measure 
                           renamed follow_path_unused. The same planner, smoother,
                           collision_monitor and twist_mux slot. Forward only: refused with
                           reversing:=true. tracker:=none (the default): controller_server
+  costmap:=own            aav_costmap's costmap node (Rust, a trial): our own local and
+                          global costmaps from the same nav2.yaml blocks, on
+                          /drivers/nav/costmap/local and /global (and *_raw). Nav2's own
+                          costmaps keep running; with tracker:=mppi_lag, mppi_lag reads our
+                          local one instead of Nav2's (docs/own-costmap.md)
   live_swap:=true         the tracker can change while it runs (`ros2 param set /track
                           tracker lqr`); sim.launch.py sets it, the car never does
   amcl:=true              stock nav2_amcl on the map and /sensors/lidar/scan (so only with
@@ -349,6 +354,17 @@ def nodes(context):
         actions.append(Node(package='aav_ghost', executable='ghost_obstacle',
                             name='ghost_obstacle', output='screen',
                             parameters=[config, {'use_sim_time': use_sim_time}]))
+    costmap = vehicle.check_costmap(LaunchConfiguration('costmap').perform(context))
+    if costmap == 'own':
+        # aav_costmap (Rust): our own local and global costmaps, beside Nav2's, from the
+        # same tuned nav2.yaml (the same layers and sources). Not a lifecycle node.
+        with open(source) as f:
+            blocks = vehicle.costmap_params(yaml.safe_load(f), v, radar, camera)
+        actions.append(Node(
+            package='aav_costmap', executable='costmap', name='costmap', output='screen',
+            parameters=[{'local': json.dumps(blocks['local']),
+                         'global': json.dumps(blocks['global']),
+                         'use_sim_time': use_sim_time}]))
     if tracker != 'none':
         # Not a lifecycle node: it serves follow_path from the start. Nav2's own numbers
         # (the speed, the checks), so every follower is held to the same.
@@ -366,7 +382,8 @@ def nodes(context):
                 package='aav_mppi_lag', executable='mppi_lag', name='mppi_lag',
                 output='screen',
                 parameters=[own, vehicle.mppi_lag_params(nav2, cfg, ego, max_speed),
-                            {'use_sim_time': use_sim_time}]))
+                            {'use_sim_time': use_sim_time,
+                             'costmap_topic': vehicle.COSTMAP_RAW_TOPICS[costmap]}]))
         else:
             own = FindPackageShare('aav_track').perform(context) + '/config/track.yaml'
             actions.append(Node(
@@ -507,6 +524,11 @@ def generate_launch_description():
         DeclareLaunchArgument('behaviour', default_value='false',
                               description='true: aav_behaviour, the behaviour states and a '
                                           'speed cap on Nav2 (a trial, docs/stopping.md)'),
+        DeclareLaunchArgument('costmap', default_value=vehicle.DEFAULT_COSTMAP,
+                              description='nav2 (the default) or own: aav_costmap, our own '
+                                          "costmaps beside Nav2's, on /drivers/nav/costmap/"
+                                          '*; tracker:=mppi_lag then reads its local one. '
+                                          'docs/own-costmap.md'),
         DeclareLaunchArgument('tracker', default_value=vehicle.DEFAULT_TRACKER,
                               description="a trial path follower in controller_server's "
                                           'place (aav_track; mppi_lag: aav_mppi_lag): ' +

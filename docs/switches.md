@@ -90,6 +90,7 @@ KISS-ICP needs its own environment once: `pixi install --locked -e kiss`.
 | `geofence:=false` | no geofence (it's on by default) |
 | `lidar:=false`, `radar:=false` | sensors off |
 | `voxels:=true` | Nav2 sees the lidar as 0.25 m cubes, not a flat scan (a trial: [Trials](trials.md#voxels-30-oct-the-lidar-as-cubes)) |
+| `costmap:=own` | our own costmaps (Rust) beside Nav2's; `tracker:=mppi_lag` then reads ours. 8 Nov: the same grid as Nav2's, half the CPU, but 1 lidar-obstacle run of 3 didn't finish ([page](own-costmap.md)) |
 
 **Tried, 29 Oct 23:05:** the menu's pick (demo --debug, `mpc`, NDT, LQI) in Gazebo on Ben's
 Mac: the track node ran MPC, NDT tracked (2 ms a match), AMCL stayed off, the speed loop

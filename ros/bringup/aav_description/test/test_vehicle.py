@@ -523,6 +523,32 @@ def test_mppi_lag_params_are_nav2s_mppi_and_the_cars_lag():
     assert fast['prune_distance'] >= 3.0 * 2.8
 
 
+def test_costmap_params_read_nav2s_costmaps_as_nav2_does():
+    nav2 = yaml.safe_load(NAV2_YAML.read_text())
+    v = vehicle.load(CONFIG)['vehicle']
+    tuned = vehicle.nav2_tuned(nav2, v, radar=False, lidar=True)
+    p = vehicle.costmap_params(tuned, v)
+    local, plan = p['local'], p['global']
+    assert local['rolling'] and local['global_frame'] == 'odom'
+    assert (local['width'], local['resolution'], local['update_frequency']) == (20.0, 0.1, 5.0)
+    assert local['footprint'] == vehicle.footprint_points(v)
+    assert local['inflation'] == {'radius': 2.0, 'scaling': 3.0}
+    # The radar's and the cameras' layers are off unless asked for; the lidar's is on.
+    names = [layer['name'] for layer in local['layers']]
+    assert names == ['lidar_layer']
+    lidar = local['layers'][0]['sources'][0]
+    assert lidar['topic'] == '/sensors/lidar/scan' and lidar['inf_is_valid'] is True
+    assert (lidar['obstacle_max_range'], lidar['raytrace_max_range']) == (12.0, 15.0)
+    assert not plan['rolling'] and plan['track_unknown'] and plan['static_layer']
+    # The planner sees the lidar too (plan_around, the default).
+    assert [layer['name'] for layer in plan['layers']] == ['lidar_layer']
+    with_radar = vehicle.costmap_params(vehicle.nav2_tuned(nav2, v, radar=True), v, radar=True)
+    radar = with_radar['local']['layers'][0]
+    assert radar['name'] == 'obstacle_layer'
+    assert radar['sources'][0]['observation_persistence'] == 0.2
+    json.dumps(p)   # one JSON parameter each
+
+
 def test_an_s_bend_needs_room_ahead():
     # Two quarter-turns side by side: 2 radii across, 2 radii ahead.
     assert math.isclose(vehicle.s_bend_length(3.0, 6.0), 6.0)
