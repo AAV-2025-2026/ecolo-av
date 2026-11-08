@@ -56,11 +56,17 @@ def main():
         except EOFError:
             return
         t0 = time.perf_counter()
+        feed = {'crop': crop, 'cond': cond, 'noise': noise}
         try:
-            paths = sess.run(['paths'], {'crop': crop, 'cond': cond, 'noise': noise})[0]
+            paths = sess.run(['paths'], feed)[0]
         except Exception as e:  # noqa: B902 - any model failure means: no paths this time
             print(f'diffusion worker: the model failed: {e}', file=sys.stderr, flush=True)
             paths = None
+            if sess.get_providers()[0] != engines.CPU:
+                # An engine that loaded the model but can't run it (8 Nov: Core ML on the
+                # 0.3 export): the CPU from now on. This plan is the lattice's.
+                sess = session(settings['model'], engines.CPU)
+                print('diffusion worker: on the CPU from now on', file=sys.stderr, flush=True)
         stdout.write(wire.encode_reply(seq, paths, 1000.0 * (time.perf_counter() - t0)))
         stdout.flush()
 

@@ -107,8 +107,17 @@ def measure(model, provider, plans, samples, warmup=3, seed=0):
         t_crop = time.perf_counter()
         noise = rng.standard_normal((samples, window.POINTS, window.CHANNELS)).astype(
             np.float32)
-        out = sess.run(['paths'], {'crop': crop[None, None].astype(np.float32),
-                                   'cond': cond[None], 'noise': noise})[0]
+        feed = {'crop': crop[None, None].astype(np.float32), 'cond': cond[None],
+                'noise': noise}
+        try:
+            out = sess.run(['paths'], feed)[0]
+        except Exception as e:  # noqa: B902 - as the worker: the CPU from now on
+            if sess.get_providers()[0] == engines.CPU:
+                raise
+            print(f'{sess.get_providers()[0]} failed to run the model ({e}); the CPU '
+                  'from now on, as the node does', file=sys.stderr)
+            sess = ort.InferenceSession(model, sess_options=opts, providers=[engines.CPU])
+            out = sess.run(['paths'], feed)[0]
         t_model = time.perf_counter()
         if first is None:
             first = 1000.0 * (t_model - t0)     # loading, building, and the first plan
