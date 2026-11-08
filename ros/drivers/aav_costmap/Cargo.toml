@@ -1,0 +1,17 @@
+[workspace]
+resolver = "2"
+# costmap: our own costmap (Nav2's costmap_2d layers, ported). No ROS:
+#   cargo test -p costmap
+#   cargo run --release -p costmap --example timing    (how long an update takes)
+# costmap-node: the ROS node (rclrs), binary costmap. colcon builds it through CMakeLists.txt.
+members = ["crates/costmap", "crates/costmap-node"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+# Nav2's costmap_2d, which costmap ports, is Apache-2.0 (PROVENANCE.md).
+license = "Apache-2.0"
+publish = false
+
+[profile.test]
+opt-level = 3

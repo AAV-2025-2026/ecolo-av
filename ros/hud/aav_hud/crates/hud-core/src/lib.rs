@@ -2,6 +2,7 @@
 //!
 //! | Module | What it holds |
 //! |---|---|
+//! | [`ahead`] | the squiggly line: ego's trace, the plan ahead, the stop point and their numbers, in base_link; where they go on a panel; pretend data |
 //! | [`config`] | the topic names, from `config/hud.yaml` |
 //! | [`units`] | speed in m/s and km/h, angles |
 //! | [`vehicle`] | `/vehicle/status`: mode, gear letter, fault names |
@@ -22,6 +23,7 @@
 //! | [`screen`] | which monitor a window goes on (`--monitor HDMI-1`), for two screens |
 //! | [`theme`] | every colour the four screens draw with: `initial_d` (black, white, Carleton's red; arcade; the default), Catppuccin Mocha and Latte, calm; `Style::corner` |
 
+pub mod ahead;
 pub mod config;
 pub mod estop;
 pub mod format;

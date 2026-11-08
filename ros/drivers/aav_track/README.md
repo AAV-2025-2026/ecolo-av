@@ -79,7 +79,7 @@ Modules (all but `track_node.py` have no ROS):
 |---|---|
 | `path.py` | `Path` (arc length, `project` -> `Foot`, `point_at`, `curvature_at`), `moved` (map into odom), `wrap` |
 | `checks.py` | `GoalCheck`, `ProgressCheck`: Nav2's SimpleGoalChecker and PoseProgressChecker |
-| `speed.py` | `SpeedPolicy`: cruise, `line.turn_speed_limit` for a bend ahead, `approach.Approach` to stop |
+| `speed.py` | `SpeedPolicy`: cruise, `line.turn_speed_limit` for a bend ahead, `approach.Approach` on the stopping law (`aav_description` `stop_law.py`, since 7 Nov) to stop |
 | `trackers/__init__.py` | `State`, `Limits`, `Command`, `Tracker`, `SteerLag`, `make(name, limits, model)` |
 | `trackers/*.py` | the six trackers |
 | `qp.py` | a small QP solver (OSQP's ADMM, numpy) for `mpc_full` and `mpc_lag` |

@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How the car stops · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/stopping.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>How the car stops</h1>
+<div class="meta">8 min read · 3 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="release-0.2.html">The 0.2 guide</a>
+<a href="whats-new.html">What&#x27;s new</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-evening.html">Tonight: drive as is</a>
+<a href="car-day.html">Car day</a>
+<a href="car-setup.html">Car setup</a>
+<a href="rollout.html">Rolling out on the car</a>
+<a href="tests.html">Every test</a>
+<a href="know-the-car.html">Know the car</a>
+<span class="sep">Learn:</span>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-speed.html">Learn: speed</a>
+<a href="learn-lidar.html">Learn: lidar</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
+<span class="sep">Reference:</span>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="path-followers.html">Path followers</a>
+<a href="switches.html">Switches</a>
+<a href="trials.html">Trials</a>
+<a href="mppi-lag.html">MPPI with lag</a>
+<a href="own-costmap.html">Our own costmap</a>
+<a href="own-planner.html">Our own planner</a>
+<a class="here" href="stopping.html">How the car stops</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="own-simulator.html">Our own simulator</a>
+<a href="own-simulator-cameras.html">Our simulator&#x27;s cameras</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="hardware-debug.html">Hardware debug</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="car-model.html">One car model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="geofence.html">The geofence</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="esp32-safety.html">ESP32 safety rules</a>
+<a href="esp32-cpp-parity.html">ESP32 C++ parity</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#1-the-stopping-law">1. The stopping law</a><a href="#2-the-behaviour-planner">2. The behaviour planner</a><a href="#3-where-the-car-really-stops">3. Where the car really stops</a></nav>
+<div class="lead"><p>One stopping law for every planned stop, a behaviour planner that uses it to slow Nav2,
+and a check of where the car really stops. Ben, 7 Nov: "we can use that to say if we have
+turned enough or slowing down enough". The designs:
+<a href="../designs/2026-11-05_how-the-car-stops.md">how the car stops</a>,
+<a href="../designs/2026-11-05_behaviour-and-speed.md">behaviour and speed</a>.</p>
+<blockquote>
+<p><strong>Every number is a GUESS</strong> until car tests 4.1-4.5 (<a href="actuator-tests.html">actuator tests</a>).
+The locks don't use any of this: they keep their own laws.</p>
+</blockquote></div>
+<section class="card"><h2 id="1-the-stopping-law">1. The stopping law</h2>
+<pre class="highlight"><code class="language-text">   S(v)  =  v·τ  +  v²/(2a)           τ = ρ + a/(2j)
+            └┬─┘    └──┬──┘
+       delay + easing  braking
+
+   the cap:     v_cap(d) = a·( √(τ² + 2d/a) − τ )     the speed that stops in d metres</code></pre>
+<p><code>aav_description</code> <code>stop_law.py</code> (no ROS): <code>StopCurve(a, j, rho)</code> with <code>distance(v)</code>,
+<code>cap(d)</code>, <code>demand(v)</code>, <code>h(room, v, margin)</code>.</p>
+<h3 id="its-numbers-come-from-the-car-model">Its numbers come from the car model</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Symbol</th>
+<th>Means</th>
+<th>From</th>
+<th>Today</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>a</code></td>
+<td>planned braking</td>
+<td>half the softer of ego's <code>max_deceleration</code> and <code>max_brake</code></td>
+<td>1.0 m/s²</td>
+</tr>
+<tr>
+<td><code>j</code></td>
+<td>jerk</td>
+<td>ego's <code>max_jerk</code></td>
+<td>2.0 m/s³</td>
+</tr>
+<tr>
+<td><code>ρ</code></td>
+<td>every delay</td>
+<td>input age 0.15 s + brake dead time + <code>brake_lag</code> + <strong>the speed loop's lag</strong></td>
+<td>1.22 s</td>
+</tr>
+<tr>
+<td><code>τ</code></td>
+<td>delay + easing</td>
+<td>ρ + a/(2j)</td>
+<td>1.47 s</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The speed loop's lag</strong> (new, not in the design): the spine's default PI coasts until the
+car is 0.2 m/s too fast, then brakes 0.5 per m/s past that. To brake at 1 m/s² it must be
+0.87 m/s too fast: 0.87 s behind. Without it, the law overran the point by 0.3-0.4 m on
+the pretend car. <code>loop=None</code> gives the design's ρ 0.35.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Distance left</th>
+<th>0.5 m</th>
+<th>1 m</th>
+<th>2 m</th>
+<th>5 m</th>
+<th>10 m</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>v_cap</code></td>
+<td>0.31 m/s</td>
+<td>0.57 m/s</td>
+<td>1.01 m/s</td>
+<td>2.02 m/s</td>
+<td>3.24 m/s</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="who-uses-it">Who uses it</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>User</th>
+<th>Before</th>
+<th>Now</th>
+<th>Check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Trial trackers (<code>aav_track</code> <code>speed.py</code>)</td>
+<td><code>√(2·1.5·d)</code></td>
+<td><strong>the law</strong></td>
+<td>never a higher speed, at every distance (<code>test_speed.py</code>)</td>
+</tr>
+<tr>
+<td>Point driver (<code>aav_drive_to_point</code>)</td>
+<td><code>√(2a(d − 0.8v))</code></td>
+<td>the same; <strong><code>stop_law:=hybrid</code></strong> picks the law (a trial)</td>
+<td>stops at B on the pretend car (<code>test_drive.py</code>)</td>
+</tr>
+<tr>
+<td>ego's start-up log</td>
+<td><code>0.4v + v²/2a</code></td>
+<td>both lines: the hardest stop, and the planned one</td>
+<td>the plan is never shorter (<code>test_dynamics.py</code>)</td>
+</tr>
+<tr>
+<td>Behaviour planner</td>
+<td>none</td>
+<td>the law</td>
+<td>below</td>
+</tr>
+<tr>
+<td>The geofence's lock</td>
+<td>RSS</td>
+<td><strong>unchanged</strong> (Simplex)</td>
+<td>its worst case is never shorter than where the car model stops (<code>test_geofence.py</code>). Above about 0.7 m/s the law plans <strong>more</strong> room than the lock (1.97 against 1.40 m at 1 m/s on the spine), so the car slows before the lock closes</td>
+</tr>
+<tr>
+<td>The stop sign's lock</td>
+<td>4.7 m</td>
+<td><strong>unchanged</strong></td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="point-driver-pretend-car-ego-and-gazebos-actuator-model">Point driver, pretend car (ego and Gazebo's actuator model)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>From</th>
+<th>Law</th>
+<th>Stop error</th>
+<th>Peak braking</th>
+<th>Time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1 m/s, 10 m</td>
+<td>approach</td>
+<td>+0.06 m</td>
+<td>0.77 m/s²</td>
+<td>15.4 s</td>
+</tr>
+<tr>
+<td>1 m/s, 10 m</td>
+<td>hybrid</td>
+<td>+0.09 m</td>
+<td>0.77 m/s²</td>
+<td>15.3 s</td>
+</tr>
+<tr>
+<td>3 m/s, 30 m</td>
+<td>approach</td>
+<td>+0.04 m</td>
+<td>1.32 m/s²</td>
+<td>19.7 s</td>
+</tr>
+<tr>
+<td>3 m/s, 30 m</td>
+<td>hybrid</td>
+<td>+0.09 m</td>
+<td><strong>0.78 m/s²</strong></td>
+<td>19.9 s</td>
+</tr>
+</tbody>
+</table></div>
+<p>Gentler at speed, 5 cm further past B. Not yet run in Gazebo.</p>
+</section>
+<section class="card"><h2 id="2-the-behaviour-planner">2. The behaviour planner</h2>
+<p><code>aav_behaviour</code> (a trial, <strong>off by default</strong>): <code>pixi run sim world:=road behaviour:=true</code>.
+It knows why the car should slow, and sends Nav2 a speed cap. <strong>It can't stop the car</strong>:
+a lock or Nav2's goal check makes every final stop.</p>
+<pre class="highlight"><code class="language-text"> DRIVE ─► APPROACH ─► STOPPED ─► WAIT ─► GO ─► DRIVE
+  (no cap)  (cap falls)  (lock on,  (lock on)  (cap rises)
+                         still)        │
+                                       └─► ASK (a person is told)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stop for</th>
+<th><code>left</code></th>
+<th>The final stop</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A stop sign</td>
+<td>camera range to the sign − 4.7 m</td>
+<td>the <code>stop_sign</code> lock</td>
+</tr>
+<tr>
+<td>An obstacle in the lane</td>
+<td>lidar: nearest point ahead − bumper − stop zone</td>
+<td>collision_monitor, then the <code>stop_zone</code> lock</td>
+</tr>
+<tr>
+<td>The fence</td>
+<td>along the plan to where the geofence would say NEAR</td>
+<td>the geofence's lock</td>
+</tr>
+<tr>
+<td>The goal</td>
+<td>along the plan to its end</td>
+<td>Nav2's goal check</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="the-cap">The cap</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>v_cap(left)</code> of the lowest stop</td>
+<td>the stopping law, above</td>
+</tr>
+<tr>
+<td>0.0, or between 0.3 m/s and Nav2's top speed</td>
+<td>Nav2 reads 0.0 as <strong>no limit</strong></td>
+</tr>
+<tr>
+<td>Falls no faster than 2 m/s²</td>
+<td>MPPI cuts its turn rate at once, its speed later</td>
+</tr>
+<tr>
+<td>The sign's cap never rises in APPROACH</td>
+<td>a new picture can't speed the car up</td>
+</tr>
+<tr>
+<td>Rises at 0.5 m/s² in GO</td>
+<td></td>
+</tr>
+<tr>
+<td>Odometry stale: the floor</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="topics">Topics</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Topic</th>
+<th>Type</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/drivers/nav/speed_limit</code></td>
+<td><code>nav2_msgs/SpeedLimit</code>, 20 Hz</td>
+<td>controller_server reads it with <code>behaviour:=true</code></td>
+</tr>
+<tr>
+<td><code>/drivers/nav/behaviour/state</code></td>
+<td><code>diagnostic_msgs/DiagnosticStatus</code>, 5 Hz</td>
+<td>for the screens: state, reason, cap, left</td>
+</tr>
+<tr>
+<td><code>/perception/stop_sign/distance</code></td>
+<td><code>geometry_msgs/PointStamped</code></td>
+<td>new, from the watcher: where the sign is</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="in-gazebo-8-nov-pixi-run-sim-check-behaviour">In Gazebo (8 Nov, <code>pixi run sim-check --behaviour</code>)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stop</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Obstacle</td>
+<td>passed 2 of 4 runs: APPROACH, cap down to 0.3 m/s, the stop zone fired at 0.50 m/s, the bumper 0.8 m from the box</td>
+</tr>
+<tr>
+<td>Obstacle, the other 2</td>
+<td>the car went round the box (the lidar is on, so MPPI may steer round it): no stop to score</td>
+</tr>
+<tr>
+<td>Goal</td>
+<td>APPROACH from 2 m out, lowest cap 0.48-0.68 m/s; reached, 0.9 m from the goal</td>
+</tr>
+<tr>
+<td>Stop sign (<code>-e ml ... --perception</code>)</td>
+<td>the lock stopped the car 3.5 m before the sign, but the behaviour <strong>never entered APPROACH(sign)</strong>: still to find out why</td>
+</tr>
+</tbody>
+</table></div>
+<p>At 1 m/s the law's cap binds only in the last 2 m, so the slowing is short.</p>
+<h3 id="not-built-yet">Not built yet</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>Why it waits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The <code>patient</code> progress checker</td>
+<td>a stock tree edit; holds over 10 s still look stuck to Nav2</td>
+</tr>
+<tr>
+<td>ASK's reply (<code>/hud/ask/answer</code>)</td>
+<td>the HUD has no reply path</td>
+</tr>
+<tr>
+<td>The trial trackers reading the cap</td>
+<td>they ignore <code>/drivers/nav/speed_limit</code></td>
+</tr>
+<tr>
+<td>The car</td>
+<td>the stage gates in the design: <code>pi</code> mode first</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="3-where-the-car-really-stops">3. Where the car really stops</h2>
+<p><code>pixi run sim-check --stop-point</code> (the empty world, the spine in the loop, about 4 minutes).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>a scripted drive at 0.5, 0.75 and 1 m/s (the spine's top speed: 1 m/s)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>steady for 1.5 s, then the e-stop: the spine brakes fully</td>
+</tr>
+<tr>
+<td>3</td>
+<td>the prediction: the first <code>/ego/stop_point</code> after the press (ego, the shared car model, full brake)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>moved to the map by <code>/tf</code> at its stamp</td>
+</tr>
+<tr>
+<td>5</td>
+<td>scored against Gazebo's truth and the global EKF</td>
+</tr>
+</tbody>
+</table></div>
+<p>Pass: within 0.25 m, or 10 % of the distance if more. A drive that never reached half
+its speed fails. The maths is <code>tools/stop_points.py</code>: it can score a bag from the car
+later, with a tape measure for the truth.</p>
+<h3 id="numbers-8-nov">Numbers (8 Nov)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>From</th>
+<th>Predicted</th>
+<th>Truth</th>
+<th>Localization</th>
+<th>Stop point after the press</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.54 m/s</td>
+<td>0.11 m</td>
+<td>0.12 m</td>
+<td>0.37 m</td>
+<td>3 ms</td>
+</tr>
+<tr>
+<td>0.77 m/s</td>
+<td>0.19 m</td>
+<td>0.18 m</td>
+<td>0.17 m</td>
+<td>43 ms</td>
+</tr>
+<tr>
+<td>0.98 m/s</td>
+<td>0.30 m</td>
+<td>0.24 m</td>
+<td>0.33 m</td>
+<td>83 ms</td>
+</tr>
+</tbody>
+</table></div>
+<p>The stopping law plans far more (0.95, 1.42 and 1.93 m): it plans a gentle stop at
+1 m/s², not a full brake.</p></section>
+<nav class="prevnext"><a class="prev" href="own-planner.html"><small>Previous</small>← Our own planner</a>
+<a class="next" href="a-to-b.html"><small>Next</small>A to B →</a></nav>
+</main>
+<footer>Source: <code>docs/stopping.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

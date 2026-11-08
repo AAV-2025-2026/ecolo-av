@@ -18,8 +18,11 @@ to ego. A person always outranks the computer.
 | [aav_navigation](./aav_navigation/README.md) | Nav2 (Smac Lattice planner, Hybrid-A* forward only; MPPI), behaviour trees, maps | `/drivers/nav/cmd_vel` | 20 |
 | [aav_track](./aav_track/README.md) | trial path followers (pure pursuit, Stanley, LQR, MPC, MPC with speed) in controller_server's place: `tracker:=` (`docs/trials.md`) | `cmd_vel_nav`, inside Nav2's slot | (20) |
 | [aav_mppi_lag](./aav_mppi_lag/README.md) | a trial follower: Nav2's MPPI in Rust, its model with the actuators' lag, in controller_server's place: `tracker:=mppi_lag` ([page](../../docs/mppi-lag.md)); says `/drivers/nav/lag_aware` | `cmd_vel_nav`, inside Nav2's slot | (20) |
+| [aav_costmap](./aav_costmap/README.md) | a trial: our own local and global costmaps in Rust, Nav2's layers ported, beside Nav2's: `costmap:=own`; `mppi_lag` then reads ours ([page](../../docs/own-costmap.md)) | `/drivers/nav/costmap/*`, inside Nav2's slot | (20) |
+| [aav_planner](./aav_planner/README.md) | a trial planner: Nav2's State Lattice in Rust, beside Nav2's; the behaviour trees call it: `planner:=own` ([page](../../docs/own-planner.md)) | `/plan`, inside Nav2's slot | (20) |
 | [aav_diffusion_planner](./aav_diffusion_planner/README.md) | a trial planner: a model draws the path, a guard checks it, the lattice's path if it fails: `planner:=diffusion` (`docs/trials.md`) | `/plan`, inside Nav2's slot | (20) |
-| [aav_routes](./aav_routes/README.md) | street routes (Valhalla or OSRM) as Nav2 GPS waypoints | `/drivers/nav/route/*` | — |
+| [aav_behaviour](./aav_behaviour/README.md) | a trial: the behaviour states and a speed cap on Nav2 from the stopping law, for a stop sign, an obstacle ahead, the fence and the goal: `behaviour:=true` ([page](../../docs/stopping.md)) | `/drivers/nav/speed_limit`, inside Nav2's slot | (20) |
+| [aav_routes](./aav_routes/README.md) | street routes (Valhalla or OSRM) as Nav2 GPS waypoints; directions on the campus by a place's name (its own road graph) | `/drivers/nav/route/*` | — |
 | [aav_language](./aav_language/README.md) | plain-English driving: MCP drive tools and a local-model agent | uses the actions above | — |
 
 The lane follower on the AI slot (priority 10) lives in `ros/perception/aav_lane_geometry`.

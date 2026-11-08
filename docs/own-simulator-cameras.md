@@ -41,6 +41,8 @@ Bevy draws the world from each camera on the car, with no window, and the pictur
 | `pixi run sim-cameras --bench 300` | as fast as it can: the most pictures a second |
 | `pixi run sim-cameras --ros` | publishes the topics, a scripted drive, wall-clock stamps |
 | `pixi run sim-cameras --ros --pose truth` | draws where `/vehicle/sim/truth` says, with its stamps |
+| `pixi run sim-cameras --world maps/campus/campus.sdf --at 49,-71,0` | a Gazebo world (the core's reader), parked at x, y, yaw |
+| `pixi run sim simulator:=own world:=road` | the whole simulator: the launch starts the cameras on the world it runs |
 
 `--ros` needs `pixi run build` first, and stays on this computer (`tools/ros.sh --local`).
 
@@ -68,9 +70,18 @@ The shared types live in `camera-core`, which has no Bevy and no ROS:
 | `CameraRenderer` | the trait: `set_world(&SimWorld)` and `render(car, stamp, cameras)` |
 | `Cameras` | the rig, a timer per camera, and a renderer: `tick(car, now)` draws the ones due |
 
-**For the merge:** the core turns its world into a `SimWorld` (SDF's boxes, planes and
-cylinders map one to one; colours are SDF's, linear) and publishes `/vehicle/sim/truth`.
-Its `/system/source` announcer lists the cameras, as `gazebo_adapter` does.
+### Joined to the core (8 Nov)
+
+![The front left camera on Colonel By Drive, the campus world](img/own-sim-cameras-campus.png)
+
+| Step | Where |
+|---|---|
+| The core reads the SDF world: every shape, its colour and picture, the sky and the sun | `sim-core` `world.rs` |
+| Those shapes become a `SimWorld`: boxes, cylinders and planes one to one; OBJ meshes with their picture coordinates | `camera-core` `core_world.rs`, `obj.rs` |
+| Bevy draws them; pictures repeat (the campus's tarmac and grass), with smaller copies far off | `src/scene.rs` |
+| SDF's light is scaled by 0.6 to look like Gazebo's | `core_world::LIGHT` |
+| `simulator:=own` starts `sim_cameras --ros --pose truth --world <the world>`; `gazebo_adapter` announces the cameras | `aav_gazebo` `gazebo.launch.py` |
+| Models placed while running (`obstacle:=true`, `spawn_entity`): the simulator lists them on `/vehicle/sim/entities`; the cameras read each SDF file and draw the world again | `sim-node`, `src/ros.rs`, `core_world::placed` |
 
 ## Tests
 
@@ -101,10 +112,10 @@ So four cameras at the car's 15 Hz (60 pictures a second) should fit when the co
 
 | Missing | Why it matters |
 |---|---|
-| Gazebo's worlds (`road.sdf`, `test_lot.sdf`, campus) | only the test world draws; the core's world reader feeds it at the merge |
 | A computer with no GPU (CI, oirp-spss) | Bevy needs Vulkan or Metal: the picture tests can't run there. Only `camera-core` runs in CI |
 | A side-by-side with Gazebo's pictures | the looks match by eye (`docs/img/sim-cameras.png`); not measured |
-| The detector on these pictures | the stop sign carries Gazebo's own picture; not yet run through RF-DETR |
+| The detector on these pictures | the stop sign carries Gazebo's own picture: see [own-simulator.md](own-simulator.md)'s results |
+| The campus at 10 Hz on a busy computer | 4 cameras on the campus: 9.1 Hz, 105 ms median (no ROS, load 11) |
 | Faults (freeze, stop) | `gazebo_camera` does them for Gazebo; the simulator's fault switch should cover these |
 | The JPEG topics | Gazebo has none either: `chase_jpeg` and `preview_jpeg` still make them |
 | Lifelike pictures | a non-goal: Gazebo's aren't either |

@@ -85,6 +85,21 @@ fn the_shapes_for_a_renderer_keep_their_kind_place_and_colour() {
     assert!(
         matches!(&plate.geometry, Geometry::Mesh { file, .. } if file.ends_with("stop_sign.obj"))
     );
+    // Its picture, through model://, for the cameras.
+    assert!(plate
+        .texture
+        .as_ref()
+        .is_some_and(|t| t.ends_with("materials/textures/stop_sign.png") && t.is_file()));
+}
+
+#[test]
+fn the_sky_and_the_sun_as_the_file_says() {
+    let road = load("road").lighting;
+    assert_eq!(road.background, Some([0.49, 0.69, 0.80, 1.0]));
+    assert_eq!(road.ambient, Some([0.5, 0.5, 0.5, 1.0]));
+    let sun = road.sun.expect("the sun");
+    assert_eq!(sun.direction, Vec3::new(-0.5, 0.1, -0.9));
+    assert_eq!(sun.diffuse, [0.9, 0.9, 0.9, 1.0]);
 }
 
 #[test]

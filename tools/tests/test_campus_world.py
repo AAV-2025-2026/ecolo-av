@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 
 import numpy as np
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import campus_world as c  # noqa: E402, I100
@@ -130,7 +131,7 @@ def test_a_path_stops_at_the_road_it_crosses():
 
 
 def test_a_park_round_a_road_leaves_the_road_open(tmp_path):
-    meshes, _, grid, _, _, _, _ = c.build(read_small(tmp_path), (-5, -5, 30, 30))
+    meshes, _, grid, _, _, _, _, _ = c.build(read_small(tmp_path), (-5, -5, 30, 30))
     assert grid.is_free(2.0, 7.0), 'the lot is drivable'
     assert meshes['grass'].vertices and meshes['kerb'].vertices
     assert not grid.is_free(-3.0, 5.0), 'the grass is not'
@@ -154,7 +155,7 @@ def test_the_cars_start_has_room_round_it():
 
 
 def test_build_keeps_the_tunnel_and_the_tree_right(tmp_path):
-    meshes, _, grid, _, trunks, report, lots = c.build(read_small(tmp_path), (-5, -5, 30, 30))
+    meshes, _, grid, _, trunks, report, lots, _ = c.build(read_small(tmp_path), (-5, -5, 30, 30))
     assert report['lots'] == 1 and len(lots) == 1
     assert report['paths'] == 0, 'a footway in a tunnel is under the ground'
     assert report['trees'] == 1 and len(trunks) == 1
@@ -167,6 +168,25 @@ def test_heights_come_from_the_map_then_a_guess():
     assert c.floors_of({'name': 'Dunton Tower'}) == 22 * c.FLOOR_HEIGHT
     assert c.floors_of({'amenity': 'shelter'}) == 3.0
     assert c.floors_of({}, 'a') == c.floors_of({}, 'a')
+
+
+def test_a_line_moved_left_stays_its_distance_round_a_bend():
+    moved = c.offset_line([(0.0, 0.0), (10.0, 0.0), (10.0, 10.0)], 1.0)
+    assert moved[0] == pytest.approx((0.0, 1.0))
+    assert moved[1] == pytest.approx((9.0, 1.0))    # the mitre: 1 m from both segments
+    assert moved[2] == pytest.approx((9.0, 10.0))
+    right = c.offset_line([(0.0, 0.0), (10.0, 0.0)], -2.0)
+    assert right == pytest.approx([(0.0, -2.0), (10.0, -2.0)])
+
+
+def test_a_painted_road_has_an_edge_line_each_side_inside_its_edges():
+    shapes = c.edge_lines([(0.0, 0.0), (20.0, 0.0)], 7.0)
+    assert len(shapes) == 2
+    ys = sorted(sum(p[1] for p in s) / len(s) for s in shapes)
+    assert ys == pytest.approx([-3.5 + c.EDGE_INSET, 3.5 - c.EDGE_INSET])
+    for s in shapes:
+        width = max(p[1] for p in s) - min(p[1] for p in s)
+        assert width == pytest.approx(c.LINE_WIDTH)
 
 
 def test_road_widths_come_from_the_map_then_their_kind():

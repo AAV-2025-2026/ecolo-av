@@ -60,7 +60,19 @@ def test_the_log_lines_and_the_brake_warning():
     lines = d.describe(CAR, 1.57, 0.5, 1.0, 1.0, 2.0)
     assert lines[0] == 'body: 181 kg + 0 kg aboard'
     assert 'stops from 1 m/s in 0.65 m' in lines[2]
+    # The stopping law (stop_law.py): a 1.0, tau 1.47 (the speed loop's lag in it): 1.97 m.
+    assert 'plans 1.97 m' in lines[2]
     assert not any('WARNING' in line for line in lines)
     # 120 kg aboard: the brakes give 3.0 x 181 / 301 = 1.80, under ego's 2.0.
     heavy = d.describe(Body(payload=120.0), 1.57, 0.5, 1.0, 1.0, 2.0)
     assert heavy[-1].startswith('WARNING: with 120 kg aboard the brakes give only 1.80')
+
+
+def test_the_stopping_law_plans_no_shorter_than_the_hardest_stop():
+    from aav_description import stop_law
+    for body in (CAR, Body(payload=120.0)):
+        curve = stop_law.from_numbers(d.braking_limit(body), 2.0, 2.0)
+        for i in range(1, 80):
+            v = 0.05 * i
+            brake = min(2.0, d.braking_limit(body))
+            assert curve.distance(v) >= d.stopping_distance(body, v, brake)

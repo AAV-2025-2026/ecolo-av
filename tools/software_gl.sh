@@ -2,8 +2,8 @@
 # Run a command with Mesa's software OpenGL (llvmpipe) as EGL's only driver, so Gazebo's
 # cameras and lidar render on a Linux computer with no GPU: GitHub's runners, oirp-spss.
 #
-#   tools/software_gl.sh pixi run sim-check --obstacle
-#   tools/software_gl.sh pixi run sim gui:=false
+#   tools/software_gl.sh pixi run sim-check --simulator gazebo --obstacle
+#   tools/software_gl.sh pixi run sim simulator:=gazebo gui:=false
 #
 # Why: our environment's EGL (libglvnd) has no driver of its own; it uses the computer's.
 # With none (no Mesa, no NVIDIA), Ogre can't start, and Gazebo crashes as the world loads

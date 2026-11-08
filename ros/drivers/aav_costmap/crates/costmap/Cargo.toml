@@ -1,0 +1,10 @@
+[package]
+name = "costmap"
+description = "A costmap (static map, obstacle layers with ray clearing, inflation), ported from Nav2's costmap_2d"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# No dependencies: it builds offline, and tests on any laptop.
+[dependencies]

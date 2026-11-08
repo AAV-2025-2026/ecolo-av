@@ -274,15 +274,19 @@ def test_bad_values_stop_the_launch():
         started(SIM, controller='dwb')
 
 
+# Gazebo's own parts (gz sim, its bridges): said outright, since ours is the default.
+GZ = 'gazebo'
+
+
 def test_gazebo_bridges_the_sensors_only_where_the_world_renders_them():
-    actions = started(GAZEBO, world='empty', gui='false')
+    actions = started(GAZEBO, simulator=GZ, world='empty', gui='false')
     assert 'gz_road_bridge' not in names(actions)
     assert parameters(node(actions, 'gazebo_adapter'))['radar'] is False
     # One node per sensor, as on the car; the radar's only where the world renders it.
     assert {'gazebo_imu', 'gazebo_gps'} <= names(actions)
     assert not {'gazebo_radar', 'gazebo_camera'} & names(actions)
     for world in ('road', 'test_lot'):
-        actions = started(GAZEBO, world=world, gui='false')
+        actions = started(GAZEBO, simulator=GZ, world=world, gui='false')
         assert 'gz_road_bridge' in names(actions), world
         assert parameters(node(actions, 'gazebo_adapter'))['radar'] is True, world
         assert 'gazebo_radar' in names(actions), world
@@ -291,57 +295,60 @@ def test_gazebo_bridges_the_sensors_only_where_the_world_renders_them():
 
 
 def test_gazebo_obstacle_and_start_pose():
-    actions = started(GAZEBO, world='road', gui='false', obstacle='true', start_y='0.3',
-                      start_yaw='0.1')
+    actions = started(GAZEBO, simulator=GZ, world='road', gui='false', obstacle='true',
+                      start_y='0.3', start_yaw='0.1')
     spawn = arguments(node(actions, 'spawn_aav'))
     assert spawn[spawn.index('-y') + 1] == '0.3' and spawn[spawn.index('-Y') + 1] == '0.1'
     box = arguments(node(actions, 'spawn_obstacle'))
     assert box[box.index('-file') + 1].endswith(os.path.join('obstacle', 'model.sdf'))
     assert (box[box.index('-x') + 1], box[box.index('-y') + 1]) == ('15.5', '0.0')
-    assert 'spawn_obstacle' not in names(started(GAZEBO, world='road', gui='false'))
+    assert 'spawn_obstacle' not in names(started(GAZEBO, simulator=GZ, world='road', gui='false'))
 
 
 def test_gazebo_runs_the_simulator_headless_without_a_window():
-    gz = included(started(GAZEBO, world='empty', gui='false'))['gz_sim.launch.py']['gz_args']
+    empty = started(GAZEBO, simulator=GZ, world='empty', gui='false')
+    gz = included(empty)['gz_sim.launch.py']['gz_args']
     assert gz.startswith('-r -s ') and gz.endswith('empty.sdf')
     # Only Linux renders through EGL; a Mac's ogre2 renders headless on Metal as it is.
-    road = included(started(GAZEBO, world='road', gui='false'))['gz_sim.launch.py']['gz_args']
+    road = started(GAZEBO, simulator=GZ, world='road', gui='false')
+    road = included(road)['gz_sim.launch.py']['gz_args']
     assert ('--headless-rendering' in road) == (not GAZEBO.MAC)
     assert '--headless-rendering' not in gz
 
 
 def test_the_lidar_only_where_the_world_renders_it():
-    road = started(GAZEBO, world='road', gui='false', lidar='true')
+    road = started(GAZEBO, simulator=GZ, world='road', gui='false', lidar='true')
     assert included(road)['description.launch.py']['lidar'] == 'true'
     assert parameters(node(road, 'gz_lidar_bridge'))['config_file'].endswith(
         'bridge_lidar.yaml')
-    lot = started(GAZEBO, world='test_lot', gui='false', lidar='true')
+    lot = started(GAZEBO, simulator=GZ, world='test_lot', gui='false', lidar='true')
     assert included(lot)['description.launch.py']['lidar'] == 'true'
-    actions = started(GAZEBO, world='empty', gui='false', lidar='true')
+    actions = started(GAZEBO, simulator=GZ, world='empty', gui='false', lidar='true')
     assert included(actions)['description.launch.py']['lidar'] == 'false'
     assert 'gz_lidar_bridge' not in names(actions)
 
 
 def test_the_lidar_is_on_by_default():
-    road = started(GAZEBO, world='road', gui='false')
+    road = started(GAZEBO, simulator=GZ, world='road', gui='false')
     assert included(road)['description.launch.py']['lidar'] == 'true'
     assert 'gz_lidar_bridge' in names(road)
     assert included(started(SIM, world='road'))['gazebo.launch.py']['lidar'] == 'true'
-    off = started(GAZEBO, world='road', gui='false', lidar='false')
+    off = started(GAZEBO, simulator=GZ, world='road', gui='false', lidar='false')
     assert included(off)['description.launch.py']['lidar'] == 'false'
     assert 'gz_lidar_bridge' not in names(off)
 
 
 def test_the_chase_camera_only_where_the_world_renders_it():
-    road = started(GAZEBO, world='road', gui='false')
+    road = started(GAZEBO, simulator=GZ, world='road', gui='false')
     assert included(road)['description.launch.py']['chase_camera'] == 'true'
     assert parameters(node(road, 'gz_chase_bridge'))['config_file'].endswith(
         'bridge_chase.yaml')
     jpeg = node(road, 'chase_jpeg')
     assert (jpeg.node_package, jpeg.node_executable) == ('image_transport', 'republish')
     assert included(started(SIM, world='road'))['gazebo.launch.py']['chase_camera'] == 'true'
-    for actions in (started(GAZEBO, world='empty', gui='false'),
-                    started(GAZEBO, world='road', gui='false', chase_camera='false')):
+    for actions in (started(GAZEBO, simulator=GZ, world='empty', gui='false'),
+                    started(GAZEBO, simulator=GZ, world='road', gui='false',
+                            chase_camera='false')):
         assert included(actions)['description.launch.py']['chase_camera'] == 'false'
         assert not {'gz_chase_bridge', 'chase_jpeg'} & names(actions)
 

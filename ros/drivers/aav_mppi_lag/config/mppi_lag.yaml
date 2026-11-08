@@ -22,4 +22,5 @@ mppi_lag:
     odom_timeout: 1.0           # s without odometry: give up the path
     cmd_topic: cmd_vel_nav
     status_topic: /drivers/nav/track/status
+    local_plan_topic: /drivers/nav/local_plan   # MPPI's chosen future, for the screens
     lag_aware_topic: /drivers/nav/lag_aware

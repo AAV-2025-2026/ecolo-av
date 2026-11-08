@@ -1,0 +1,119 @@
+//! The planner on the hand-made maps: a path where one exists, none where none does, and
+//! every path one the car can drive (clear of walls, starting at the start, ending at the
+//! goal, no turn much tighter than the car's).
+
+use costmap::cost::LETHAL;
+use costmap::footprint;
+use lattice_planner::{cusps, length, scenes, tightest_turn, PlanError, Pose};
+
+/// The car's outline is off every lethal cell at this pose.
+fn clear(grid: &costmap::Grid, p: &Pose) -> bool {
+    let pose = costmap::Pose2 {
+        x: p.x,
+        y: p.y,
+        yaw: p.yaw,
+    };
+    let placed = footprint::placed(&scenes::CAR, &pose);
+    let cells = footprint::cells_under(grid, &placed);
+    !cells.is_empty() && cells.iter().all(|&c| grid.data[c] < LETHAL)
+}
+
+#[test]
+fn each_scene_with_and_without_reversing() {
+    let lattice = scenes::lattice();
+    for reversing in [false, true] {
+        let planner = scenes::planner(reversing);
+        for scene in scenes::all() {
+            let expect = if reversing {
+                scene.reverse_ok
+            } else {
+                scene.forward_ok
+            };
+            let what = format!("{} (reversing {reversing})", scene.name);
+            match planner.plan(&scene.grid, &scene.start, &scene.goal, &|| false) {
+                Ok(plan) => {
+                    assert!(expect, "{what}: found a path where none should be");
+                    let (first, last) = (plan.poses[0], *plan.poses.last().unwrap());
+                    assert!(
+                        (first.x - scene.start.x).hypot(first.y - scene.start.y) < 0.5,
+                        "{what}: starts at {first:?}"
+                    );
+                    assert!(
+                        (last.x - scene.goal.x).hypot(last.y - scene.goal.y) < 0.6,
+                        "{what}: ends at {last:?}"
+                    );
+                    for p in &plan.raw {
+                        assert!(
+                            clear(&scene.grid, p),
+                            "{what}: the car hits a wall at {p:?}"
+                        );
+                    }
+                    let turn = tightest_turn(&plan.raw, 1.0);
+                    assert!(
+                        turn > 0.8 * lattice.turning_radius,
+                        "{what}: a {turn:.2} m turn"
+                    );
+                    if !reversing {
+                        assert_eq!(cusps(&plan.raw), 0, "{what}: reverses");
+                    }
+                    assert!(plan.total_time < 2.0, "{what}: {} s", plan.total_time);
+                    assert!(length(&plan.poses) > 0.0);
+                }
+                Err(e) => {
+                    assert!(!expect, "{what}: no path ({e})");
+                    assert!(
+                        matches!(
+                            e,
+                            PlanError::NoValidPath | PlanError::Timeout | PlanError::StartOccupied
+                        ),
+                        "{what}: {e}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn reversing_out_of_the_parking_space_backs_out_first() {
+    let scene = scenes::all()
+        .into_iter()
+        .find(|s| s.name == "parking-lot exit")
+        .unwrap();
+    let plan = scenes::planner(true)
+        .plan(&scene.grid, &scene.start, &scene.goal, &|| false)
+        .unwrap();
+    // Its first metre runs behind the car (the car faces +x).
+    let p = plan
+        .raw
+        .iter()
+        .find(|p| (p.x - 12.0).hypot(p.y - 10.0) > 1.0)
+        .unwrap();
+    assert!(p.x < 12.0, "first move {p:?}");
+    assert!(cusps(&plan.raw) >= 1);
+}
+
+#[test]
+fn off_the_map_and_cancelled() {
+    let scene = scenes::all().remove(0);
+    let planner = scenes::planner(false);
+    let off = Pose::new(-5.0, 0.0, 0.0);
+    assert_eq!(
+        planner
+            .plan(&scene.grid, &off, &scene.goal, &|| false)
+            .unwrap_err(),
+        PlanError::StartOutsideMap
+    );
+    assert_eq!(
+        planner
+            .plan(&scene.grid, &scene.start, &off, &|| false)
+            .unwrap_err(),
+        PlanError::GoalOutsideMap
+    );
+    assert_eq!(
+        planner
+            .plan(&scene.grid, &scene.start, &scene.goal, &|| true)
+            .unwrap_err(),
+        PlanError::Cancelled
+    );
+}

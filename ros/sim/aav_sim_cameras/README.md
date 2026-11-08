@@ -28,7 +28,7 @@ no distortion. The chase camera: 70 degrees across.
 
 | File | What it is |
 |---|---|
-| `crates/camera-core/` | no Bevy, no ROS: lenses and camera_info (`lens.rs`), mounts and topics (`rig.rs`), the shared world type (`world.rs`), when each camera is due (`schedule.rs`), pictures (`frame.rs`), the `CameraRenderer` trait and `Cameras` (`lib.rs`) |
+| `crates/camera-core/` | no Bevy, no ROS: lenses and camera_info (`lens.rs`), mounts and topics (`rig.rs`), the shared world type (`world.rs`), the core's world as that type (`core_world.rs`), OBJ meshes (`obj.rs`), when each camera is due (`schedule.rs`), pictures (`frame.rs`), the `CameraRenderer` trait and `Cameras` (`lib.rs`) |
 | `src/lib.rs` | `BevyRenderer`: the trait in Bevy, offscreen, stepped by hand |
 | `src/scene.rs` | a `SimWorld` as Bevy's meshes, materials, sky and sun |
 | `src/main.rs` | the program `sim_cameras`: the timing check, `--bench`, `--save`, `--ros` |
@@ -45,7 +45,15 @@ pixi run sim-cameras --from 18 --speed 0     # parked 7 m from the stop sign
 pixi run sim-cameras --bench 300             # as fast as it can
 pixi run sim-cameras --ros                   # publish, a scripted drive, wall-clock stamps
 pixi run sim-cameras --ros --pose truth      # draw where /vehicle/sim/truth says, its stamps
+pixi run sim-cameras --world maps/campus/campus.sdf --at 49,-71,0 --save /tmp/pics
+                                             # a Gazebo world, parked there (x, y, yaw)
 ```
+
+`pixi run sim` (ours is the default) starts it with `--ros --pose truth --world <the world>`
+(`aav_gazebo` `worlds.sim_cameras_command`). With `--ros` it also reads
+`/vehicle/sim/entities` and draws each model placed while running. With `faults:=true` the
+front left picture goes elsewhere: `--image-topic front_left=/gazebo/camera/front_left/image_raw`
+(its camera_info stays). A computer with no GPU can't run it: use `simulator:=gazebo`.
 
 In Rust, for the core simulator (no ROS needed):
 

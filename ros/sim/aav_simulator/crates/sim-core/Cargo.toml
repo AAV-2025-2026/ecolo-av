@@ -9,3 +9,9 @@ publish.workspace = true
 [dependencies]
 # Reads Gazebo's world files (SDF is XML).
 roxmltree = "0.20"
+# The shared car model (ours: aav_description's car-model), behind CarModel: feature
+# `shared` (src/shared_car.rs). cargo test -p sim-core --features shared.
+car-model = { path = "../../../../bringup/aav_description/car-model", optional = true }
+
+[features]
+shared = ["dep:car-model"]

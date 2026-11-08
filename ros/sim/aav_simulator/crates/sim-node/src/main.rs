@@ -23,6 +23,11 @@
 //!                                     1800 x 16 rays, organised, packed as Gazebo's (lidar)
 //!             gazebo/radar/points     sensor_msgs/PointCloud2, 10 Hz, radar_link, best
 //!                                     effort: the radar stand-in's 61 x 3 rays (radar)
+//!             vehicle/sim/entities    visualization_msgs/MarkerArray, latched: every model
+//!                                     placed while running (obstacle, spawn_entity), each a
+//!                                     MESH_RESOURCE marker: ns its name, mesh_resource its
+//!                                     SDF file (file://), its pose in the map. For the
+//!                                     cameras (sim_cameras), which draw them
 //! Serves      vehicle/sim/spawn_entity  simulation_interfaces/SpawnEntity: put a model (an SDF
 //!                                     file, or model://name) in the world, at initial_pose
 //!                                     (map frame; x, y and yaw), as Gazebo's create service
@@ -34,14 +39,16 @@
 //!             (vehicle.yaml's), lidar, radar (true: that sensor runs), obstacle (the bench's
 //!             box at obstacle_x, obstacle_y, from obstacle_model), body_length,
 //!             body_width, rear_overhang, body_height (the car stops at what its outline
-//!             meets, as Gazebo's; body_length 0: it drives through), seed, step (s),
+//!             meets, as Gazebo's; body_length 0: it drives through), ground_step (m: the
+//!             highest step a wheel rolls up, 0.1; the car rides the world's ground, tilts on
+//!             slopes, stops at a higher kerb; 0: flat ground), seed, step (s),
 //!             clock_hz, real_time_factor (1.0; 0: as fast as it can), threads
 //!
 //! The simulated time runs in a thread of its own, paced against the wall clock; the
 //! executor only takes the commands. Cameras plug in through sim-core's SensorPlugin.
 
 use std::{
-    collections::BTreeSet,
+    collections::BTreeMap,
     path::{Path, PathBuf},
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -67,6 +74,7 @@ use ros_env::simulation_interfaces::srv::{
     SpawnEntity_Response,
 };
 use ros_env::std_msgs::msg::Header;
+use ros_env::visualization_msgs::msg::{Marker, MarkerArray};
 use sim_core::car::{Command, TwistFollower};
 use sim_core::lidar::{LidarSpec, Scan, FIELDS, POINT_STEP};
 use sim_core::math::{Pose, Rot3, Vec3};
@@ -148,6 +156,7 @@ fn main() -> Result<()> {
             rear_overhang: params.rear_overhang.get(),
             height: params.body_height.get(),
         }),
+        ground_step: (params.ground_step.get() > 0.0).then(|| params.ground_step.get()),
     };
     let car = Box::new(TwistFollower::new(
         params.wheelbase.get(),
@@ -189,12 +198,22 @@ fn main() -> Result<()> {
             yaw_rate: 0.0,
         },
         changes: Vec::new(),
-        placed: if params.obstacle.get() {
-            BTreeSet::from(["obstacle".to_string()])
-        } else {
-            BTreeSet::new()
-        },
+        placed: BTreeMap::new(),
+        entities: node.create_publisher("vehicle/sim/entities".reliable().transient_local())?,
     }));
+    if params.obstacle.get() {
+        let at = Pose::from_xyz_rpy(
+            [params.obstacle_x.get(), params.obstacle_y.get(), 0.0],
+            [0.0; 3],
+        );
+        let file = PathBuf::from(params.obstacle_model.get().as_ref());
+        if let Ok(mut s) = shared.lock() {
+            s.placed.insert("obstacle".into(), (file, at));
+            s.announce();
+        }
+    } else if let Ok(s) = shared.lock() {
+        s.announce();
+    }
     let latest = Arc::clone(&shared);
     let _cmd = node.create_subscription("gazebo/cmd_vel", move |msg: Twist| {
         if let Ok(mut s) = latest.lock() {
@@ -305,8 +324,51 @@ fn run(
 struct Shared {
     command: Command,
     changes: Vec<Change>,
-    /// The names placed so far, so a delete can say whether there was one.
-    placed: BTreeSet<String>,
+    /// What is placed so far, by name: its SDF file and pose. A delete says whether there
+    /// was one; the cameras hear the lot on vehicle/sim/entities.
+    placed: BTreeMap<String, (PathBuf, Pose)>,
+    entities: Publisher<MarkerArray>,
+}
+
+impl Shared {
+    /// Every placed model, latched, for the cameras: a DELETEALL, then one marker each.
+    fn announce(&self) {
+        let clear = Marker {
+            action: Marker::DELETEALL,
+            ..Default::default()
+        };
+        let markers = std::iter::once(clear)
+            .chain(
+                self.placed
+                    .iter()
+                    .enumerate()
+                    .map(|(i, (name, (file, pose)))| {
+                        let [x, y, z, w] = pose.rotation.quaternion();
+                        Marker {
+                            header: Header {
+                                frame_id: "map".into(),
+                                ..Default::default()
+                            },
+                            ns: name.clone(),
+                            id: i as i32,
+                            type_: Marker::MESH_RESOURCE,
+                            action: Marker::ADD,
+                            pose: PoseMsg {
+                                position: Point {
+                                    x: pose.position.x,
+                                    y: pose.position.y,
+                                    z: pose.position.z,
+                                },
+                                orientation: Quaternion { x, y, z, w },
+                            },
+                            mesh_resource: format!("file://{}", file.display()),
+                            ..Default::default()
+                        }
+                    }),
+            )
+            .collect();
+        let _ = self.entities.publish(MarkerArray { markers });
+    }
 }
 
 /// An object to put in the world, or take away, before the next step.
@@ -379,13 +441,14 @@ fn spawn(
         let why = "the simulator's lock is poisoned".to_string();
         return refuse(SimResult::RESULT_OPERATION_FAILED, why);
     };
-    if s.placed.contains(&name) && !request.allow_renaming {
+    if s.placed.contains_key(&name) && !request.allow_renaming {
         return refuse(
             SpawnEntity_Response::NAME_NOT_UNIQUE,
             format!("{name} is there already"),
         );
     }
-    s.placed.insert(name.clone());
+    s.placed.insert(name.clone(), (file, pose));
+    s.announce();
     s.changes.push(Change::Place {
         name: name.clone(),
         mesh,
@@ -401,7 +464,8 @@ fn spawn(
 fn delete(shared: &Mutex<Shared>, request: &DeleteEntity_Request) -> DeleteEntity_Response {
     let result = match shared.lock() {
         Ok(mut s) => {
-            if s.placed.remove(&request.entity) {
+            if s.placed.remove(&request.entity).is_some() {
+                s.announce();
                 s.changes.push(Change::Remove(request.entity.clone()));
                 sim_result(SimResult::RESULT_OK, "")
             } else {
@@ -513,9 +577,9 @@ fn odometry(ns: u64, frame: &str, o: &Odometry) -> OdometryMsg {
                 position: Point {
                     x: o.x,
                     y: o.y,
-                    z: 0.0,
+                    z: o.z,
                 },
-                orientation: quaternion(Rot3::from_yaw(o.yaw).quaternion()),
+                orientation: quaternion(Rot3::from_rpy(o.roll, o.pitch, o.yaw).quaternion()),
             },
             ..Default::default()
         },
@@ -615,6 +679,7 @@ struct Params {
     obstacle_y: ReadOnlyParameter<f64>,
     obstacle_model: ReadOnlyParameter<Arc<str>>,
     body_length: ReadOnlyParameter<f64>,
+    ground_step: ReadOnlyParameter<f64>,
     body_width: ReadOnlyParameter<f64>,
     rear_overhang: ReadOnlyParameter<f64>,
     body_height: ReadOnlyParameter<f64>,
@@ -669,6 +734,7 @@ impl Params {
             obstacle_y: number("obstacle_y", 0.0)?,
             obstacle_model: text("obstacle_model", "")?,
             body_length: number("body_length", 2.0)?,
+            ground_step: number("ground_step", 0.1)?,
             body_width: number("body_width", 1.0)?,
             rear_overhang: number("rear_overhang", 0.2)?,
             body_height: number("body_height", 1.5)?,

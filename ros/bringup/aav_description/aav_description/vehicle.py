@@ -310,6 +310,22 @@ def check_tracker(tracker, reversing=False):
     return name
 
 
+# Whose costmaps (costmap:=, docs/own-costmap.md): nav2 (the default, and the car's) or own
+# (aav_costmap, a trial beside Nav2's). Each one's raw local costmap, for aav_mppi_lag.
+COSTMAPS = ('nav2', 'own')
+DEFAULT_COSTMAP = 'nav2'
+COSTMAP_RAW_TOPICS = {'nav2': '/local_costmap/costmap_raw',
+                      'own': '/drivers/nav/costmap/local_raw'}
+
+
+def check_costmap(costmap):
+    """Return the costmap's name (lower case), or raise ValueError saying what to pick."""
+    name = str(costmap).strip().lower()
+    if name not in COSTMAPS:
+        raise ValueError(f'costmap:={costmap}: pick one of {", ".join(COSTMAPS)}')
+    return name
+
+
 # Nav2's planners (planner:=, docs/controllers.md "Planners"), each under the one plugin name
 # the behaviour trees ask for, GridBased. hybrid (SmacPlannerHybrid, the default) and lattice
 # (SmacPlannerLattice, on our own primitives: tools/lattice_primitives.py) keep to the car's
@@ -320,9 +336,17 @@ def check_tracker(tracker, reversing=False):
 # diffusion (aav_diffusion_planner, a trial: docs/designs/2026-11-02_diffusion-planner.md):
 # a model draws the path and a guard checks it, with the lattice behind it in planner_server
 # as the fallback (TRIAL_PLANNERS: the planner each stands on). Sim and bench only.
-PLANNERS = ('hybrid', 'lattice', 'smac2d', 'navfn', 'theta_star', 'diffusion')
+# own (aav_planner, a trial: docs/own-planner.md): Nav2's State Lattice ported to Rust,
+# on the same primitives file and penalties; bt_navigator's trees call it, and
+# planner_server keeps running the lattice beside it (navigate_through_poses, and the
+# head-to-head in controller_compare). Sim and bench only.
+PLANNERS = ('hybrid', 'lattice', 'smac2d', 'navfn', 'theta_star', 'diffusion', 'own')
 CAR_PLANNERS = ('hybrid', 'lattice')
-TRIAL_PLANNERS = {'diffusion': 'lattice'}
+TRIAL_PLANNERS = {'diffusion': 'lattice', 'own': 'lattice'}
+# planner:=own: our planner's action; bt_navigator's compute_path_to_pose is pointed here.
+OWN_PLANNER_ACTION = '/drivers/nav/planner/compute_path_to_pose'
+# ... and planner_server's own /plan goes here (ours publishes /plan).
+OWN_PLANNER_NAV2_PLAN = '/drivers/nav/planner/nav2_plan'
 # The lattice is the default (Ben, 1 Nov): with reversing on, every leg of the lot tour,
 # 29 s quicker than Hybrid-A* (docs/trials.md, 30 Oct). Forward only it lost the U-turn
 # (29 Oct), so a car that may not reverse takes Hybrid-A* (FORWARD_ONLY_PLANNER).
@@ -330,7 +354,8 @@ DEFAULT_PLANNER = 'lattice'
 FORWARD_ONLY_PLANNER = 'hybrid'
 # Each planner's block in nav2.yaml's planner_server (GridBased is hybrid's own).
 PLANNER_BLOCKS = {'hybrid': 'GridBased', 'lattice': 'Lattice', 'smac2d': 'Smac2D',
-                  'navfn': 'NavFn', 'theta_star': 'ThetaStar', 'diffusion': 'Lattice'}
+                  'navfn': 'NavFn', 'theta_star': 'ThetaStar', 'diffusion': 'Lattice',
+                  'own': 'Lattice'}
 
 
 def server_planner(planner):
@@ -513,6 +538,150 @@ def mppi_lag_params(nav2, cfg, ego=None, max_speed=None):
     for critic in mppi['critics']:
         for key, value in (mppi.get(critic) or {}).items():
             out[f'{critic}.{key}'] = critic_value(key, value)
+    return out
+
+
+# Nav2's own defaults for what nav2.yaml leaves out (costmap_2d's ObstacleLayer and
+# ObservationBuffer, Jazzy), so our costmap reads a block as Nav2 does.
+COSTMAP_SOURCE_DEFAULTS = {
+    'topic': '', 'data_type': 'LaserScan', 'marking': True, 'clearing': False,
+    'min_obstacle_height': 0.0, 'max_obstacle_height': 2.0,
+    'obstacle_min_range': 0.0, 'obstacle_max_range': 2.5,
+    'raytrace_min_range': 0.0, 'raytrace_max_range': 3.0,
+    'inf_is_valid': False, 'observation_persistence': 0.0,
+}
+
+
+# The Lattice block's keys our planner reads (aav_planner's lattice-planner Settings).
+OWN_PLANNER_KEYS = (
+    'lattice_filepath', 'allow_reverse_expansion', 'allow_unknown', 'tolerance',
+    'max_iterations', 'max_on_approach_iterations', 'max_planning_time',
+    'terminal_checking_interval', 'reverse_penalty', 'change_penalty',
+    'non_straight_penalty', 'cost_penalty', 'retrospective_penalty', 'rotation_penalty',
+    'analytic_expansion_ratio', 'analytic_expansion_max_length',
+    'analytic_expansion_max_cost', 'analytic_expansion_max_cost_override',
+    'lookup_table_size', 'smooth_path')
+
+
+def planner_params(tuned, v, costmap='nav2'):
+    """
+    Return aav_planner's settings (planner:=own) as a dict, from the tuned nav2.yaml.
+
+    tuned: nav2.yaml after nav2_tuned with planner:=own (the Lattice block, the file and
+    reversing filled in, is planner_server's GridBased); v: vehicle.yaml's `vehicle`;
+    costmap: which global costmap it plans on (nav2 or own). The same block, the car's
+    outline and padding, and the global costmap's inflation, so ours plans as Nav2's does.
+    """
+    block = tuned['planner_server']['ros__parameters']['GridBased']
+    out = {k: block[k] for k in OWN_PLANNER_KEYS if k in block}
+    gc = tuned['global_costmap']['global_costmap']['ros__parameters']
+    out['footprint'] = footprint_points(v)
+    out['footprint_padding'] = float(gc.get('footprint_padding', 0.01))
+    out['inflation'] = None
+    for plugin in gc['plugins']:
+        layer = gc.get(plugin, {})
+        if (layer.get('plugin', '').endswith('InflationLayer') and
+                layer.get('enabled', True)):
+            out['inflation'] = {'radius': float(layer.get('inflation_radius', 0.55)),
+                                'scaling': float(layer.get('cost_scaling_factor', 10.0))}
+    return out
+
+
+# planner:=own: each global costmap's raw topic, its partial updates, and whether it is
+# latched (Nav2 sends the whole map once, then only the changed parts).
+GLOBAL_COSTMAP_TOPICS = {
+    'nav2': ('/global_costmap/costmap_raw', '/global_costmap/costmap_raw_updates', True),
+    'own': ('/drivers/nav/costmap/global_raw', '', False),
+}
+
+
+def costmap_params(tuned, v, radar=False, camera=False):
+    """
+    Return aav_costmap's two blocks, {'local': {...}, 'global': {...}}, from nav2.yaml.
+
+    tuned: nav2.yaml after nav2_tuned (its layers as Nav2 runs them); v: vehicle.yaml's
+    `vehicle`. radar and camera turn on the local costmap's obstacle_layer and
+    camera_layer, as the launch file's rewrites do for Nav2. Each block holds only what
+    our costmap reads, in plain types, with Nav2's defaults filled in: the frame, the
+    window, the rates, the car's outline (vehicle.yaml's) and padding, the static map,
+    the inflation, and each enabled obstacle layer with its sources.
+    """
+    enabled = {'obstacle_layer': radar, 'camera_layer': camera}
+    out = {}
+    for name in ('local', 'global'):
+        block = tuned[f'{name}_costmap'][f'{name}_costmap']['ros__parameters']
+        spec = {
+            'global_frame': block.get('global_frame', 'map'),
+            'rolling': bool(block.get('rolling_window', False)),
+            'width': float(block.get('width', 5)),
+            'height': float(block.get('height', 5)),
+            'resolution': float(block.get('resolution', 0.05)),
+            'track_unknown': bool(block.get('track_unknown_space', False)),
+            'update_frequency': float(block.get('update_frequency', 5.0)),
+            'publish_frequency': float(block.get('publish_frequency', 1.0)),
+            'footprint': footprint_points(v),
+            'footprint_padding': float(block.get('footprint_padding', 0.01)),
+            'static_layer': False, 'inflation': None, 'layers': [],
+        }
+        for plugin in block['plugins']:
+            layer = block.get(plugin, {})
+            kind = layer.get('plugin', '').split('::')[-1]
+            if not enabled.get(plugin, layer.get('enabled', True)):
+                continue
+            if kind == 'StaticLayer':
+                spec['static_layer'] = True
+            elif kind == 'InflationLayer':
+                spec['inflation'] = {'radius': float(layer.get('inflation_radius', 0.55)),
+                                     'scaling': float(layer.get('cost_scaling_factor', 10.0))}
+            elif kind in ('ObstacleLayer', 'VoxelLayer'):
+                sources = []
+                for source in str(layer.get('observation_sources', '')).split():
+                    s = dict(COSTMAP_SOURCE_DEFAULTS, **layer.get(source, {}))
+                    sources.append({'name': source, 'topic': s['topic'],
+                                    'data_type': s['data_type'],
+                                    'marking': bool(s['marking']),
+                                    'clearing': bool(s['clearing']),
+                                    'inf_is_valid': bool(s['inf_is_valid']),
+                                    **{k: float(s[k]) for k in (
+                                        'min_obstacle_height', 'max_obstacle_height',
+                                        'obstacle_min_range', 'obstacle_max_range',
+                                        'raytrace_min_range', 'raytrace_max_range',
+                                        'observation_persistence')}})
+                spec['layers'].append({
+                    'name': plugin,
+                    'min_obstacle_height': float(layer.get('min_obstacle_height', 0.0)),
+                    'max_obstacle_height': float(layer.get('max_obstacle_height', 2.0)),
+                    'footprint_clearing': bool(layer.get('footprint_clearing_enabled', True)),
+                    'sources': sources})
+        out[name] = spec
+    return out
+
+
+def behaviour_params(nav2, cfg, ego=None, max_speed=None, controller=DEFAULT_CONTROLLER):
+    """
+    Return aav_behaviour's parameters: the cap's top, the lane ahead, ego's limits.
+
+    base_speed is the controller's own top speed (MPPI's vx_max, RPP's desired_linear_vel,
+    or `max_speed`, sim_speed:=): a higher cap would raise MPPI's envelope. front and
+    half_width are the body's front bumper and half its width plus the stop zone's margin;
+    stop_gap is the stop zone's reach (STOP_ZONE_AHEAD): the obstacle's final stop.
+    """
+    server = nav2['controller_server']['ros__parameters']
+    if max_speed:
+        base = float(max_speed)
+    elif controller == 'mppi':
+        base = float(server['MPPI']['vx_max'])
+    else:
+        base = float(server['FollowPath']['desired_linear_vel'])
+    v = cfg['vehicle']
+    body = v['body']
+    out = {'base_speed': base,
+           'front': float(body['length'] - body['rear_overhang']),
+           'half_width': float(body['width'] / 2.0 + STOP_ZONE_MARGIN),
+           'stop_gap': float(STOP_ZONE_AHEAD)}
+    for key in ('max_deceleration', 'max_jerk'):
+        if ego and key in ego:
+            out[key] = float(ego[key])
     return out
 
 

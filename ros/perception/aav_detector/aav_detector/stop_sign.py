@@ -94,3 +94,31 @@ class StopSignWatcher:
     def tick(self, now: float) -> bool:
         """Advance the timers without new boxes (the detector can go quiet)."""
         return self.update((), now)
+
+
+def sign_point(centre_px: float, height_px: float, focal_px: float,
+               fx: Optional[float] = None, cx: Optional[float] = None,
+               optical: bool = False,
+               sign_height_m: float = SIGN_HEIGHT_M) -> Tuple[float, float, float]:
+    """
+    Return where a sign's box puts the sign, (x, y, z) in its camera's frame (m).
+
+    The range along the camera's axis is sign_distance_m; the bearing comes from the box's
+    centre column (centre_px) and the lens (fx, cx: the CameraInfo's K[0] and K[2]); with
+    no lens yet, straight ahead. optical: the frame is z forward, x right (REP-103's
+    _optical); else x forward, y left, as camera_left_link. The height isn't known: 0.
+    """
+    ahead = sign_distance_m(height_px, focal_px, sign_height_m)
+    right = ahead * (centre_px - cx) / fx if fx and cx is not None else 0.0
+    return (right, 0.0, ahead) if optical else (ahead, -right, 0.0)
+
+
+def biggest_sign(boxes: Iterable[Tuple[str, float, float, float]],
+                 min_score: float) -> Optional[Tuple[float, float]]:
+    """Return (centre_px, height_px) of the tallest stop-sign box, or None."""
+    best = None
+    for label, score, height, centre in boxes:
+        if normal_label(label) == 'stop sign' and score >= min_score and height > 0 and (
+                best is None or height > best[1]):
+            best = (centre, height)
+    return best

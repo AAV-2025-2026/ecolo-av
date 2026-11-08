@@ -41,6 +41,14 @@ pub enum Topic {
     OutputMux,
     /// `/hud/heartbeat`, sent: the screen is alive (hud_core::heartbeat).
     Heartbeat,
+    /// The squiggly line (hud_core::ahead): ego's trace, the bold line.
+    Trace,
+    /// Its faint line: the plan ahead, in base_link.
+    PlanAhead,
+    /// Its stop bar: where a full brake now stops the car.
+    StopPoint,
+    /// Its numbers: the gap, the room, the goal.
+    Ahead,
 }
 
 impl Topic {
@@ -56,12 +64,17 @@ impl Topic {
 
     /// The topics that aren't listed: the e-stop and the heartbeat (sent), the source
     /// (latched), the watchdog (a banner of its own) and the output mux (its own panel).
-    pub const UNLISTED: [Topic; 5] = [
+    /// The squiggly line's four have their own panel, AHEAD.
+    pub const UNLISTED: [Topic; 9] = [
         Topic::Estop,
         Topic::Source,
         Topic::Watchdog,
         Topic::OutputMux,
         Topic::Heartbeat,
+        Topic::Trace,
+        Topic::PlanAhead,
+        Topic::StopPoint,
+        Topic::Ahead,
     ];
 
     /// The ROS parameter that holds this topic's name.
@@ -78,6 +91,10 @@ impl Topic {
             Self::Watchdog => "watchdog_topic",
             Self::OutputMux => "output_mux_topic",
             Self::Heartbeat => "heartbeat_topic",
+            Self::Trace => "trace_topic",
+            Self::PlanAhead => "plan_ahead_topic",
+            Self::StopPoint => "stop_point_topic",
+            Self::Ahead => "ahead_topic",
         }
     }
 }
@@ -96,6 +113,10 @@ pub struct HudConfig {
     pub watchdog_topic: String,
     pub output_mux_topic: String,
     pub heartbeat_topic: String,
+    pub trace_topic: String,
+    pub plan_ahead_topic: String,
+    pub stop_point_topic: String,
+    pub ahead_topic: String,
     /// Seconds without a message before a topic shows STALE.
     pub stale_after: f64,
     /// m/s: the car's forward cap, ego's `max_speed`. The arcade gauge's redline starts
@@ -170,6 +191,10 @@ impl HudConfig {
             Topic::Watchdog => &self.watchdog_topic,
             Topic::OutputMux => &self.output_mux_topic,
             Topic::Heartbeat => &self.heartbeat_topic,
+            Topic::Trace => &self.trace_topic,
+            Topic::PlanAhead => &self.plan_ahead_topic,
+            Topic::StopPoint => &self.stop_point_topic,
+            Topic::Ahead => &self.ahead_topic,
         }
     }
 
@@ -187,6 +212,10 @@ impl HudConfig {
             Topic::Watchdog => &mut self.watchdog_topic,
             Topic::OutputMux => &mut self.output_mux_topic,
             Topic::Heartbeat => &mut self.heartbeat_topic,
+            Topic::Trace => &mut self.trace_topic,
+            Topic::PlanAhead => &mut self.plan_ahead_topic,
+            Topic::StopPoint => &mut self.stop_point_topic,
+            Topic::Ahead => &mut self.ahead_topic,
         };
         *slot = name;
     }

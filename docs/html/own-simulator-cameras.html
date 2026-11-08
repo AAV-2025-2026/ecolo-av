@@ -7,7 +7,7 @@
 <!-- Generated from docs/own-simulator-cameras.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Our simulator&#x27;s cameras</h1>
-<div class="meta">6 min read · 7 sections</div></header>
+<div class="meta">7 min read · 7 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -29,10 +29,11 @@
 <a href="car-evening.html">Tonight: drive as is</a>
 <a href="car-day.html">Car day</a>
 <a href="car-setup.html">Car setup</a>
+<a href="rollout.html">Rolling out on the car</a>
 <a href="tests.html">Every test</a>
 <a href="know-the-car.html">Know the car</a>
-<a href="measure-the-car.html">Measure the car</a>
 <span class="sep">Learn:</span>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <a href="learn-car.html">The car, box by box</a>
@@ -47,8 +48,8 @@
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
 <a href="campus.html">The campus</a>
-<a href="maps-and-position.html">Maps and position</a>
 <span class="sep">Reference:</span>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <a href="learn-can.html">Learn: CAN</a>
 <a href="status.html">Status</a>
@@ -58,6 +59,9 @@
 <a href="switches.html">Switches</a>
 <a href="trials.html">Trials</a>
 <a href="mppi-lag.html">MPPI with lag</a>
+<a href="own-costmap.html">Our own costmap</a>
+<a href="own-planner.html">Our own planner</a>
+<a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -225,6 +229,14 @@ IMU, GPS, wheels, clock) is built beside it. The plan:
 <td><code>pixi run sim-cameras --ros --pose truth</code></td>
 <td>draws where <code>/vehicle/sim/truth</code> says, with its stamps</td>
 </tr>
+<tr>
+<td><code>pixi run sim-cameras --world maps/campus/campus.sdf --at 49,-71,0</code></td>
+<td>a Gazebo world (the core's reader), parked at x, y, yaw</td>
+</tr>
+<tr>
+<td><code>pixi run sim simulator:=own world:=road</code></td>
+<td>the whole simulator: the launch starts the cameras on the world it runs</td>
+</tr>
 </tbody>
 </table></div>
 <p><code>--ros</code> needs <code>pixi run build</code> first, and stays on this computer (<code>tools/ros.sh --local</code>).</p>
@@ -282,9 +294,42 @@ IMU, GPS, wheels, clock) is built beside it. The plan:
 </tr>
 </tbody>
 </table></div>
-<p><strong>For the merge:</strong> the core turns its world into a <code>SimWorld</code> (SDF's boxes, planes and
-cylinders map one to one; colours are SDF's, linear) and publishes <code>/vehicle/sim/truth</code>.
-Its <code>/system/source</code> announcer lists the cameras, as <code>gazebo_adapter</code> does.</p>
+<h3 id="joined-to-the-core-8-nov">Joined to the core (8 Nov)</h3>
+<p><img alt="The front left camera on Colonel By Drive, the campus world" src="../img/own-sim-cameras-campus.png" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The core reads the SDF world: every shape, its colour and picture, the sky and the sun</td>
+<td><code>sim-core</code> <code>world.rs</code></td>
+</tr>
+<tr>
+<td>Those shapes become a <code>SimWorld</code>: boxes, cylinders and planes one to one; OBJ meshes with their picture coordinates</td>
+<td><code>camera-core</code> <code>core_world.rs</code>, <code>obj.rs</code></td>
+</tr>
+<tr>
+<td>Bevy draws them; pictures repeat (the campus's tarmac and grass), with smaller copies far off</td>
+<td><code>src/scene.rs</code></td>
+</tr>
+<tr>
+<td>SDF's light is scaled by 0.6 to look like Gazebo's</td>
+<td><code>core_world::LIGHT</code></td>
+</tr>
+<tr>
+<td><code>simulator:=own</code> starts <code>sim_cameras --ros --pose truth --world &lt;the world&gt;</code>; <code>gazebo_adapter</code> announces the cameras</td>
+<td><code>aav_gazebo</code> <code>gazebo.launch.py</code></td>
+</tr>
+<tr>
+<td>Models placed while running (<code>obstacle:=true</code>, <code>spawn_entity</code>): the simulator lists them on <code>/vehicle/sim/entities</code>; the cameras read each SDF file and draw the world again</td>
+<td><code>sim-node</code>, <code>src/ros.rs</code>, <code>core_world::placed</code></td>
+</tr>
+</tbody>
+</table></div>
 </section>
 <section class="card"><h2 id="tests">Tests</h2>
 <div class="table-wrap"><table>
@@ -372,10 +417,6 @@ Its <code>/system/source</code> announcer lists the cameras, as <code>gazebo_ada
 </thead>
 <tbody>
 <tr>
-<td>Gazebo's worlds (<code>road.sdf</code>, <code>test_lot.sdf</code>, campus)</td>
-<td>only the test world draws; the core's world reader feeds it at the merge</td>
-</tr>
-<tr>
 <td>A computer with no GPU (CI, oirp-spss)</td>
 <td>Bevy needs Vulkan or Metal: the picture tests can't run there. Only <code>camera-core</code> runs in CI</td>
 </tr>
@@ -385,7 +426,11 @@ Its <code>/system/source</code> announcer lists the cameras, as <code>gazebo_ada
 </tr>
 <tr>
 <td>The detector on these pictures</td>
-<td>the stop sign carries Gazebo's own picture; not yet run through RF-DETR</td>
+<td>the stop sign carries Gazebo's own picture: see <a href="own-simulator.html">own-simulator.md</a>'s results</td>
+</tr>
+<tr>
+<td>The campus at 10 Hz on a busy computer</td>
+<td>4 cameras on the campus: 9.1 Hz, 105 ms median (no ROS, load 11)</td>
 </tr>
 <tr>
 <td>Faults (freeze, stop)</td>

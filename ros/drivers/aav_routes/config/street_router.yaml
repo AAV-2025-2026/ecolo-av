@@ -2,7 +2,8 @@
 # later; the test lot first.
 street_router:
   ros__parameters:
-    router: valhalla                    # valhalla (ours: pixi run -e routes router) or osrm
+    router: valhalla                    # valhalla (ours: pixi run -e routes router), osrm, or
+                                        # campus: the campus's road graph (campus_site.yaml)
     router_url: http://127.0.0.1:8002   # this computer only; never a paid or public server
     costing: auto                       # Valhalla's car profile (osrm: always driving)
     timeout: 5.0                        # s to wait for the router
@@ -14,3 +15,7 @@ street_router:
     map_frame: map
     follow_at_once: false               # true: send every route to Nav2 straight away
     fix_topic: /localization/gps/fix    # navsat_transform's filtered fix
+    # router: campus only
+    site_file: ''                       # '': this package's config/campus_site.yaml
+    root: .                             # the site file's osm path starts here (the repo)
+    speed: 1.0                          # m/s, for the time in the status line

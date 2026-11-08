@@ -29,10 +29,11 @@
 <a href="car-evening.html">Tonight: drive as is</a>
 <a href="car-day.html">Car day</a>
 <a href="car-setup.html">Car setup</a>
+<a href="rollout.html">Rolling out on the car</a>
 <a href="tests.html">Every test</a>
 <a href="know-the-car.html">Know the car</a>
-<a href="measure-the-car.html">Measure the car</a>
 <span class="sep">Learn:</span>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <a href="learn-car.html">The car, box by box</a>
@@ -47,8 +48,8 @@
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
 <a href="campus.html">The campus</a>
-<a href="maps-and-position.html">Maps and position</a>
 <span class="sep">Reference:</span>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <a href="learn-can.html">Learn: CAN</a>
 <a href="status.html">Status</a>
@@ -58,6 +59,9 @@
 <a href="switches.html">Switches</a>
 <a href="trials.html">Trials</a>
 <a href="mppi-lag.html">MPPI with lag</a>
+<a href="own-costmap.html">Our own costmap</a>
+<a href="own-planner.html">Our own planner</a>
+<a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -176,9 +180,13 @@ driver. Publish <code>false</code> to clear it.</p>
 <pre class="highlight"><code class="language-bash">pixi run sim                     # the empty world, with Nav2
 pixi run sim world:=test_lot     # the walled test lot, with its map
 pixi run sim world:=road         # the bench's road, for the car's camera and radar
-pixi run sim simulator:=own      # our own Rust simulator in Gazebo's place (no cameras yet)</code></pre>
-<p><code>simulator:=own</code> swaps <code>gz sim</code> and its bridges for <a href="own-simulator.html">our own simulator</a>: the
-same worlds and topics, so everything else runs unchanged. Gazebo stays the default.</p>
+pixi run sim simulator:=gazebo   # Gazebo itself, not our simulator</code></pre>
+<p><strong>Since 8 Nov the default is <a href="own-simulator.html">our own simulator</a></strong> (<code>simulator:=own</code>): it
+plays <code>gz sim</code> and its bridges, on the same worlds and topics, so everything else runs
+unchanged. It passed every <code>sim-check</code> leg Gazebo passes, three times each. Gazebo stays as
+<code>simulator:=gazebo</code>: to compare, and on a computer with no GPU, where only Gazebo's cameras
+draw (in software: <code>tools/software_gl.sh pixi run sim simulator:=gazebo</code>). The rest of this
+page says Gazebo: both play the same part.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -590,7 +598,7 @@ simulated time.
 <p>Start it with <code>gui:=false</code>, and watch in RViz or Foxglove instead. The empty and
 test_lot worlds render nothing, so they run anywhere. The road world renders the cameras
 and the lidar: on Linux with no GPU, start it through <code>tools/software_gl.sh</code>, as
-<code>tools/software_gl.sh pixi run sim gui:=false</code> (Mesa's software OpenGL). Without it,
+<code>tools/software_gl.sh pixi run sim simulator:=gazebo gui:=false</code> (Mesa's software OpenGL). Without it,
 Gazebo crashes as the world loads (<code>Unable to load Ogre Plugin</code>), and the car never
 appears. <span class="badge b-works">works</span> on oirp-spss, 23 Oct.</p>
 </div>

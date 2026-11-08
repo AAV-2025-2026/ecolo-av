@@ -18,6 +18,7 @@
   <depend>sensor_msgs</depend>
   <depend>rosgraph_msgs</depend>
   <depend>simulation_interfaces</depend>
+  <depend>visualization_msgs</depend>
   <!-- aav_gazebo's worlds and models come in as paths (its gazebo.launch.py passes them),
        so there's no dependency loop: aav_gazebo exec_depends on this package. -->
 

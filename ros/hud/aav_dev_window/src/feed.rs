@@ -12,6 +12,7 @@ use debug_core::{
     swap,
 };
 use hud_core::{
+    ahead::{StopMark, Summary},
     gate::{self, Verdict},
     health::Health,
     origin::{Announcement, Origins},
@@ -67,6 +68,23 @@ pub enum Update {
     Vehicle(VehicleStatus),
     Gate(String),
     Watchdog(String),
+    /// The squiggly line (`hud_core::ahead`), all in base_link: ego's trace, the bold line.
+    Trace(Vec<(f64, f64)>),
+    /// What the planner wants: the faint line.
+    PlanAhead(Vec<(f64, f64)>),
+    /// Where a full brake now stops the car.
+    StopPoint(StopMark),
+    /// The squiggly line's numbers: the gap, the stop, the room.
+    Ahead(Summary),
+}
+
+/// A base_link point, placed with the car's pose in odom or on the map.
+pub fn from_base(car: Pose, (x, y): (f64, f64)) -> Point {
+    let (sin, cos) = car.yaw.sin_cos();
+    Point::new(
+        car.position.x + x * cos - y * sin,
+        car.position.y + x * sin + y * cos,
+    )
 }
 
 /// Where the news comes from, and where the window's two commands go.
@@ -444,6 +462,15 @@ mod tests {
         let car_map = Pose::new(10.0, 10.0, std::f64::consts::FRAC_PI_2);
         let p = odom_to_map([2.0, 0.0], car_odom, car_map);
         assert!((p.x - 10.0).abs() < 1e-6 && (p.y - 11.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn base_link_points_follow_the_car() {
+        let car = Pose::new(10.0, 5.0, std::f64::consts::FRAC_PI_2);
+        let ahead = from_base(car, (2.0, 0.0));
+        assert!((ahead.x - 10.0).abs() < 1e-9 && (ahead.y - 7.0).abs() < 1e-9);
+        let left = from_base(car, (0.0, 1.0));
+        assert!((left.x - 9.0).abs() < 1e-9 && (left.y - 5.0).abs() < 1e-9);
     }
 
     #[test]

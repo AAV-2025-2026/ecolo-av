@@ -89,12 +89,15 @@ and doesn't model `lqi` yet).
 | Switch | What |
 |---|---|
 | `world:=test_lot` / `road` / `empty` | where the car is (`sim` only; the demos use the test lot) |
+| `simulator:=gazebo` | Gazebo plays the world, not our simulator (the default since 8 Nov: [page](own-simulator.md)) |
 | `reversing:=false` | Nav2 drives forward only |
 | `sim_speed:=3` | a top speed above the car's 1 m/s, in Gazebo only |
-| `lag_scale:=2` | the car's throttle, brake and steering lags twice what `vehicle.yaml` says; every driver still reads `vehicle.yaml` (a robustness test, Gazebo only) |
+| `lag_scale:=2` | the car's throttle, brake and steering lags twice what `vehicle.yaml` says; every driver still reads `vehicle.yaml` (a robustness test; with `simulator:=gazebo` only) |
 | `geofence:=false` | no geofence (it's on by default) |
 | `lidar:=false`, `radar:=false` | sensors off |
 | `voxels:=true` | Nav2 sees the lidar as 0.25 m cubes, not a flat scan (a trial: [Trials](trials.md#voxels-30-oct-the-lidar-as-cubes)) |
+| `costmap:=own` | our own costmaps (Rust) beside Nav2's; `tracker:=mppi_lag` then reads ours. 8 Nov: the same grid as Nav2's, half the CPU; with its clear service, the obstacle legs 3 of 3 as Nav2's ([page](own-costmap.md)) |
+| `planner:=own` | our own planner (Rust: Nav2's lattice ported) answers the behaviour trees, Nav2's lattice beside it; with `costmap:=own` it plans on our global costmap. 8 Nov: the test lot 12 of 12 as Nav2's, about 20 % slower on the campus's long legs ([page](own-planner.md)) |
 
 **Tried, 29 Oct 23:05:** the menu's pick (demo --debug, `mpc`, NDT, LQI) in Gazebo on Ben's
 Mac: the track node ran MPC, NDT tracked (2 ms a match), AMCL stayed off, the speed loop
@@ -115,6 +118,7 @@ and drives a leg in Gazebo. Nothing was switched on release day.
 | How far it moved | `ekf_local`: wheels, IMU | the same | the same | | `kiss_icp:=true` (scored), `kiss_ekf:=true` (no clear win) |
 | Speed loop | `default` (PI) | `default` | `default` (no switch on the car) | today's PI loop; `sim-check` 9 of 9 with each of the three | `lqi`, `smooth` (sim and bench) |
 | Geofence, sensor watchdog | on | on | on | they hold Nav2 when the pose or a sensor goes bad | `geofence:=false` (sim only) |
+| Who plays the world | ours (`simulator:=own`, since 8 Nov) | - | - | every `sim-check` leg Gazebo passes, 3 times each; no GPU-less start-up crashes | `simulator:=gazebo` (and on a computer with no GPU) |
 
 **Why the winners stay off:**
 

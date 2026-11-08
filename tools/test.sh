@@ -20,7 +20,7 @@ for pkg in ros/ego/aav_ego ros/io_mux/aav_io_mux ros/can_bridge/aav_spine ros/ca
            ros/sim/aav_gazebo ros/sim/aav_carla \
            ros/drivers/aav_scripted ros/drivers/aav_language ros/drivers/aav_navigation \
            ros/drivers/aav_actuator_tests ros/drivers/aav_drive_to_point ros/drivers/aav_routes ros/drivers/aav_rc \
-           ros/drivers/aav_track ros/drivers/aav_diffusion_planner \
+           ros/drivers/aav_track ros/drivers/aav_diffusion_planner ros/drivers/aav_behaviour \
            ros/bringup/aav_description ros/bringup/aav_run_info ros/localization/aav_gps_heading ros/localization/aav_kiss_icp \
            ros/localization/aav_localization_health \
            ros/perception/aav_detector ros/sources/aav_camera_stream \
@@ -49,9 +49,13 @@ if command -v cargo >/dev/null; then
   echo "== ros/localization/aav_ndt: NDT's maths, the filters, LOST; the design's checks"
   (cd ros/localization/aav_ndt && cargo test -q --locked -p ndt-core)
   echo "== ros/sim/aav_simulator: our own simulator's core: the car, the rays, Gazebo's worlds"
-  (cd ros/sim/aav_simulator && cargo test -q --locked -p sim-core)
+  (cd ros/sim/aav_simulator && cargo test -q --locked -p sim-core --features shared)
   echo "== ros/drivers/aav_mppi_lag: MPPI with the lag, its critics, the closed-loop runs"
-  (cd ros/drivers/aav_mppi_lag && cargo test -q --locked -p mppi-lag)
+  (cd ros/drivers/aav_mppi_lag && cargo test -q --locked -p mppi-lag --features shared)
+  echo "== ros/drivers/aav_costmap: our own costmap's layers and hand-made scenes"
+  (cd ros/drivers/aav_costmap && cargo test -q --locked -p costmap)
+  echo "== ros/drivers/aav_planner: our own planner's curves and hand-made maps"
+  (cd ros/drivers/aav_planner && cargo test -q --locked -p lattice-planner)
   # Only the logic: the window (raylib) needs a screen's libraries, and colcon builds it.
   echo "== ros/hud/aav_hud: the HUD's state, GPS, e-stop and formatting; the map's maths; the hardware panel's buttons"
   (cd ros/hud/aav_hud && cargo test -q --locked -p hud-core -p map-core -p debug-core -p panel-core)

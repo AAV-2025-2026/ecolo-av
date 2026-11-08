@@ -15,9 +15,11 @@
 //! }
 //! ```
 
+pub mod core_world;
 pub mod frame;
 pub mod geom;
 pub mod lens;
+pub mod obj;
 pub mod rig;
 pub mod schedule;
 pub mod world;
@@ -27,6 +29,7 @@ use std::time::Duration;
 pub use frame::Frame;
 pub use geom::{Pose, Rotation, Vec3};
 pub use lens::{Lens, Pixel};
+pub use obj::TriMesh;
 pub use rig::{CameraSpec, Hz, Rig};
 pub use schedule::Timer;
 pub use world::{Geometry, Look, Rgb, Shape, SimWorld, Sun};

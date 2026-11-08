@@ -495,8 +495,12 @@ ground move**, with whatever firmware is on the ESP32 now. Wheels off the ground
 | 3 | The Kar-Tech stop pressed | write down what it cuts (S1); the brake stays full | |
 | 4 | Power off, then try the rear wheel again | write down: does the brake hold without power? (S2) | |
 | 5 | The brake actuator's settings saved (A2) | the file | |
+| 6 | The brake's limits, with the hardware lead: in Pololu's Jrk program (on its USB), the brake actuator's target and feedback at **released**, at the **touch point** (where the pads start to grip: turn the wheel by hand while it moves slowly) and at **full** | released ______ touch ______ full ______ (the firmware uses 400 and 3500, never measured) | |
+| 7 | The most the brake may ever be pushed (the hardware lead's choice): a target, a pressure or the actuator's current limit; and can it **hold full brake for minutes** without overheating (the ESP32 holds full at boot) | max safe ______ ; current limit ______ A ; hold OK? ______ | |
+| 8 | Does the brake actuator report its position (analog feedback)? | yes / no | |
 
-**Stop point:** 1-2 pass; 3-4 written down. The brake's strength is measured on the
+**Stop point:** 1-2 pass; 3-8 written down. Rows 6-8 are what the brake needs, like the
+steering's ends: the safe range a stronger stop may use when the car is loaded. The brake's strength is measured on the
 ground later (tests 4.3, [Know the car](know-the-car.md)).
 
 ## A7b · The Motor Pi's UART, ready

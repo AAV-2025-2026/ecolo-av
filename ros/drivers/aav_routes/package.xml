@@ -3,7 +3,7 @@
 <package format="3">
   <name>aav_routes</name>
   <version>0.1.0</version>
-  <description>Street routes, for real streets later (the lot first): street_router asks an offline router (Valhalla, or OSRM) for the way from the car's GPS fix to a destination, and publishes it as GPS waypoints for Nav2's follow_gps_waypoints and as a map-frame path. Only a suggestion: Nav2, twist_mux, ego and the spine stay in charge.</description>
+  <description>Street routes, for real streets later (the lot first): street_router asks an offline router (Valhalla, or OSRM) for the way from the car's GPS fix to a destination (or, on the campus, uses its own road graph from OpenStreetMap, with named places), and publishes it as GPS waypoints for Nav2's follow_gps_waypoints and as a map-frame path. Only a suggestion: Nav2, twist_mux, ego and the spine stay in charge.</description>
   <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
   <license>TODO</license>
 
@@ -16,6 +16,8 @@
   <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>std_srvs</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
 

@@ -9,6 +9,7 @@ A **costmap** is a grid laid on the ground. Every cell holds a cost:
 Nav2's planner searches the grid for a path the car can drive. Its controller follows that
 path and slows down near high-cost cells. `nav2_costmap_2d` builds the grids from layers.
 The settings are in `ros/drivers/aav_navigation/config/nav2.yaml`.
+Our own costmap, in Rust, runs beside Nav2's as a trial: [Our own costmap](own-costmap.md).
 
 ## The two costmaps
 

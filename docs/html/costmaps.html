@@ -29,10 +29,11 @@
 <a href="car-evening.html">Tonight: drive as is</a>
 <a href="car-day.html">Car day</a>
 <a href="car-setup.html">Car setup</a>
+<a href="rollout.html">Rolling out on the car</a>
 <a href="tests.html">Every test</a>
 <a href="know-the-car.html">Know the car</a>
-<a href="measure-the-car.html">Measure the car</a>
 <span class="sep">Learn:</span>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <a href="learn-car.html">The car, box by box</a>
@@ -47,8 +48,8 @@
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
 <a href="campus.html">The campus</a>
-<a href="maps-and-position.html">Maps and position</a>
 <span class="sep">Reference:</span>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <a href="learn-can.html">Learn: CAN</a>
 <a href="status.html">Status</a>
@@ -58,6 +59,9 @@
 <a href="switches.html">Switches</a>
 <a href="trials.html">Trials</a>
 <a href="mppi-lag.html">MPPI with lag</a>
+<a href="own-costmap.html">Our own costmap</a>
+<a href="own-planner.html">Our own planner</a>
+<a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -117,7 +121,8 @@
 </ul>
 <p>Nav2's planner searches the grid for a path the car can drive. Its controller follows that
 path and slows down near high-cost cells. <code>nav2_costmap_2d</code> builds the grids from layers.
-The settings are in <code>ros/drivers/aav_navigation/config/nav2.yaml</code>.</p></div>
+The settings are in <code>ros/drivers/aav_navigation/config/nav2.yaml</code>.
+Our own costmap, in Rust, runs beside Nav2's as a trial: <a href="own-costmap.html">Our own costmap</a>.</p></div>
 <section class="card"><h2 id="the-two-costmaps">The two costmaps</h2>
 <div class="table-wrap"><table>
 <thead>

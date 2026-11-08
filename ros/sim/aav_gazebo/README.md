@@ -122,4 +122,4 @@ pixi run build && colcon test --packages-select aav_gazebo && colcon test-result
 ```
 
 `pixi run test` runs everything. The whole loop: `pixi run sim-check` (on a machine
-with no GPU: `tools/software_gl.sh pixi run sim-check`).
+with no GPU: `tools/software_gl.sh pixi run sim-check --simulator gazebo`).

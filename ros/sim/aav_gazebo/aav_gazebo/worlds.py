@@ -42,11 +42,14 @@ CAMPUS_NDT_FLOOR = 0.45
 CAMPUS_SPEED = '2.5'
 CAMPUS_CUBE_FLOOR = 0.12
 
-# Who plays the world (simulator:=, docs/own-simulator.md): Gazebo, or our own Rust simulator
-# (aav_simulator), a drop-in for gz sim and its bridges. Gazebo stays the default until ours
-# passes the same checks. Ours casts the lidar's and radar's rays but renders no cameras yet.
+# Who plays the world (simulator:=, docs/own-simulator.md): our own Rust simulator
+# (aav_simulator), a drop-in for gz sim and its bridges, the default since 8 Nov (it passed
+# the same checks as Gazebo); or Gazebo (simulator:=gazebo), kept for comparison and for a
+# computer with no GPU (CI, oirp-spss), where our cameras can't draw but Mesa's
+# software GL draws Gazebo's (tools/software_gl.sh). Ours casts the lidar's and radar's
+# rays; its cameras are their own program (aav_sim_cameras, Bevy), drawing the same world file.
 SIMULATORS = ('gazebo', 'own')
-DEFAULT_SIMULATOR = 'gazebo'
+DEFAULT_SIMULATOR = 'own'
 
 
 def world_file(share: str, world: str) -> str:
@@ -78,8 +81,50 @@ def check_simulator(name: str) -> str:
 
 
 def has_cameras(path: str, simulator: str) -> bool:
-    """Return True if this world renders cameras with this simulator: Gazebo's only, today."""
-    return check_simulator(simulator) == 'gazebo' and has_sensors(path)
+    """Return True if this world renders cameras: where it renders sensors, either simulator."""
+    check_simulator(simulator)
+    return has_sensors(path)
+
+
+# Our simulator's cameras: their own Cargo workspace, not a colcon package (Bevy).
+SIM_CAMERAS = os.path.join('ros', 'sim', 'aav_sim_cameras', 'Cargo.toml')
+
+
+def repo_root(here: str) -> str:
+    """
+    Return the repository's root: the folder pixi runs in, or else where `here` really is.
+
+    here is a file in the repository, as colcon --symlink-install installs it (a link
+    back to the source).
+    """
+    if os.path.isfile(SIM_CAMERAS):
+        return os.getcwd()
+    folder = os.path.dirname(os.path.realpath(here))
+    while folder != os.path.dirname(folder):
+        if os.path.isfile(os.path.join(folder, SIM_CAMERAS)):
+            return folder
+        folder = os.path.dirname(folder)
+    raise ValueError(f'simulator:=own: no {SIM_CAMERAS} above {here}: run from the repository')
+
+
+def sim_cameras_command(root: str, world: str, models, chase: bool = True,
+                        relay: str = '') -> list:
+    """
+    Return the command that runs our simulator's cameras beside it (simulator:=own).
+
+    They draw world (an SDF file, model:// from models) where /vehicle/sim/truth puts the
+    car, on Gazebo's camera topics. cargo builds them first if they changed (Bevy: minutes
+    the first time). chase=False leaves out the chase camera. relay: the front left
+    picture's topic instead of its own (its camera_info stays), for gazebo_camera's faults.
+    """
+    cmd = ['cargo', 'run', '--release', '-q', '--features', 'ros',
+           '--manifest-path', os.path.join(root, SIM_CAMERAS), '--',
+           '--ros', '--pose', 'truth', '--world', world, '--models', ':'.join(models)]
+    if not chase:
+        cmd += ['--cameras', 'front_left,front_right,rear']
+    if relay:
+        cmd += ['--image-topic', 'front_left=' + relay]
+    return cmd
 
 
 def has_sensors(path: str) -> bool:

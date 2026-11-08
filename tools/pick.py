@@ -67,6 +67,8 @@ PLANNERS = [
      ['planner:=theta_star']),
     ('diffusion', 'a model draws it, a guard checks it, the lattice if it fails (a trial)',
      ['planner:=diffusion']),
+    ('own', "our own planner: Nav2's lattice in Rust, beside Nav2's (a trial)",
+     ['planner:=own']),
 ]
 
 # Where-am-I finders that run beside the EKF and are scored (they never steer yet); with
