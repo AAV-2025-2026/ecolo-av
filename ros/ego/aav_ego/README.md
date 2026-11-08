@@ -26,6 +26,8 @@ speed, reverse speed, acceleration, jerk, steering angle and rate, and a body mo
 | | `/drivers/<d>/lag_aware` (`std_msgs/Bool`, latched) and `/drivers/<d>/cmd_vel`, for each `d` in `lag_aware_drivers`: is a lag-aware driver driving? |
 | Publishes | `/ego/actuator_cmd` (`ackermann_msgs/AckermannDriveStamped`) at `rate_hz`: speed (m/s), steering_angle (rad, + left), acceleration (m/s²: the limit used; while speeding up with `max_jerk` > 0, the eased acceleration now), steering_angle_velocity (`max_steering_rate`) |
 | | `/ego/trace` (`nav_msgs/Path`, frame `base_link`) at `trace_rate_hz`: where the car goes over `trace_horizon` s |
+| | `/ego/stop_point` (`geometry_msgs/PoseStamped`, frame `base_link`, with each trace): where a full brake now stops the car |
+| Node `look_ahead` | started by `ego.launch.py` (`look_ahead:=true`, the default): the squiggly line's numbers for the screens. Subscribes `/ego/trace`, `/ego/stop_point`, `/drivers/nav/local_plan`, `/plan`, `/local_costmap/costmap`, TF; publishes `/ego/plan_ahead` (Path, base_link) and `/ego/ahead` (DiagnosticStatus: gap_m, plan, stop_m, goal_m, obstacle_m, room_m, front_m, rear_m, half_width_m). Parameters in its docstring (`look_ahead_node.py`) |
 
 Launch arguments:
 
@@ -33,6 +35,7 @@ Launch arguments:
 |---|---|
 | `max_speed` | m/s, a lower forward cap than `ego.yaml`'s (a first drive on stands). Must be above 0 and at most `ego.yaml`'s |
 | `sim_max_speed` | m/s, a higher cap, up to 5.0, only with `use_sim_time:=true` |
+| `look_ahead` | `true`: also start `look_ahead` (the screens' squiggly line); `false`: ego alone |
 
 Parameters. From `config/ego.yaml`:
 
@@ -67,12 +70,15 @@ Modules:
 | `vehicle_model.py` | the car as a linear model (transfer functions, state space, margins), for tuning and the report: `VehicleModel`, `from_vehicle_yaml()`, `summary()`. Never drives the car. Used by `tools/vehicle_model.py` (`pixi run python3 tools/vehicle_model.py`, `docs/vehicle-model.md`) |
 | `lag_lead.py` | `LagLead` (the lead), `LeadTimes`, `LeadLimits`, `lead_wanted(mode, sim, aware)`, `LagAwareWatch` (whose command is it?), `command_key` |
 | `trace_ahead.py` | `Twin` (ego's copy of the car), `trace(...)` -> poses in `base_link`, `ego_commands` |
+| `stop_ahead.py` | `stop_point(cfg, state)` -> `StopPoint` (where a full brake now stops, base_link; the car model), `s_of_v` (the design's S(v)) |
+| `look_ahead.py` | the squiggly line's maths: `crop_ahead`, `gap`, `grade`, `to_goal`, `Grid`, `first_hit`, `extend`, `describe` |
+| `look_ahead_node.py` | the ROS node `look_ahead` |
 | `ego_node.py` | the ROS node `Ego` |
 
 ## Invariants
 
-- `ackermann.py`, `dynamics.py`, `vehicle_model.py`, `lag_lead.py` and `trace_ahead.py`
-  have no ROS imports. The car model is `aav_description`'s `car_model.py` (`docs/car-model.md`).
+- `ackermann.py`, `dynamics.py`, `vehicle_model.py`, `lag_lead.py`, `trace_ahead.py`,
+  `stop_ahead.py` and `look_ahead.py` have no ROS imports. The car model is `aav_description`'s `car_model.py` (`docs/car-model.md`).
 - The lag lead runs before every limit: `max_speed`, the steering limit and rate, the slews,
   the jerk and the body still apply after it. It never softens a slow-down, never changes
   direction, never touches a stop, and never runs while a lag-aware driver drives.
@@ -94,7 +100,7 @@ Modules:
 
 ## Side Effects
 
-- Publishes `/ego/actuator_cmd` and `/ego/trace`; logs the limits, what the body allows
+- Publishes `/ego/actuator_cmd`, `/ego/trace` and `/ego/stop_point` (`look_ahead`: `/ego/plan_ahead`, `/ego/ahead`); logs the limits, what the body allows
   and the lag lead's numbers at start-up, and each time the lead turns on or off.
 - No files, no hardware.
 
@@ -112,7 +118,9 @@ it; `test_ego_launch.py` skips without ROS). `pixi run test` runs everything.
 | `test_ackermann.py` | the conversion, slew, jerk, live changes |
 | `test_dynamics.py` | the body's limits |
 | `test_vehicle_model.py` | the linear model (needs numpy, scipy) |
-| `test_ego_launch.py` | the `max_speed` and `sim_max_speed` caps |
+| `test_ego_launch.py` | the `max_speed` and `sim_max_speed` caps; `look_ahead` on by default, and off |
 | `test_lag_lead.py` | the lead: when it runs, its limits, ego's limits after it, it helps on the car model |
 | `test_trace_ahead.py` | the trace and the twin |
+| `test_stop_ahead.py` | the stop point: parked, S(v), dead time, turning, backwards, no brake |
+| `test_look_ahead.py` | the plan cut ahead, the gap and its grade, the goal, the costmap's first obstacle |
 | `test_ego_node.py` | the node in this process: `/ego/trace`; the lead off for a lag-aware driver (needs ROS) |

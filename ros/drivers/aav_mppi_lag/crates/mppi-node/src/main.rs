@@ -18,6 +18,9 @@
 //!                                         /drivers/nav/cmd_vel
 //!             drivers/nav/track/status    diagnostic_msgs/DiagnosticStatus, every tick: the
 //!                                         same keys as aav_track's, plus the model and MPPI's
+//!             drivers/nav/local_plan      nav_msgs/Path, odom, every tick: the poses MPPI's
+//!                                         chosen sequence leads to (local_plan_topic), the
+//!                                         screens' faint line (aav_ego look_ahead)
 //!             drivers/nav/lag_aware       std_msgs/Bool, reliable, transient local, depth 1:
 //!                                         true when a path starts with model lag (ego's lead
 //!                                         must stay off while this drives), false when it
@@ -49,7 +52,9 @@ use rclrs::*;
 use ros_env::aav_interfaces::msg::ActuatorState;
 use ros_env::builtin_interfaces::msg::Time;
 use ros_env::diagnostic_msgs::msg::{DiagnosticStatus, KeyValue};
-use ros_env::geometry_msgs::msg::{Quaternion, Twist, TwistStamped, Vector3};
+use ros_env::geometry_msgs::msg::{
+    Point, Pose as PoseMsg, PoseStamped, Quaternion, Twist, TwistStamped, Vector3,
+};
 use ros_env::nav2_msgs::action::{FollowPath, FollowPath_Feedback, FollowPath_Result};
 use ros_env::nav2_msgs::msg::Costmap as CostmapMsg;
 use ros_env::nav_msgs::msg::{Odometry, Path};
@@ -86,6 +91,7 @@ fn main() -> Result<()> {
         lag_on: false,
         cmd: node.create_publisher(config.cmd_topic.as_str())?,
         status: node.create_publisher(config.status_topic.as_str())?,
+        local_plan: node.create_publisher(config.local_plan_topic.as_str())?,
         clock: node.get_clock(),
         logger: node.logger().clone(),
         follower,
@@ -245,6 +251,8 @@ struct Core {
     follower: AnyFollower,
     cmd: Publisher<TwistStamped>,
     status: Publisher<DiagnosticStatus>,
+    /// MPPI's chosen future, in odom: the screens' faint line.
+    local_plan: Publisher<Path>,
     clock: Clock,
     logger: Logger,
     /// (pose, speed, when) from odometry.
@@ -531,8 +539,37 @@ impl Core {
                 let loop_ms = started.elapsed().as_secs_f64() * 1000.0;
                 self.loop_max = self.loop_max.max(loop_ms);
                 self.report(loop_ms, &report);
+                self.publish_local_plan(&report.plan.poses);
             }
         }
+    }
+
+    /// MPPI's chosen future, in odom, stamped now.
+    fn publish_local_plan(&self, poses: &[Pose]) {
+        let header = Header {
+            stamp: self.stamp(),
+            frame_id: self.config.odom_frame.clone(),
+        };
+        let poses = poses
+            .iter()
+            .map(|p| PoseStamped {
+                header: header.clone(),
+                pose: PoseMsg {
+                    position: Point {
+                        x: p.x,
+                        y: p.y,
+                        z: 0.0,
+                    },
+                    orientation: Quaternion {
+                        x: 0.0,
+                        y: 0.0,
+                        z: (p.yaw / 2.0).sin(),
+                        w: (p.yaw / 2.0).cos(),
+                    },
+                },
+            })
+            .collect();
+        let _ = self.local_plan.publish(Path { header, poses });
     }
 
     fn publish(&self, v: f64, w: f64) {
@@ -610,6 +647,7 @@ struct Config {
     measured_timeout: f64,
     cmd_topic: String,
     status_topic: String,
+    local_plan_topic: String,
     lag_aware_topic: String,
     costmap_topic: String,
     use_costmap: bool,
@@ -949,6 +987,7 @@ impl Config {
             measured_timeout: d.number("measured_timeout", 0.5)?,
             cmd_topic: d.text("cmd_topic", "cmd_vel_nav")?,
             status_topic: d.text("status_topic", "/drivers/nav/track/status")?,
+            local_plan_topic: d.text("local_plan_topic", "/drivers/nav/local_plan")?,
             lag_aware_topic: d.text("lag_aware_topic", "/drivers/nav/lag_aware")?,
             costmap_topic: d.text("costmap_topic", "/local_costmap/costmap_raw")?,
             use_costmap: d.flag("use_costmap", true)?,

@@ -41,7 +41,7 @@ pixi run measure controllers --trackers mppi_lag --controllers mppi --tours lot
 |---|---|
 | Action server | `/follow_path` (`nav2_msgs/action/FollowPath`): the newest path replaces the last without a stop |
 | Subscribes | `/localization/odom/local` (Odometry); `/tf` (map -> odom, once per path); `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake` (ActuatorState, measured, while fresh); `/local_costmap/costmap_raw` (nav2_msgs/Costmap) |
-| Publishes | `/cmd_vel_nav` (TwistStamped); `/drivers/nav/track/status` (DiagnosticStatus, aav_track's keys and more); `/drivers/nav/lag_aware` (Bool, latched) |
+| Publishes | `/cmd_vel_nav` (TwistStamped); `/drivers/nav/track/status` (DiagnosticStatus, aav_track's keys and more); `/drivers/nav/local_plan` (Path, odom: MPPI's chosen future, the screens' faint line); `/drivers/nav/lag_aware` (Bool, latched) |
 
 Results: succeeded; aborted with `FAILED_TO_MAKE_PROGRESS`, `NO_VALID_CONTROL`,
 `INVALID_PATH`, `TF_ERROR`, `UNKNOWN` (no odometry); canceled.
@@ -83,6 +83,7 @@ From `config/mppi_lag.yaml`: `model` (lag or ideal), `steer_std`, `noise_correla
 |---|---|
 | `model.rs` | `CarModel`: the trait any car model plugs in through (the shared car model at merge) |
 | `lag.rs` | `LagModel`: the 0.3 spec |
+| `shared.rs` (feature `shared`) | `SharedModel`: the shared `car-model` crate behind `CarModel`, with spine-core's own speed loop (any profile) |
 | `ego.rs` | `Driven`: ego's ramps in front of any model |
 | `ideal.rs` | `IdealModel`: no lag, as Nav2's MPPI |
 | `optimizer.rs` | MPPI: sample, roll out (threads), score, softmax, Savitzky-Golay, shift |
@@ -98,7 +99,10 @@ From `config/mppi_lag.yaml`: `model` (lag or ideal), `steer_std`, `noise_correla
   the locks and e-stops all sit after `cmd_vel_nav`.
 - The maths has no ROS; the node has no maths.
 - `model_dt` must equal `1 / rate_hz` (the plan shifts one step a tick, as Nav2's).
-- Rust API Guidelines; `cargo fmt` and `cargo clippy` clean; no dependencies in the crate.
+- Rust API Guidelines; `cargo fmt` and `cargo clippy` clean; no dependencies in the crate
+  by default. The feature `shared` adds the shared `car-model` crate (ours) as
+  `SharedModel` behind `CarModel` (`shared.rs`: it drives as `LagModel` does, to 1 cm);
+  the node still runs `LagModel`.
 
 ## Side Effects
 

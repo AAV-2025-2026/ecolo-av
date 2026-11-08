@@ -164,8 +164,8 @@ def waypoints(points, tolerance=1.0, min_spacing=10.0, max_spacing=30.0):
     return out[1:] if len(out) > 1 else out
 
 
-def summary(route, count):
-    """One line for people: the length, the router's time, the waypoints."""
+def summary(route, count, who='a normal car'):
+    """One line for people: the length, the router's time (for who), the waypoints."""
     minutes = route.duration / 60.0
-    return (f'route: {route.length / 1000.0:.2f} km, about {minutes:.0f} min for a normal '
-            f'car, {count} waypoints')
+    return (f'route: {route.length / 1000.0:.2f} km, about {minutes:.0f} min for {who}, '
+            f'{count} waypoints')

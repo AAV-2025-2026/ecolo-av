@@ -7,7 +7,9 @@ car can actually follow, within its speed, acceleration, jerk, steering and body
 
 ```
 /control/cmd_vel (TwistStamped) ──▶ ego ──▶ /ego/actuator_cmd (AckermannDriveStamped, 50 Hz)
-                                       └──▶ /ego/trace (Path, base_link, 10 Hz): where it goes
+                                       ├──▶ /ego/trace (Path, base_link, 10 Hz): where it goes
+                                       └──▶ /ego/stop_point (base_link): where a full brake stops it
+look_ahead (beside ego) ──▶ /ego/plan_ahead, /ego/ahead: the screens' squiggly line
 ```
 
 ego holds the car model (`docs/car-model.md`): it can lead for the actuators' lag
@@ -29,7 +31,8 @@ ego holds the car model (`docs/car-model.md`): it can lead for the actuators' la
 
 ## Side Effects
 
-- Publishes `/ego/actuator_cmd` all the time, and `/ego/trace` at 10 Hz.
+- Publishes `/ego/actuator_cmd` all the time, `/ego/trace` and `/ego/stop_point` at 10 Hz;
+  `look_ahead` publishes `/ego/plan_ahead` and `/ego/ahead`.
 
 ## Verification
 

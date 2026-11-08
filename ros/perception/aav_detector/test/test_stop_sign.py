@@ -1,4 +1,5 @@
-from aav_detector.stop_sign import (CLEAR, GAZEBO_FOCAL_PX, PASSING, sign_distance_m,
+from aav_detector.stop_sign import (biggest_sign, CLEAR, GAZEBO_FOCAL_PX, PASSING,
+                                    sign_distance_m, sign_point,
                                     STOPPING, StopRule, StopSignWatcher)
 import pytest
 
@@ -71,3 +72,21 @@ def test_a_bigger_lens_needs_a_bigger_box():
     assert StopRule().min_height_px(950.0) == pytest.approx(151.6, abs=0.1)
     # No lens given: the rule's own (Gazebo's, or focal_px from the parameters).
     assert StopSignWatcher(StopRule(focal_px=950.0)).update(box_at(4.0, 950.0), 0.0)
+
+
+def test_the_signs_point_in_its_cameras_frame():
+    # 55 px tall with Gazebo's lens: 4.68 m along the axis; its centre 34.3 px right of cx.
+    ahead = sign_distance_m(55.0, GAZEBO_FOCAL_PX)
+    x, y, z = sign_point(354.3, 55.0, GAZEBO_FOCAL_PX, fx=343.0, cx=320.0)
+    assert (x, z) == (pytest.approx(ahead), 0.0) and y == pytest.approx(-0.1 * ahead)
+    ox, oy, oz = sign_point(354.3, 55.0, GAZEBO_FOCAL_PX, fx=343.0, cx=320.0, optical=True)
+    assert (ox, oy, oz) == (pytest.approx(0.1 * ahead), 0.0, pytest.approx(ahead))
+    # No lens yet: straight ahead.
+    assert sign_point(500.0, 55.0, GAZEBO_FOCAL_PX)[1] == 0.0
+
+
+def test_the_biggest_sign_box():
+    boxes = [('stop sign', 0.9, 30.0, 100.0), ('stop sign', 0.9, 60.0, 300.0),
+             ('person', 0.9, 200.0, 50.0), ('stop sign', 0.2, 90.0, 10.0)]
+    assert biggest_sign(boxes, 0.5) == (300.0, 60.0)
+    assert biggest_sign([], 0.5) is None

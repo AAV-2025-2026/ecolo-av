@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">52 min read · 14 sections</div></header>
+<div class="meta">55 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -29,10 +29,11 @@
 <a href="car-evening.html">Tonight: drive as is</a>
 <a href="car-day.html">Car day</a>
 <a href="car-setup.html">Car setup</a>
+<a href="rollout.html">Rolling out on the car</a>
 <a href="tests.html">Every test</a>
 <a href="know-the-car.html">Know the car</a>
-<a href="measure-the-car.html">Measure the car</a>
 <span class="sep">Learn:</span>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <a href="learn-car.html">The car, box by box</a>
@@ -47,8 +48,8 @@
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
 <a href="campus.html">The campus</a>
-<a href="maps-and-position.html">Maps and position</a>
 <span class="sep">Reference:</span>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <a href="learn-can.html">Learn: CAN</a>
 <a href="status.html">Status</a>
@@ -58,6 +59,7 @@
 <a href="switches.html">Switches</a>
 <a href="trials.html">Trials</a>
 <a href="mppi-lag.html">MPPI with lag</a>
+<a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -519,6 +521,20 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>2026-10-16</td>
 <td>sim</td>
 </tr>
+<tr>
+<td><a href="routes.html#on-the-campus">Directions on the campus</a> (<code>aav_routes</code> <code>router: campus</code>, <code>campus_graph.py</code>, <code>pixi run campus-route</code>)</td>
+<td>Ben, 7 Nov: Tesla-like directions, "higher level navigation", picked for 0.3 on the campus. Say a building's name; the route runs on the campus's own roads, the ones Nav2's map has free, one-way roads kept, with no server to start. The named places are the first piece of the site file (TODO 100)</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="stopping.html#2-the-behaviour-planner">The behaviour planner</a> (<code>aav_behaviour</code>, <code>behaviour:=true</code>, a trial): DRIVE, APPROACH, STOPPED, WAIT, GO, ASK; a speed cap on Nav2 from the stopping law for a stop sign, an obstacle in the lane, the fence and the goal; <code>/drivers/nav/behaviour/state</code></td>
+<td>Ben, 7 Nov: "we can use that to say if we have turned enough or slowing down enough". Today the sign's lock fires at cruise speed and nothing says why the car waits: this slows the car before each stop, and the locks still make every stop</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
 </tbody>
 </table></div>
 </section>
@@ -585,7 +601,7 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 </tr>
 <tr>
 <td><a href="car-model.html">One car model</a> (<code>aav_description</code> <code>car_model.py</code>, its Rust twin <code>car-model</code>): actuator lags, dead times, the steering motor and the bicycle; <code>step</code> and <code>predict</code></td>
-<td>Ben, 7 Nov: "we really want the ego to have a mathematical model for steering, braking and acceleration": ego, the simulators and the Rust drivers share one model, Python and Rust checked against the same vectors</td>
+<td>Ben, 7 Nov: "we really want the ego to have a mathematical model for steering, braking and acceleration": ego, the simulators and the Rust drivers share one model, Python and Rust checked against the same vectors. The simulator's and the Rust MPPI's <code>CarModel</code> traits take it too (feature <code>shared</code>: <code>SharedCar</code>, <code>SharedModel</code>), checked against their own copies</td>
 <td>Ben</td>
 <td>2026-11-07</td>
 <td>built</td>
@@ -600,6 +616,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <tr>
 <td><a href="car-model.html#egos-trace">ego's trace</a> (<code>/ego/trace</code>, <code>aav_ego</code> <code>trace_ahead.py</code>): where the car goes over the next 2 s, from the car model and a copy of ego</td>
 <td>Ben's idea, 7 Nov: "a trace of where it's going (like a tail but in front)", so drivers can match it to their plan and correct</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="stopping.html#1-the-stopping-law">One stopping law</a> (<code>aav_description</code> <code>stop_law.py</code>: S(v), the cap v_cap(d), from the car model's brake, lags and speed loop)</td>
+<td>Five parts of the stack each had their own answer to "how far do I need to stop?", and they disagreed (the design, TODO 110). Now one curve: the trial trackers use it, ego logs it, the point driver can (<code>stop_law:=hybrid</code>), the behaviour planner caps Nav2 with it. The locks keep their own laws; a test checks the geofence lock always counts on more room than the car model needs</td>
 <td>Ben</td>
 <td>2026-11-07</td>
 <td>built</td>
@@ -1128,6 +1151,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>sim</td>
 </tr>
 <tr>
+<td><a href="hud.html#the-squiggly-line-ahead">The squiggly line</a> (AHEAD on the HUD, key T on the developer window): ego's trace bold, coloured by how far it strays from the plan; the plan faint; a bar where the front bumper stops on a full brake now (<code>/ego/stop_point</code>, from the car model); the room to the goal or the first obstacle. Worked out once in <code>aav_ego</code> (<code>stop_ahead.py</code>, <code>look_ahead</code>), drawn by both screens, pretend data too</td>
+<td>Ben, 7 Nov, of his Tesla's line: "gets shorter when braking and longer when accelerating and it curves to show the predictive path", and "show that we will stop based on the model in the correct location"</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
 <td><a href="simulation.html">Screens as heartbeats</a> (<code>watch_screens:=dev_window,hw_panel</code>)</td>
 <td>Test what stops the car when a screen dies: the window and the hardware panel each beat, and with <code>spine:=true</code> the spine's own state machine latches. Refused for the real car</td>
 <td>Ben</td>
@@ -1308,6 +1338,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Numbers for how well the car sped up, held its speed and stopped on B, the same for Gazebo and car runs; a tape-measured stop splits the GPS error from the control error</td>
 <td>Ben</td>
 <td>2026-10-26</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="stopping.html#3-where-the-car-really-stops">Stop-point check</a> (<code>pixi run sim-check --stop-point</code>, <code>tools/stop_points.py</code>)</td>
+<td>Ben, 7 Nov: where the car really stops after an e-stop against <code>/ego/stop_point</code>, by truth and by localization, at 0.5, 0.75 and 1 m/s (all within 0.25 m in Gazebo, 8 Nov); the same scorer can take a car bag once the real numbers are measured</td>
+<td>Ben</td>
+<td>2026-11-07</td>
 <td>built</td>
 </tr>
 </tbody>

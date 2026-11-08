@@ -57,6 +57,18 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
                                             the loop, at 1 and 3 m/s, drives only: two
                                             more runs; --spine-points-only skips the
                                             road world's run)
+    pixi run sim-check --stop-point        (where the car really stops against where ego
+                                            said, /ego/stop_point: scripted drives at 1,
+                                            1.5 and 2 m/s, then the e-stop (a full brake,
+                                            the spine in the loop); truth and localization.
+                                            The empty world, one more run;
+                                            --stop-point-only skips the road world's run.
+                                            docs/stopping.md)
+    pixi run sim-check --behaviour         (the behaviour trial, behaviour:=true: an
+                                            obstacle in the lane and a Nav2 goal, each
+                                            slowed by the speed cap, and with -e ml
+                                            --perception the stop sign too; one more run.
+                                            --behaviour-only skips the road world's run)
 
 bench_check.py tests the car's software against pretend sensors that draw a flat world;
 this tests it against Gazebo's camera and radar stand-in, which see the road world
@@ -191,6 +203,7 @@ from aav_interfaces.action import DriveToPoint, ScriptedDrive  # noqa: E402
 from aav_interfaces.msg import ActuatorState, SpineOutputs, VehicleStatus  # noqa: E402
 from aav_lane_geometry.msg import LaneGeometry  # noqa: E402
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus  # noqa: E402
+from geometry_msgs.msg import PoseStamped, TwistStamped  # noqa: E402
 import gz_crash  # noqa: E402
 from nav2_msgs.action import NavigateToPose  # noqa: E402
 from nav2_msgs.msg import CollisionMonitorState  # noqa: E402
@@ -207,6 +220,8 @@ from sensor_msgs.msg import CameraInfo, Image, LaserScan, PointCloud2  # noqa: E
 from sensor_msgs_py import point_cloud2  # noqa: E402
 from std_msgs.msg import Bool, String, UInt64  # noqa: E402
 from std_srvs.srv import SetBool, Trigger  # noqa: E402
+import stop_points  # noqa: E402
+import tf2_ros  # noqa: E402
 from vision_msgs.msg import Detection2DArray  # noqa: E402
 from visualization_msgs.msg import Marker  # noqa: E402
 import yaml  # noqa: E402
@@ -226,7 +241,8 @@ RADAR_TOPICS = ('/sensors/radar/points', '/perception/radar/clusters',
                 '/perception/radar/cluster_boxes')
 # What only runs with Nav2 (navigation.launch.py): the map, and stop_hold beside
 # collision_monitor. A nav:=false run checks the contract without them.
-NAV_TOPICS = ('/map', '/safety/stop_hold/lock', '/global_costmap/costmap')
+NAV_TOPICS = ('/map', '/safety/stop_hold/lock', '/global_costmap/costmap',
+              '/local_costmap/costmap')
 RADAR_FIELDS = ['x', 'y', 'z', 'intensity', 'velocity']   # the TI driver's
 LIDAR_RAYS = (1800, 16)     # the simulated roof lidar: steps around, beams (sensors xacro)
 
@@ -361,8 +377,25 @@ class Probe(Node):
         # starts as soon as the camera sees the lane, before its check begins.
         self.track, self.lanes, self.image_stamps, self.cloud_stamps = [], [], [], []
         self.create_subscription(Odometry, '/vehicle/sim/truth', self.on_truth, 10)
-        self.create_subscription(Odometry, '/localization/odom/global',
-                                 lambda m: setattr(self, 'glob', m), 10)
+        self.glob_track = []     # (t, x, y, yaw, v) of the global EKF, for --stop-point
+        self.create_subscription(Odometry, '/localization/odom/global', self.on_glob, 10)
+        # (stamp, v) of the one command ego obeys, for --stop-point
+        self.commands = []
+        self.create_subscription(TwistStamped, '/control/cmd_vel',
+                                 lambda m: self.commands.append(
+                                     (seconds(m.header.stamp), m.twist.linear.x)), 10)
+        # (stamp, x, y) of ego's stop point, base_link at its stamp, and /tf for it
+        self.stop_points = []
+        self.create_subscription(PoseStamped, '/ego/stop_point',
+                                 lambda m: self.stop_points.append(
+                                     (seconds(m.header.stamp), m.pose.position.x,
+                                      m.pose.position.y)), 10)
+        self.tf = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf, self)
+        # (t, state, reason, cap, left) from the behaviour trial (--behaviour)
+        self.behaviour = []
+        self.create_subscription(DiagnosticStatus, '/drivers/nav/behaviour/state',
+                                 self.on_behaviour, 10)
         self.create_subscription(LaneGeometry, '/perception/lane/geometry', self.on_lane, 10)
         self.create_subscription(Image, '/sensors/camera/front_left/image_raw', self.on_image, 2)
         self.create_subscription(CameraInfo, '/sensors/camera/front_left/camera_info',
@@ -431,6 +464,16 @@ class Probe(Node):
         self.create_subscription(DiagnosticStatus, '/perception/voxels/status',
                                  lambda m: self.voxels.append({v.key: v.value for v in m.values}),
                                  10)
+
+    def on_glob(self, msg):
+        self.glob = msg
+        self.glob_track.append((seconds(msg.header.stamp), msg.pose.pose.position.x,
+                                msg.pose.pose.position.y, yaw_of(msg), msg.twist.twist.linear.x))
+
+    def on_behaviour(self, msg):
+        v = {kv.key: kv.value for kv in msg.values}
+        self.behaviour.append((self.now(), v.get('state', ''), v.get('reason', ''),
+                               float(v.get('cap_mps', 'nan')), float(v.get('left_m', 'nan'))))
 
     def on_truth(self, msg):
         self.truth = msg
@@ -1954,6 +1997,192 @@ VOXELS = False   # --voxels: every session with the lidar takes voxels:=true
 KISS_EKF = False  # --kiss-ekf: every session with the lidar takes kiss_ekf:=true
 
 
+# m/s: --stop-point's drives. The spine caps the car at its MAX_SPEED, 1.0 m/s (spine-core
+# spine.rs, Arsh, 6 Nov): a safety lock, so the drives stay under it.
+STOP_SPEEDS = (0.5, 0.75, 1.0)
+
+
+def programs_held(probe, wait=120.0):
+    """
+    Wait until programs may drive; return '' then, or why they are still held.
+
+    The geofence holds them until the global pose settles (STARTING), the watchdog while a
+    sensor is late: a drive sent before then runs while twist_mux holds it.
+    """
+    fence = []
+    sub = probe.create_subscription(String, '/safety/geofence/state',
+                                    lambda m: fence.append(m.data), 10)
+    ready = probe.spin_for(wait, lambda: bool(fence) and fence[-1].startswith('OK')
+                           and probe.lock is False)
+    probe.destroy_subscription(sub)
+    return '' if ready else (f'programs still held after {wait:g} s: geofence '
+                             f'{fence[-1] if fence else "silent"}, watchdog {probe.state}')
+
+
+def check_stop_point(probe):
+    """
+    Drive at each of STOP_SPEEDS, then the e-stop: check the car stops where ego said.
+
+    With the spine in the loop an e-stop is a full brake, what /ego/stop_point predicts
+    (aav_ego stop_ahead.py: the shared car model, full brake now). The prediction is the
+    first stop point ego stamped at or after the press; it is moved into the map frame by
+    /tf at its stamp. Truth: Gazebo's, along the heading at that stamp. Localization: the
+    global EKF's stop against the predicted point. Then the e-stop is let go and the spine
+    armed again for the next drive.
+    """
+    from aav_description.car_model import ActuatorConfig
+    from aav_description.stop_law import from_car_model
+    if not probe.drive.wait_for_server(timeout_sec=20.0):
+        result('stop point', False, 'no scripted driver')
+        return
+    with open(os.path.join(ROOT, 'ros', 'ego', 'aav_ego', 'config', 'ego.yaml')) as f:
+        ego = yaml.safe_load(f)['ego']['ros__parameters']
+    law = from_car_model(ActuatorConfig.from_vehicle(vehicle.load()),
+                         ego['max_deceleration'], ego['max_jerk'])
+    waiting = programs_held(probe)
+    if waiting:
+        result('stop point', False, waiting)
+        return
+    stops = []
+    stem = os.path.splitext(LAUNCH.get('log', '/tmp/aav-sim-check.log'))[0]
+    for speed in STOP_SPEEDS:
+        name = f'stop point {speed:g} m/s'
+        probe.spin_for(30.0, lambda: abs(probe.speed()) < STILL)
+        if not probe.armed():
+            probe.arm_and_hold()
+        begin = probe.now()
+        sent = probe.drive.send_goal_async(ScriptedDrive.Goal(
+            target_speed=speed, acceleration=0.5, deceleration=1.0, hold_time=30.0))
+        probe.spin_for(10.0, sent.done)
+        if not sent.done() or not sent.result().accepted:
+            result(name, False, 'the scripted drive was refused')
+            continue
+        handle = sent.result()
+        # Steady at the speed for 1.5 s (Gazebo's time), then the e-stop.
+        steady = []
+        probe.spin_for(60.0, lambda: (steady.append(probe.now())
+                                      if abs(probe.speed() - speed) < 0.05 else steady.clear())
+                       or (steady and steady[-1] - steady[0] > 1.5))
+        t0 = probe.now()
+        probe.estop.publish(Bool(data=True))
+        probe.spin_for(30.0, lambda: probe.now() - t0 > 2.0 and abs(probe.speed()) < STILL)
+        top = held(probe, 2.0, press=probe.estop)
+        finish(probe, handle)
+        track = [stop_points.Sample(*row) for row in probe.track]
+        glob = [stop_points.Sample(*row) for row in probe.glob_track]
+        with open(f'{stem}-{speed:g}.csv', 'w') as out:
+            out.write('kind,t,x,y,yaw,v\n')
+            out.writelines(f'stop_point,{t:.3f},{x:.4f},{y:.4f},,\n'
+                           for t, x, y in probe.stop_points if t >= begin)
+            out.writelines(f'truth,{s.t:.3f},{s.x:.4f},{s.y:.4f},{s.yaw:.4f},{s.v:.4f}\n'
+                           for s in track if s.t >= begin)
+            out.writelines(f'ekf,{s.t:.3f},{s.x:.4f},{s.y:.4f},{s.yaw:.4f},{s.v:.4f}\n'
+                           for s in glob if s.t >= begin)
+        said = next(((t, x, y) for t, x, y in probe.stop_points if t >= t0), None)
+        end = stop_points.stopped(track, t0, STILL)
+        origin = stop_points.at(track, said[0]) if said else None
+        rearmed, words = rearm(probe, top)
+        if said is None or origin is None or end is None:
+            result(name, False, 'no /ego/stop_point after the press' if said is None
+                   else 'never stood still')
+            continue
+        if origin.v < 0.5 * speed:
+            result(name, False, f'the car only reached {origin.v:.2f} m/s: no stop to check')
+            continue
+        st, sx, sy = said
+        predicted = math.hypot(sx, sy)
+        localized = None
+        try:
+            from rclpy.time import Time
+            tf = probe.tf.lookup_transform('map', 'base_link', Time(seconds=st))
+            q = tf.transform.rotation
+            yaw = math.atan2(2.0 * (q.w * q.z + q.x * q.y), 1.0 - 2.0 * (q.y * q.y + q.z * q.z))
+            o = stop_points.Sample(st, tf.transform.translation.x, tf.transform.translation.y,
+                                   yaw, 0.0)
+            g1 = stop_points.at(glob, end.t + 1.0)
+            if g1 is not None:
+                localized = stop_points.along(o, g1)
+        except Exception as e:  # noqa: B902 - no TF: no localization's number
+            print(f'no TF at the stamp of the stop point: {e}', flush=True)
+        stop = stop_points.Stop(speed=origin.v, predicted=predicted,
+                                truth=stop_points.along(origin, end), localized=localized,
+                                law=law.distance(origin.v))
+        stops.append(stop)
+        lag = f'; the stop point {1000 * (st - t0):.0f} ms after the press'
+        result(name, stop.ok, stop.words() + lag + ('' if rearmed else f'; {words}'))
+    located = [s.localized_ok for s in stops if s.localized_ok is not None]
+    result('stop point, localization', all(located) if located else None,
+           f'{sum(located)} of {len(located)} within the tolerance + '
+           f'{stop_points.TOLERANCE:g} m (the global EKF, by /tf at the stamp of the stop point)')
+
+
+def behaviour_seen(probe, since):
+    """Return the behaviour states seen since `since`, in order, each once: 'STATE(reason)'."""
+    seen = []
+    for t, state, reason, *_ in probe.behaviour:
+        word = f'{state}({reason})' if reason not in ('', '-') else state
+        if t >= since and (not seen or seen[-1] != word):
+            seen.append(word)
+    return seen
+
+
+def lowest_cap(probe, since):
+    caps = [cap for t, _, _, cap, _ in probe.behaviour if t >= since and cap > 0.0]
+    return min(caps) if caps else None
+
+
+def check_behaviour(probe, sign=False):
+    """
+    Check the behaviour trial (behaviour:=true): it slows for each stop; the locks still stop.
+
+    With `sign`, the stop sign first (check_stop_sign's rules, plus the speed as the lock
+    fired); then an obstacle in the lane (check_obstacle's rules, plus the speed as the
+    stop zone fired); then a Nav2 goal (reached, and how far off it stopped).
+    """
+    if not probe.spin_for(30.0, lambda: bool(probe.behaviour)):
+        result('behaviour', False, 'nothing on /drivers/nav/behaviour/state')
+        return
+    waiting = programs_held(probe)
+    if waiting:
+        result('behaviour', False, waiting)
+        return
+    if sign:
+        since = probe.now()
+        fired = []
+        sub = probe.create_subscription(
+            Bool, '/perception/stop_sign',
+            lambda m: fired.append(abs(probe.speed())) if m.data and not fired else None, 10)
+        check_stop_sign(probe)
+        probe.destroy_subscription(sub)
+        seen = behaviour_seen(probe, since)
+        at = f'{fired[0]:.2f} m/s' if fired else 'never'
+        result('behaviour: sign', 'APPROACH(sign)' in seen and bool(fired) and fired[0] <= 0.5,
+               f'speed as the lock fired: {at}; lowest cap {lowest_cap(probe, since)}; '
+               f'states {" > ".join(seen)}')
+    since, monitor = probe.now(), len(probe.monitor)
+    speed_at = []
+
+    def watch():
+        if not speed_at and any(a == CollisionMonitorState.STOP and p == 'StopZone'
+                                for a, p in probe.monitor[monitor:]):
+            speed_at.append(abs(probe.speed()))
+        return False
+
+    timer = probe.create_timer(0.05, watch)
+    check_obstacle(probe, name='behaviour: obstacle (the stop zone)')
+    probe.destroy_timer(timer)
+    seen = behaviour_seen(probe, since)
+    at = f'{speed_at[0]:.2f} m/s' if speed_at else 'never'
+    result('behaviour: obstacle', 'APPROACH(obstacle)' in seen,
+           f'speed as the stop zone fired: {at}; lowest cap {lowest_cap(probe, since)}; '
+           f'states {" > ".join(seen)}')
+    since = probe.now()
+    check_nav_goal(probe)
+    seen = behaviour_seen(probe, since)
+    result('behaviour: goal', 'APPROACH(goal)' in seen,
+           f'lowest cap {lowest_cap(probe, since)}; states {" > ".join(seen)}')
+
+
 def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spine=False,
             world='road', retry=True):
     """
@@ -2113,7 +2342,7 @@ def main():
     log = os.environ.get('AAV_SIM_LOG', '/tmp/aav-sim-check.log')
     logs = [log]
     if not {'--drive-to-point-only', '--speed-steps-only', '--spine-points-only',
-            '--lane-only'} & set(args):
+            '--stop-point-only', '--behaviour-only', '--lane-only'} & set(args):
         # With --obstacle the planner is blind to the box, so the stop zone must stop the car.
         session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}']
                 + (['plan_around:=false'] if '--obstacle' in args else []),
@@ -2192,6 +2421,23 @@ def main():
         session(['spine:=true', 'nav:=false', 'lidar:=false', 'radar:=false', 'sim_speed:=2'],
                 [lambda probe: check_speed_steps(probe, profile)], logs[-1],
                 f'speed steps, spine, {profile}', ignore=NAV_TOPICS, spine=True, world='empty')
+    if '--stop-point' in args or '--stop-point-only' in args:
+        # Its own run: the empty world, nothing else driving, ego's cap at the top speed.
+        stem, ext = os.path.splitext(log)
+        logs.append(f'{stem}-stop-point{ext}')
+        session(['spine:=true', 'nav:=false', 'lidar:=false', 'radar:=false',
+                 f'sim_speed:={max(STOP_SPEEDS):g}'],
+                [check_stop_point], logs[-1], 'stop point', ignore=NAV_TOPICS, spine=True,
+                world='empty')
+    if '--behaviour' in args or '--behaviour-only' in args:
+        # Its own run: the trial on, the planner blind to the box (the cap must slow, the
+        # stop zone must stop), the lidar on for the lane ahead.
+        stem, ext = os.path.splitext(log)
+        logs.append(f'{stem}-behaviour{ext}')
+        session(['behaviour:=true', 'lidar:=true', 'plan_around:=false',
+                 f'perception:={str(perception).lower()}'],
+                [lambda probe: check_behaviour(probe, sign=perception)], logs[-1],
+                'behaviour')
     if {'--lane', '--lane-only'} & set(args):
         # Its own run: control_interface drives whenever it sees the lane, so it would take
         # the wheel between the other checks. Nothing else drives here: no Nav2.

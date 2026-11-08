@@ -1,0 +1,55 @@
+# The campus's site file: Carleton (docs/routes.md, "On the campus").
+#
+# The first piece of TODO 100's site file. Only the parts directions need are here: which
+# roads the car may use, and the named places. The fence, keep-out areas, speed zones and
+# missions come with TODO 100's design; they'll join this file, not a new one.
+#
+# street_router (router: campus) and `pixi run campus-route` read it. Any building or lot
+# OpenStreetMap names works too ("Nesbitt Building", "P5"); these are the ones we use often,
+# and a place here wins over OpenStreetMap's of the same name.
+#
+# A place's lat/lon is the middle of its building or lot, from OpenStreetMap; the route ends
+# on the nearest road the car may use. Add `stop: [lat, lon]` to a place to say exactly
+# where the car pulls up (a drop-off point measured on the day).
+#
+# Map data (c) OpenStreetMap contributors, ODbL.
+
+site: campus
+# Must be navsat.yaml's datum (test_campus_graph.py checks): a site drawn on another datum
+# would put every place in the wrong spot.
+datum: [45.3860, -75.6960]
+# The same file `pixi run campus` builds Gazebo's world and Nav2's map from.
+osm: maps/carla/carleton.osm
+
+# Road kinds the car may use (OpenStreetMap's highway=*). A subset of what campus_world.py
+# draws as free on Nav2's map. Left out: trunk and primary (Bronson Avenue, the Airport
+# Parkway): the car stays on the campus. Never footways, paths or cycleways.
+roads: [secondary, secondary_link, tertiary, unclassified, residential, service]
+oneway: true          # one-way roads are driven one way only
+max_snap: 80.0        # m: a place further than this from any road has no route
+
+places:
+  # Engineering, the team's end of the campus
+  - {name: Mackenzie Building, kind: building, lat: 45.384744, lon: -75.697810}
+  - {name: Minto Centre, kind: building, lat: 45.385289, lon: -75.697086,
+     osm: The Minto Centre for Advanced Studies in Engineering}
+  - {name: Canal Building, kind: building, lat: 45.384187, lon: -75.698486}
+  - {name: Engineering Design Center, kind: building, lat: 45.384870, lon: -75.698365}
+  # The middle
+  - {name: Nicol Building, kind: building, lat: 45.384276, lon: -75.696806}
+  - {name: Richcraft Hall, kind: building, lat: 45.382378, lon: -75.696167}
+  - {name: Herzberg Laboratories, kind: building, lat: 45.382203, lon: -75.697510}
+  - {name: MacOdrum Library, kind: building, lat: 45.381863, lon: -75.699829}
+  - {name: Dunton Tower, kind: building, lat: 45.382679, lon: -75.699318}
+  - {name: Tory Building, kind: building, lat: 45.382693, lon: -75.698136}
+  - {name: Paterson Hall, kind: building, lat: 45.381806, lon: -75.698468}
+  - {name: Nesbitt Building, kind: building, lat: 45.383831, lon: -75.693321}
+  # Sport
+  - {name: Fieldhouse, kind: building, lat: 45.386829, lon: -75.694404}
+  - {name: Athletics Building, kind: building, lat: 45.386240, lon: -75.694255}
+  # Parking: P4 is where the car starts in Gazebo
+  - {name: P1, kind: parking, lat: 45.380794, lon: -75.700533}
+  - {name: P4, kind: parking, lat: 45.385364, lon: -75.695372}
+  - {name: P5, kind: parking, lat: 45.387222, lon: -75.693290}
+  - {name: P6, kind: parking, lat: 45.389390, lon: -75.698730}
+  - {name: P18, kind: parking, lat: 45.389311, lon: -75.697067, osm: Parking Garage (P18)}

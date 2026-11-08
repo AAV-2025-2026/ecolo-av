@@ -18,3 +18,7 @@ watchdog: /safety/sensor_watchdog/state          # String: the sensor watchdog
 goal: /goal_pose                                 # PoseStamped, out: only in developer mode
 screen_alive: /hud/dev_window/heartbeat         # UInt64, out: only in developer mode, frames drawn
 estop: /safety/estop                             # Bool, out: only ever true, developer mode
+trace: /ego/trace                                # Path, base_link: ego's trace, the squiggly line's bold line
+plan_ahead: /ego/plan_ahead                      # Path, base_link: what the planner wants, its faint line
+stop_point: /ego/stop_point                      # PoseStamped, base_link: where a full brake now stops
+ahead: /ego/ahead                                # DiagnosticStatus: the gap, the stop, the room
