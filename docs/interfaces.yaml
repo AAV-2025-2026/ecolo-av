@@ -839,6 +839,11 @@ topics:
     pub: []
     sub: [street_router]
     note: Where to go, as a map-frame point (RViz, or a screen); street_router turns it into lat/lon with /toLL, then as /drivers/nav/route/destination.
+  /drivers/nav/route/place:
+    type: std_msgs/msg/String
+    pub: []
+    sub: [street_router]
+    note: Where to go, by name ("Mackenzie Building", "P4", "minto"), with router campus only. The site file (aav_routes config/campus_site.yaml) and OpenStreetMap's named buildings and lots; the route runs on the campus's own road graph (campus_graph.py) to the nearest road the car may use. A name that fits several, or none, says why on /drivers/nav/route/status.
   /drivers/nav/route/waypoints:
     type: geographic_msgs/msg/GeoPath
     pub: [street_router]

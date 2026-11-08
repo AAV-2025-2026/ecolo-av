@@ -19,7 +19,7 @@ to ego. A person always outranks the computer.
 | [aav_track](./aav_track/README.md) | trial path followers (pure pursuit, Stanley, LQR, MPC, MPC with speed) in controller_server's place: `tracker:=` (`docs/trials.md`) | `cmd_vel_nav`, inside Nav2's slot | (20) |
 | [aav_mppi_lag](./aav_mppi_lag/README.md) | a trial follower: Nav2's MPPI in Rust, its model with the actuators' lag, in controller_server's place: `tracker:=mppi_lag` ([page](../../docs/mppi-lag.md)); says `/drivers/nav/lag_aware` | `cmd_vel_nav`, inside Nav2's slot | (20) |
 | [aav_diffusion_planner](./aav_diffusion_planner/README.md) | a trial planner: a model draws the path, a guard checks it, the lattice's path if it fails: `planner:=diffusion` (`docs/trials.md`) | `/plan`, inside Nav2's slot | (20) |
-| [aav_routes](./aav_routes/README.md) | street routes (Valhalla or OSRM) as Nav2 GPS waypoints | `/drivers/nav/route/*` | — |
+| [aav_routes](./aav_routes/README.md) | street routes (Valhalla or OSRM) as Nav2 GPS waypoints; directions on the campus by a place's name (its own road graph) | `/drivers/nav/route/*` | — |
 | [aav_language](./aav_language/README.md) | plain-English driving: MCP drive tools and a local-model agent | uses the actions above | — |
 
 The lane follower on the AI slot (priority 10) lives in `ros/perception/aav_lane_geometry`.

@@ -3,6 +3,14 @@
 The current work list, newest first. Tick items off as they land; each tick = a commit.
 Ben's messages, word for word: `docs/history/messages-*.md`.
 
+## 0.3: directions on the campus (7 Nov)
+
+Ben, 7 Nov: Tesla-like "higher level navigation for directions"; for 0.3, on the campus. The page: [On the campus](docs/routes.md#on-the-campus).
+
+| # | Task | Status |
+|---|---|---|
+| 140 | **Directions on the campus**: a place's name (or lat/lon, or a map point) to a route on the campus's own road graph (`campus_graph.py`, from the `.osm` Gazebo's world comes from), cut into Nav2 GPS waypoints; `street_router router:=campus`, `/drivers/nav/route/place`; `pixi run campus-route`; 19 named places in the site file (`campus_site.yaml`, TODO 100's first piece) | ✅ 7 Nov built and tested without ROS. ⬜ Gazebo run (below). ⬜ real drop-off points (`stop:`) measured on the day; a screen to pick a place (the screens' agent) |
+
 ## 0.3: ego knows the car (7 Nov)
 
 Ben, 7 Nov: "we really want the ego to have a mathematical model for steering, braking and acceleration ... have the algorithms know about lag". The page: [one car model](docs/car-model.md).

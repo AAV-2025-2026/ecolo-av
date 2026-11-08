@@ -1,7 +1,8 @@
 # Street routes (PLAN S8)
 
 Pick a destination, get the way there **along real streets**, and hand it to Nav2 as GPS
-waypoints. Built 16 October.
+waypoints. Built 16 October. **On the campus** (7 Nov): by a building's name, on the
+campus's own road graph, no server: [On the campus](#on-the-campus).
 
 !!! warning "For real streets later: the lot first"
   This is for driving on streets, after the car has proven itself in a lot (PLAN C8, C9).
@@ -63,6 +64,88 @@ tools/ros.sh ros2 service call /drivers/nav/route/follow std_srvs/srv/Trigger
 `ROUTES_DIR=/elsewhere` puts it all somewhere else; `ROUTES_PBF=file.osm.pbf` uses your
 own extract (Geofabrik's Ontario, 1 GB, for a bigger area).
 
+## On the campus
+
+Directions to a building, Tesla-like (Ben, 7 Nov: TODO 140). Say where; the car gets the
+way along the campus roads, as waypoints for Nav2.
+
+```
+"Fieldhouse"  ──►  the place's middle  ──►  the nearest road the car may use
+car's GPS fix ──►  the nearest road    ──►  shortest way on the campus graph ──► waypoints
+```
+
+### Run it
+
+```bash
+pixi run campus                    # once: the map, the world (about 10 s)
+pixi run campus-route Fieldhouse   # no ROS: 453 m from P4 ...
+pixi run campus-route --list       # every place it knows
+```
+
+In Gazebo (the car starts in lot P4):
+
+```bash
+pixi run sim world:=campus reversing:=false gui:=false rviz:=false geofence_radius:=600
+tools/ros.sh --local ros2 launch aav_routes street_router.launch.py \
+  router:=campus use_sim_time:=true speed:=2.5
+tools/ros.sh --local ros2 topic pub --once /drivers/nav/route/place std_msgs/msg/String "{data: Fieldhouse}"
+tools/ros.sh --local ros2 service call /drivers/nav/route/follow std_srvs/srv/Trigger
+```
+
+`geofence_radius:=600`: the fence is a circle round the start, 200 m by default; most of
+the campus is further.
+
+| Say where | How |
+|---|---|
+| a place's name | `/drivers/nav/route/place`: "Mackenzie Building", "minto", "P4" (any case, part of a name if only one fits) |
+| a lat/lon | `/drivers/nav/route/destination`, as on streets |
+| a click on a map | `/drivers/nav/route/goal` (a map point), as on streets |
+
+The route shows where the screens already draw `/drivers/nav/route/path` (`nav_msgs/Path`,
+map frame, latched): the map window, RViz, Foxglove.
+
+### Why our own small graph, not Valhalla
+
+| | Campus graph (picked) | Valhalla on a campus extract |
+|---|---|---|
+| Server | none: in `street_router` | `valhalla_service`, tiles built first |
+| Its map | `maps/carla/carleton.osm`, the one Gazebo's world and Nav2's map come from | a `.pbf`: a second download or a conversion |
+| Roads | exactly the kinds `campus_world.py` draws free on Nav2's map | its car profile avoids parking aisles and private service roads: most of a campus |
+| Size | 1,665 corners, 1,749 road pieces; a route in about 2 ms | built for a city |
+| Licence | ours | MIT |
+
+So a small Dijkstra in Python, with tests. Valhalla stays for real streets.
+
+### The site file
+
+`ros/drivers/aav_routes/config/campus_site.yaml`: the first piece of TODO 100's site file.
+
+| Part | What |
+|---|---|
+| `datum` | must be `navsat.yaml`'s (a test checks) |
+| `osm` | the map the graph is built from |
+| `roads` | road kinds the car may use. Not trunk or primary (Bronson, the Airport Parkway); never footways, paths, cycleways, tunnels, `access=no` |
+| `oneway` | one-way roads driven one way (true) |
+| `max_snap` | 80 m: a place further from any road has no route |
+| `places` | 19 named places: engineering, the middle, sport, lots. Any building or lot OpenStreetMap names works too (76 in all) |
+
+A place's point is the middle of its building. The route ends on the nearest road to it:
+up to 56 m away (Tory). Add `stop: [lat, lon]` to a place for the real drop-off point.
+
+### Routes from P4 (no ROS)
+
+| To | Length |
+|---|---|
+| Fieldhouse | 453 m |
+| Richcraft Hall | 592 m |
+| P18 | 634 m |
+| Minto Centre | 956 m |
+| Mackenzie Building | 1,091 m |
+| MacOdrum Library | 1,480 m |
+
+Long ways round are the map's: one-way roads, and buildings whose nearest road is a dead
+end. Gazebo's map lets Nav2 go either way on a one-way road; the route doesn't.
+
 ## The parts
 
 | Part | File | Does |
@@ -70,6 +153,9 @@ own extract (Geofabrik's Ontario, 1 GB, for a bigger area).
 | The logic, no ROS | `ros/drivers/aav_routes/aav_routes/osrm_route.py` | the request (Valhalla or OSRM), the answer (GeoJSON or an encoded polyline), the waypoints |
 | The node | `aav_routes/street_router.py` | the fix, the destination, the router over HTTP, `/fromLL`, `/toLL`, the follow service |
 | Its settings | `config/street_router.yaml` | router URL, spacing, `max_length` |
+| The campus graph, no ROS | `aav_routes/campus_graph.py` | roads from the `.osm`, places, snapping, Dijkstra |
+| The campus's site file | `config/campus_site.yaml` | roads the car may use, named places |
+| Directions without ROS | `tools/campus_route.py` | `pixi run campus-route` |
 | The map window | `aav_hud` (Rust) | draws `/drivers/nav/route/path` in violet, under Nav2's blue plan |
 | The tasks | `tools/get_routes.sh`, `tools/router.sh` | download and build; start the router |
 
@@ -91,6 +177,7 @@ The waypoints reuse the route maths from the 2025-26 HUD's back end, now
 |---|---|---|
 | `/drivers/nav/route/destination` | `geographic_msgs/GeoPointStamped` | in: where to go |
 | `/drivers/nav/route/goal` | `geometry_msgs/PoseStamped` (map) | in: where to go, as a map point |
+| `/drivers/nav/route/place` | `std_msgs/String` | in: where to go, by name (`router: campus` only) |
 | `/drivers/nav/route/waypoints` | `geographic_msgs/GeoPath`, latched | out: the GPS waypoints |
 | `/drivers/nav/route/path` | `nav_msgs/Path` (map), latched | out: the route, to draw |
 | `/drivers/nav/route/status` | `std_msgs/String`, latched | out: "route: 1.99 km, about 4 min..." or why not |
