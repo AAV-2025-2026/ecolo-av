@@ -22,7 +22,17 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
                                             the car must stop, and say why: 5 more minutes)
     pixi run sim-check --faults --no-watchdog   (the same without the sensor watchdog: a report
                                             of what the stack does on its own, no pass or fail)
-    pixi run sim-check --no-lidar          (without the simulated roof lidar: lidar:=false)
+    pixi run sim-check --costmap own       (every run with our own costmaps beside Nav2's,
+                                            costmap:=own, aav_costmap; the obstacle legs
+                                            then also report each costmap process's CPU,
+                                            our update time, and Nav2's local costmap
+                                            against ours while the car stands still)
+    pixi run sim-check --tracker mppi_lag  (every run with that path follower, tracker:=;
+                                            with --costmap own it reads our costmap)
+    pixi run sim-check --legs-only --lidar-obstacle --plan-around
+                                           (only the extra runs named, not the road
+                                            world's first run: the costmap's scoring)
+    pixi run sim-check --no-lidar         (without the simulated roof lidar: lidar:=false)
     pixi run sim-check --voxels            (every run with the lidar takes voxels:=true: Nav2
                                             reads the lidar as cubes, aav_voxels, instead of
                                             the flat scan; with --lidar-obstacle, the trial's
@@ -202,11 +212,12 @@ from aav_gazebo.faults import NODES as FAULT_NODES  # noqa: E402
 from aav_interfaces.action import DriveToPoint, ScriptedDrive  # noqa: E402
 from aav_interfaces.msg import ActuatorState, SpineOutputs, VehicleStatus  # noqa: E402
 from aav_lane_geometry.msg import LaneGeometry  # noqa: E402
+import costmap_diff  # noqa: E402
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus  # noqa: E402
 from geometry_msgs.msg import PoseStamped, TwistStamped  # noqa: E402
 import gz_crash  # noqa: E402
 from nav2_msgs.action import NavigateToPose  # noqa: E402
-from nav2_msgs.msg import CollisionMonitorState  # noqa: E402
+from nav2_msgs.msg import CollisionMonitorState, Costmap  # noqa: E402
 from nav_msgs.msg import OccupancyGrid, Odometry  # noqa: E402
 import numpy  # noqa: E402
 import rclpy  # noqa: E402
@@ -310,6 +321,87 @@ def seconds(stamp):
 def result(name, ok, detail):
     RESULTS.append((name, ok, detail))
     print(f'{"INFO" if ok is None else "PASS" if ok else "FAIL"}  {name}: {detail}', flush=True)
+
+
+def process_cpu():
+    """Return {program: CPU seconds} for the running launch's costmap processes."""
+    if 'pgid' not in LAUNCH:
+        return {}
+    out = subprocess.run(['ps', '-A', '-o', 'pgid=,time=,command='], capture_output=True,
+                         text=True).stdout
+    cpu = {}
+    for line in out.splitlines():
+        parts = line.split(None, 2)
+        if len(parts) < 3 or parts[0] != str(LAUNCH['pgid']):
+            continue
+        name = next((n for n in COSTMAP_PROGRAMS if n in parts[2]), None)
+        if name:
+            # [[h:]m:]s.ss
+            secs = 0.0
+            for field in parts[1].split(':'):
+                secs = secs * 60.0 + float(field)
+            cpu[name] = cpu.get(name, 0.0) + secs
+    return cpu
+
+
+# Which processes hold a costmap: Nav2's local one is in controller_server (with
+# tracker:=mppi_lag, the only thing it does), its global one in planner_server (with the
+# planner); ours both in aav_costmap's costmap.
+COSTMAP_PROGRAMS = ('controller_server', 'planner_server', 'aav_costmap/costmap')
+
+
+class CostmapWatch:
+    """
+    Watch the costmaps while a leg runs.
+
+    Our costmap's update times, the costmap processes' CPU, and Nav2's local costmap
+    against ours (snapshot(), while the car stands still).
+    """
+
+    def __init__(self, probe):
+        self.probe, self.times, self.grids, self.diff = probe, [], {}, None
+        self.subs = [
+            probe.create_subscription(DiagnosticStatus, '/drivers/nav/costmap/status',
+                                      self.on_status, 10),
+            probe.create_subscription(Costmap, '/local_costmap/costmap_raw',
+                                      lambda m: self.grids.update(nav2=m), 2),
+            probe.create_subscription(Costmap, '/drivers/nav/costmap/local_raw',
+                                      lambda m: self.grids.update(own=m), 2)]
+        self.cpu, self.start = process_cpu(), time.monotonic()
+
+    def on_status(self, msg):
+        values = {kv.key: kv.value for kv in msg.values}
+        if values.get('costmap') == 'local':
+            self.times.append(float(values['update_ms']))
+
+    def snapshot(self):
+        """Nav2's local costmap against ours, now (both must have come)."""
+        if 'nav2' in self.grids and 'own' in self.grids:
+            def plain(m):
+                return {'origin_x': m.metadata.origin.position.x,
+                        'origin_y': m.metadata.origin.position.y,
+                        'resolution': m.metadata.resolution, 'width': m.metadata.size_x,
+                        'height': m.metadata.size_y, 'data': bytes(m.data)}
+            self.diff = costmap_diff.compare(plain(self.grids['nav2']),
+                                             plain(self.grids['own']))
+
+    def report(self):
+        """One line: CPU per costmap process, our update time, the comparison."""
+        wall = time.monotonic() - self.start
+        now = process_cpu()
+        used = {n: 100.0 * (now[n] - self.cpu.get(n, 0.0)) / wall for n in now}
+        cpu = ', '.join(f'{n.split("/")[-1]} {used[n]:.0f} %'
+                        for n in COSTMAP_PROGRAMS if n in used)
+        for sub in self.subs:
+            self.probe.destroy_subscription(sub)
+        line = f'CPU over {wall:.0f} s: {cpu or "none seen"}'
+        if self.times:
+            t = sorted(self.times)
+            line += (f'; our local update {sum(t) / len(t):.2f} ms mean, '
+                     f'{t[int(0.95 * (len(t) - 1))]:.2f} ms 95th')
+        if self.diff:
+            line += f'; Nav2 vs ours while stopped: {costmap_diff.summary(self.diff)}'
+        return line
 
 
 def yaw_of(msg):
@@ -963,20 +1055,24 @@ def check_obstacle(probe, ahead=15.0, goal=30.0, model=OBSTACLE, depth=1.0, name
         return
     newest = {}     # the local costmap, in odom: on the world's origin, as the car started
     if costmap:
-        sub = probe.create_subscription(OccupancyGrid, '/local_costmap/costmap',
+        sub = probe.create_subscription(OccupancyGrid, LOCAL_COSTMAP[COSTMAP],
                                         lambda m: newest.update(grid=m), 2)
+    watch = CostmapWatch(probe)
     done = probe.go_to(x0 + goal * c, y0 + goal * s, h)    # facing as it started
     if done is None:
         result(name, False, 'no Nav2, or it refused the goal')
         remove_model()
+        watch.report()
         return
     seen, top, still, gap, peak = len(probe.monitor), 0.0, None, None, None
+    stopped_by = None                       # who stopped the car first
     moving = 0.3 if backwards else 0.5      # m/s: it has got going (reversing: 0.5 at most)
     furthest, fired = 0.0, None             # m towards the model; when the stop zone fired
 
     def take_away():
         nonlocal gap, peak
         gap = ahead - furthest              # the closest the bumper came
+        watch.snapshot()
         if 'grid' in newest:
             peak = costmap_peak(newest['grid'], bx, by, depth / 2.0 + 0.5)
         remove_model()
@@ -994,6 +1090,8 @@ def check_obstacle(probe, ahead=15.0, goal=30.0, model=OBSTACLE, depth=1.0, name
             fired = probe.now()
         if top > moving and abs(v) < 0.02:
             still = still if still is not None else probe.now()
+            if stopped_by is None:
+                stopped_by = 'the stop zone' if fired is not None else 'the controller'
             if probe.now() - still > 3.0:      # stood still for 3 s: take the box away
                 take_away()
         else:
@@ -1016,8 +1114,10 @@ def check_obstacle(probe, ahead=15.0, goal=30.0, model=OBSTACLE, depth=1.0, name
         mark = (f'; the local costmap {peak} of 100 there' if peak is not None
                 else '; no local costmap seen')
     result(name, ok, f'{where} (top speed {top:.2f} m/s), stop zone fired: {stop_zone}{mark}; '
+                     f'first stopped by {stopped_by or "nothing"}; '
                      f'taken away, Nav2 goal {"reached" if reached else "not reached"} '
                      f'{along():.1f} m on')
+    result(f'{name}: costmaps ({COSTMAP})', None, watch.report())
     if gap is None:
         remove_model()
 
@@ -1091,14 +1191,17 @@ def check_plan_around(probe, ahead=15.0, goal=30.0, depth=1.0):
         return
     start = len(probe.track)
     seen = len(probe.monitor)
+    watch = CostmapWatch(probe)
     done = probe.go_to(x0 + goal * c, y0 + goal * s, h)
     if done is None:
         result('plan around', False, 'no Nav2, or it refused the goal')
     else:
         probe.spin_for(240.0, done.done)
     remove_model()
+    costs = watch.report()
     if done is None:
         return
+    result(f'plan around: costmaps ({COSTMAP})', None, costs)
     drive = probe.track[start:]
     # The car's centre line, base_link to the bumper, against the box's centre: less half
     # the car's width and half the box.
@@ -1992,6 +2095,8 @@ WATCHDOG_TOPICS = ('/safety/sensor_watchdog/lock', '/safety/sensor_watchdog/stat
 
 EVERY_RUN = []   # launch arguments every session adds: --speed-loop's, --simulator's
 SIMULATOR = None      # --simulator gazebo or own; else sim.launch.py's default (main)
+COSTMAP = 'nav2'      # --costmap own: aav_costmap beside Nav2's (sim.launch.py costmap:=)
+LOCAL_COSTMAP = {'nav2': '/local_costmap/costmap', 'own': '/drivers/nav/costmap/local'}
 SIMULATOR_NAMES = {'gazebo': 'Gazebo', 'own': 'our simulator'}
 VOXELS = False   # --voxels: every session with the lidar takes voxels:=true
 KISS_EKF = False  # --kiss-ekf: every session with the lidar takes kiss_ekf:=true
@@ -2343,10 +2448,23 @@ def main():
         SIMULATOR = DEFAULT_SIMULATOR
     # Always said: the checks place models and read logs the way this simulator wants.
     EVERY_RUN.append(f'simulator:={SIMULATOR}')
+    global COSTMAP
+    for flag_name, choices in (('--costmap', vehicle.COSTMAPS), ('--tracker', vehicle.TRACKERS)):
+        if flag_name in args:
+            at = args.index(flag_name)
+            if at + 1 >= len(args) or args[at + 1] not in choices:
+                print(f'{flag_name} takes {", ".join(choices)}', file=sys.stderr)
+                return 2
+            EVERY_RUN.append(f'{flag_name[2:]}:={args[at + 1]}')
+            if flag_name == '--tracker' and args[at + 1] != 'none':
+                EVERY_RUN.append('reversing:=false')     # the trial trackers: forward only
+            if flag_name == '--costmap':
+                COSTMAP = args[at + 1]
     log = os.environ.get('AAV_SIM_LOG', '/tmp/aav-sim-check.log')
     logs = [log]
     if not {'--drive-to-point-only', '--speed-steps-only', '--spine-points-only',
-            '--stop-point-only', '--behaviour-only', '--lane-only'} & set(args):
+            '--stop-point-only', '--behaviour-only', '--lane-only',
+            '--legs-only'} & set(args):
         # With --obstacle the planner is blind to the box, so the stop zone must stop the car.
         session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}']
                 + (['plan_around:=false'] if '--obstacle' in args else []),
