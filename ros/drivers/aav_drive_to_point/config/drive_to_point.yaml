@@ -15,6 +15,9 @@ point_driver:
     # car, measure it with the brake test (docs/tests.md 4.3) and the first drives to a point.
     brake_lead: 0.8
     stop_band: 0.05         # m: this close to B, command zero
+    # How it slows into B: approach (sqrt(2 a (d - lead v)), the default) or hybrid (the
+    # stopping law, aav_description stop_law.py: a trial; launch stop_law:=hybrid).
+    stop_law: approach
     creep: 0.1              # m/s: the least it asks for, short of B
     lookahead_min: 2.0      # m: pure pursuit's carrot, at least (about the wheelbase)
     lookahead_time: 1.0     # s of driving: the carrot moves out with speed

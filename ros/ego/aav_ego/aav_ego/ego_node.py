@@ -174,7 +174,7 @@ class Ego(Node):
         lim = self.limits
         for line in dynamics.describe(self.body, lim.wheelbase, lim.max_steering_angle,
                                       lim.max_speed, lim.max_acceleration,
-                                      lim.max_deceleration):
+                                      lim.max_deceleration, lim.max_jerk):
             if line.startswith('WARNING'):
                 self.get_logger().warning(line[len('WARNING: '):])
             else:

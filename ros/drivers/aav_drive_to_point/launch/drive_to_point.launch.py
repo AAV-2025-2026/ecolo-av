@@ -2,6 +2,7 @@
 The point driver: an action server (/drive_to_point) that drives to one point and stops there.
 
   ros2 launch aav_drive_to_point drive_to_point.launch.py [use_sim_time:=false] [watchdog:=true]
+      [stop_law:=approach|hybrid]
   pixi run drive-to-point --sim --ahead 20          (the client: aav_drive_to_point point_cli)
 
 The braking (actuators max_brake), the wheelbase and the steering limit come from
@@ -38,6 +39,9 @@ def launch_setup(context):
         raise ValueError(f'watchdog:={watchdog}: use true or false')
     if watchdog == 'false':
         config['watchdog_timeout'] = 0.0
+    law = LaunchConfiguration('stop_law').perform(context).strip()
+    if law:
+        config['stop_law'] = law
     return [Node(
         package='aav_drive_to_point',
         executable='point_driver',
@@ -55,5 +59,8 @@ def generate_launch_description():
         DeclareLaunchArgument('watchdog', default_value='true',
                               description="false where no sensor watchdog runs: don't wait "
                                           'for its lock'),
+        DeclareLaunchArgument('stop_law', default_value='',
+                              description='approach (the default, drive_to_point.yaml) or '
+                                          'hybrid: the stopping law, a trial'),
         OpaqueFunction(function=launch_setup),
     ])

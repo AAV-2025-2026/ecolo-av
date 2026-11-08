@@ -174,6 +174,32 @@ def test_motion_from_the_real_configs():
     assert motion_from(ego, car, 'uart', 10.0, 0.1, legacy=legacy)[1]
 
 
+def test_the_lock_never_counts_on_less_room_than_the_stopping_law():
+    # The stopping law (aav_description stop_law.py) plans the normal stops; the lock keeps
+    # its own law and never imports it (Simplex). For every backend and speed up to ego's
+    # cap, the lock's worst case must be at least the law's distance, so the law's stops
+    # end before the lock would have to act. Only this test reads both.
+    import sys
+    sys.path.insert(0, os.path.join(ROS, 'bringup', 'aav_description'))
+    from aav_description.car_model import ActuatorConfig
+    from aav_description.stop_law import from_car_model
+    ego = load('ego', 'aav_ego', 'config', 'ego.yaml')['ego']['ros__parameters']
+    car = load('bringup', 'aav_description', 'config', 'vehicle.yaml')
+    spine = load('can_bridge', 'aav_spine', 'config', 'spine.yaml')['spine_bridge'][
+        'ros__parameters']
+    legacy = load('can_bridge', 'aav_legacy', 'config', 'legacy.yaml')['legacy_uart_bridge'][
+        'ros__parameters']
+    curve = from_car_model(ActuatorConfig.from_vehicle(car), ego['max_deceleration'],
+                           ego['max_jerk'])
+    for backend in ('spine', 'uart', 'gazebo', 'gazebo_esp32'):
+        motion, _ = motion_from(ego, car, backend, 10.0, 0.1, spine=spine, legacy=legacy)
+        for i in range(1, int(motion.max_speed / 0.05) + 1):
+            v = 0.05 * i
+            lock = stopping_distance(v, motion.reaction_time, motion.max_accel, motion.braking,
+                                     motion.max_speed)
+            assert lock >= curve.distance(v), (backend, v)
+
+
 def test_along_an_arc():
     assert along_arc(0, 0, 0, 2, 0) == pytest.approx((2, 0, 0))
     # A quarter circle of radius 2, left.
