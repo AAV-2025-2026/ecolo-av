@@ -215,6 +215,9 @@ class Behaviour:
                   warnings: List[str]) -> None:
         s = self.s
         mine = [x for x in w.stops if x.reason == self.reason]
+        if self.reason in ('obstacle', 'fence', 'goal') and self.binding(mine) is None:
+            # No longer binds: a new goal's long path, or the obstacle moved further off.
+            mine = []
         lock = LOCK_OF.get(self.reason)
         if lock is not None and locks.get(lock) and still:
             self._go(STOPPED, self.reason, w.now)

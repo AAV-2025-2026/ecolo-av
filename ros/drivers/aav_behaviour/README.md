@@ -55,7 +55,7 @@ Parameters (from `vehicle.behaviour_params`: nav2.yaml, vehicle.yaml, ego.yaml):
 | `ask_after` | 30 s | a non-sign lock this long: ASK |
 | `max_deceleration`, `max_jerk`, `speed_loop` | ego's, `default` | the stopping law's numbers |
 | `front`, `half_width`, `stop_gap` | the body and the stop zone | the lane ahead |
-| `stop_distance_m`, `near_depth`, `plan_timeout` | 4.7 m, 2.5 m, 3 s | |
+| `stop_distance_m`, `near_depth`, `plan_timeout` | 4.7 m, 2.5 m, 25 s | the to-pose tree keeps a path up to 20 s near the goal |
 
 | Module | No ROS? | Holds |
 |---|---|---|

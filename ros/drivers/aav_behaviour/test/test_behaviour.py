@@ -96,6 +96,15 @@ def test_a_goal_that_ends_ends_its_approach():
     assert b.step(world(0.1, goal_active=False)).state == DRIVE
 
 
+def test_a_new_goal_far_away_ends_the_last_goals_approach():
+    # The next goal starts at once: still a goal, but its path is long, so no cap binds.
+    b = Behaviour(CURVE)
+    b.step(world(0.0, stops=[Stop('goal', 1.0)], goal_active=True))
+    assert b.state == APPROACH
+    d = b.step(world(0.1, stops=[Stop('goal', 15.0)], goal_active=True))
+    assert d.state in (GO, DRIVE)
+
+
 def test_an_obstacle_that_goes_away_lets_the_car_speed_up_again():
     b = Behaviour(CURVE)
     for i in range(10):
