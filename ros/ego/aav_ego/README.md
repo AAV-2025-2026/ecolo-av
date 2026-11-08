@@ -22,7 +22,10 @@ speed, reverse speed, acceleration, jerk, steering angle and rate, and a body mo
 |---|---|
 | Node `ego` | `ros2 launch aav_ego ego.launch.py [use_sim_time:=false] [max_speed:=0.3] [sim_max_speed:=]` |
 | Subscribes | `/control/cmd_vel` (`geometry_msgs/TwistStamped`; plain `Twist` when the parameter `use_stamped` is false, in `ego.yaml`: not a launch argument) |
+| | `/vehicle/odom` (`nav_msgs/Odometry`): the measured speed, for the trace's twin |
+| | `/drivers/<d>/lag_aware` (`std_msgs/Bool`, latched) and `/drivers/<d>/cmd_vel`, for each `d` in `lag_aware_drivers`: is a lag-aware driver driving? |
 | Publishes | `/ego/actuator_cmd` (`ackermann_msgs/AckermannDriveStamped`) at `rate_hz`: speed (m/s), steering_angle (rad, + left), acceleration (m/s²: the limit used; while speeding up with `max_jerk` > 0, the eased acceleration now), steering_angle_velocity (`max_steering_rate`) |
+| | `/ego/trace` (`nav_msgs/Path`, frame `base_link`) at `trace_rate_hz`: where the car goes over `trace_horizon` s |
 
 Launch arguments:
 
@@ -45,6 +48,11 @@ Parameters. From `config/ego.yaml`:
 | `max_lateral_accel` | 2.0 m/s² | sideways comfort limit in a turn |
 | `cmd_timeout` | 0.3 s | since the last command **arrived**, then stop |
 | `rate_hz`, `frame_id`, `use_stamped` | 50, `base_link`, true | |
+| `lag_lead` | `auto` | live. The lag lead: `auto` in a simulator only (off on the car, SAFE); `on` the car too, once tests 3.10-4.5 measured the lags; `off` never. Never while a lag-aware driver drives |
+| `lag_lead_filter`, `lag_lead_max_speed`, `lag_lead_max_steer` | 0.1 s, 0.3 m/s, 0.1 rad | the request's filter; the most the lead adds or takes |
+| `lag_aware_drivers` | scripted, point, nav, ai | whose `/drivers/<d>/lag_aware` ego watches |
+| `trace_horizon`, `trace_rate_hz`, `trace_speed_loop` | 2.0 s, 10 Hz, `default` | the trace; 0 Hz: none |
+| `vehicle_yaml` | `''` | the car model's numbers (`''`: `aav_description`'s) |
 
 From `ros/bringup/aav_description/config/vehicle.yaml` (the launch file passes them):
 `wheelbase`, `max_steering_angle`, `max_reverse_speed`, and the body (`mass`, `track`,
@@ -57,11 +65,17 @@ Modules:
 | `ackermann.py` | `Limits`, `EgoModel.step(cmd, dt)` -> (speed, steering, accel); `steering_angle`, `turn_rate`, `slew_speed`, `ease_speed`, `curvature`; `LIVE_LIMITS`, `live_change()` |
 | `dynamics.py` | `Body`; `speed_up_limit`, `braking_limit`, `lateral_limit`, `curve_speed`, `stopping_distance`, `energy`, `describe()` (start-up log lines) |
 | `vehicle_model.py` | the car as a linear model (transfer functions, state space, margins), for tuning and the report: `VehicleModel`, `from_vehicle_yaml()`, `summary()`. Never drives the car. Used by `tools/vehicle_model.py` (`pixi run python3 tools/vehicle_model.py`, `docs/vehicle-model.md`) |
+| `lag_lead.py` | `LagLead` (the lead), `LeadTimes`, `LeadLimits`, `lead_wanted(mode, sim, aware)`, `LagAwareWatch` (whose command is it?), `command_key` |
+| `trace_ahead.py` | `Twin` (ego's copy of the car), `trace(...)` -> poses in `base_link`, `ego_commands` |
 | `ego_node.py` | the ROS node `Ego` |
 
 ## Invariants
 
-- `ackermann.py`, `dynamics.py` and `vehicle_model.py` have no ROS imports.
+- `ackermann.py`, `dynamics.py`, `vehicle_model.py`, `lag_lead.py` and `trace_ahead.py`
+  have no ROS imports. The car model is `aav_description`'s `car_model.py` (`docs/car-model.md`).
+- The lag lead runs before every limit: `max_speed`, the steering limit and rate, the slews,
+  the jerk and the body still apply after it. It never softens a slow-down, never changes
+  direction, never touches a stop, and never runs while a lag-aware driver drives.
 - Bicycle model about the rear axle (`base_link`): `steering = atan(L w / v)`, clamped
   to `max_steering_angle`. Below `min_speed_for_steering` the wheels hold: a car can't
   turn on the spot.
@@ -74,13 +88,14 @@ Modules:
   car; a turn slows the car rather than steering less.
 - Turn speed stays under `max_lateral_accel` and under half of what slides or tips the car.
 - Publishes every tick, at 50 Hz, even with no command.
-- Only `max_steering_rate` and `payload` change while running; others are refused with
-  "restart ego". `max_speed:=` only lowers the cap; `sim_max_speed:=` only in a simulator.
+- Only `max_steering_rate`, `payload` and `lag_lead` change while running; others are
+  refused with "restart ego". `max_speed:=` only lowers the cap; `sim_max_speed:=` only in a simulator.
 - Ackermann appears only from here on (`/ego/actuator_cmd`); drivers send `TwistStamped`.
 
 ## Side Effects
 
-- Publishes `/ego/actuator_cmd`; logs the limits and what the body allows at start-up.
+- Publishes `/ego/actuator_cmd` and `/ego/trace`; logs the limits, what the body allows
+  and the lag lead's numbers at start-up, and each time the lead turns on or off.
 - No files, no hardware.
 
 ## Verification
@@ -98,3 +113,6 @@ it; `test_ego_launch.py` skips without ROS). `pixi run test` runs everything.
 | `test_dynamics.py` | the body's limits |
 | `test_vehicle_model.py` | the linear model (needs numpy, scipy) |
 | `test_ego_launch.py` | the `max_speed` and `sim_max_speed` caps |
+| `test_lag_lead.py` | the lead: when it runs, its limits, ego's limits after it, it helps on the car model |
+| `test_trace_ahead.py` | the trace and the twin |
+| `test_ego_node.py` | the node in this process: `/ego/trace`; the lead off for a lag-aware driver (needs ROS) |

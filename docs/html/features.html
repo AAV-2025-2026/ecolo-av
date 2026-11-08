@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">49 min read · 14 sections</div></header>
+<div class="meta">52 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -57,6 +57,7 @@
 <a href="path-followers.html">Path followers</a>
 <a href="switches.html">Switches</a>
 <a href="trials.html">Trials</a>
+<a href="mppi-lag.html">MPPI with lag</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -74,12 +75,15 @@
 <a href="simulation.html">Simulation</a>
 <a href="sim-and-car.html">Sim and the car</a>
 <a href="full-simulation.html">Full simulation</a>
+<a href="own-simulator.html">Our own simulator</a>
+<a href="own-simulator-cameras.html">Our simulator&#x27;s cameras</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="hardware-debug.html">Hardware debug</a>
 <a href="learn-state-space.html">Learn: state space</a>
 <a href="vehicle-model.html">The car as a linear model</a>
+<a href="car-model.html">One car model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="geofence.html">The geofence</a>
 <a href="sources-and-targets.html">Sources and targets</a>
@@ -488,11 +492,11 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>built</td>
 </tr>
 <tr>
-<td><a href="trials.html#lag-aware-mpc-7-nov-mpc_lag">Lag-aware MPC</a> (<code>tracker:=mpc_lag</code>; <code>aav_track</code> <code>lag_model.py</code>; tells ego on <code>/drivers/nav/lag_aware</code>)</td>
-<td>Ben, 7 Nov: "have the algorithms know about lag". It plans the steering and the set speed through the car's own lags (the spine's speed loop, throttle, brake, the steering motor's rate and linkage, dead times, the commands already sent), so it steers early by as much as the car is late. A challenger to MPPI. While it drives, ego's lead stays off, so the lag isn't cancelled twice</td>
+<td><a href="mppi-lag.html">MPPI that knows the lag</a> (<code>aav_mppi_lag</code>, <code>tracker:=mppi_lag</code>; <code>model: ideal</code> for the same MPPI without it)</td>
+<td>Ben, 7 Nov (0.3): "have the algorithms know about lag". Nav2's MPPI can't take our lag model without a C++ plugin, and we write no C++: so MPPI is ported to Rust, its eight critics as nav2.yaml runs them, on a model with ego's ramps, the spine's speed loop, the throttle, brake and steering lags and dead times. Nav2 still plans. Says <code>true</code> on <code>/drivers/nav/lag_aware</code> while it follows a path, so ego's lead stays off. Without ROS, on very slow actuators, it kept a corner and an S-curve within 0.1 m where the lag-free MPPI lost the path; at vehicle.yaml's guesses both stay within a few cm. 1.7 ms a tick (2000 x 56) on an M4 Max</td>
 <td>Ben</td>
 <td>2026-11-07</td>
-<td>sim</td>
+<td>built</td>
 </tr>
 <tr>
 <td><a href="controllers.html#planners">Trial planners</a> (<code>planner:=</code> hybrid, lattice, smac2d, navfn or theta_star; the lattice on our own primitives, <code>pixi run python3 tools/lattice_primitives.py</code>, 16 headings or 32 with <code>lattice_headings:=32</code>)</td>
@@ -577,6 +581,27 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Transfer functions and state space, to tune the loops and write the report in SYSC 3600's terms</td>
 <td>Ben</td>
 <td>2026-10-24</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="car-model.html">One car model</a> (<code>aav_description</code> <code>car_model.py</code>, its Rust twin <code>car-model</code>): actuator lags, dead times, the steering motor and the bicycle; <code>step</code> and <code>predict</code></td>
+<td>Ben, 7 Nov: "we really want the ego to have a mathematical model for steering, braking and acceleration": ego, the simulators and the Rust drivers share one model, Python and Rust checked against the same vectors</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="car-model.html#egos-lead">ego's lag lead</a> (<code>lag_lead</code>: auto, on or off; <code>aav_ego</code> <code>lag_lead.py</code>): asks a little ahead for the actuators' lag and dead time, before every limit; <code>auto</code> leads only in a simulator; off while a lag-aware driver drives (<code>/drivers/&lt;slot&gt;/lag_aware</code>)</td>
+<td>Ben, 7 Nov: "have the algorithms know about lag": the car answers about when the driver wanted, while ego stays a safety lock and nothing leads twice</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="car-model.html#egos-trace">ego's trace</a> (<code>/ego/trace</code>, <code>aav_ego</code> <code>trace_ahead.py</code>): where the car goes over the next 2 s, from the car model and a copy of ego</td>
+<td>Ben's idea, 7 Nov: "a trace of where it's going (like a tail but in front)", so drivers can match it to their plan and correct</td>
+<td>Ben</td>
+<td>2026-11-07</td>
 <td>built</td>
 </tr>
 </tbody>
@@ -928,7 +953,7 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 </tr>
 <tr>
 <td>Actuator model</td>
-<td>Lag and limits between ego and Gazebo, so the simulated car answers like a real one</td>
+<td>Lag and limits between ego and Gazebo, so the simulated car answers like a real one; since 7 Nov it is the shared car model (<code>aav_description</code> <code>car_model.py</code>), so ego predicts with the same car Gazebo drives</td>
 <td>Ben</td>
 <td>2026-10-15</td>
 <td>sim</td>
@@ -959,6 +984,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Today's car runs the 2025-26 C++ ESP32, not the spine: Gazebo drives through the real UART bridge and that firmware's throttle ramp and brake, so its speed loop is tested before car day</td>
 <td>Ben</td>
 <td>2026-10-29</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="own-simulator.html">Our own simulator in Rust</a> (<code>aav_simulator</code>, <code>sim simulator:=own</code>)</td>
+<td>Ben, 7 Nov: "merge in everything from gazebo so its standalone in rust". Gazebo's worlds, car, lidar, radar stand-in, IMU, GPS, wheels and clock on Gazebo's own topics, so the stack runs unchanged; no GPU, a seed repeats every sensor, and the car stops at what it hits. Cameras plug in separately. Gazebo stays the default until ours passes the same checks</td>
+<td>Ben</td>
+<td>2026-11-07</td>
 <td>sim</td>
 </tr>
 <tr>
@@ -995,6 +1027,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Ben</td>
 <td>2026-10-09</td>
 <td>sim</td>
+</tr>
+<tr>
+<td><a href="own-simulator-cameras.html">Our simulator's cameras</a> (<code>aav_sim_cameras</code>, <code>pixi run sim-cameras</code>)</td>
+<td>Ben, 7 Nov: replace Gazebo with our own Rust simulator, every sensor. Bevy draws each car camera offscreen with Gazebo's picture, lens, rate and frame, so the detector and stop-sign watcher can't tell them apart; the core simulator plugs it in through one trait</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
 </tr>
 </tbody>
 </table></div>

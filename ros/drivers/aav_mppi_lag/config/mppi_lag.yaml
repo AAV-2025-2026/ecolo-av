@@ -1,0 +1,25 @@
+# aav_mppi_lag's own settings (docs/mppi-lag.md). navigation.launch.py adds the rest:
+# MPPI's block, the checks and the costmap's outline from nav2.yaml, the car and its
+# actuators from vehicle.yaml, the ramps from ego.yaml (vehicle.mppi_lag_params). Nothing
+# here repeats them.
+mppi_lag:
+  ros__parameters:
+    model: lag                  # lag: plan with the actuators' lag (lag_aware true);
+                                # ideal: without, as Nav2's MPPI does (a comparison run)
+    steer_std: 0.15             # rad: the steering noise. Nav2 samples the turn rate
+                                # (wz_std 0.1 rad/s); at 1 m/s that is atan(0.1 x 1.561) = 0.155
+    noise_correlation: 0.8      # each step's noise keeps 0.8 of the last step's (AR(1), about
+                                # 0.25 s). Nav2's is white (0): through a lagging steering
+                                # white noise averages away, every sample drives alike, and
+                                # MPPI lost the path on a slow car (docs/mppi-lag.md)
+    threads: 4                  # rollout threads: 3.1 ms a tick on an M4 Max; leaves the
+                                # rest of the stack its cores (0: one per core)
+    seed: 42
+    use_costmap: true           # CostCritic and the path's clear points read the local costmap
+    costmap_topic: /local_costmap/costmap_raw
+    measured_timeout: 0.5       # s: a measured steering, throttle or brake older than this is
+                                # dropped; the model keeps its own
+    odom_timeout: 1.0           # s without odometry: give up the path
+    cmd_topic: cmd_vel_nav
+    status_topic: /drivers/nav/track/status
+    lag_aware_topic: /drivers/nav/lag_aware

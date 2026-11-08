@@ -477,6 +477,36 @@ def test_track_params_are_nav2s_own_checks_and_speeds():
     assert vehicle.track_params(nav2, cfg, ego, max_speed=3.0)['cruise_speed'] == 3.0
 
 
+def test_mppi_lag_params_are_nav2s_mppi_and_the_cars_lag():
+    nav2 = yaml.safe_load(NAV2_YAML.read_text())
+    cfg = vehicle.load(CONFIG)
+    ego = yaml.safe_load(EGO_YAML.read_text())['ego']['ros__parameters']
+    p = vehicle.mppi_lag_params(nav2, cfg, ego)
+    server = nav2['controller_server']['ros__parameters']
+    mppi = server['MPPI']
+    assert 'mppi_lag' in vehicle.TRACKERS
+    assert p['critics'] == mppi['critics']
+    for name in ('time_steps', 'batch_size', 'temperature', 'gamma', 'vx_std'):
+        assert p[name] == mppi[name], name
+    assert isinstance(p['time_steps'], int) and isinstance(p['model_dt'], float)
+    assert p['model_dt'] == pytest.approx(1.0 / p['rate_hz'])
+    assert p['vx_max'] == mppi['vx_max'] and p['vx_min'] == 0.0
+    assert p['GoalAngleCritic.threshold_to_consider'] == 2.5
+    assert p['PathAlignCritic.use_path_orientations'] is True
+    assert p['xy_goal_tolerance'] == server['general_goal_checker']['xy_goal_tolerance']
+    # Every actuator number from vehicle.yaml; the unset dead times are 0.
+    for key, value in cfg['actuators'].items():
+        if key in vehicle.MPPI_LAG_ACTUATORS:
+            assert p[f'actuators.{key}'] == value, key
+    assert p['actuators.steer_dead_time'] == cfg['actuators'].get('steer_dead_time', 0.0)
+    assert p['ego.max_steering_rate'] == ego['max_steering_rate']
+    assert len(p['footprint']) == 8
+    # sim_speed:= 3: faster, and the path ahead stretched to fit 2.8 s of it.
+    fast = vehicle.mppi_lag_params(nav2, cfg, ego, max_speed=3.0)
+    assert fast['vx_max'] == 3.0
+    assert fast['prune_distance'] >= 3.0 * 2.8
+
+
 def test_an_s_bend_needs_room_ahead():
     # Two quarter-turns side by side: 2 radii across, 2 radii ahead.
     assert math.isclose(vehicle.s_bend_length(3.0, 6.0), 6.0)

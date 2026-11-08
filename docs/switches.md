@@ -46,6 +46,7 @@ the U-turn. The real car takes only `hybrid` or `lattice` (it refuses `diffusion
 | `tracker:=mpc` | ours: try the next 1.5 s of steering, keep the best | **12 of 12** |
 | `tracker:=mpc_full` | ours: MPC that plans the speed too | 10 of 12 |
 | `tracker:=mpc_lag` | ours: MPC that knows the car is late, and plans for it (7 Nov) | [see trials](trials.md#lag-aware-mpc-7-nov-mpc_lag) |
+| `tracker:=mppi_lag` | ours: Nav2's MPPI in Rust, knowing the steering and pedals lag ([page](mppi-lag.md)) | 7 Nov, a loaded computer: 0.13 m off the path while it drove (Nav2's MPPI 0.20 m), but it gave up when the odometry stalled; [not fair yet](mppi-lag.md#in-gazebo) |
 
 Our trackers drive forward only: give them `reversing:=false` (the menu does).
 In `demo --debug`, keys 1-4 swap the tracker live. More: [Controllers](controllers.md),

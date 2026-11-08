@@ -143,6 +143,11 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
    such a brake below its target is driven again, up to 3 times, and only reported (no
    pass or fail) if every try was spoiled. The samples go to /tmp/aav-sim-speed-steps.csv.
 
+With --simulator own: every run on our own Rust simulator (aav_simulator,
+   docs/own-simulator.md) in gz sim's place, simulator:=own. It draws no cameras yet: the
+   camera's checks say so and pass by, and the contract leaves the camera topics out; the
+   obstacles go in through its /vehicle/sim/spawn_entity and delete_entity services.
+
 Times are Gazebo's, simulated; only the limits on waiting are wall-clock. Prints a table and
 exits 1 if anything failed. The launch logs go to /tmp/aav-sim-check.log and, with --lane,
 /tmp/aav-sim-check-lane.log: AAV_SIM_LOG=/tmp/mine.log moves them. AAV_SIM_DOMAIN and
@@ -220,7 +225,7 @@ RADAR_TOPICS = ('/sensors/radar/points', '/perception/radar/clusters',
                 '/perception/radar/cluster_boxes')
 # What only runs with Nav2 (navigation.launch.py): the map, and stop_hold beside
 # collision_monitor. A nav:=false run checks the contract without them.
-NAV_TOPICS = ('/map', '/safety/stop_hold/lock')
+NAV_TOPICS = ('/map', '/safety/stop_hold/lock', '/global_costmap/costmap')
 RADAR_FIELDS = ['x', 'y', 'z', 'intensity', 'velocity']   # the TI driver's
 LIDAR_RAYS = (1800, 16)     # the simulated roof lidar: steps around, beams (sensors xacro)
 
@@ -311,6 +316,37 @@ def gz_service(service, reqtype, request):
     except subprocess.TimeoutExpired:
         return False
     return done.returncode == 0 and 'data: true' in done.stdout
+
+
+def place_model(model, x, y, yaw, name='obstacle'):
+    """Put a model in the world: Gazebo's create service, or our simulator's spawn_entity."""
+    if SIMULATOR == 'gazebo':
+        return gz_service('create', 'gz.msgs.EntityFactory',
+                          f'sdf_filename: "{model}", name: "{name}", '
+                          f'pose: {{position: {{x: {x}, y: {y}, z: 0}}, '
+                          f'orientation: {{z: {math.sin(yaw / 2.0)}, w: {math.cos(yaw / 2.0)}}}}}')
+    return ros_service('/vehicle/sim/spawn_entity', 'simulation_interfaces/srv/SpawnEntity',
+                       f'{{name: "{name}", uri: "{model}", initial_pose: {{pose: {{position: '
+                       f'{{x: {x}, y: {y}, z: 0.0}}, orientation: {{z: {math.sin(yaw / 2.0)}, '
+                       f'w: {math.cos(yaw / 2.0)}}}}}}}}}')
+
+
+def remove_model(name='obstacle'):
+    """Take a placed model away again."""
+    if SIMULATOR == 'gazebo':
+        return gz_service('remove', 'gz.msgs.Entity', f'name: "{name}", type: MODEL')
+    return ros_service('/vehicle/sim/delete_entity', 'simulation_interfaces/srv/DeleteEntity',
+                       f'{{entity: "{name}"}}')
+
+
+def ros_service(service, kind, request):
+    """Call a ROS service by `ros2 service call`; True if its Result says RESULT_OK (1)."""
+    try:
+        done = subprocess.run(['ros2', 'service', 'call', service, kind, request],
+                              capture_output=True, text=True, timeout=60)
+    except subprocess.TimeoutExpired:
+        return False
+    return done.returncode == 0 and re.search(r'result=1\b', done.stdout) is not None
 
 
 class Probe(Node):
@@ -572,6 +608,9 @@ def check_contract(probe, env, tag, ignore=(), profile='road'):
 def check_sensors(probe):
     """Check the camera is the bench camera, in camera_left_link, and the radar the TI's."""
     probe.spin_for(5.0)     # a few seconds of each, for their rates
+    if SIMULATOR != 'gazebo':
+        check_radar(probe)
+        return
     image, info, cloud = probe.image, probe.info, probe.cloud
     camera_ok = (image.width, image.height, image.header.frame_id) == (
         BENCH['width'], BENCH['height'], 'camera_left_link')
@@ -594,6 +633,19 @@ def check_sensors(probe):
            f'{cloud.width * cloud.height} points with nothing within 8.4 m')
 
 
+def check_radar(probe):
+    """Check the radar stand-in alone: our own simulator draws no camera yet."""
+    cloud = probe.cloud
+    fields = [f.name for f in cloud.fields]
+    radar_hz = rate(probe.cloud_stamps)
+    ok = (cloud.header.frame_id == 'radar_link' and fields == RADAR_FIELDS
+          and cloud.width * cloud.height == 0 and abs(radar_hz - 10.0) < 1.5)
+    result('sensors', ok,
+           f'no camera ({SIMULATOR} draws none yet); radar stand-in in '
+           f'{cloud.header.frame_id} at {radar_hz:.1f} Hz, fields {",".join(fields)}, '
+           f'{cloud.width * cloud.height} points with nothing within 8.4 m')
+
+
 def check_cameras(probe):
     """
     Check the other two cameras: front right and rear, each in its own frame.
@@ -601,6 +653,9 @@ def check_cameras(probe):
     At 5 Hz or more: they send 10, but on a busy Mac two more reliable picture streams lose
     some. The front left camera's own check (check_sensors) holds 10 Hz.
     """
+    if SIMULATOR != 'gazebo':
+        result('cameras', None, f'{SIMULATOR} draws no cameras yet: not tested')
+        return
     # Only for this check, as the lidar's: two more picture streams would load the run.
     got = {'front_right': [], 'rear': []}
     subs = [probe.create_subscription(Image, f'/sensors/camera/{name}/image_raw',
@@ -878,11 +933,8 @@ def check_obstacle(probe, ahead=15.0, goal=30.0, model=OBSTACLE, depth=1.0, name
 
     # Its near face `ahead` m past the bumper, on the car's line.
     bx, by = x0 + (front + ahead + depth / 2.0) * c, y0 + (front + ahead + depth / 2.0) * s
-    if not gz_service('create', 'gz.msgs.EntityFactory',
-                      f'sdf_filename: "{model}", name: "obstacle", '
-                      f'pose: {{position: {{x: {bx}, y: {by}, z: 0}}, '
-                      f'orientation: {{z: {math.sin(h / 2.0)}, w: {math.cos(h / 2.0)}}}}}'):
-        result(name, False, "could not place the box (Gazebo's create service)")
+    if not place_model(model, bx, by, h):
+        result(name, False, "could not place the box (the simulator's create service)")
         return
     newest = {}     # the local costmap, in odom: on the world's origin, as the car started
     if costmap:
@@ -891,7 +943,7 @@ def check_obstacle(probe, ahead=15.0, goal=30.0, model=OBSTACLE, depth=1.0, name
     done = probe.go_to(x0 + goal * c, y0 + goal * s, h)    # facing as it started
     if done is None:
         result(name, False, 'no Nav2, or it refused the goal')
-        gz_service('remove', 'gz.msgs.Entity', 'name: "obstacle", type: MODEL')
+        remove_model()
         return
     seen, top, still, gap, peak = len(probe.monitor), 0.0, None, None, None
     moving = 0.3 if backwards else 0.5      # m/s: it has got going (reversing: 0.5 at most)
@@ -902,7 +954,7 @@ def check_obstacle(probe, ahead=15.0, goal=30.0, model=OBSTACLE, depth=1.0, name
         gap = ahead - furthest              # the closest the bumper came
         if 'grid' in newest:
             peak = costmap_peak(newest['grid'], bx, by, depth / 2.0 + 0.5)
-        gz_service('remove', 'gz.msgs.Entity', 'name: "obstacle", type: MODEL')
+        remove_model()
 
     end = time.monotonic() + 240.0
     while time.monotonic() < end and not done.done():
@@ -942,7 +994,7 @@ def check_obstacle(probe, ahead=15.0, goal=30.0, model=OBSTACLE, depth=1.0, name
                      f'taken away, Nav2 goal {"reached" if reached else "not reached"} '
                      f'{along():.1f} m on')
     if gap is None:
-        gz_service('remove', 'gz.msgs.Entity', 'name: "obstacle", type: MODEL')
+        remove_model()
 
 
 def check_lane_keeping(probe):
@@ -1009,11 +1061,8 @@ def check_plan_around(probe, ahead=15.0, goal=30.0, depth=1.0):
     c, s = math.cos(h), math.sin(h)
     centre = front + ahead + depth / 2.0
     bx, by = x0 + centre * c, y0 + centre * s
-    if not gz_service('create', 'gz.msgs.EntityFactory',
-                      f'sdf_filename: "{OBSTACLE}", name: "obstacle", '
-                      f'pose: {{position: {{x: {bx}, y: {by}, z: 0}}, '
-                      f'orientation: {{z: {math.sin(h / 2.0)}, w: {math.cos(h / 2.0)}}}}}'):
-        result('plan around', False, "could not place the box (Gazebo's create service)")
+    if not place_model(OBSTACLE, bx, by, h):
+        result('plan around', False, "could not place the box (the simulator's create service)")
         return
     start = len(probe.track)
     seen = len(probe.monitor)
@@ -1022,7 +1071,7 @@ def check_plan_around(probe, ahead=15.0, goal=30.0, depth=1.0):
         result('plan around', False, 'no Nav2, or it refused the goal')
     else:
         probe.spin_for(240.0, done.done)
-    gz_service('remove', 'gz.msgs.Entity', 'name: "obstacle", type: MODEL')
+    remove_model()
     if done is None:
         return
     drive = probe.track[start:]
@@ -1913,10 +1962,16 @@ def check_speed_steps(probe, profile):
 
 
 LIDAR_TOPICS = ('/sensors/lidar/points', '/sensors/lidar/scan')
+# What a simulator that draws no cameras leaves out: every camera's topics, and the chase
+# camera's, from the contract.
+with open(os.path.join(ROOT, 'docs', 'interfaces.yaml')) as _contract:
+    CAMERA_TOPICS = tuple(t for t in yaml.safe_load(_contract)['topics'] if 'camera' in t)
 WATCHDOG_TOPICS = ('/safety/sensor_watchdog/lock', '/safety/sensor_watchdog/state')
 
 
-EVERY_RUN = []   # launch arguments every session adds: --speed-loop's
+EVERY_RUN = []   # launch arguments every session adds: --speed-loop's, --simulator's
+SIMULATOR = 'gazebo'   # --simulator own: our Rust simulator, which draws no cameras yet
+SIMULATOR_NAMES = {'gazebo': 'Gazebo', 'own': 'our simulator'}
 VOXELS = False   # --voxels: every session with the lidar takes voxels:=true
 KISS_EKF = False  # --kiss-ekf: every session with the lidar takes kiss_ekf:=true
 
@@ -1934,6 +1989,9 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spin
     """
     road = world == 'road'
     radar = radar and road
+    cameras = road and SIMULATOR == 'gazebo'
+    if road and not cameras:
+        ignore = tuple(ignore) + CAMERA_TOPICS
     watchdog = 'watchdog:=false' not in launch_args
     tag = f' ({label})' if label else ''
     # What a run leaves out on purpose isn't missing from the graph.
@@ -1946,8 +2004,9 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spin
     ignore = (tuple(ignore) + (LIDAR_TOPICS if 'lidar:=false' in launch_args else ())
               + (WATCHDOG_TOPICS if 'watchdog:=false' in launch_args else ()))
     env = dict(os.environ)
-    print(f"Starting Gazebo's {world} world{tag} on ROS domain {env['ROS_DOMAIN_ID']}, Gazebo "
-          f"partition {env['GZ_PARTITION']} (this computer only)...", flush=True)
+    print(f"Starting {SIMULATOR_NAMES[SIMULATOR]}'s {world} world{tag} on ROS domain "
+          f"{env['ROS_DOMAIN_ID']}, Gazebo partition {env['GZ_PARTITION']} (this computer "
+          'only)...', flush=True)
     log = open(log_path, 'w')
     launch = subprocess.Popen(['ros2', 'launch', 'aav_bringup', 'sim.launch.py', f'world:={world}',
                                'gui:=false', 'rviz:=false', *launch_args, *EVERY_RUN],
@@ -1960,8 +2019,8 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spin
     try:
         def missing():
             return [n for n, m in (('truth', probe.truth), ('global EKF', probe.glob),
-                                   ('camera', probe.image if road else True),
-                                   ('lens', probe.info if road else True),
+                                   ('camera', probe.image if cameras else True),
+                                   ('lens', probe.info if cameras else True),
                                    ('radar', probe.cloud if radar else True),
                                    # Its heartbeat: without it twist_mux holds the drivers.
                                    ('the sensor watchdog', probe.lock if watchdog else True))
@@ -1987,7 +2046,8 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spin
             detail = ('the sensors run, but Nav2 never came up in 120 s (its lifecycle '
                       f'manager stalled? See {log_path})')
         else:
-            detail = ("Gazebo's truth, the global EKF" + (', the camera' if road else '') +
+            detail = (f"{SIMULATOR_NAMES[SIMULATOR]}'s truth, the global EKF" +
+                      (', the camera' if cameras else '') +
                       (' and the radar stand-in are' if radar else ' are (no radar)') +
                       ' running' + (', and Nav2 is up' if nav else ''))
         if nav_up and spine:
@@ -2066,6 +2126,18 @@ def main():
             print('--esp32 and --spine are two backends: pick one', file=sys.stderr)
             return 2
         EVERY_RUN.extend(['esp32:=true', f'esp32_loop:={args[at + 1]}'])
+    global SIMULATOR
+    if '--simulator' in args:
+        at = args.index('--simulator')
+        if at + 1 >= len(args) or args[at + 1] not in ('gazebo', 'own'):
+            print('--simulator takes gazebo or own', file=sys.stderr)
+            return 2
+        SIMULATOR = args[at + 1]
+        EVERY_RUN.append(f'simulator:={SIMULATOR}')
+        if SIMULATOR != 'gazebo' and ({'--perception', '--lane', '--faults'} & set(args)):
+            print(f'--perception, --lane and --faults need cameras: {SIMULATOR} draws none yet',
+                  file=sys.stderr)
+            return 2
     log = os.environ.get('AAV_SIM_LOG', '/tmp/aav-sim-check.log')
     logs = [log]
     if not {'--drive-to-point-only', '--speed-steps-only', '--spine-points-only'} & set(args):

@@ -56,7 +56,8 @@ Parameters  actuator_model (true), speed_loop (default: the actuator model's spe
             throttle's, brake's and steering's lags times this, to test a follower against
             a car slower than vehicle.yaml says; only the model's), spine (false), rate_hz (50),
             cmd_timeout (0.2 s), wheelbase,
-            wheel_radius, rendered (the world renders cameras), radar, lidar (what
+            wheel_radius, rendered (the world renders sensors), cameras (it draws the
+            cameras: rendered unless simulator:=own), radar, lidar (what
             /system/source announces), fault.odom (ok), speed_variance
 
 So ekf_local, ekf_global, navsat_transform and imu_filter_madgwick run in simulation
@@ -182,9 +183,11 @@ class GazeboAdapter(Node):
         self.create_subscription(JointState, 'joint_states', self.on_joints, 10)
         self.create_timer(1.0 / rate, self.tick)
         rendered = self.declare_parameter('rendered', False).value
+        # Our own simulator renders the lidar and radar but no cameras (simulator:=own).
+        cameras = self.declare_parameter('cameras', rendered).value
         self.announce(sources.simulated(rendered=rendered, lidar=lidar,
                                         radar=self.declare_parameter('radar', False).value,
-                                        vehicle=not self.spine))
+                                        vehicle=not self.spine, cameras=cameras))
         # The wheels' fault on purpose: one per stream (/vehicle/odom, /vehicle/wheels),
         # set together. The other sensors' faults are their own nodes' (faults.NODES).
         self.faults = {'odom': [faults.Fault('odom'), faults.Fault('odom')]}

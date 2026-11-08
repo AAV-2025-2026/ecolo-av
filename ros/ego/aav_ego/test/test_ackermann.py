@@ -185,6 +185,7 @@ def test_every_setting_in_ego_yaml_is_one_ego_reads():
     import yaml
     path = pathlib.Path(__file__).resolve().parents[1] / 'config' / 'ego.yaml'
     names = set(yaml.safe_load(path.read_text())['ego']['ros__parameters'])
-    node_own = {'cmd_timeout', 'rate_hz', 'frame_id', 'use_stamped'}
+    from aav_ego.lag_lead import START_ONLY   # the lead's and the trace's (and lag_lead)
+    node_own = {'cmd_timeout', 'rate_hz', 'frame_id', 'use_stamped', 'lag_lead'} | START_ONLY
     assert names <= set(vars(Limits())) | set(vars(Body())) | node_own
     assert 'max_jerk' in names

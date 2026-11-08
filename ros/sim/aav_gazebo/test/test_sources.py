@@ -31,3 +31,9 @@ def test_with_the_spine_in_the_loop_spine_bridge_announces_the_car():
     got = names(sources.simulated(rendered=True, lidar=True, vehicle=False))
     assert not {'vehicle', 'odometry', 'wheels'} & set(got)
     assert 'imu' in got and 'gps' in got and 'camera_front_left' in got
+
+
+def test_our_own_simulator_announces_the_rays_but_no_cameras():
+    topics = {t for _, t in sources.simulated(rendered=True, lidar=True, cameras=False)}
+    assert {'/sensors/radar/points', '/sensors/lidar/points'} <= topics
+    assert not any('camera' in t for t in topics)
