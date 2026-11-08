@@ -34,7 +34,9 @@
 //!             (vehicle.yaml's), lidar, radar (true: that sensor runs), obstacle (the bench's
 //!             box at obstacle_x, obstacle_y, from obstacle_model), body_length,
 //!             body_width, rear_overhang, body_height (the car stops at what its outline
-//!             meets, as Gazebo's; body_length 0: it drives through), seed, step (s),
+//!             meets, as Gazebo's; body_length 0: it drives through), ground_step (m: the
+//!             highest step a wheel rolls up, 0.1; the car rides the world's ground, tilts on
+//!             slopes, stops at a higher kerb; 0: flat ground), seed, step (s),
 //!             clock_hz, real_time_factor (1.0; 0: as fast as it can), threads
 //!
 //! The simulated time runs in a thread of its own, paced against the wall clock; the
@@ -148,6 +150,7 @@ fn main() -> Result<()> {
             rear_overhang: params.rear_overhang.get(),
             height: params.body_height.get(),
         }),
+        ground_step: (params.ground_step.get() > 0.0).then(|| params.ground_step.get()),
     };
     let car = Box::new(TwistFollower::new(
         params.wheelbase.get(),
@@ -513,9 +516,9 @@ fn odometry(ns: u64, frame: &str, o: &Odometry) -> OdometryMsg {
                 position: Point {
                     x: o.x,
                     y: o.y,
-                    z: 0.0,
+                    z: o.z,
                 },
-                orientation: quaternion(Rot3::from_yaw(o.yaw).quaternion()),
+                orientation: quaternion(Rot3::from_rpy(o.roll, o.pitch, o.yaw).quaternion()),
             },
             ..Default::default()
         },
@@ -615,6 +618,7 @@ struct Params {
     obstacle_y: ReadOnlyParameter<f64>,
     obstacle_model: ReadOnlyParameter<Arc<str>>,
     body_length: ReadOnlyParameter<f64>,
+    ground_step: ReadOnlyParameter<f64>,
     body_width: ReadOnlyParameter<f64>,
     rear_overhang: ReadOnlyParameter<f64>,
     body_height: ReadOnlyParameter<f64>,
@@ -669,6 +673,7 @@ impl Params {
             obstacle_y: number("obstacle_y", 0.0)?,
             obstacle_model: text("obstacle_model", "")?,
             body_length: number("body_length", 2.0)?,
+            ground_step: number("ground_step", 0.1)?,
             body_width: number("body_width", 1.0)?,
             rear_overhang: number("rear_overhang", 0.2)?,
             body_height: number("body_height", 1.5)?,

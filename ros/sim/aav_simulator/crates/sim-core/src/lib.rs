@@ -7,6 +7,7 @@
 //! | [`car`] | the car: the [`car::CarModel`] trait, Gazebo's twist follower, the actuator model |
 //! | `shared_car` (feature `shared`) | `SharedCar`: the shared car-model crate behind the [`car::CarModel`] trait |
 //! | [`lidar`] | the roof lidar and the radar stand-in, by ray casting, packed as Gazebo's |
+//! | [`ground`] | the ground under each wheel: slopes tilt the car, a kerb too high stops it |
 //! | [`geo`] | the datum, and world positions as latitude and longitude |
 //! | [`sim`] | the loop: step the car, and which stream speaks when; the camera plug-in |
 //! | [`noise`] | seeded noise, so the same seed gives the same sensor streams |
@@ -17,6 +18,7 @@
 
 pub mod car;
 pub mod geo;
+pub mod ground;
 pub mod lidar;
 pub mod math;
 pub mod noise;

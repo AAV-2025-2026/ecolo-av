@@ -146,6 +146,13 @@ impl Rot3 {
         }
     }
 
+    /// Roll, pitch and yaw (rad), as `from_rpy` takes them.
+    pub fn rpy(&self) -> (f64, f64, f64) {
+        let m = &self.m;
+        let pitch = (-m[2][0]).clamp(-1.0, 1.0).asin();
+        (m[2][1].atan2(m[2][2]), pitch, m[1][0].atan2(m[0][0]))
+    }
+
     /// The rotation as a unit quaternion: (x, y, z, w).
     pub fn quaternion(&self) -> [f64; 4] {
         let m = &self.m;

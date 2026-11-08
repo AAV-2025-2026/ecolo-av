@@ -11,6 +11,7 @@ use std::path::PathBuf;
 
 use crate::car::{CarModel, CarState, Command};
 use crate::geo::Geodetic;
+use crate::ground::Ground;
 use crate::lidar::{LidarSpec, Scan};
 use crate::math::{Pose, Rot3, Vec3};
 use crate::noise::Noise;
@@ -168,6 +169,9 @@ pub struct Settings {
     /// The car's outline: it stops at what it hits, as Gazebo's does. None: it drives
     /// through everything.
     pub body: Option<Body>,
+    /// m: the highest step a wheel rolls up (`ground::Ground`): the car rides the world's
+    /// ground, tilts on slopes, and stops at a higher kerb. None: flat ground at z = 0.
+    pub ground_step: Option<f64>,
 }
 
 /// One IMU reading, in `imu_link`.
@@ -212,6 +216,10 @@ pub struct Odometry {
     /// m/s and rad/s, in base_link.
     pub speed: f64,
     pub yaw_rate: f64,
+    /// m and rad: the height and tilt on the ground (0 for the wheels' odometry).
+    pub z: f64,
+    pub roll: f64,
+    pub pitch: f64,
 }
 
 /// Something to publish now.
@@ -284,6 +292,8 @@ pub struct Simulator {
     /// When the car last pushed against something (ns): a new hit is one after a second
     /// clear of it, not each step it keeps pushing.
     last_contact_ns: Option<u64>,
+    /// Each wheel's ground height (m): rear right, rear left, front right, front left.
+    wheel_heights: [f64; 4],
 }
 
 impl Simulator {
@@ -314,9 +324,13 @@ impl Simulator {
                 yaw: 0.0,
                 speed: 0.0,
                 yaw_rate: 0.0,
+                z: 0.0,
+                roll: 0.0,
+                pitch: 0.0,
             },
             joints: Joints::default(),
             last_contact_ns: None,
+            wheel_heights: [0.0; 4],
         }
     }
 
@@ -350,14 +364,38 @@ impl Simulator {
         &self.settings
     }
 
-    /// `base_link` in the world, flat on the ground.
+    /// `base_link` in the world: on the ground under the rear axle, tilted to the wheels
+    /// (flat at z = 0 without `ground_step`).
     pub fn base_link(&self) -> Pose {
         let s = self.car.state();
-        Pose::new(Vec3::new(s.x, s.y, 0.0), Rot3::from_yaw(s.yaw))
+        match self.ground() {
+            Some(g) => g.pose(s.x, s.y, s.yaw, self.wheel_heights),
+            None => Pose::new(Vec3::new(s.x, s.y, 0.0), Rot3::from_yaw(s.yaw)),
+        }
+    }
+
+    fn ground(&self) -> Option<Ground> {
+        let g = self.settings.geometry;
+        self.settings.ground_step.map(|max_step| Ground {
+            max_step,
+            wheelbase: g.wheelbase,
+            track: g.track,
+        })
     }
 
     /// The first outputs, at time 0: the clock and where the car stands.
     pub fn start(&mut self) -> Vec<Output> {
+        if let Some(g) = self.ground() {
+            // Find the ground from a little up: the car may start on a raised lot.
+            let s = self.car.state();
+            let anywhere = Ground {
+                max_step: f64::INFINITY,
+                ..g
+            };
+            if let Ok(h) = anywhere.settle(&self.world.scene, s.x, s.y, s.yaw, [0.4; 4]) {
+                self.wheel_heights = h;
+            }
+        }
         let mut out = vec![Output::Clock];
         self.speak(&mut out, true);
         out
@@ -370,9 +408,26 @@ impl Simulator {
         let mut s = self.car.step(command, dt);
         self.time_ns += self.settings.step_ns;
         let mut out = Vec::new();
+        let mut heights = self.wheel_heights;
+        let mut blocked = false;
+        if let Some(g) = self.ground() {
+            match g.settle(&self.world.scene, s.x, s.y, s.yaw, self.wheel_heights) {
+                Ok(h) => heights = h,
+                Err(_) => blocked = true,
+            }
+        }
         if let Some(body) = self.settings.body {
-            let at = Pose::new(Vec3::new(s.x, s.y, 0.0), Rot3::from_yaw(s.yaw));
-            if body.touches(&self.world.scene, &at) {
+            let at = match self.ground() {
+                Some(g) => g.pose(s.x, s.y, s.yaw, heights),
+                None => Pose::new(Vec3::new(s.x, s.y, 0.0), Rot3::from_yaw(s.yaw)),
+            };
+            blocked = blocked || body.touches(&self.world.scene, &at);
+        }
+        if !blocked {
+            self.wheel_heights = heights;
+        }
+        {
+            if blocked {
                 // Back to where it was, standing: a wall stops the car, as Gazebo's physics.
                 self.car.hold(&before);
                 s = self.car.state();
@@ -405,12 +460,17 @@ impl Simulator {
         }
         if self.due(r.truth) {
             let s = self.car.state();
+            let base = self.base_link();
+            let (roll, pitch, _) = base.rotation.rpy();
             out.push(Output::Truth(Odometry {
                 x: s.x,
                 y: s.y,
                 yaw: s.yaw,
                 speed: s.speed,
                 yaw_rate: s.yaw_rate,
+                z: base.position.z,
+                roll,
+                pitch,
             }));
         }
         if self.due(r.imu) {
@@ -474,6 +534,9 @@ impl Simulator {
             yaw: crate::math::wrap(s.yaw - self.start.yaw),
             speed: s.speed,
             yaw_rate: s.yaw_rate,
+            z: 0.0,
+            roll: 0.0,
+            pitch: 0.0,
         };
         let g = self.settings.geometry;
         let half = g.track / 2.0;
@@ -503,10 +566,16 @@ impl Simulator {
         // The specific force at the sensor: the car's acceleration (along, and the turn's
         // pull toward the centre, at the sensor's place ahead of the axle) and gravity.
         let r = mount.position;
+        // Gravity's pull, as the tilted car feels it (straight up on flat ground).
+        let up = self
+            .base_link()
+            .rotation
+            .transpose()
+            .apply(Vec3::new(0.0, 0.0, GRAVITY));
         let accel = Vec3::new(
-            s.accel - s.yaw_rate * s.yaw_rate * r.x,
-            s.speed * s.yaw_rate,
-            GRAVITY,
+            s.accel - s.yaw_rate * s.yaw_rate * r.x + up.x,
+            s.speed * s.yaw_rate + up.y,
+            up.z,
         );
         let accel = into_imu.apply(accel);
         let g = &mut self.imu_noise;
@@ -584,6 +653,7 @@ mod tests {
                 rear_overhang: 0.2,
                 height: 1.5,
             }),
+            ground_step: None,
         }
     }
 
@@ -633,6 +703,49 @@ mod tests {
         );
         assert_eq!(s.speed, 0.0);
         assert_eq!(hits, 1, "one hit, however long it pushes");
+    }
+
+    #[test]
+    fn a_kerb_stops_the_wheels_and_a_step_onto_a_mat_lifts_the_truth() {
+        let mut s = settings();
+        s.body = None; // only the wheels feel the ground
+        s.ground_step = Some(0.1);
+        let mut world = World::flat(400.0);
+        // A 5 cm mat from 3 m on, then a 0.3 m kerb from 10 m on.
+        world.scene.place(
+            "mat",
+            &crate::scene::Mesh::cuboid(Vec3::new(4.0, 10.0, 0.05)),
+            &Pose::new(Vec3::new(5.0, 0.0, 0.025), Rot3::IDENTITY),
+        );
+        world.scene.place(
+            "kerb",
+            &crate::scene::Mesh::cuboid(Vec3::new(10.0, 10.0, 0.3)),
+            &Pose::new(Vec3::new(15.0, 0.0, 0.15), Rot3::IDENTITY),
+        );
+        let car = Box::new(TwistFollower::new(1.561, 0.5));
+        let mut sim = Simulator::new(s, world, car, (0.0, 0.0, 0.0));
+        sim.start();
+        let go = Command::Twist {
+            speed: 1.0,
+            yaw_rate: 0.0,
+        };
+        let mut on_mat = None;
+        let mut hits = 0;
+        for _ in 0..12_000 {
+            for o in sim.step(&go) {
+                match o {
+                    Output::Truth(t) if (4.0..5.0).contains(&t.x) => on_mat = Some(t),
+                    Output::Hit { .. } => hits += 1,
+                    _ => {}
+                }
+            }
+        }
+        let t = on_mat.expect("the car crossed the mat");
+        assert!((t.z - 0.05).abs() < 1e-9 && t.pitch.abs() < 1e-9, "{t:?}");
+        // The front wheels (1.561 m ahead) stop at the kerb's face, at x = 10.
+        let x = sim.car().x;
+        assert!(x > 8.4 && x < 8.44, "the front wheels at the kerb: x = {x}");
+        assert_eq!(hits, 1);
     }
 
     #[test]

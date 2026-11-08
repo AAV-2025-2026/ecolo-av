@@ -6,7 +6,9 @@ Our own simulator, in Rust: a drop-in for `gz sim` and its `ros_gz_bridge`s
 (`sim.launch.py simulator:=own`, `docs/own-simulator.md`). It reads Gazebo's own world files,
 moves the car, casts the lidar's and radar's rays, and publishes on the topics the bridges
 use. `aav_gazebo`'s nodes (`gazebo_adapter`, `gazebo_imu`, `gazebo_gps`, `gazebo_radar`) and
-the whole stack above them run unchanged. No cameras yet. Gazebo stays the default.
+the whole stack above them run unchanged. The cameras are their own program,
+`aav_sim_cameras`, drawing the same world file; the launch starts both. Gazebo stays the
+default.
 
 ```text
 /control/sim/actuator_cmd ─> gazebo_adapter ─> /gazebo/cmd_vel ─> simulator (the car)
@@ -21,7 +23,7 @@ the whole stack above them run unchanged. No cameras yet. Gazebo stays the defau
 
 | Crate | Holds | ROS? |
 |---|---|---|
-| `crates/sim-core` | the worlds (SDF, `model://`, OBJ), the car (`CarModel`), the lidars, the IMU and GPS, the loop, the camera plug-in point (`SensorPlugin`) | no, no Bevy |
+| `crates/sim-core` | the worlds (SDF, `model://`, OBJ), the car (`CarModel`), the ground under each wheel (`ground.rs`: slopes, kerbs), the lidars, the IMU and GPS, the loop, the camera plug-in point (`SensorPlugin`) | no, no Bevy |
 | `crates/sim-core`, feature `shared` | `SharedCar`: the shared `car-model` crate (`aav_description`) behind `CarModel`, the same states as `ActuatorCar` to 1e-9 (`shared_car.rs`). The node doesn't use it yet: it runs `TwistFollower` behind `gazebo_adapter`'s model, as with Gazebo | no |
 | `crates/sim-node` | the node, binary `simulator` (rclrs) | yes |
 
@@ -32,7 +34,7 @@ the whole stack above them run unchanged. No cameras yet. Gazebo stays the defau
 | sub | `/gazebo/cmd_vel` | Twist: speed and turn rate, kept until the next |
 | pub | `/clock` | 1 kHz, as Gazebo |
 | pub | `/gazebo/odom` | Odometry, 50 Hz, `odom` |
-| pub | `/vehicle/sim/truth` | Odometry, 50 Hz, `map` |
+| pub | `/vehicle/sim/truth` | Odometry, 50 Hz, `map`: height and tilt on the ground too |
 | pub | `/gazebo/imu` | Imu, 50 Hz, `imu_link`, gravity +9.8 |
 | pub | `/gazebo/navsat` | NavSatFix, 5 Hz, `gps_link` |
 | pub | `/joint_states` | JointState, 100 Hz: four wheels, two steering joints |
@@ -42,7 +44,8 @@ the whole stack above them run unchanged. No cameras yet. Gazebo stays the defau
 
 Parameters: `world`, `models`, `start_x`, `start_y`, `start_yaw`, the car's size and sensor
 mounts (`aav_gazebo`'s `gazebo.launch.py` passes `vehicle.yaml`'s), `lidar`, `radar`,
-`obstacle`, `body_length` (0: drives through things), `seed`, `step` (0.001 s), `clock_hz`
+`obstacle`, `body_length` (0: drives through things), `ground_step` (0.1 m: the highest step
+a wheel rolls up; 0: flat ground), `seed`, `step` (0.001 s), `clock_hz`
 (1000), `real_time_factor` (1.0; 0 = as fast as it can), `threads`. The node's docstring has
 them all.
 
