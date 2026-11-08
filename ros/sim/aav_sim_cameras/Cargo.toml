@@ -1,0 +1,39 @@
+# The simulator's cameras: Bevy draws the world from each camera on the car, offscreen, and
+# the pictures go out on Gazebo's camera topics.
+#
+# Its own workspace, with no package.xml, as the developer window: colcon and the car's
+# builds never compile Bevy. camera-core has no engine and no ROS; tools/test.sh tests it.
+[workspace]
+members = [".", "crates/camera-core"]
+
+[package]
+name = "sim-cameras"
+description = "The simulator's cameras: Bevy renders offscreen, rclrs publishes Gazebo's camera topics"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[[bin]]
+name = "sim_cameras"
+path = "src/main.rs"
+
+[features]
+# Without ROS by default: renders and times on any computer, with nothing sourced.
+# `ros` needs ROS sourced for the message types (tools/sim_cameras.sh does it).
+default = []
+ros = ["dep:rclrs", "dep:ros-env"]
+
+[dependencies]
+camera-core = { path = "crates/camera-core" }
+# The same Bevy as the developer window. "3d" is all it draws with; no window is opened.
+bevy = { version = "0.20", default-features = false, features = ["3d"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+rclrs = { version = "0.8", optional = true }
+ros-env = { version = "0.3", optional = true }
+
+# Bevy is far too slow without optimisation, so optimise the libraries even in a dev build.
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3

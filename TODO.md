@@ -22,6 +22,14 @@ Ben, 7 Nov: "Does the bevy tool still use gazebo in the background. I would love
 |---|---|---|
 | 134 | **Our own simulator's core** ([page](docs/own-simulator.md), `aav_simulator`, `sim simulator:=own`): Gazebo's worlds (test lot, road, campus), the car (a `CarModel` trait, the car-model crate's rules), the roof lidar and the radar stand-in by ray casting, IMU, GPS, wheels, truth, `/clock`, TF through `/joint_states`; the car stops at what it hits; spawn and delete services; `sim-check --simulator own` | ✅ 7 Nov built; on a loaded Mac: drop-in pass (no cameras), a Nav2 goal reached, `sim-check` pass but the box run's last leg (a late TF), `--lidar-obstacle` pass. ⬜ the cameras plug in (another branch); `car-model` behind the trait; a quiet-machine run beside Gazebo's spread; then ours the default |
 
+## Saturday 7 November: release 0.3, our own simulator
+
+Ben, 7 Nov: replace Gazebo with our own Rust simulator, every sensor. The core (world, car, lidar, IMU, GPS, wheels, clock, TF) and the cameras are built side by side.
+
+| # | Task | Status |
+|---|---|---|
+| 135 | **The simulator's cameras** ([page](docs/own-simulator-cameras.md), `aav_sim_cameras`): Bevy offscreen, Gazebo's four camera topics, `CameraRenderer` for the core. Left: feed it the core's world and truth; read Gazebo's SDF worlds; a no-GPU path for CI; compare with Gazebo's pictures; the detector on its pictures | ✅ built, test world only. ⬜ merge with the core |
+
 ## Saturday 7 November: the hardware debug plan
 
 Ben, 7 Nov: the Rust replaces the C++, WiFi pages too, with JSON instead of streaming text; graphs of steering, brake and throttle in `hw_panel`; debug one part of the car at a time.

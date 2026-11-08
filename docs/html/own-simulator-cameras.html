@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Our simulator&#x27;s cameras · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/own-simulator-cameras.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Our simulator&#x27;s cameras</h1>
+<div class="meta">6 min read · 7 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="release-0.2.html">The 0.2 guide</a>
+<a href="whats-new.html">What&#x27;s new</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-evening.html">Tonight: drive as is</a>
+<a href="car-day.html">Car day</a>
+<a href="car-setup.html">Car setup</a>
+<a href="tests.html">Every test</a>
+<a href="know-the-car.html">Know the car</a>
+<a href="measure-the-car.html">Measure the car</a>
+<span class="sep">Learn:</span>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-speed.html">Learn: speed</a>
+<a href="learn-lidar.html">Learn: lidar</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
+<a href="maps-and-position.html">Maps and position</a>
+<span class="sep">Reference:</span>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="path-followers.html">Path followers</a>
+<a href="switches.html">Switches</a>
+<a href="trials.html">Trials</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a class="here" href="own-simulator-cameras.html">Our simulator&#x27;s cameras</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="hardware-debug.html">Hardware debug</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="geofence.html">The geofence</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="esp32-safety.html">ESP32 safety rules</a>
+<a href="esp32-cpp-parity.html">ESP32 C++ parity</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#in-one-line">In one line</a><a href="#the-cameras">The cameras</a><a href="#run-it">Run it</a><a href="#how-the-core-plugs-it-in">How the core plugs it in</a><a href="#tests">Tests</a><a href="#measured-7-nov-bens-m4-max">Measured (7 Nov, Ben&#x27;s M4 Max)</a><a href="#what-it-is-not-yet">What it is not, yet</a></nav>
+<div class="lead"><p>Ben, 7 Nov: replace Gazebo with our own Rust simulator, every sensor. This page is the
+<strong>cameras</strong> part: <code>ros/sim/aav_sim_cameras</code>. The rest of the simulator (world, car, lidar,
+IMU, GPS, wheels, clock) is built beside it. The plan:
+<a href="../designs/2026-11-05_own-simulator.md">our own simulator</a>.</p>
+<p><img alt="The front left camera, 7 m from the stop sign" src="../img/own-sim-cameras-front.png" /></p></div>
+<section class="card"><h2 id="in-one-line">In one line</h2>
+<p>Bevy draws the world from each camera on the car, with no window, and the pictures go out on
+<strong>Gazebo's camera topics</strong>: same size, lens, rate, encoding and frame.</p>
+</section>
+<section class="card"><h2 id="the-cameras">The cameras</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Camera</th>
+<th>Topics</th>
+<th>Frame</th>
+<th>Where it sits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>front left</td>
+<td><code>/sensors/camera/front_left/image_raw</code>, <code>camera_info</code></td>
+<td><code>camera_left_link</code></td>
+<td><code>vehicle.yaml</code></td>
+</tr>
+<tr>
+<td>front right</td>
+<td><code>/sensors/camera/front_right/...</code></td>
+<td><code>camera_right_link</code></td>
+<td><code>vehicle.yaml</code></td>
+</tr>
+<tr>
+<td>rear</td>
+<td><code>/sensors/camera/rear/...</code></td>
+<td><code>camera_rear_link</code></td>
+<td><code>vehicle.yaml</code></td>
+</tr>
+<tr>
+<td>chase</td>
+<td><code>/vehicle/sim/chase_camera/image_raw</code></td>
+<td><code>base_link</code></td>
+<td>7 m behind, 3.5 m up</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Value</th>
+<th>Same as Gazebo?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Picture</td>
+<td>640 x 360, <code>rgb8</code></td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Lens</td>
+<td>focal 343 px, centre (320, 180), no distortion</td>
+<td>yes: K, P, R, D all match</td>
+</tr>
+<tr>
+<td>Rate</td>
+<td>10 Hz, on whole tenths of sim time</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>QoS</td>
+<td>reliable, keep last 10</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>Stamp</td>
+<td>the time of the car pose it was drawn from</td>
+<td>yes</td>
+</tr>
+</tbody>
+</table></div>
+<p><img alt="The chase camera: the car's body, the box, the stop sign" src="../img/own-sim-cameras-chase.png" /></p>
+</section>
+<section class="card"><h2 id="run-it">Run it</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run sim-cameras</code></td>
+<td>the test world for 10 s, then the timing table. No ROS</td>
+</tr>
+<tr>
+<td><code>pixi run sim-cameras --save /tmp/pics</code></td>
+<td>also keeps each camera's first picture</td>
+</tr>
+<tr>
+<td><code>pixi run sim-cameras --from 18 --speed 0</code></td>
+<td>the car parked 7 m from the stop sign</td>
+</tr>
+<tr>
+<td><code>pixi run sim-cameras --bench 300</code></td>
+<td>as fast as it can: the most pictures a second</td>
+</tr>
+<tr>
+<td><code>pixi run sim-cameras --ros</code></td>
+<td>publishes the topics, a scripted drive, wall-clock stamps</td>
+</tr>
+<tr>
+<td><code>pixi run sim-cameras --ros --pose truth</code></td>
+<td>draws where <code>/vehicle/sim/truth</code> says, with its stamps</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>--ros</code> needs <code>pixi run build</code> first, and stays on this computer (<code>tools/ros.sh --local</code>).</p>
+</section>
+<section class="card"><h2 id="how-the-core-plugs-it-in">How the core plugs it in</h2>
+<pre class="highlight"><code class="language-text"> core simulator ─── /vehicle/sim/truth (50 Hz) ───► sim_cameras ───► the camera topics
+                    or, in Rust: Cameras::tick(car pose, sim time)</code></pre>
+<p>Two ways, both ready:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Way</th>
+<th>When</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Its own program</strong>, reading <code>/vehicle/sim/truth</code></td>
+<td>the default: a slow picture can't delay the IMU</td>
+</tr>
+<tr>
+<td><strong>In Rust</strong>, <code>camera_core::Cameras</code> with <code>sim_cameras::BevyRenderer</code></td>
+<td>if the core wants pictures in its own loop</td>
+</tr>
+</tbody>
+</table></div>
+<p>The shared types live in <code>camera-core</code>, which has no Bevy and no ROS:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Type</th>
+<th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SimWorld</code></td>
+<td>the sky, the light, and a list of <code>Shape</code>s in the map frame; the car's body</td>
+</tr>
+<tr>
+<td><code>Shape</code></td>
+<td>a name, a <code>Geometry</code> (plane, box, cylinder, octagon), a pose, a <code>Look</code> (colour, picture)</td>
+</tr>
+<tr>
+<td><code>Rig</code>, <code>CameraSpec</code></td>
+<td>each camera: lens, rate, topic, frame, mount</td>
+</tr>
+<tr>
+<td><code>CameraRenderer</code></td>
+<td>the trait: <code>set_world(&amp;SimWorld)</code> and <code>render(car, stamp, cameras)</code></td>
+</tr>
+<tr>
+<td><code>Cameras</code></td>
+<td>the rig, a timer per camera, and a renderer: <code>tick(car, now)</code> draws the ones due</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>For the merge:</strong> the core turns its world into a <code>SimWorld</code> (SDF's boxes, planes and
+cylinders map one to one; colours are SDF's, linear) and publishes <code>/vehicle/sim/truth</code>.
+Its <code>/system/source</code> announcer lists the cameras, as <code>gazebo_adapter</code> does.</p>
+</section>
+<section class="card"><h2 id="tests">Tests</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Test</th>
+<th>What it proves</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>projection</td>
+<td>a point 10 m ahead lands on (320, 180); 1 m left and 0.5 m up, 34.3 and 17.15 px off</td>
+<td><code>camera-core</code>, every <code>tools/test.sh</code></td>
+</tr>
+<tr>
+<td>camera_info</td>
+<td>K, P, R, D as Gazebo's bridge sends them</td>
+<td><code>camera-core</code></td>
+</tr>
+<tr>
+<td>rate</td>
+<td>one sim minute at 50 Hz gives each camera exactly 600 pictures, on the tenths</td>
+<td><code>camera-core</code></td>
+</tr>
+<tr>
+<td>picture colours</td>
+<td>sky, road, grass, kerb, box, stop sign, post: each where the lens says, its colour</td>
+<td><code>tests/render.rs</code>, needs a GPU</td>
+</tr>
+<tr>
+<td>picture edges</td>
+<td>the stop sign's edges in the picture within 1 px of the lens's</td>
+<td><code>tests/render.rs</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="measured-7-nov-bens-m4-max">Measured (7 Nov, Ben's M4 Max)</h2>
+<p>Other agents were using the same computer (load 10 to 40), so the slow tail is partly theirs.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Run</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bevy ready, shaders warmed</td>
+<td>0.2 to 0.5 s</td>
+</tr>
+<tr>
+<td>Four cameras at 10 Hz, <code>--ros</code>, 25 s</td>
+<td>10.03 Hz each, 251 pictures, out 16 ms after due (median), 60 ms worst, none late</td>
+</tr>
+<tr>
+<td><code>--pose truth</code>, a 50 Hz truth on sim time</td>
+<td>10.00 Hz on sim time, every stamp on a tenth, 15 ms median, 26 ms worst</td>
+</tr>
+<tr>
+<td><code>ros2 topic hz</code></td>
+<td>10.000 Hz, min 0.097 s, max 0.103 s</td>
+</tr>
+<tr>
+<td><code>--bench</code>, four cameras, a quiet minute</td>
+<td>57 rounds a second (227 pictures/s), 17.5 ms a round</td>
+</tr>
+<tr>
+<td>No ROS, 30 s, heavy load</td>
+<td>9.92 Hz; median 19 ms; 25 of 298 late (worst 196 ms)</td>
+</tr>
+</tbody>
+</table></div>
+<p>So four cameras at the car's 15 Hz (60 pictures a second) should fit when the computer is quiet: not yet run at 15 Hz.</p>
+</section>
+<section class="card"><h2 id="what-it-is-not-yet">What it is not, yet</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Missing</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gazebo's worlds (<code>road.sdf</code>, <code>test_lot.sdf</code>, campus)</td>
+<td>only the test world draws; the core's world reader feeds it at the merge</td>
+</tr>
+<tr>
+<td>A computer with no GPU (CI, oirp-spss)</td>
+<td>Bevy needs Vulkan or Metal: the picture tests can't run there. Only <code>camera-core</code> runs in CI</td>
+</tr>
+<tr>
+<td>A side-by-side with Gazebo's pictures</td>
+<td>the looks match by eye (<code>docs/img/sim-cameras.png</code>); not measured</td>
+</tr>
+<tr>
+<td>The detector on these pictures</td>
+<td>the stop sign carries Gazebo's own picture; not yet run through RF-DETR</td>
+</tr>
+<tr>
+<td>Faults (freeze, stop)</td>
+<td><code>gazebo_camera</code> does them for Gazebo; the simulator's fault switch should cover these</td>
+</tr>
+<tr>
+<td>The JPEG topics</td>
+<td>Gazebo has none either: <code>chase_jpeg</code> and <code>preview_jpeg</code> still make them</td>
+</tr>
+<tr>
+<td>Lifelike pictures</td>
+<td>a non-goal: Gazebo's aren't either</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="full-simulation.html"><small>Previous</small>← Full simulation</a>
+<a class="next" href="carla.html"><small>Next</small>CARLA →</a></nav>
+</main>
+<footer>Source: <code>docs/own-simulator-cameras.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

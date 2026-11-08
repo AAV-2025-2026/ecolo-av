@@ -117,6 +117,8 @@ PAGES = [
      'The whole car in Gazebo: the pipeline, the actuators'),
     ('own-simulator.md', 'Our own simulator',
      "Gazebo's job in Rust: the worlds, the car, the lidar, IMU, GPS; simulator:=own"),
+    ('own-simulator-cameras.md', "Our simulator's cameras",
+     'Bevy draws the car cameras offscreen, on the same topics as Gazebo'),
     ('carla.md', 'CARLA', "Photo-real towns and Carleton's streets: UE5 vs UE4, the twin"),
     ('bench.md', 'Bench mode', "The car's software on one computer, with stand-ins"),
     ('actuator-tests.md', 'Actuator tests', 'Measure how the car moves: on stands, in a lot'),

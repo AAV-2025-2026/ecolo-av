@@ -16,6 +16,7 @@ topics as the real car, so everything upstream runs unchanged.
 | [aav_spine_sim](./aav_spine_sim/README.md) | bench | the real `spine-core` logic (Rust) on the CAN frames, driving a car model or Gazebo's car |
 | [aav_bench](./aav_bench/README.md) | bench | pretend sensors that match the real drivers' topics, types, frames and QoS |
 | [aav_carla](./aav_carla/README.md) | carla | a CARLA car behind the real car's topics (never yet run against a real server) |
+| [aav_sim_cameras](./aav_sim_cameras/README.md) | sim | our own simulator's cameras: Bevy draws each car camera offscreen, on Gazebo's camera topics. Its own Cargo workspace, not a colcon package |
 
 ## Invariants
 

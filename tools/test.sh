@@ -53,6 +53,9 @@ if command -v cargo >/dev/null; then
   # Only the logic: the window (raylib) needs a screen's libraries, and colcon builds it.
   echo "== ros/hud/aav_hud: the HUD's state, GPS, e-stop and formatting; the map's maths; the hardware panel's buttons"
   (cd ros/hud/aav_hud && cargo test -q --locked -p hud-core -p map-core -p debug-core -p panel-core)
+  # Only the logic: the pictures need Bevy and a GPU (cargo test --release there).
+  echo "== ros/sim/aav_sim_cameras: the simulator's cameras: lenses, camera_info, mounts, rates"
+  (cd ros/sim/aav_sim_cameras && cargo test -q --locked -p camera-core)
   # Every firmware crate must build without the standard library, for the Pico 2's chip.
   if [[ -d "$(rustc --print target-libdir --target thumbv8m.main-none-eabihf 2>/dev/null)" ]]; then
     echo "== firmware/spine, no_std, for the Pico 2 (thumbv8m.main-none-eabihf)"
@@ -92,7 +95,7 @@ bad = [t for t in ('turtle', 'sim', 'bench', 'bench-check', 'view', 'sim-check',
                    'demo', 'ndt-map', 'carla-car', 'laptop-bench')
        if not tasks.get(t, '').startswith('tools/ros.sh --local ')]
 # The families that start Gazebo or drive it: each choice's line in its script.
-for script, choices in (('tools/screen.sh', ('hw-panel',)),
+for script, choices in (('tools/screen.sh', ('hw-panel',)), ('tools/sim_cameras.sh', ('--ros',)),
                         ('tools/measure.sh', ('controllers', 'timing', 'stream', 'atob'))):
     text = open(script).read()
     for choice in choices:

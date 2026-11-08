@@ -1,0 +1,55 @@
+# The simulator's cameras: the same pictures, lenses, rates, topics and frames as Gazebo's
+# (aav_description urdf/aav.sensors.gazebo.xacro), so either one is a drop-in for the other.
+#
+# Each real camera's mount is the frame of that name in vehicle.yaml's sensors: (the only
+# place car measurements live). The chase camera is the simulator's own, so its mount is here.
+# Topics: <topic>/image_raw (sensor_msgs/Image, rgb8) and <topic>/camera_info.
+#
+# The lens: the 2024-25 calibration at a third of its size (focal 343 px for 640 x 360),
+# as the bench camera and Gazebo have it. No distortion. Clip planes as Gazebo's.
+cameras:
+  - name: front_left
+    topic: /sensors/camera/front_left
+    frame_id: camera_left_link
+    mount: camera_left_link
+    width: 640
+    height: 360
+    focal_px: 343.0
+    rate_hz: 10.0
+    near: 0.1
+    far: 150.0
+  - name: front_right
+    topic: /sensors/camera/front_right
+    frame_id: camera_right_link
+    mount: camera_right_link
+    width: 640
+    height: 360
+    focal_px: 343.0
+    rate_hz: 10.0
+    near: 0.1
+    far: 150.0
+  - name: rear
+    topic: /sensors/camera/rear
+    frame_id: camera_rear_link
+    mount: camera_rear_link
+    width: 640
+    height: 360
+    focal_px: 343.0
+    rate_hz: 10.0
+    near: 0.1
+    far: 150.0
+  # 7 m behind the rear axle and 3.5 m up, looking down 0.28 rad, 70 degrees across.
+  # Sees the car's body; no camera_info, frame base_link (as Gazebo's).
+  - name: chase
+    topic: /vehicle/sim/chase_camera
+    frame_id: base_link
+    mount_xyz: [-7.0, 0.0, 3.5]
+    mount_rpy: [0.0, 0.28, 0.0]
+    width: 640
+    height: 360
+    horizontal_fov: 1.2217304764   # 70 degrees
+    rate_hz: 10.0
+    near: 0.5
+    far: 2000.0
+    camera_info: false
+    sees_car: true
