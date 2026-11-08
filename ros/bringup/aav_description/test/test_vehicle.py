@@ -365,6 +365,27 @@ def test_the_firmware_copies_match_vehicle_yaml():
     assert rust_const(SPINE_RS, 'MAX_REVERSE_SPEED') == v['max_reverse_speed']
 
 
+CALIBRATION_RS = ROOT / 'firmware/spine/crates/spine-board/src/calibration.rs'
+
+
+def test_the_firmware_brake_travel_matches_vehicle_yaml():
+    # Like the steering's ends: the firmware maps the brake 0..1 onto released..full
+    # (calibration.rs `Brake`), the adaptive brake reads them from vehicle.yaml.
+    brake = vehicle.load(CONFIG)['brake']
+    block = re.search(r'brake: Brake \{\s*released: (\d+),\s*full: (\d+),',
+                      CALIBRATION_RS.read_text())
+    assert block, f'no `brake: Brake {{ released, full }}` in {CALIBRATION_RS}'
+    assert (float(block.group(1)), float(block.group(2))) == (brake['released'], brake['full'])
+
+
+def test_the_brake_limits_are_in_order():
+    from aav_description.adaptive_brake import BrakeLimits
+    limits = BrakeLimits.from_vehicle(vehicle.load(CONFIG))
+    # released < touch < safe max <= full (or all reversed, for a brake that pulls).
+    assert 0.0 < limits.touch_fraction < limits.safe_max_fraction <= 1.0
+    assert limits.max_hold_time > 0.0
+
+
 def test_ego_and_the_spine_share_one_forward_speed_limit():
     # Every driver respects one limit: ego asks for no more, the spine enforces it, the RC
     # transmitter too. Raise both together, per the test plan.

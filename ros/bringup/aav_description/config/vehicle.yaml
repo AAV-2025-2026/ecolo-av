@@ -99,6 +99,26 @@ actuators:
   # pi_loop_decel: 0.0        # m/s^2, the same in pi. TODO test 4.3
 
 
+# The brake actuator's limits, like the steering's ends: the brake command 0..1 maps onto
+# released..full (the firmware's calibration.rs `Brake`; test_vehicle.py checks it keeps
+# the same released and full). Read by the adaptive brake (aav_description
+# adaptive_brake.py, docs/stopping.md "A heavier car"): it brakes harder when the car
+# slows less than expected, never above safe_max, and only max_hold_time s near it.
+# Targets are the brake actuator's (Jrk) targets, in counts.
+#
+# EVERY VALUE IS A PLACEHOLDER: measured on stands on car day, A7 rows 6-8
+# (docs/car-day.md), with the hardware lead. Until then the adaptive brake is a sim trial.
+
+brake:
+  released: 400         # PLACEHOLDER: brake let go. The firmware's 400, never measured. TODO A7.6
+  touch: 800            # PLACEHOLDER: the pads start to grip. A guess. TODO A7.6
+  full: 3500            # PLACEHOLDER: full brake. The firmware's 3500, never measured. TODO A7.6
+  safe_max: 3200        # PLACEHOLDER: the most the brake may ever be pushed (the hardware
+                        # lead's choice: a target, a pressure or the current limit). TODO A7.7
+  max_hold_time: 5.0    # s near safe_max before the extra force comes off. PLACEHOLDER:
+                        # can it hold full brake for minutes? TODO A7.7
+
+
 # Sensor mounts, relative to base_link.
 # xyz in metres, rpy in radians.
 #

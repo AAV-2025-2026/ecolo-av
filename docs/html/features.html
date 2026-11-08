@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">58 min read · 14 sections</div></header>
+<div class="meta">59 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -623,7 +623,7 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>built</td>
 </tr>
 <tr>
-<td><a href="car-model.html">One car model</a> (<code>aav_description</code> <code>car_model.py</code>, its Rust twin <code>car-model</code>): actuator lags, dead times, the steering motor and the bicycle; <code>step</code> and <code>predict</code></td>
+<td><a href="car-model.html">One car model</a> (<code>aav_description</code> <code>car_model.py</code>, its Rust twin <code>car-model</code>): actuator lags, dead times, the steering motor and the bicycle; <code>step</code> and <code>predict</code>; the mass and a payload (8 Nov: a loaded car speeds up and brakes by mass / (mass + payload))</td>
 <td>Ben, 7 Nov: "we really want the ego to have a mathematical model for steering, braking and acceleration": ego, the simulators and the Rust drivers share one model, Python and Rust checked against the same vectors. The simulator's and the Rust MPPI's <code>CarModel</code> traits take it too (feature <code>shared</code>: <code>SharedCar</code>, <code>SharedModel</code>), checked against their own copies</td>
 <td>Ben</td>
 <td>2026-11-07</td>
@@ -649,6 +649,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Ben</td>
 <td>2026-11-07</td>
 <td>built</td>
+</tr>
+<tr>
+<td><a href="stopping.html#4-a-heavier-car-the-adaptive-brake">The adaptive brake</a> (<code>aav_description</code> <code>adaptive_brake.py</code>, <code>adaptive_brake:=true</code>, a sim trial): after the speed loop, it compares the slowing measured with the empty car model's, and brakes harder when the car stops too slowly, never above the brake's safe max, rising at a set rate, high force only for a set time; the brake's limits in <code>vehicle.yaml</code> <code>brake:</code> (placeholders until car day A7); the car model's <code>payload</code> (kg aboard: <code>payload:=</code>); <code>sim-check --loaded-stop</code></td>
+<td>Ben, 8 Nov: "if we brake without a person vs with a person ... we are going to need to dynamically realize that we aren't braking as fast as we expect and start applying more force. We don't want to overwhelm the brakes though". The same brake stops a heavier car later; this keeps the stop where the plan said, inside the brake's own limits, below every safety lock</td>
+<td>Ben Woodhead</td>
+<td>2026-11-08</td>
+<td>sim</td>
 </tr>
 </tbody>
 </table></div>

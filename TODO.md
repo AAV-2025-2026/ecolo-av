@@ -3,6 +3,14 @@
 The current work list, newest first. Tick items off as they land; each tick = a commit.
 Ben's messages, word for word: `docs/history/messages-*.md`.
 
+## A heavier car: the adaptive brake (8 Nov)
+
+Ben, 8 Nov: "if we brake without a person vs with a person ... we are going to need to dynamically realize that we aren't braking as fast as we expect and start applying more force. We don't want to overwhelm the brakes though, so we might want to know what the max values are like the steering system." The page: [a heavier car](docs/stopping.md#4-a-heavier-car-the-adaptive-brake).
+
+| # | Task | Status |
+|---|---|---|
+| 145 | **The adaptive brake** (`aav_description` `adaptive_brake.py`; `adaptive_brake:=true` in the sim): measured against the empty car model's slowing, more brake for a car that stops too slowly; never above `brake: safe_max`, a rise rate, `max_hold_time` near it; the car model's `payload`; `sim-check --loaded-stop` | ✅ 8 Nov built and tested without ROS: from 2 m/s with 150 kg aboard the car model stops 0.58 m past the empty plan, +0.04 m with the adaptive brake (the page). ⬜ `sim-check --loaded-stop` in the simulator. ⬜ car day A7 rows 6-8: the brake's real limits into `vehicle.yaml` `brake:`. ⬜ on the car: in `legacy_uart_bridge`'s `pi` loop (Python, the same module), then spine-core in Rust (a twin with shared vectors); the wheel speed's noise first (8 spokes a turn) |
+
 ## Off Nav2, one piece at a time (8 Nov)
 
 Ben, 8 Nov: our own versions beside Nav2, each until it wins; Nav2 stays the default and on the car. The order: the costmap, a Rust path planner, the navigator.
