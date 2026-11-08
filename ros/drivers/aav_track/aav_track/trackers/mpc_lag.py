@@ -46,10 +46,12 @@ It tells ego so: a lag-aware tracker (`lag_aware = True`), ego's lead turns off.
 from __future__ import annotations
 
 from collections import deque
+from dataclasses import replace
 import math
 import time
 from typing import Sequence
 
+from aav_description import car_model
 from aav_drive_to_point.approach import planned_deceleration
 from aav_track import lag_model as lm
 from aav_track import qp
@@ -86,9 +88,14 @@ class MPCLag(Tracker):
             raise ValueError('need cruise, accel, decel, max_brake, lateral_accel, period, '
                              'r, w_slack above 0; horizon >= 2; terminal >= 1; r_rate, '
                              'q_speed, r_speed, latency >= 0; substeps >= 1')
-        self.car = model                                    # for the estimate
-        self.plan_car = model.without_deadbands()           # for the plan
+        model = replace(model, wheelbase=limits.wheelbase, max_steering=limits.max_steer)
+        self.model = model
+        # The estimate: the shared car model, with the speed loop's own state (its
+        # integral); the dead times are this tracker's queues, a tick at a time.
+        self.car = lm.without_dead_times(model)
+        self.plan_car = lm.without_deadbands(self.car)      # for the plan
         self.loop = lm.speed_loop(speed_loop)
+        self.model_dt = period / substeps
         self.cruise, self.accel, self.decel = cruise, accel, decel
         self.brake = planned_deceleration(max_brake)
         self.lateral_accel = lateral_accel
@@ -101,7 +108,8 @@ class MPCLag(Tracker):
         self.d_steer = lm.dead_ticks(model.steer_dead_time + latency, period)
         self.d_speed = lm.dead_ticks(max(model.throttle_dead_time, model.brake_dead_time) +
                                      latency, period)
-        self.est = None               # the state estimate (lag_model rows), at the last tick
+        self.car_state = None         # the estimate: car_model.CarState, at the last tick
+        self.speed_loop = None        # its car_model.SpeedLoop (the integral)
         self.sent = None              # (steer, set speed) of the last tick
         self.acting = None            # (steer, set speed) acting over this tick
         self.steer_queue = deque()    # the steering commands still in the dead time
@@ -118,24 +126,40 @@ class MPCLag(Tracker):
     # --- the estimate ---------------------------------------------------------------------
 
     def estimate(self, state: State, dt: float) -> np.ndarray:
-        """Return the state now: measured pose and speed, the rest from what was sent."""
+        """
+        Return the state now: the pose and speed measured, the rest from what was sent.
+
+        The actuators and the speed loop's integral come from the shared car model
+        (car_model.step, with its SpeedLoop), run over the last tick from the speed then
+        measured, with the commands that acted over it.
+        """
         foot = self.foot(state.x, state.y)
-        if self.est is None:
-            x = np.zeros(lm.NX)
-            x[[lm.SETPOINT, lm.MOTOR, lm.WHEELS]] = state.steer
+        v = max(state.v, 0.0)
+        if self.car_state is None:
+            self.car_state = car_model.CarState(steer=state.steer, steer_motor=state.steer,
+                                                steer_setpoint=state.steer,
+                                                steer_linkage=state.steer)
+            self.speed_loop = car_model.SpeedLoop(self.loop)
             self.steer_queue = deque([state.steer] * self.d_steer)
-            self.speed_queue = deque([max(state.v, 0.0)] * self.d_speed)
-            self.sent = (state.steer, max(state.v, 0.0))
+            self.speed_queue = deque([v] * self.d_speed)
+            self.sent = (state.steer, v)
         else:
             # The commands that acted over the last tick (sent a dead time before it).
-            u = np.array(self.acting)
-            ticks = max(1, int(round(dt / self.period)))
-            x = self.est
-            for _ in range(ticks):
-                x = lm.step(self.car, self.loop, x, u, 0.0, self.period, self.substeps)
-        x = np.array(x, float)
+            command = car_model.Command(steer=self.acting[0], speed=self.acting[1])
+            car = self.car_state
+            for _ in range(max(1, int(round(dt / self.model_dt)))):
+                car = car_model.step(self.car, car, command, self.model_dt, self.speed_loop)
+            self.car_state = car
+        c = self.car_state
+        x = np.zeros(lm.NX)
         x[lm.E_Y], x[lm.E_TH], x[lm.S] = foot.cross, wrap(state.yaw - foot.heading), foot.s
-        x[lm.V] = max(state.v, 0.0)
+        x[lm.V] = v
+        x[lm.THROTTLE], x[lm.BRAKE] = c.throttle_level, c.brake_level
+        x[lm.SETPOINT], x[lm.MOTOR] = c.steer_setpoint, c.steer_motor
+        x[lm.WHEELS] = c.steer_linkage
+        x[lm.INTEGRAL] = self.speed_loop.integral
+        # The next tick starts from the speed measured now.
+        self.car_state = replace(c, v=v)
         return x
 
     @staticmethod
@@ -240,7 +264,6 @@ class MPCLag(Tracker):
         speed = float(np.clip(plan[0, 1], self.sent[1] - self.decel * tick,
                               self.sent[1] + self.accel * tick))
         speed = float(np.clip(speed, 0.0, self.cruise))
-        self.est = x0
         self.sent = (steer, speed)
         self.acting = (self.passed(self.steer_queue, steer),
                        self.passed(self.speed_queue, speed))

@@ -1,5 +1,5 @@
 """
-A pretend car for the trackers' tests: ego's model, then Gazebo's actuator model, a flat plane.
+A pretend car for the trackers' tests: ego's model, then the shared car model, a flat plane.
 
 The same chain as aav_drive_to_point's fake_car.py (ego -> gazebo_adapter's actuator model
 -> the car), driven the way the node drives it: a tracker and the speed policy at 20 Hz,
@@ -12,9 +12,9 @@ import math
 import time
 from typing import List, Tuple
 
+from aav_description.car_model import ActuatorConfig, Actuators
 from aav_ego.ackermann import EgoModel, Limits as EgoLimits
 from aav_ego.vehicle_model import VehicleModel
-from aav_gazebo.actuator_model import ActuatorConfig, Actuators
 from aav_track.checks import GoalCheck
 from aav_track.lag_model import CarParams
 from aav_track.path import Path

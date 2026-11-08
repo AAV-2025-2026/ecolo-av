@@ -63,7 +63,7 @@ From `config/track.yaml`: `lateral_accel` (1.0 m/s², slow for bends), `odom_tim
 each tracker's gains (`stanley.*`, `lqr.*`, `mpc.*`, `mpc_full.*`, `mpc_lag.*`; every
 tracker's are declared). `mpc_full` also takes `cruise_speed`, `acceleration`, `max_brake`,
 `lateral_accel` and vehicle.yaml's `max_accel` (the throttle). `mpc_lag` takes those,
-`deceleration`, and vehicle.yaml's whole `actuators:` section (`lag_model.CarParams`).
+`deceleration`, and vehicle.yaml's whole `actuators:` section (`car_model.ActuatorConfig`).
 
 **Live swap (sim only).** `live_swap` (default false; `sim.launch.py` sets it through
 `navigation.launch.py live_swap:=true`, the car never does): `ros2 param set /track
@@ -83,7 +83,7 @@ Modules (all but `track_node.py` have no ROS):
 | `trackers/__init__.py` | `State`, `Limits`, `Command`, `Tracker`, `SteerLag`, `make(name, limits, model)` |
 | `trackers/*.py` | the six trackers |
 | `qp.py` | a small QP solver (OSQP's ADMM, numpy) for `mpc_full` and `mpc_lag` |
-| `lag_model.py` | the car with its lags, in the path's frame, on arrays: `CarParams` (vehicle.yaml), `SpeedLoopParams` (the spine's PI), `step()`. A stand-in for the shared car model (`aav_description` `car_model.py`), same spec |
+| `lag_model.py` | the shared car model's maths (`aav_description` `car_model.py`) again, on arrays and in the path's frame, for `mpc_lag`'s plan: `step()`; its numbers and speed loops are `car_model`'s (`CarParams` is `car_model.ActuatorConfig`). `mpc_lag`'s estimate runs `car_model.step` itself |
 
 Built from: `aav_drive_to_point`'s `line.py` (`pursuit_curvature`, `turn_speed_limit`)
 and `approach.py`; `aav_ego`'s `vehicle_model.py` (`VehicleModel.lateral`, for LQR and
@@ -119,6 +119,6 @@ runs it). In Gazebo: `pixi run measure controllers --trackers ...`.
 | `test_speed.py` | cruise, slow before a bend, stop at the end |
 | `test_trackers.py` | each tracker on a pretend car (`sim_car.py`: ego's model, Gazebo's actuators): straight, a curve, a 1 m offset, at 1 and 3 m/s; the forward U-turn in a 14 m lane, at the planner's radius and at full lock; limits; LQR's schedule and preview; mpc_full's speed (slows to swing, stops at the end, throttle and brake); MPC's step times |
 | `test_qp.py` | the QP solver against hand answers and scipy's SLSQP |
-| `test_lag_model.py` | the model's spec (lags, rate, deadband, brake, bicycle); its speed loop and its car against aav_gazebo's |
+| `test_lag_model.py` | the model's spec (lags, rate, deadband, brake, bicycle); the same states as `car_model.step`, step for step (both speed loops, every branch) |
 | `test_trackers.py` (mpc_lag) | no speed overshoot; the 2 m/s U-turn with vehicle.yaml's lags and with them doubled (`follow(lag_scale=2)`); the stop; the dead-time buffer; step time |
 | `test_track_node.py` | the node with ROS, on a free domain: a path to success, a newer path replacing the last without a stop, an empty path refused, a live swap refused without `live_swap` and carried out mid-path with it (skips without the built workspace) |

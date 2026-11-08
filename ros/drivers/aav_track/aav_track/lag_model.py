@@ -1,10 +1,12 @@
 """
 The car with its lags, for the lag-aware MPC (mpc_lag): one small interface, no ROS.
 
-A stand-in until the shared car model (aav_description car_model.py, with a Rust twin)
-merges; it follows the same spec (lags exact, the deadband against the motor's setpoint,
-dead times floor(t / dt + 0.5), mid-step heading), so it can be swapped for it there.
-This one works in the path's frame and on arrays, for mpc_lag's finite differences:
+The shared car model (aav_description car_model.py, with its Rust twin) is the truth: its
+numbers (ActuatorConfig), its speed loops (SpeedLoopConfig), and mpc_lag's estimate
+(car_model.step). This is the same maths 1-5 again, in the path's frame and on numpy
+arrays (one column a state), because mpc_lag linearises it by finite differences 13 times
+a stage, 30 stages a tick: car_model.step, one state at a time, would take most of the
+tick. test_lag_model.py checks the two give the same states, step for step:
 
 | Part | Model (one step dt) |
 |---|---|
@@ -34,9 +36,10 @@ Input (rows of u): STEER (the steering target, rad) and SPEED (the set speed, m/
 
 from __future__ import annotations
 
-from dataclasses import dataclass, fields, replace
+from dataclasses import replace
 import math
 
+from aav_description import car_model
 import numpy as np
 
 E_Y, E_TH, S, V, THROTTLE, BRAKE, SETPOINT, MOTOR, WHEELS, INTEGRAL = range(10)
@@ -45,78 +48,36 @@ STEER, SPEED = 0, 1
 NU = 2
 
 
-@dataclass(frozen=True)
-class CarParams:
-    """vehicle.yaml: `actuators:`, with full lock and the wheelbase from `vehicle:`."""
-
-    wheelbase: float = 1.57
-    max_steering: float = 0.5
-    max_accel: float = 1.5
-    throttle_deadband: float = 0.0
-    throttle_lag: float = 0.1
-    max_brake: float = 3.0
-    brake_lag: float = 0.2
-    drag: float = 0.1
-    steer_rate: float = 0.8
-    steer_lag: float = 0.1
-    steer_offset: float = 0.0
-    steer_deadband: float = 0.005
-    throttle_dead_time: float = 0.0
-    brake_dead_time: float = 0.0
-    steer_dead_time: float = 0.0
-
-    @classmethod
-    def from_vehicle(cls, cfg) -> 'CarParams':
-        """Build it from the whole of vehicle.yaml (aav_description.vehicle.load())."""
-        known = {f.name for f in fields(cls)}
-        values = {k: float(v) for k, v in (cfg.get('actuators') or {}).items() if k in known}
-        values['wheelbase'] = float(cfg['vehicle']['wheelbase'])
-        values['max_steering'] = float(cfg['vehicle']['max_steering_angle'])
-        return cls(**values)
-
-    def lags_scaled(self, k: float) -> 'CarParams':
-        """Return these numbers with every lag and dead time k times longer."""
-        return replace(self, throttle_lag=k * self.throttle_lag, brake_lag=k * self.brake_lag,
-                       steer_lag=k * self.steer_lag,
-                       throttle_dead_time=k * self.throttle_dead_time,
-                       brake_dead_time=k * self.brake_dead_time,
-                       steer_dead_time=k * self.steer_dead_time)
-
-    def without_deadbands(self) -> 'CarParams':
-        """Return these numbers with no deadbands: for a plan, whose gradients they'd flatten."""
-        return replace(self, throttle_deadband=0.0, steer_deadband=0.0)
+# The numbers: the shared car model's (aav_description car_model.ActuatorConfig, from
+# vehicle.yaml), not a copy. CarParams is its name here.
+CarParams = car_model.ActuatorConfig
 
 
-@dataclass(frozen=True)
-class SpeedLoopParams:
-    """The spine's PI speed loop (spine-core SpeedLoopConfig; aav_gazebo SpeedLoopConfig)."""
-
-    kp: float = 0.3
-    ki: float = 0.1
-    integral_limit: float = 0.3
-    setpoint_weight: float = 1.0
-    brake_gain: float = 0.5
-    coast_band: float = 0.2
-    stopped_speed: float = 0.05
-    hold_brake: float = 0.3
-    clamping: bool = False       # anti-windup: True 'clamp' (not while pinned), False 'bounds'
+def lags_scaled(car: CarParams, k: float) -> CarParams:
+    """Return the numbers with every lag and dead time k times longer."""
+    return replace(car, throttle_lag=k * car.throttle_lag, brake_lag=k * car.brake_lag,
+                   steer_lag=k * car.steer_lag, throttle_dead_time=k * car.throttle_dead_time,
+                   brake_dead_time=k * car.brake_dead_time,
+                   steer_dead_time=k * car.steer_dead_time)
 
 
-# spine-core's PI profiles (SpeedLoopProfile): 'default' and 'smooth' (TODO 27). The LQI
-# ('lqi') isn't modelled here yet. test_lag_model.py checks them against aav_gazebo's.
-SPEED_LOOPS = {
-    'default': SpeedLoopParams(),
-    'smooth': SpeedLoopParams(kp=1.0, ki=0.25, integral_limit=1.0, setpoint_weight=0.75,
-                              clamping=True),
-}
+def without_deadbands(car: CarParams) -> CarParams:
+    """Return the numbers with no deadbands: for a plan, whose gradients they'd flatten."""
+    return replace(car, throttle_deadband=0.0, steer_deadband=0.0)
 
 
-def speed_loop(name: str) -> SpeedLoopParams:
-    try:
-        return SPEED_LOOPS[name]
-    except KeyError:
-        raise ValueError(f'no speed loop {name!r} modelled: pick one of '
-                         f'{", ".join(SPEED_LOOPS)}') from None
+def without_dead_times(car: CarParams) -> CarParams:
+    """Return the numbers with no dead times: mpc_lag keeps those itself, a tick at a time."""
+    return replace(car, throttle_dead_time=0.0, brake_dead_time=0.0, steer_dead_time=0.0)
+
+
+def speed_loop(name: str) -> car_model.SpeedLoopConfig:
+    """Return the spine's speed loop profile by name: its PIs ('default', 'smooth') only."""
+    loop = car_model.speed_loop_profile(name)
+    if loop.lqi is not None:
+        raise ValueError(f"the speed loop {name!r} (the LQI) isn't modelled here yet: "
+                         'pick default or smooth')
+    return loop
 
 
 def clip(x, lo, hi):
@@ -134,7 +95,7 @@ def dead_ticks(dead_time: float, period: float) -> int:
     return int(math.floor(dead_time / period + 0.5))
 
 
-def pedals(loop: SpeedLoopParams, target, measured, integral, dt):
+def pedals(loop: car_model.SpeedLoopConfig, target, measured, integral, dt):
     """
     Return (throttle, brake, integral): the spine's PI, forward only, on arrays.
 
@@ -147,7 +108,7 @@ def pedals(loop: SpeedLoopParams, target, measured, integral, dt):
     prop = loop.kp * (loop.setpoint_weight * t - measured)
     ceiling = np.maximum(loop.integral_limit + (1.0 - loop.setpoint_weight) * loop.kp * t, 0.0)
     grown = clip(integral + loop.ki * error * dt, 0.0, ceiling)
-    if loop.clamping:
+    if loop.anti_windup == 'clamp':
         demand = prop + grown
         pinned = ((demand > 1.0) & (error > 0.0)) | ((demand < 0.0) & (error < 0.0))
         integral = np.where(pinned, integral, grown)
@@ -166,7 +127,8 @@ def pedals(loop: SpeedLoopParams, target, measured, integral, dt):
             np.where(stopping, 0.0, integral))
 
 
-def step(car: CarParams, loop: SpeedLoopParams, x: np.ndarray, u: np.ndarray, kappa: float,
+def step(car: CarParams, loop: car_model.SpeedLoopConfig, x: np.ndarray, u: np.ndarray,
+         kappa: float,
          dt: float, substeps: int = 1) -> np.ndarray:
     """
     Return the state(s) dt later: x (NX,) or (NX, m), u (NU,) or (NU, m).

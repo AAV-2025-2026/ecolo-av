@@ -1,16 +1,16 @@
 """
-The car with its lags (lag_model.py): the spec, and the same car as Gazebo's actuator model.
+The car with its lags (lag_model.py): the spec, and the same states as the shared car model.
 
-aav_gazebo's actuator_model is what pixi run sim drives; both step their lags exactly
-(exp), so they agree closely at a small step (the speed integrates a little differently).
+aav_description's car_model is the truth (ego, Gazebo's adapter, our simulator use it);
+lag_model.step is its maths again on arrays, in the path's frame, for mpc_lag's plan.
 """
 
+from dataclasses import replace
 import math
 from pathlib import Path
 
-from aav_description import vehicle
-from aav_gazebo.actuator_model import (ActuatorConfig, Actuators, speed_loop_profile,
-                                       SpeedLoop)
+from aav_description import car_model, vehicle
+from aav_description.car_model import Actuators, speed_loop_profile, SpeedLoop
 from aav_track import lag_model as lm
 import numpy as np
 import pytest
@@ -35,7 +35,7 @@ def test_the_numbers_come_from_vehicle_yaml():
         if hasattr(car, key):
             assert getattr(car, key) == value
     assert car.steer_dead_time == 0.0             # not measured yet: none
-    doubled = car.lags_scaled(2.0)
+    doubled = lm.lags_scaled(car, 2.0)
     assert doubled.steer_lag == 2 * car.steer_lag and doubled.brake_lag == 2 * car.brake_lag
     assert doubled.max_accel == car.max_accel
 
@@ -82,7 +82,7 @@ def test_a_change_inside_the_deadband_does_not_move_the_motor():
     x = lm.step(car, loop, x, [0.11, 0.0], 0.0, 0.05)
     assert x[lm.MOTOR] == pytest.approx(0.11)
     # Without the deadband (a plan's copy), every change moves it.
-    x = lm.step(car.without_deadbands(), loop, rest(setpoint=0.1, motor=0.1), [0.103, 0.0],
+    x = lm.step(lm.without_deadbands(car), loop, rest(setpoint=0.1, motor=0.1), [0.103, 0.0],
                 0.0, 0.05)
     assert x[lm.MOTOR] == pytest.approx(0.103)
 
@@ -112,7 +112,7 @@ def test_it_works_on_columns_as_on_one_state():
         assert out[:, i] == pytest.approx(one)
 
 
-@pytest.mark.parametrize('profile', sorted(lm.SPEED_LOOPS))
+@pytest.mark.parametrize('profile', ['default', 'smooth'])
 def test_the_speed_loop_is_gazebos(profile):
     # The same set speeds and measured speeds into both: the same throttle and brake.
     rng = np.random.default_rng(3)
@@ -129,6 +129,37 @@ def test_the_speed_loop_is_gazebos(profile):
         assert float(integral) == pytest.approx(theirs.integral, abs=1e-12)
 
 
+def test_it_gives_the_shared_car_models_states_step_for_step():
+    # car_model.step (one state, x and y in the world) against lag_model.step (arrays, in
+    # a straight path's frame: e_y = y, e_theta = yaw, s = x): set speeds and steering
+    # targets that make every branch work - speeding up, coasting, braking, the stop's
+    # hold, the steering's rate, its deadband, full lock.
+    rng = np.random.default_rng(7)
+    for profile in ('default', 'smooth'):
+        car = replace(car_model.ActuatorConfig(), throttle_deadband=0.05, steer_offset=0.01)
+        loop_cfg = lm.speed_loop(profile)
+        theirs, loop = car_model.CarState(), SpeedLoop(loop_cfg)
+        x = rest()
+        for i in range(2000):
+            if i % 50 == 0:
+                speed = float(rng.choice([0.0, rng.uniform(0.0, 3.0)]))
+                steer = float(rng.uniform(-0.7, 0.7))
+            elif i % 7 == 0:
+                steer += float(rng.uniform(-0.004, 0.004))        # inside the deadband
+            theirs = car_model.step(car, theirs, car_model.Command(steer=steer, speed=speed),
+                                    0.01, loop)
+            x = lm.step(car, loop_cfg, x, [steer, speed], 0.0, 0.01)
+            assert x[lm.V] == pytest.approx(theirs.v, abs=1e-9)
+            assert x[lm.S] == pytest.approx(theirs.x, abs=1e-9)
+            assert x[lm.E_Y] == pytest.approx(theirs.y, abs=1e-9)
+            assert x[lm.E_TH] == pytest.approx(theirs.yaw, abs=1e-9)
+            assert x[lm.THROTTLE] == pytest.approx(theirs.throttle_level, abs=1e-12)
+            assert x[lm.BRAKE] == pytest.approx(theirs.brake_level, abs=1e-12)
+            assert x[lm.MOTOR] == pytest.approx(theirs.steer_motor, abs=1e-12)
+            assert x[lm.WHEELS] == pytest.approx(theirs.steer_linkage, abs=1e-12)
+            assert x[lm.INTEGRAL] == pytest.approx(loop.integral, abs=1e-12)
+
+
 def test_unknown_speed_loops_are_refused():
     with pytest.raises(ValueError, match='lqi'):
         lm.speed_loop('lqi')
@@ -136,9 +167,9 @@ def test_unknown_speed_loops_are_refused():
 
 def test_it_drives_as_gazebos_actuator_model():
     # Speed and steering commands for 6 s: the speed, and the wheels' angle, agree with
-    # aav_gazebo's Actuators within a few per cent at a 2 ms step.
+    # the shared model's Actuators (Gazebo's adapter) within a few per cent at a 2 ms step.
     dt = 0.002
-    cfg = ActuatorConfig()
+    cfg = car_model.ActuatorConfig()
     gz = Actuators(cfg)
     car = lm.CarParams()
     loop = lm.speed_loop('default')

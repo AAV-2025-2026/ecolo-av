@@ -539,7 +539,7 @@ steering  ──> dead time ──> motor (0.8 rad/s) ──> linkage (lag) ─�
 
 | It models | From |
 |---|---|
-| the spine's speed loop (`default` or `smooth`) | spine-core's gains (as aav_gazebo's `SpeedLoop`) |
+| the spine's speed loop (`default` or `smooth`) | spine-core's gains (`car_model`'s `SpeedLoop`) |
 | throttle and brake lags, drag, full brake | `vehicle.yaml` `actuators:` |
 | steering motor's rate, deadband, linkage lag, offset | `vehicle.yaml` `actuators:` |
 | dead times, and the commands already sent | `*_dead_time` (0 until measured), plus `latency` 0.1 s |
@@ -563,9 +563,9 @@ speed under the bend's and the goal's limit.
 ### It tells ego (the `lag_aware` contract)
 
 `/drivers/nav/lag_aware` (`std_msgs/Bool`, reliable, transient local, depth 1): **true**
-while `mpc_lag` drives, **false** for every other tracker and when the node stops. MPPI
-and RPP publish nothing: ego keeps its lead on. The exact form is the ego branch's; to
-be checked when the two merge.
+while `mpc_lag` is the tracker, **false** for every other tracker and when the node stops.
+Nav2's MPPI and RPP publish nothing: ego keeps its lead on (`lag_lead: auto`). Ego's
+contract (merged 7 Nov); the Rust MPPI (`mppi_lag`) says it on the same topic.
 
 ### Results: the pretend car (ego, then Gazebo's actuator model)
 
@@ -616,8 +616,8 @@ Running (7 Nov): the lot tour against MPPI, RPP and MPC, with the lags as told a
 - Today's car runs the ESP32's open speed loop, not the spine's PI: not modelled.
 - Dead times act on the set speed, not after the speed loop (an approximation; they are 0
   until measured).
-- `lag_model.py` is a stand-in for the shared car model (`aav_description`
-  `car_model.py`), the same spec; swap at the merge.
+- The plan runs `lag_model.py`, the shared car model's maths on arrays (for speed);
+  a test keeps it equal to `car_model.step` to 1e-9. The estimate runs `car_model` itself.
 
 ## Planners, 29 Oct: hybrid, lattice and smac2d
 
