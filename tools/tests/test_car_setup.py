@@ -57,8 +57,9 @@ def test_a_dry_run_prints_every_step_and_changes_nothing(home, role):
     for step in ('backup', 'upgrade', 'install', 'services', 'check'):
         assert f'== {step}' in done.stdout
     assert list(home.iterdir()) == []
-    # Only the upgrade's two refusals may stop a whole dry run.
-    if role in ('motor_pi', 'localization'):
+    # Only motor_pi's upgrade refusal may stop a whole dry run now: localization is
+    # unblocked, since machines/localization.yaml runs its IMU and GPS (TODO 75).
+    if role == 'motor_pi':
         assert done.returncode == 1 and 'refused' in done.stdout
     else:
         assert done.returncode == 0, done.stdout + done.stderr
@@ -95,6 +96,12 @@ def test_a_wrong_hostname_is_a_stop_on_linux_unless_host_ok(home):
     ok = run(home, 'orin', 'check', '--host-ok', host='cam2')
     assert ok.returncode == 0 and 'STOP' not in ok.stdout
     assert re.search(r'OK\s+hostname', run(home, 'orin', 'check').stdout)
+
+
+def test_the_planned_names_pass_as_well_as_the_old_ones(home):
+    for role, name in (('orin', 'aav-orin'), ('motor_pi', 'aav-motor'),
+                       ('localization', 'aav-localization'), ('dash', 'aav-dash')):
+        assert re.search(r'OK\s+hostname', run(home, role, 'check', host=name).stdout), role
 
 
 def test_upgrade_refuses_the_localization_pi_until_its_machine_file_exists(home):
@@ -176,7 +183,9 @@ def test_services_by_role(home):
     assert 'systemctl --user enable aav-car' in orin
     pi = run(home, 'motor_pi', 'services', '--machine', 'motor_pi_alone').stdout
     assert 'server 192.168.1.140' in pi and 'AAV_MACHINE=motor_pi_alone' in pi
-    for role in ('localization', 'dash', 'camera_pi', 'lab_desktop'):
+    loc = run(home, 'localization', 'services').stdout
+    assert 'AAV_MACHINE=localization' in loc and 'enable aav-car' in loc
+    for role in ('dash', 'camera_pi', 'lab_desktop'):
         assert 'enable aav-car' not in run(home, role, 'services').stdout
     assert 'enable mediamtx' in run(home, 'camera_pi', 'services').stdout
 

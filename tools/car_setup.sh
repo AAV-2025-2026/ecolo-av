@@ -87,18 +87,20 @@ default_machine() {
   case "$1" in
     orin) echo orin ;;
     motor_pi) echo motor_pi ;;
+    localization) echo localization ;;   # its IMU and GPS drivers (machines/localization.yaml)
     *) echo "" ;;
   esac
 }
 if [[ -z "$machine" ]]; then machine=$(default_machine "$role"); fi
 
-# The hostname the 21 Oct audit found, by role (it may change on a new SD card).
+# The hostnames a role may have: the one the 21 Oct audit found, then the planned name
+# (docs/rollout.md, "The names"). Either passes, so a renamed computer needs no --host-ok.
 expected_host() {
   case "$1" in
-    orin) echo ubuntu ;;
-    motor_pi) echo ubuntu-cortex ;;
-    localization) echo localhost.localdomain ;;
-    dash) echo aav-desktop ;;
+    orin) echo "ubuntu aav-orin" ;;
+    motor_pi) echo "ubuntu-cortex aav-motor" ;;
+    localization) echo "localhost.localdomain aav-localization" ;;
+    dash) echo "aav-desktop aav-dash" ;;
     camera_pi) echo "aav-cam1 aav-cam2" ;;
     *) echo "" ;;
   esac

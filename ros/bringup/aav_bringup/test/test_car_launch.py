@@ -180,9 +180,11 @@ def test_the_lidar_runs_where_its_packets_go_and_nav2_reads_it():
     assert sent['sensors.launch.py']['lidar'] == 'true'
     nav = sent['navigation.launch.py']
     assert (nav['lidar'], nav['collision_monitor']) == ('true', 'true')
-    # lidar:=false switches it off everywhere, whatever the machine file says.
+    # lidar:=false switches it off everywhere, whatever the machine file says. The lidar is
+    # the Orin's only sensor now (imu/gps are on the localization Pi), so sensors.launch.py
+    # drops out entirely.
     off = included(started(CAR, machine='orin', lidar='false'))
-    assert off['sensors.launch.py']['lidar'] == 'false'
+    assert 'sensors.launch.py' not in off
     assert (off['navigation.launch.py']['lidar'],
             off['navigation.launch.py']['collision_monitor']) == ('false', 'false')
     # A machine without the part starts no driver.

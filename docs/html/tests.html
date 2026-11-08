@@ -7,7 +7,7 @@
 <!-- Generated from docs/tests.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Every test we&#x27;ve talked about</h1>
-<div class="meta">24 min read · 8 sections</div></header>
+<div class="meta">25 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -29,10 +29,11 @@
 <a href="car-evening.html">Tonight: drive as is</a>
 <a href="car-day.html">Car day</a>
 <a href="car-setup.html">Car setup</a>
+<a href="rollout.html">Rolling out on the car</a>
 <a class="here" href="tests.html">Every test</a>
 <a href="know-the-car.html">Know the car</a>
-<a href="measure-the-car.html">Measure the car</a>
 <span class="sep">Learn:</span>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <a href="learn-car.html">The car, box by box</a>
@@ -47,8 +48,8 @@
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
 <a href="campus.html">The campus</a>
-<a href="maps-and-position.html">Maps and position</a>
 <span class="sep">Reference:</span>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <a href="learn-can.html">Learn: CAN</a>
 <a href="status.html">Status</a>
@@ -511,8 +512,8 @@ Which test fits which number, and when to stop repeating it: <a href="know-the-c
 <tr>
 <td>4.3</td>
 <td><strong>Brake</strong></td>
-<td>at 1, 2, 3 m/s, a fixed brake (50%, full). <code>actuator-test brake</code>: a normal stop, as no brake command exists</td>
-<td>stopping distance and deceleration in <strong>g</strong></td>
+<td>at 1, 2, 3 m/s, a fixed brake (50%, full). <code>actuator-test brake</code>: a normal stop, as no brake command exists. <strong>Twice: the car empty, then with a person (or sandbags, weighed)</strong></td>
+<td>stopping distance and deceleration in <strong>g</strong>, for each load: how much weaker the same brake is with a person</td>
 <td>🔧</td>
 </tr>
 <tr>
@@ -933,7 +934,7 @@ trials wait for 4.22.</p>
 </tr>
 </tbody>
 </table></div></section>
-<nav class="prevnext"><a class="prev" href="car-setup.html"><small>Previous</small>← Car setup</a>
+<nav class="prevnext"><a class="prev" href="rollout.html"><small>Previous</small>← Rolling out on the car</a>
 <a class="next" href="know-the-car.html"><small>Next</small>Know the car →</a></nav>
 </main>
 <footer>Source: <code>docs/tests.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
