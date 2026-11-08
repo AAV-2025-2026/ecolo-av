@@ -30,6 +30,14 @@ Ben, 7 Nov: replace Gazebo with our own Rust simulator, every sensor. The core (
 |---|---|---|
 | 135 | **The simulator's cameras** ([page](docs/own-simulator-cameras.md), `aav_sim_cameras`): Bevy offscreen, Gazebo's four camera topics, `CameraRenderer` for the core. Left: feed it the core's world and truth; read Gazebo's SDF worlds; a no-GPU path for CI; compare with Gazebo's pictures; the detector on its pictures | ✅ built, test world only. ⬜ merge with the core |
 
+## Saturday 7 November: 0.3, the algorithms know about lag (MPPI)
+
+Ben, 7 Nov: "have the algorithms know about lag". MPPI out of Nav2 into our own Rust driver, its model with the actuators' lag; Nav2 keeps planning.
+
+| # | Task | Status |
+|---|---|---|
+| 131 | **MPPI that knows the lag** (`aav_mppi_lag`, `tracker:=mppi_lag`, [page](docs/mppi-lag.md)): Nav2's MPPI and its eight critics in Rust, on a lag model behind a `CarModel` trait (the shared car model's rules); `/drivers/nav/lag_aware` true while it drives, for ego's lead | ✅ 7 Nov built, tested without ROS. ⬜ Gazebo against Nav2's MPPI on a quiet computer (7 Nov's runs: the odometry stalled under load and it gave up; the page). ⬜ at merge: the shared `car-model` crate behind `CarModel` (its rules matched already). ⬜ the car's real lags (tests 3.10-3.12, 4.1-4.5), then the same runs again; the Orin's tick time (estimated, not measured) |
+
 ## Saturday 7 November: the hardware debug plan
 
 Ben, 7 Nov: the Rust replaces the C++, WiFi pages too, with JSON instead of streaming text; graphs of steering, brake and throttle in `hw_panel`; debug one part of the car at a time.

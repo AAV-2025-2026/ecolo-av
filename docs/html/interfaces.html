@@ -57,6 +57,7 @@
 <a href="path-followers.html">Path followers</a>
 <a href="switches.html">Switches</a>
 <a href="trials.html">Trials</a>
+<a href="mppi-lag.html">MPPI with lag</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -1172,7 +1173,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/cmd_vel_nav</code></td>
 <td><code>geometry_msgs/msg/TwistStamped</code></td>
-<td><code>controller_server</code>, <code>behavior_server</code>, <code>track</code></td>
+<td><code>controller_server</code>, <code>behavior_server</code>, <code>track</code>, <code>mppi_lag</code></td>
 <td><code>velocity_smoother</code></td>
 <td>-</td>
 <td>Nav2's own name, inside Nav2 - the path follower's command, before the velocity smoother, collision_monitor and /drivers/nav/cmd_vel. controller_server publishes it (tracker:=none, the default), or aav_track's track node with a trial tracker on (tracker:=pure_pursuit</td>
@@ -1188,10 +1189,18 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <tr>
 <td><code>/drivers/nav/track/status</code></td>
 <td><code>diagnostic_msgs/msg/DiagnosticStatus</code></td>
-<td><code>track</code></td>
+<td><code>track</code>, <code>mppi_lag</code></td>
 <td><code>controller_compare</code>, <code>debug_hud</code></td>
 <td>-</td>
-<td>aav_track's debug, every tick while it follows a path (20 Hz) - name track, message the tracker's name; values tracker, loop_ms (this tick's work), loop_ms_max, missed_ticks (since the path came, by the node's clock), cross_track_m (+ left of the path), heading_error_rad, steer_rad, speed_mps, left_m (along the path to its end). Only with tracker:= on.</td>
+<td>aav_track's debug, every tick while it follows a path (20 Hz) - name track, message the tracker's name; values tracker, loop_ms (this tick's work), loop_ms_max, missed_ticks (since the path came, by the node's clock), cross_track_m (+ left of the path), heading_error_rad, steer_rad, speed_mps, left_m (along the path to its end). Only with tracker:= on. aav_mppi_lag's mppi_lag (tracker:=mppi_lag) publishes the same keys, message mppi_lag, and adds model (lag or ideal), est_steering_rad (its model's wheel angle), best_cost and collided_share (MPPI's cheapest sample, the share of samples that hit the costmap).</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/lag_aware</code></td>
+<td><code>std_msgs/msg/Bool</code></td>
+<td><code>mppi_lag</code></td>
+<td>-</td>
+<td>-</td>
+<td>Does the nav slot's driver plan for the actuators' lag right now? Reliable, transient local, depth 1 (ego's lag_aware contract, /drivers/<slot>/lag_aware - ego's lag_aware_drivers list has nav). aav_mppi_lag's mppi_lag (tracker:=mppi_lag) says false at start, true when it starts following a path with model lag, false when the path ends (succeeded, aborted, cancelled) and when it exits; always false with model ideal. Absent with Nav2's own controllers (no lag in their model). Ego's lead (0.3) turns off while it is true, so the lag isn't cancelled twice.</td>
 </tr>
 <tr>
 <td><code>/drivers/nav/route/destination</code></td>

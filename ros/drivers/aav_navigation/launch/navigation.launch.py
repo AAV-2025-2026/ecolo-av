@@ -59,6 +59,8 @@ Trials (docs/trials.md), each beside the default and scored by pixi run measure 
                           models/diffusion/planner.onnx), diffusion_provider:= (ONNX
                           Runtime's). car.launch.py refuses it
   tracker:=pure_pursuit|stanley|lqr|mpc|mpc_full  aav_track's track node follows the path instead
+                          (tracker:=mppi_lag: aav_mppi_lag's mppi_lag node, Nav2's MPPI
+                          with the actuators' lag; docs/mppi-lag.md)
                           of controller_server: it serves follow_path (bt_navigator's
                           FollowPath) and publishes cmd_vel_nav; controller_server keeps
                           running (its costmaps, the trees' clear calls) with its own action
@@ -329,14 +331,24 @@ def nodes(context):
         ego_file = FindPackageShare('aav_ego').perform(context) + '/config/ego.yaml'
         with open(ego_file) as f:
             ego = yaml.safe_load(f)['ego']['ros__parameters']
-        own = FindPackageShare('aav_track').perform(context) + '/config/track.yaml'
-        actions.append(Node(
-            package='aav_track', executable='track', name='track', output='screen',
-            parameters=[own, vehicle.track_params(nav2, cfg, ego,
-                                                  float(speed) if speed else None),
-                        {'tracker': tracker, 'use_sim_time': use_sim_time,
-                         'live_swap': IfCondition(
-                             LaunchConfiguration('live_swap')).evaluate(context)}]))
+        max_speed = float(speed) if speed else None
+        if tracker == 'mppi_lag':
+            # aav_mppi_lag (Rust): Nav2's MPPI with the actuators' lag in its model. nav2.yaml's
+            # MPPI block and checks, vehicle.yaml's actuators, ego.yaml's ramps.
+            own = FindPackageShare('aav_mppi_lag').perform(context) + '/config/mppi_lag.yaml'
+            actions.append(Node(
+                package='aav_mppi_lag', executable='mppi_lag', name='mppi_lag',
+                output='screen',
+                parameters=[own, vehicle.mppi_lag_params(nav2, cfg, ego, max_speed),
+                            {'use_sim_time': use_sim_time}]))
+        else:
+            own = FindPackageShare('aav_track').perform(context) + '/config/track.yaml'
+            actions.append(Node(
+                package='aav_track', executable='track', name='track', output='screen',
+                parameters=[own, vehicle.track_params(nav2, cfg, ego, max_speed),
+                            {'tracker': tracker, 'use_sim_time': use_sim_time,
+                             'live_swap': IfCondition(
+                                 LaunchConfiguration('live_swap')).evaluate(context)}]))
     if diffusion:
         # Not a lifecycle node: it serves from the start, and falls back to the lattice
         # until the lattice answers. The guard's numbers from the car and Nav2's files.
@@ -468,7 +480,8 @@ def generate_launch_description():
                                           'only, so the car stops for it (the stop tests)'),
         DeclareLaunchArgument('tracker', default_value=vehicle.DEFAULT_TRACKER,
                               description="a trial path follower in controller_server's "
-                                          'place (aav_track): ' + ', '.join(vehicle.TRACKERS) +
+                                          'place (aav_track; mppi_lag: aav_mppi_lag): ' +
+                                          ', '.join(vehicle.TRACKERS) +
                                           '. docs/trials.md'),
         DeclareLaunchArgument('live_swap', default_value='false',
                               description='true (sim.launch.py sets it): the tracker can be '

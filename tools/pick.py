@@ -47,6 +47,8 @@ FOLLOWERS = [
      ['tracker:=mpc', 'reversing:=false']),
     ('mpc_full', 'ours: MPC that plans the speed too',
      ['tracker:=mpc_full', 'reversing:=false']),
+    ('mppi_lag', "ours: Nav2's MPPI in Rust, knowing the steering and pedals lag",
+     ['tracker:=mppi_lag', 'reversing:=false']),
 ]
 
 # Who draws the route: Nav2's planner (planner:=). Gazebo, the lot tour, MPPI: hybrid

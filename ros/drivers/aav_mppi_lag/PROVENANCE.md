@@ -1,0 +1,44 @@
+# Provenance
+
+The `mppi-lag` crate ports Nav2's MPPI controller to Rust. It is rewritten in Rust's own
+style, not transliterated: enums for the critics, a trait for the car model, no xtensor.
+
+## Where it came from
+
+| | |
+|---|---|
+| Repo | https://github.com/ros-planning/navigation2 |
+| Package | `nav2_mppi_controller` |
+| Commit | `645abd95f2be02a13ca539b29c2ddc065db34f89` (Jazzy, `vendor/ros2-src.repos`) |
+| Licence | Apache-2.0 (the package's `LICENSE.md`; Samsung Research America and the Nav2 authors) |
+| Read 7 Nov 2026 | `src/optimizer.cpp`, `include/.../motion_models.hpp`, `include/.../tools/utils.hpp`, `src/path_handler.cpp`, `src/noise_generator.cpp`, `src/critics/*.cpp` |
+
+## What was taken
+
+| Ours | Nav2's |
+|---|---|
+| `optimizer.rs` | `Optimizer`: noise on the sequence, rollouts, critics, control cost (gamma / std²), softmax with temperature, retries on all-collide, shift |
+| `smoothing.rs` | `utils::savitskyGolayFilter`, the same 9 taps and history |
+| `critics.rs` | `ConstraintCritic`, `CostCritic`, `GoalCritic`, `GoalAngleCritic`, `PathAlignCritic`, `PathFollowCritic`, `PathAngleCritic` (forward mode), `PreferForwardCritic`; `findPathFurthestReachedPoint`, `findPathCosts`, `findClosestPathPt` |
+| `path.rs` | `PathHandler`: closest pose within `max_robot_pose_search_dist`, prune, `prune_distance` ahead, cut at the costmap's edge |
+| `costmap.rs` | the costmap's cost codes; `FootprintCollisionChecker`'s edge cost; `InflationLayer::computeCost` |
+
+## What changed, and why
+
+| Change | Why |
+|---|---|
+| The car model: ego's ramps, the spine's speed loop, throttle and brake lag, steering rate, linkage lag, deadbands, dead times (`lag.rs`, `ego.rs`) instead of Nav2's velocity clamps | the point of the port: plan with the lag (0.3, Ben, 7 Nov) |
+| Samples in (speed, steering angle), not (vx, wz) | the actuators take an angle; full lock is a plain clamp |
+| Samples clipped only to the range and full lock; ego's ramps are in the model | Nav2's per-step clipping of noise drifts samples slower (nav2.yaml's ax_max 3.0 workaround) |
+| Noise correlated step to step (AR(1), `noise_correlation`, 0 = Nav2's) | through a lagging steering, white noise averages away and MPPI lost the path on a slow car (`docs/mppi-lag.md`) |
+| Sends element 0 of the sequence, not 1 | the model's state already holds every command sent (the dead times) |
+| A reset starts from the last command, not zeros | taking over mid-drive shouldn't brake first |
+| `PathAngleCritic`: forward mode only; no `TwirlingCritic`, `ObstaclesCritic`, `VelocityDeadbandCritic` | nav2.yaml runs none of the others; the trackers never reverse |
+| Our own random numbers (xoshiro256++) and `std::thread::scope` | no dependencies: the crate builds offline |
+| The lag model follows the shared `car-model` crate's rules (exact first-order lags, the deadband on the motor's setpoint, dead times floor(t/dt + 0.5) steps, the bicycle with the new speed and steering at the mid-step heading) | one model of the car for every 0.3 algorithm; at the merge, that crate implements `CarModel` |
+| `/drivers/nav/lag_aware`: true while a path runs with `model: lag` | ego's lead (0.3) turns off for a driver that already plans with the lag |
+| Goal and progress checks (`follower.rs`) | controller_server's `SimpleGoalChecker` and `PoseProgressChecker`, as aav_track's `checks.py` |
+
+## Changes since
+
+None yet.
