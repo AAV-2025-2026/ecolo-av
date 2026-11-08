@@ -5,7 +5,8 @@ Nav2 as one more driver: goals in, /drivers/nav/cmd_vel (TwistStamped) out to tw
       [radar:=false] [lidar:=false] [collision_monitor:=<radar or lidar>]
       [camera_obstacles:=false] [ghost:=false] [voxels:=false]
       [reversing:=false] [max_speed:=] [controller:=mppi] [planner:=lattice]
-      [diffusion_model:=] [diffusion_provider:=CPUExecutionProvider]
+      [diffusion_model:=] [diffusion_provider:=CPUExecutionProvider] [diffusion_record:=]
+      [diffusion_python:=] [diffusion_smoothing:=gear]
       [plan_around:=true]
       [tracker:=none] [live_swap:=false] [amcl:=false] [amcl_x:=0.0] [amcl_y:=0.0]
       [amcl_yaw:=0.0] [amcl_map:=]
@@ -348,6 +349,9 @@ def nodes(context):
             parameters=[diffusion_params(nav2, v, reversing), {
                 'model': LaunchConfiguration('diffusion_model').perform(context),
                 'provider': LaunchConfiguration('diffusion_provider').perform(context),
+                'record': LaunchConfiguration('diffusion_record').perform(context),
+                'learn_python': LaunchConfiguration('diffusion_python').perform(context),
+                'smoothing': LaunchConfiguration('diffusion_smoothing').perform(context),
                 'use_sim_time': use_sim_time}]))
     if amcl:
         config = f'{share}/config/amcl.yaml'
@@ -457,6 +461,16 @@ def generate_launch_description():
                               description="with planner:=diffusion: ONNX Runtime's engine "
                                           '(CPUExecutionProvider, CoreMLExecutionProvider, '
                                           'CUDAExecutionProvider, TensorrtExecutionProvider)'),
+        DeclareLaunchArgument('diffusion_smoothing', default_value='gear',
+                              description="with planner:=diffusion: gear (each gear's run "
+                                          'smoothed on its own) or average (2 Nov)'),
+        DeclareLaunchArgument('diffusion_python', default_value='',
+                              description="with planner:=diffusion: the model worker's "
+                                          "Python (empty: Pixi's learn environment)"),
+        DeclareLaunchArgument('diffusion_record', default_value='',
+                              description="with planner:=diffusion: a folder for each plan's "
+                                          'inputs, to replay offline (training/replay.py); '
+                                          'empty: none'),
         DeclareLaunchArgument('lattice_headings',
                               default_value=str(vehicle.LATTICE_HEADINGS[0]),
                               description='with planner:=lattice: 16 headings (the default '

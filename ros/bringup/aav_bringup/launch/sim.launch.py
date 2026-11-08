@@ -75,7 +75,9 @@ bench's argument names:
                       planner:=diffusion: a model draws the path, a guard checks it,
                       the lattice's path when it fails (aav_diffusion_planner, a trial:
                       pixi install --locked -e learn, pixi run diffusion train first);
-                      diffusion_model:=<.onnx> another model
+                      diffusion_model:=<.onnx> another model; diffusion_record:=<folder>
+                      each plan's inputs, to replay offline; diffusion_smoothing:=average
+                      the 2 Nov smoothing
   tracker:=lqr        a trial path follower (aav_track: pure_pursuit, stanley, lqr or mpc)
                       in controller_server's place, on Nav2's same planner, smoother and
                       collision_monitor. Forward only: with reversing:=false (docs/trials.md)
@@ -295,6 +297,8 @@ def launch_setup(context):
                                controller=controller, tracker=tracker, planner=planner,
                                lattice_headings=arg('lattice_headings'),
                                diffusion_model=arg('diffusion_model'),
+                               diffusion_record=arg('diffusion_record'),
+                               diffusion_smoothing=arg('diffusion_smoothing'),
                                # A trial tracker may be swapped live here (the debug
                                # HUD's panel shows which): Gazebo only, never the car.
                                live_swap='true',
@@ -492,6 +496,12 @@ def generate_launch_description():
                                           'empty: models/diffusion/planner.onnx. A file '
                                           "that is not there: every plan the lattice's "
                                           '(the fallback test)'),
+        DeclareLaunchArgument('diffusion_smoothing', default_value='gear',
+                              description="with planner:=diffusion: gear (each gear's run "
+                                          'smoothed on its own) or average (2 Nov)'),
+        DeclareLaunchArgument('diffusion_record', default_value='',
+                              description="with planner:=diffusion: a folder for each plan's "
+                                          'inputs, to replay offline (training/replay.py)'),
         DeclareLaunchArgument('lattice_headings',
                               default_value=str(vehicle.LATTICE_HEADINGS[0]),
                               description='with planner:=lattice: 16 headings (the default) '

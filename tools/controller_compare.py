@@ -56,7 +56,9 @@ The trials (docs/trials.md):
                     the diffusion trial beside the lattice: each leg's note says how many
                     plans came from the model, how many from the lattice (the guard's
                     fallback) and why, and the guard's refusals by check.
-                    diffusion_nomodel: the same with no model file (every plan the lattice's)
+                    diffusion_nomodel: the same with no model file (every plan the lattice's).
+                    --diffusion-model <.onnx> another model; --diffusion-record <folder>
+                    each plan's inputs, for pixi run diffusion replay
 
 For each tour and controller it:
 1. starts sim.launch.py world:=test_lot gui:=false rviz:=false controller:=<rpp|mppi>
@@ -704,6 +706,15 @@ def session(tour, follower, args, out_dir, body, used, run=1):
                f'reversing:={str(args.reversing).lower()}']
     if planner:
         command += planner_launch(planner)
+        if planner.startswith('diffusion'):
+            if args.diffusion_model and planner == 'diffusion':
+                command.append(f'diffusion_model:={os.path.abspath(args.diffusion_model)}')
+            if args.diffusion_smoothing:
+                command.append(f'diffusion_smoothing:={args.diffusion_smoothing}')
+            if args.diffusion_record:
+                # Each plan's inputs, a folder a run, to replay offline (training/replay.py).
+                command.append('diffusion_record:=' + os.path.join(
+                    os.path.abspath(args.diffusion_record), f'{tour}-{tag}'))
     if args.amcl:
         command.append('amcl:=true')
     if args.ndt_ekf:
@@ -1014,6 +1025,16 @@ def main():
                         help="only each tour's first N legs (each starts where the last ended)")
     parser.add_argument('--plans', action='store_true',
                         help='save every plan of each leg in results.json, not just its first')
+    parser.add_argument('--diffusion-model', default=None,
+                        help='with --planners diffusion: this model (.onnx) instead of '
+                             'models/diffusion/planner.onnx')
+    parser.add_argument('--diffusion-smoothing', choices=('gear', 'average'), default=None,
+                        help="with --planners diffusion: how the model's paths are smoothed "
+                             '(gear, the default; average: 2 Nov)')
+    parser.add_argument('--diffusion-record', default=None,
+                        help="with --planners diffusion: save each plan's inputs in this "
+                             'folder (a subfolder a run), to replay offline: '
+                             'pixi run diffusion replay')
     parser.add_argument('--out', help='where the results go (default: log/controller-compare/)')
     args = parser.parse_args()
     if args.trackers:
