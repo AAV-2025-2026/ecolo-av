@@ -3,7 +3,8 @@ The diffusion model itself, in the learn environment's Python: crops in, paths o
 
     .pixi/envs/learn/bin/python -I worker.py      (diffusion_planner starts it)
 
-Reads its settings (one JSON line: model, provider), then requests, from stdin; writes a
+Reads its settings (one JSON line: model, provider: engines.py's, which falls back to
+the CPU if the engine can't load the model), then requests, from stdin; writes a
 reply for each to stdout (wire.py). Exits when stdin closes. Messages go to stderr. No
 ROS here: the learn environment has Python, NumPy, PyTorch and ONNX Runtime (pixi.toml).
 """
@@ -17,16 +18,21 @@ import time
 # package's own modules (wire, window) import as they do in the node.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from aav_diffusion_planner import wire  # noqa: E402
+from aav_diffusion_planner import engines, wire  # noqa: E402
 
 
-def session(model, provider):
+def session(model, provider, cache_dir=None):
+    """Return an ONNX Runtime session on `provider`, falling back down engines.CHAINS."""
     import onnxruntime as ort
-    providers = [provider] if provider == 'CPUExecutionProvider' else [
-        provider, 'CPUExecutionProvider']
+    chain = engines.usable(engines.engines(provider, cache_dir),
+                           ort.get_available_providers())
+    if not chain:
+        chain = engines.engines(engines.CPU)
     opts = ort.SessionOptions()
     opts.log_severity_level = 3
-    return ort.InferenceSession(model, sess_options=opts, providers=providers)
+    return ort.InferenceSession(model, sess_options=opts,
+                                providers=[name for name, _ in chain],
+                                provider_options=[options for _, options in chain])
 
 
 def main():
@@ -37,7 +43,11 @@ def main():
     if not line:
         return
     settings = wire.decode_settings(line)
-    sess = session(settings['model'], settings.get('provider', 'CPUExecutionProvider'))
+    # TensorRT's engines, built on the first start (minutes on the Orin), kept beside the
+    # model: `pixi run measure diffusion` builds them first, in the same folder.
+    cache = os.path.join(os.path.dirname(os.path.abspath(settings['model'])), 'engines')
+    os.makedirs(cache, exist_ok=True)
+    sess = session(settings['model'], settings.get('provider', engines.CPU), cache)
     print(f'diffusion worker: {settings["model"]} on {sess.get_providers()[0]}',
           file=sys.stderr, flush=True)
     while True:

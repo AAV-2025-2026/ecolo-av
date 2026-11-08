@@ -5,6 +5,7 @@ Train the diffusion planner on the teachers' paths, score it with the guard, exp
     pixi run diffusion train                 (dataset, train, score, export: models/diffusion/)
     pixi run diffusion train --epochs 2      (a quick look)
     pixi run diffusion score                 (score the trained model again, no training)
+    pixi run diffusion export --fp16         (ONNX again from planner.pt; and FP16 for a GPU)
 
 Runs in the learn environment (.pixi/envs/learn: PyTorch, ONNX, ONNX Runtime; no ROS).
 In: models/diffusion/data/*.npz (pixi run diffusion data). Out, in models/diffusion/ (not
@@ -63,23 +64,24 @@ def limits_for(reversing, lock):
     return guard.Limits(min_radius=0.95 * lock, reversing=bool(reversing))
 
 
-def examples(path, start, goal, rng):
-    """Yield (start, path) pairs: the whole path, then SUFFIXES from points along it."""
+def examples(path, start, goal, rng, suffixes=SUFFIXES):
+    """Yield (start, path) pairs: the whole path, then `suffixes` from points along it."""
     yield start, path
     seg = np.hypot(*np.diff(path[:, :2], axis=0).T)
     left = seg.sum() - np.concatenate([[0.0], np.cumsum(seg)])
     can = np.nonzero((left > MIN_LEFT) & (np.arange(len(path)) > 0))[0]
-    for i in rng.choice(can, size=min(SUFFIXES, len(can)), replace=False) if len(can) else []:
+    for i in rng.choice(can, size=min(suffixes, len(can)), replace=False) if len(can) else []:
         yield tuple(path[i]), path[i:]
 
 
-def build(data_dir, rng):
+def build(data_dirs, rng, suffixes=SUFFIXES):
     """Return the dataset: crops (uint8), conds, targets, test flags, and what was dropped."""
     poly, lock = vehicle_numbers()
     fp = guard.footprint_points(poly)
     crops, conds, targets, test, meta = [], [], [], [], []
     seen = refused = 0
-    for f in sorted(glob.glob(os.path.join(data_dir, '*.npz'))):
+    files = sorted(f for d in data_dirs for f in glob.glob(os.path.join(d, '*.npz')))
+    for f in files:
         d = np.load(f)
         grid = window.Grid(d['costmap'], float(d['origin'][0]), float(d['origin'][1]),
                            float(d['resolution']))
@@ -92,13 +94,13 @@ def build(data_dir, rng):
             if failed:
                 refused += 1
                 continue
-            for s, p in examples(path, start, goal, rng):
+            for s, p in examples(path, start, goal, rng, suffixes):
                 win = window.window_for(s, goal)
                 crops.append((window.crop(grid, win) * 255).astype(np.uint8))
                 conds.append(window.cond(win, s, goal, rev))
                 targets.append(window.encode_path(win, p))
                 test.append(is_test)
-                meta.append((os.path.basename(f), k, str(d['teacher'][k])))
+                meta.append((f, k, str(d['teacher'][k])))
                 if is_test:
                     break           # the test keeps whole paths only
     return (np.stack(crops), np.stack(conds), np.stack(targets), np.array(test),
@@ -166,7 +168,7 @@ def train(ds, args, dev):
                'weights': sum(p.numel() for p in m.parameters())}
 
 
-def score(sampler_fn, ds, data_dir, limit, seed=0):
+def score(sampler_fn, ds, data_dirs, limit, seed=0, gear_smooth=True):
     """
     Return the guard's score on the held-back maps: each test example planned once.
 
@@ -183,7 +185,7 @@ def score(sampler_fn, ds, data_dir, limit, seed=0):
     for i in idx:
         name, k, _ = meta[i]
         if name not in grids:
-            d = np.load(os.path.join(data_dir, name))
+            d = np.load(name if os.path.isabs(name) else os.path.join(data_dirs[0], name))
             grids[name] = (window.Grid(d['costmap'], float(d['origin'][0]),
                                        float(d['origin'][1]), float(d['resolution'])), d)
         grid, d = grids[name]
@@ -196,12 +198,16 @@ def score(sampler_fn, ds, data_dir, limit, seed=0):
         out = sampler_fn(crops[i][None, None].astype(np.float32) / 255.0, conds[i][None], noise)
         ms.append(1000.0 * (time.perf_counter() - t0))
         win = window.window_for(start, goal)
-        paths, _ = window.decode_paths(win, out)
+        paths, gears = window.decode_paths(win, out)
         lim = limits_for(rev, lock)
         teacher_len = guard.length(teacher)
         passed = []
-        for p in paths:
-            failed, facts = guard.check(window.smooth(p), grid, start, goal, lim, fp, teacher_len)
+        first, again = window.smoothed(paths, gears, by_gear=gear_smooth)
+        for i, p in enumerate(first):
+            failed, facts = guard.check(p, grid, start, goal, lim, fp, teacher_len)
+            if failed and again is not None and set(failed) <= guard.AGAIN_ON:
+                failed, facts = guard.check(again(i), grid, start, goal, lim, fp,
+                                            teacher_len)
             for c in failed:
                 refusals[c] = refusals.get(c, 0) + 1
             if not failed:
@@ -219,8 +225,12 @@ def score(sampler_fn, ds, data_dir, limit, seed=0):
             'sampler_ms_worst': round(ms[-1], 1)}
 
 
-def export(m, path, steps=STEPS):
+def export(m, path, steps=STEPS, fp16=False):
+    """Write the sampler as ONNX: float32, or FP16 inside (float32 in and out) with fp16."""
     sampler = net.Sampler(m.cpu().eval(), steps)
+    if fp16:
+        import copy
+        sampler = net.HalfSampler(copy.deepcopy(sampler))
     crop = torch.zeros(1, 1, window.SIZE, window.SIZE)
     cond = torch.zeros(1, window.COND)
     noise = torch.zeros(SAMPLES, window.POINTS, window.CHANNELS)
@@ -240,8 +250,11 @@ def onnx_fn(path, provider='CPUExecutionProvider'):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0].strip())
-    parser.add_argument('what', nargs='?', default='train', choices=('train', 'score'))
-    parser.add_argument('--data', default=os.path.join(OUT, 'data'))
+    parser.add_argument('what', nargs='?', default='train', choices=('train', 'score', 'export'))
+    parser.add_argument('--data', nargs='+', default=[os.path.join(OUT, 'data')],
+                        help='folders of teacher paths (pixi run diffusion data)')
+    parser.add_argument('--suffixes', type=int, default=SUFFIXES,
+                        help='extra examples from points along each path (replans)')
     parser.add_argument('--out', default=OUT)
     parser.add_argument('--epochs', type=int, default=60)
     parser.add_argument('--batch', type=int, default=256)
@@ -249,6 +262,12 @@ def main():
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--test-plans', type=int, default=300)
     parser.add_argument('--rebuild', action='store_true', help='make dataset.npz again')
+    parser.add_argument('--steps', type=int, default=STEPS, help='Euler steps a plan')
+    parser.add_argument('--fp16', action='store_true',
+                        help='export: planner_fp16.onnx too (FP16 inside, for the GPU)')
+    parser.add_argument('--average-smooth', action='store_true',
+                        help="score with 2 Nov's smoothing (one average over the whole "
+                             "path), not each gear's run on its own")
     args = parser.parse_args()
     torch.manual_seed(args.seed)
     os.makedirs(args.out, exist_ok=True)
@@ -259,8 +278,10 @@ def main():
               json.loads(str(z['info'])))
     else:
         t0 = time.monotonic()
-        ds = build(args.data, np.random.default_rng(args.seed))
+        ds = build(args.data, np.random.default_rng(args.seed), args.suffixes)
         ds[5]['build_seconds'] = round(time.monotonic() - t0, 1)
+        ds[5]['suffixes'] = args.suffixes
+        ds[5]['data'] = [os.path.relpath(d, ROOT) for d in args.data]
         np.savez(cache, crops=ds[0], conds=ds[1], targets=ds[2], test=ds[3], meta=ds[4],
                  info=json.dumps(ds[5]))
     info = dict(ds[5], examples=int(len(ds[0])), test_examples=int(ds[3].sum()))
@@ -270,12 +291,26 @@ def main():
     if args.what == 'train':
         m, trained = train(ds, args, device())
         torch.save(m.state_dict(), os.path.join(args.out, 'planner.pt'))
-        export(m, onnx_path)
+        export(m, onnx_path, args.steps)
         metrics = {'dataset': info, 'training': trained}
     else:
         with open(metrics_path) as f:
             metrics = json.load(f)
-    metrics['score_onnx_cpu'] = score(onnx_fn(onnx_path), ds, args.data, args.test_plans)
+    if args.what == 'export':
+        m = net.FlowPlanner()
+        m.load_state_dict(torch.load(os.path.join(args.out, 'planner.pt'), map_location='cpu'))
+        export(m, onnx_path, args.steps)
+        metrics['steps'] = args.steps
+    if args.fp16 and args.what in ('train', 'export'):
+        m = net.FlowPlanner()
+        m.load_state_dict(torch.load(os.path.join(args.out, 'planner.pt'), map_location='cpu'))
+        half_path = os.path.join(args.out, 'planner_fp16.onnx')
+        export(m, half_path, args.steps, fp16=True)
+        metrics['onnx_fp16_bytes'] = os.path.getsize(half_path)
+    metrics['steps'] = args.steps
+    metrics['smoothing'] = 'average' if args.average_smooth else 'by gear'
+    metrics['score_onnx_cpu'] = score(onnx_fn(onnx_path), ds, args.data, args.test_plans,
+                                      gear_smooth=not args.average_smooth)
     metrics['onnx_bytes'] = os.path.getsize(onnx_path)
     with open(metrics_path, 'w') as f:
         json.dump(metrics, f, indent=1)

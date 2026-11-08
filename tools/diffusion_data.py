@@ -4,6 +4,7 @@ The diffusion planner's examples: our own planners' paths on random maps, no Gaz
 
     pixi run diffusion data                    (200 maps, 60 pairs each, 4 workers)
     pixi run diffusion data --maps 20 --pairs 10 --workers 1    (a quick look)
+    pixi run diffusion data --first 800 --maps 400 --uturn 0.6  (more maps, mostly U-turns)
 
 It copies the lattice and Hybrid-A* (the teachers): for each map it starts only Nav2's
 map_server and planner_server (the global costmap: the map, inflated), loads the map, picks
@@ -51,6 +52,11 @@ TEACHERS = {'lattice_rev': True, 'lattice_fwd': False, 'hybrid_rs': True,
             'hybrid_dubin': False}
 HYBRID_SHARE = 0.3      # of the pairs, Hybrid-A*; the rest the lattice (the fallback)
 DISTANCE = (4.0, 50.0)  # m from start to goal: the lot tour's legs, and its replans
+# --uturn: a share of the pairs turn back, as the lot tour's "turn back" leg does (15 m
+# behind, facing the other way): the goal 4-25 m away, mostly behind or beside, facing
+# back within 35 degrees, and the teacher may reverse. The model drew those worst (3 Nov).
+UTURN_DISTANCE = (4.0, 25.0)
+UTURN_SPREAD = math.radians(35.0)
 PLAN_TIME = 8.0         # s for an answer
 MAP_TIME = 240.0        # s for a map's pairs; longer and the worker starts again (STUCK)
 STUCK = 3               # a worker's exit code when it gave up on a stuck map
@@ -98,15 +104,23 @@ def planner_params(v):
             'global_costmap': {'global_costmap': {'ros__parameters': costmap}}}
 
 
-def free_pose(costmap, origin, res, rng, near=None, distance=DISTANCE):
-    """Return a random (x, y, yaw) on a cell well clear of anything, or None."""
+def free_pose(costmap, origin, res, rng, near=None, distance=DISTANCE, uturn=False):
+    """
+    Return a random (x, y, yaw) on a cell well clear of anything, or None.
+
+    uturn (with near): the goal turned back from near's heading (UTURN_*), behind or beside.
+    """
     rows, cols = costmap.shape
     for _ in range(200):
         if near is None:
             r, c = rng.randrange(rows), rng.randrange(cols)
             x, y = origin[0] + (c + 0.5) * res, origin[1] + (r + 0.5) * res
         else:
-            d, a = rng.uniform(*distance), rng.uniform(-math.pi, math.pi)
+            if uturn:
+                d = rng.uniform(*UTURN_DISTANCE)
+                a = near[2] + math.pi + rng.uniform(-0.6 * math.pi, 0.6 * math.pi)
+            else:
+                d, a = rng.uniform(*distance), rng.uniform(-math.pi, math.pi)
             x, y = near[0] + d * math.cos(a), near[1] + d * math.sin(a)
             c, r = int((x - origin[0]) / res), int((y - origin[1]) / res)
             if not (0 <= r < rows and 0 <= c < cols):
@@ -115,6 +129,9 @@ def free_pose(costmap, origin, res, rng, near=None, distance=DISTANCE):
         k = int(math.ceil(1.5 / res))
         patch = costmap[max(0, r - k):r + k + 1, max(0, c - k):c + k + 1]
         if patch.min() >= 0 and patch.max() < 99:
+            if uturn:
+                yaw = near[2] + math.pi + rng.uniform(-UTURN_SPREAD, UTURN_SPREAD)
+                return (x, y, math.atan2(math.sin(yaw), math.cos(yaw)))
             return (x, y, rng.uniform(-math.pi, math.pi))
     return None
 
@@ -243,7 +260,7 @@ def work(args, shard, shards):
     rng = random.Random(args.seed * 1000 + shard)
     maps_dir = os.path.join(args.out, 'maps')
     os.makedirs(maps_dir, exist_ok=True)
-    mine = [i for i in range(args.maps) if i % shards == shard]
+    mine = [i for i in range(args.first, args.first + args.maps) if i % shards == shard]
     specs = []
     for i in mine:
         spec = map_spec(i, random.Random(args.seed * 100003 + i))
@@ -288,11 +305,12 @@ def work(args, shard, shards):
             grid, origin, res = got
             rows = []
             for _ in range(args.pairs):
+                uturn = rng.random() < args.uturn
                 start = free_pose(grid, origin, res, rng)
-                goal = start and free_pose(grid, origin, res, rng, near=start)
+                goal = start and free_pose(grid, origin, res, rng, near=start, uturn=uturn)
                 if goal is None:
                     continue
-                reversing = rng.random() < 0.5
+                reversing = uturn or rng.random() < 0.5
                 hybrid = rng.random() < HYBRID_SHARE
                 teacher = [t for t, rev in TEACHERS.items()
                            if rev == reversing and t.startswith('hybrid') == hybrid][0]
@@ -328,6 +346,12 @@ def main():
     parser.add_argument('--domain', type=int, default=200,
                         help="the first worker's ROS domain (each next one +1; at most 232)")
     parser.add_argument('--seed', type=int, default=1)
+    parser.add_argument('--uturn', type=float, default=0.0,
+                        help='share of the pairs that turn back (0-1): the goal behind or '
+                             'beside, facing back, reversing allowed (the U-turn)')
+    parser.add_argument('--first', type=int, default=0,
+                        help="the first map's number (another set of maps beside the "
+                             'first: --first 800)')
     parser.add_argument('--out', default=OUT)
     parser.add_argument('--shard', type=int, default=None, help=argparse.SUPPRESS)
     args = parser.parse_args()
