@@ -5,7 +5,9 @@
 //! fixed, no fix and silence (40 s). The GO / STOP panel follows (hud_core::gate): the
 //! pretend watchdog holds Nav2 while the GPS is silent, and every 60 s the pretend output
 //! mux waits, then latches a stop for a simulated camera. The e-stop button stops the
-//! pretend car; a pretend laptop clears it 10 s later, so the demo keeps going.
+//! pretend car; a pretend laptop clears it 10 s later, so the demo keeps going. The
+//! squiggly line plays hud_core::ahead::pretend's 12 s loop: it grows, bends, goes amber
+//! and shrinks to a stop.
 
 use std::{
     f32::consts::TAU,
@@ -13,6 +15,7 @@ use std::{
 };
 
 use hud_core::{
+    ahead,
     estop::EstopButton,
     gps::{Fix, RawFix},
     picture::Picture,
@@ -42,10 +45,14 @@ enum Stream {
     Camera,
     Watchdog,
     OutputMux,
+    Trace,
+    PlanAhead,
+    StopPoint,
+    Ahead,
 }
 
 impl Stream {
-    const ALL: [Stream; 8] = [
+    const ALL: [Stream; 12] = [
         Stream::Vehicle,
         Stream::Gps,
         Stream::GpsFiltered,
@@ -54,6 +61,10 @@ impl Stream {
         Stream::Camera,
         Stream::Watchdog,
         Stream::OutputMux,
+        Stream::Trace,
+        Stream::PlanAhead,
+        Stream::StopPoint,
+        Stream::Ahead,
     ];
 
     fn period(self) -> Duration {
@@ -65,6 +76,7 @@ impl Stream {
             Self::Camera => 100,
             Self::Watchdog => 100,
             Self::OutputMux => 500,
+            Self::Trace | Self::PlanAhead | Self::StopPoint | Self::Ahead => 100,
         })
     }
 }
@@ -72,7 +84,7 @@ impl Stream {
 /// The demo source.
 pub struct Demo {
     start: Instant,
-    due: [Instant; 8],
+    due: [Instant; 12],
     button: EstopButton,
     estop_since: Option<Instant>,
     /// The pretend car's speed when the e-stop came, to brake from.
@@ -84,7 +96,7 @@ impl Demo {
     pub fn new(now: Instant) -> Self {
         Self {
             start: now,
-            due: [now; 8],
+            due: [now; 12],
             button: EstopButton::default(),
             estop_since: None,
             speed_at_estop: 0.0,
@@ -114,6 +126,15 @@ impl Demo {
             ),
             Stream::Watchdog => Some(Update::Watchdog(watchdog(t).into())),
             Stream::OutputMux => Some(Update::OutputMux(output_mux(t).into())),
+            Stream::Trace | Stream::PlanAhead | Stream::StopPoint | Stream::Ahead => {
+                let a = ahead::pretend(now.saturating_duration_since(self.start));
+                match stream {
+                    Stream::Trace => Some(Update::Trace(a.trace)),
+                    Stream::PlanAhead => Some(Update::PlanAhead(a.plan)),
+                    Stream::StopPoint => a.stop.map(Update::StopPoint),
+                    _ => a.summary.map(Update::Ahead),
+                }
+            }
         }
     }
 

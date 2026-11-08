@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">90 min read · 4 sections</div></header>
+<div class="meta">95 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -416,9 +416,33 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/ego/trace</code></td>
 <td><code>nav_msgs/msg/Path</code></td>
 <td><code>ego</code></td>
-<td>-</td>
+<td><code>look_ahead</code>, <code>hud</code>, <code>dev_window</code></td>
 <td>turtle, sim, car, bench</td>
-<td>Where the car is going, like a tail but in front (Ben, 7 Nov) - ego's prediction over trace_horizon (2 s), 10 Hz (trace_rate_hz), a pose every 0.1 s from now (21 poses), frame base_link at the header's stamp (each pose stamped with its own time ahead). From the shared car model (aav_description car_model.py - the speed loop, dead times, lags, steering motor and bicycle), started from ego's twin of the car (its actuators as ego drove them, its speed the last /vehicle/odom), driven by a copy of ego with the request held (its lead, ramps and limits). base_link, not odom - ego needs no localization (stands, the turtle), and a driver turns it into odom with TF at the stamp. Every number is a guess until car tests 3.10-3.12 and 4.1-4.5. For drivers to match against their plan, and for screens. aav_ego trace_ahead.py.</td>
+<td>Where the car is going, like a tail but in front (Ben, 7 Nov) - ego's prediction over trace_horizon (2 s), 10 Hz (trace_rate_hz), a pose every 0.1 s from now (21 poses), frame base_link at the header's stamp (each pose stamped with its own time ahead). From the shared car model (aav_description car_model.py - the speed loop, dead times, lags, steering motor and bicycle), started from ego's twin of the car (its actuators as ego drove them, its speed the last /vehicle/odom), driven by a copy of ego with the request held (its lead, ramps and limits). base_link, not odom - ego needs no localization (stands, the turtle), and a driver turns it into odom with TF at the stamp. Every number is a guess until car tests 3.10-3.12 and 4.1-4.5. For drivers to match against their plan, and for screens - the squiggly line's bold line (docs/hud.md). aav_ego trace_ahead.py.</td>
+</tr>
+<tr>
+<td><code>/ego/stop_point</code></td>
+<td><code>geometry_msgs/msg/PoseStamped</code></td>
+<td><code>ego</code></td>
+<td><code>look_ahead</code>, <code>hud</code>, <code>dev_window</code></td>
+<td>turtle, sim, car, bench</td>
+<td>Where the car stops if it brakes fully now (Ben, 7 Nov) - the one answer every screen and the stop-point check read. ego, with each /ego/trace (10 Hz), from the same twin and shared car model (aav_ego stop_ahead.py) - the throttle let go, the brake full (its dead time and lag), the wheels held where they point, stepped until the speed is 0. Frame base_link, stamped as the trace (now), so TF at the stamp puts it in odom or map; (0, 0) when parked. Its distance is docs/designs/2026-11-05_how-the-car-stops.md's S(v) - v x the brake's delay + v^2 / 2 max_brake, a little less for the drag. Every number is a guess until car test 4.3.</td>
+</tr>
+<tr>
+<td><code>/ego/plan_ahead</code></td>
+<td><code>nav_msgs/msg/Path</code></td>
+<td><code>look_ahead</code></td>
+<td><code>hud</code>, <code>dev_window</code></td>
+<td>turtle, sim, car, bench</td>
+<td>The squiggly line's faint line - what the planner WANTS, in base_link, so a screen needs no TF (aav_ego look_ahead, 10 Hz while /ego/trace is fresh). /drivers/nav/local_plan while fresh (0.5 s), else Nav2's /plan, moved into base_link with the newest TF and cut from beside the car to plan_ahead_m (10 m) on. No poses - no plan (a person drives); it is still sent, so a screen clears its old line. Header as the trace's.</td>
+</tr>
+<tr>
+<td><code>/ego/ahead</code></td>
+<td><code>diagnostic_msgs/msg/DiagnosticStatus</code></td>
+<td><code>look_ahead</code></td>
+<td><code>hud</code>, <code>dev_window</code></td>
+<td>turtle, sim, car, bench</td>
+<td>The squiggly line's numbers, worked out once for every screen (aav_ego look_ahead look_ahead.py, 10 Hz with /ego/plan_ahead). name look_ahead; level OK (green - the trace keeps within gap_warn, 0.3 m, of the plan, or there is no plan), WARN (amber - within gap_bad, 0.6 m), ERROR (red - further); message one line for people, such as 'ON PLAN 0.12 m - stops in 1.4 m, 0.8 m short of the goal, 3.0 m before an obstacle'. values gap_m (the most a trace pose strays from the faint line), plan (local, global, none), stop_m (/ego/stop_point's distance), goal_m (from the stop point to /plan's end, along it - + short, - past), obstacle_m (how far base_link goes along the trace, then straight on to look_m, 15 m, before the front bumper meets a lethal cell of /local_costmap/costmap), room_m (obstacle_m - stop_m - below 0 a full brake now still hits it); 'nan' - unknown; front_m, rear_m, half_width_m - the body outline from base_link (vehicle.yaml), so a screen draws the car and where its front bumper stops without copying a measurement. No stop lines yet - no topic gives where one is.</td>
 </tr>
 <tr>
 <td><code>/ego/actuator_cmd</code></td>
@@ -1197,10 +1221,26 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>RViz "2D Goal Pose", or the map window's place search (map, aav_hud - only after DRIVE HERE then CONFIRM, map frame, facing from the car, refused off Nav2's /map or with no car), starts a navigate_to_pose. The map window shows it until Nav2 plans for it.</td>
 </tr>
 <tr>
+<td><code>/local_costmap/costmap</code></td>
+<td><code>nav_msgs/msg/OccupancyGrid</code></td>
+<td><code>local_costmap</code></td>
+<td><code>look_ahead</code></td>
+<td>sim, car</td>
+<td>Nav2's own name - the local costmap as a grid, odom, rolling with the car. look_ahead (aav_ego) finds the first obstacle ahead of the stop point in it.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/local_plan</code></td>
+<td><code>nav_msgs/msg/Path</code></td>
+<td><code>controller_server</code>, <code>mppi_lag</code></td>
+<td><code>look_ahead</code></td>
+<td>-</td>
+<td>What the path follower WANTS over its own horizon - the future its chosen commands lead to, odom. Nav2's MPPI (controller:=mppi, the default; nav2.yaml visualize true, its optimal_trajectory renamed here, sent only while someone listens) or aav_mppi_lag (tracker:=mppi_lag, every tick). Regulated Pure Pursuit and aav_track's trial trackers have none - then look_ahead falls back to /plan. Only while a path runs.</td>
+</tr>
+<tr>
 <td><code>/plan</code></td>
 <td><code>nav_msgs/msg/Path</code></td>
 <td><code>planner_server</code>, <code>diffusion_planner</code></td>
-<td><code>map</code>, <code>debug_hud</code>, <code>dev_window</code></td>
+<td><code>map</code>, <code>debug_hud</code>, <code>dev_window</code>, <code>look_ahead</code></td>
 <td>-</td>
 <td>The planned path, for RViz/Foxglove, and the map window (map, aav_hud) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives. Which planner makes it is navigation.launch.py planner:= (docs/controllers.md, Planners) - hybrid (SmacPlannerHybrid, the default) or lattice (SmacPlannerLattice, our own primitives) keep to the car's turning radius; smac2d, navfn and theta_star, trials in sim and bench only, don't. Always the plugin GridBased, so the behaviour trees never change. With planner:=diffusion (aav_diffusion_planner, a trial) diffusion_planner publishes it - the path it returned, the model's or the lattice's - and planner_server's own goes to /drivers/nav/diffusion/lattice_plan.</td>
 </tr>

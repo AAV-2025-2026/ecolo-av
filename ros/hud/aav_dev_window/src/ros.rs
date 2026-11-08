@@ -4,8 +4,10 @@
 //!
 //! Subscribes: the cubes, the road, both odometries, NDT's pose and status, the scene's picture,
 //! `/rosout`, `/plan`,
-//! `/map`, the costmap, `/system/source`, `/vehicle/status`, the output gate and the
-//! watchdog (`config/dev_window.yaml`).
+//! `/map`, the costmap, `/system/source`, `/vehicle/status`, the output gate, the
+//! watchdog, and the squiggly line's four, all base_link: `/ego/trace` (Path),
+//! `/ego/plan_ahead` (Path), `/ego/stop_point` (PoseStamped), `/ego/ahead`
+//! (DiagnosticStatus) (`config/dev_window.yaml`).
 //! Publishes, only with `--developer`: `/goal_pose`, `/safety/estop` (only ever true).
 //! Serves and calls nothing.
 
@@ -29,6 +31,7 @@ use debug_core::{
     voxels::{self, VoxelSettings},
 };
 use hud_core::{
+    ahead::{StopMark, Summary},
     estop::{EstopButton, PERIOD},
     heartbeat::{Frames, Heartbeat},
     origin::{Announcement, Entry, Origin},
@@ -86,6 +89,18 @@ struct Topics {
     goal: String,
     estop: String,
     screen_alive: String,
+    trace: String,
+    plan_ahead: String,
+    stop_point: String,
+    ahead: String,
+}
+
+/// A Path's points, as they are (base_link for the squiggly line's two).
+fn path_points(m: &Path) -> Vec<(f64, f64)> {
+    m.poses
+        .iter()
+        .map(|p| (p.pose.position.x, p.pose.position.y))
+        .collect()
 }
 
 /// The two commands, which exist only in developer mode.
@@ -487,6 +502,42 @@ fn spin(
     let _watchdog = node.create_subscription(topics.watchdog.as_str().sensor_data_qos(), {
         let tx = tx.clone();
         move |m: StringMsg| send(&tx, Update::Watchdog(m.data))
+    })?;
+    // The squiggly line: all four in base_link, 10 Hz (aav_ego's ego and look_ahead).
+    let _trace = node.create_subscription(topics.trace.as_str().qos(newest), {
+        let tx = tx.clone();
+        move |m: Path| send(&tx, Update::Trace(path_points(&m)))
+    })?;
+    let _plan_ahead = node.create_subscription(topics.plan_ahead.as_str().qos(newest), {
+        let tx = tx.clone();
+        move |m: Path| send(&tx, Update::PlanAhead(path_points(&m)))
+    })?;
+    let _stop_point = node.create_subscription(topics.stop_point.as_str().qos(newest), {
+        let tx = tx.clone();
+        move |m: PoseStamped| {
+            let p = pose(&m.pose);
+            send(
+                &tx,
+                Update::StopPoint(StopMark {
+                    x: p.position.x,
+                    y: p.position.y,
+                    yaw: p.yaw,
+                }),
+            );
+        }
+    })?;
+    let _ahead = node.create_subscription(topics.ahead.as_str().qos(newest), {
+        let tx = tx.clone();
+        move |m: DiagnosticStatus| {
+            let values = m
+                .values
+                .iter()
+                .map(|kv| (kv.key.as_str(), kv.value.as_str()));
+            send(
+                &tx,
+                Update::Ahead(Summary::from_status(m.level, &m.message, values)),
+            );
+        }
     })?;
 
     let commands = if developer {
