@@ -49,9 +49,9 @@ if command -v cargo >/dev/null; then
   echo "== ros/localization/aav_ndt: NDT's maths, the filters, LOST; the design's checks"
   (cd ros/localization/aav_ndt && cargo test -q --locked -p ndt-core)
   echo "== ros/sim/aav_simulator: our own simulator's core: the car, the rays, Gazebo's worlds"
-  (cd ros/sim/aav_simulator && cargo test -q --locked -p sim-core)
+  (cd ros/sim/aav_simulator && cargo test -q --locked -p sim-core --features shared)
   echo "== ros/drivers/aav_mppi_lag: MPPI with the lag, its critics, the closed-loop runs"
-  (cd ros/drivers/aav_mppi_lag && cargo test -q --locked -p mppi-lag)
+  (cd ros/drivers/aav_mppi_lag && cargo test -q --locked -p mppi-lag --features shared)
   # Only the logic: the window (raylib) needs a screen's libraries, and colcon builds it.
   echo "== ros/hud/aav_hud: the HUD's state, GPS, e-stop and formatting; the map's maths; the hardware panel's buttons"
   (cd ros/hud/aav_hud && cargo test -q --locked -p hud-core -p map-core -p debug-core -p panel-core)
