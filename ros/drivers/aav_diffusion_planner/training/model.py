@@ -166,8 +166,10 @@ class Sampler(nn.Module):
 
     def forward(self, crop, cond, noise):
         k = noise.shape[0]
-        crop, cond = crop.expand(k, -1, -1, -1), cond.expand(k, -1)
-        ctx = self.model.context(crop, cond)
+        # The map and the goal once, then shared by the K samples: the map encoder ran K
+        # times on the same crop until 7 Nov (the same answer, K times the work).
+        ctx = self.model.context(crop, cond).expand(k, -1)
+        cond = cond.expand(k, -1)
         start, goal = ends(cond)
         x = pin(noise, noise, torch.zeros(k, device=noise.device, dtype=noise.dtype), start,
                 goal)
