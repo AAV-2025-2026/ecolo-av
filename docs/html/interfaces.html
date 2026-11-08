@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">103 min read · 4 sections</div></header>
+<div class="meta">106 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -61,6 +61,7 @@
 <a href="mppi-lag.html">MPPI with lag</a>
 <a href="own-costmap.html">Our own costmap</a>
 <a href="own-planner.html">Our own planner</a>
+<a href="own-navigator.html">Our own navigator</a>
 <a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
@@ -1236,7 +1237,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/goal_pose</code></td>
 <td><code>geometry_msgs/msg/PoseStamped</code></td>
 <td><code>rviz2</code>, <code>map</code>, <code>dev_window</code></td>
-<td><code>bt_navigator</code>, <code>map</code></td>
+<td><code>bt_navigator</code>, <code>navigator</code>, <code>map</code></td>
 <td>-</td>
 <td>RViz "2D Goal Pose", or the map window's place search (map, aav_hud - only after DRIVE HERE then CONFIRM, map frame, facing from the car, refused off Nav2's /map or with no car), starts a navigate_to_pose. The map window shows it until Nav2 plans for it.</td>
 </tr>
@@ -1271,6 +1272,14 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>-</td>
 <td>-</td>
 <td>Only with planner:=own - planner_server's own /plan, renamed - Nav2's lattice's path, when something still asks it (navigate_through_poses, controller_compare's head-to-head).</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/navigator/status</code></td>
+<td><code>diagnostic_msgs/msg/DiagnosticStatus</code></td>
+<td><code>navigator</code></td>
+<td>-</td>
+<td>-</td>
+<td>Only with navigator:=own (aav_navigator, a trial; docs/own-navigator.md) - 2 Hz and at each goal's end. name navigator; level OK, or WARN while recovering; message the step (idle, planning, following, recovering - clearing costmaps or backing up). values step, succeeded, failed (goals since start), last_end (the last goal's number and how it ended), and with a goal running goal, distance_remaining_m (along the path), recoveries, waypoint (passed, or driven to), poses_remaining.</td>
 </tr>
 <tr>
 <td><code>/drivers/nav/planner/status</code></td>
@@ -1480,7 +1489,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/drivers/nav/costmap/clear_entirely_global</code></td>
 <td><code>nav2_msgs/srv/ClearEntireCostmap</code></td>
 <td><code>costmap</code></td>
-<td>The same for our global costmap. Nothing calls it yet - the trees' global clear stays Nav2's, whose global costmap the planner reads (the navigator step will call ours).</td>
+<td>The same for our global costmap. Our navigator (navigator:=own, aav_navigator) calls it with costmap:=own - its planner recovery and its clear-both recovery; bt_navigator's trees still clear Nav2's.</td>
 </tr>
 <tr>
 <td><code>/spine/arm</code></td>
@@ -1605,10 +1614,16 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>Only with planner:=own (aav_planner, a trial; docs/own-planner.md). Our planner - Nav2's State Lattice in Rust, the same primitives file, penalties and smoothing - one path from the car (map -&gt; odom -&gt; base_link on /tf, or the goal's start with use_start) to a map pose, on the global costmap costmap:= picks. navigation.launch.py remaps bt_navigator's compute_path_to_pose here, so the trees call ours; planner_server's /compute_path_to_pose keeps answering beside it (controller_compare asks both from the same spot). Error codes as Nav2's (203-208). Planning only, nothing moves.</td>
 </tr>
 <tr>
+<td><code>/drivers/nav/planner/compute_path_through_poses</code></td>
+<td><code>nav2_msgs/action/ComputePathThroughPoses</code></td>
+<td><code>planner</code></td>
+<td>Only with planner:=own (aav_planner). One path through each goal in turn - a plan a leg, each leg from the last goal, joined - as planner_server does. bt_navigator's compute_path_through_poses is remapped here, and our navigator calls it for through-poses goals and waypoints. Error codes as Nav2's (303-309); the message names the leg that failed.</td>
+</tr>
+<tr>
 <td><code>/navigate_to_pose</code></td>
 <td><code>nav2_msgs/action/NavigateToPose</code></td>
 <td><code>bt_navigator</code></td>
-<td>Drive to one map-frame pose.</td>
+<td>Drive to one map-frame pose. Nav2's (navigator:=nav2, the default); a goal sender reaches whichever runs through aav_description vehicle.navigator_action().</td>
 </tr>
 <tr>
 <td><code>/navigate_through_poses</code></td>
@@ -1626,7 +1641,31 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/follow_gps_waypoints</code></td>
 <td><code>nav2_msgs/action/FollowGPSWaypoints</code></td>
 <td><code>waypoint_follower</code></td>
-<td>Lat/lon waypoints. street_router sends its street route here (asked on /drivers/nav/route/follow). Phase 2. language_drive (aav_language) sends one point for go_to_gps(), at most 200 m away.</td>
+<td>Lat/lon waypoints. street_router sends its street route here (asked on /drivers/nav/route/follow). Phase 2. language_drive (aav_language) sends one point for go_to_gps(), at most 200 m away. With navigator:=own both send to /drivers/nav/navigator/follow_gps_waypoints instead (their navigator parameter).</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/navigator/navigate_to_pose</code></td>
+<td><code>nav2_msgs/action/NavigateToPose</code></td>
+<td><code>navigator</code></td>
+<td>Only with navigator:=own (aav_navigator, a trial; docs/own-navigator.md), in bt_navigator's place - our behaviour trees' logic in Rust - plan (the planner's ComputePathToPose), follow (FollowPath), replan every second except on the final approach, recover (clear the local or global costmap, then in turn clear both, wait 5 s, back up 1 m when reversing; 6 times), else give up with the step's Nav2 error code. A newer goal on any of its actions replaces this one (aborted, code 0). Feedback as Nav2's (distance along the path, recoveries).</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/navigator/navigate_through_poses</code></td>
+<td><code>nav2_msgs/action/NavigateThroughPoses</code></td>
+<td><code>navigator</code></td>
+<td>Only with navigator:=own. One path through each pose (the planner's ComputePathThroughPoses), replanned every 3 s from the car through the poses not yet passed - passed within 1 m, or passed along the path.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/navigator/follow_waypoints</code></td>
+<td><code>nav2_msgs/action/FollowWaypoints</code></td>
+<td><code>navigator</code></td>
+<td>Only with navigator:=own. Map poses, driven as one through-poses goal (waypoints - pass_through, the default - no stop and no turn to face at each, TODO 140) or as Nav2's waypoint_follower does (stop_at_each). missed_waypoints - those not reached when it ends.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/navigator/follow_gps_waypoints</code></td>
+<td><code>nav2_msgs/action/FollowGPSWaypoints</code></td>
+<td><code>navigator</code></td>
+<td>Only with navigator:=own. Lat/lon waypoints, put on the map by navsat_transform's datum (aav_localization navsat.yaml - the same UTM steps as /fromLL, map-core's earth.rs), then as follow_waypoints. street_router (navigator - own) and language_drive send here.</td>
 </tr>
 </tbody>
 </table></div>

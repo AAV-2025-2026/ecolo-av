@@ -84,6 +84,10 @@ bench's argument names:
                       collision_monitor. Forward only: with reversing:=false (docs/trials.md)
   costmap:=own        our own costmaps beside Nav2's (aav_costmap, a trial); with
                       tracker:=mppi_lag, mppi_lag reads ours (docs/own-costmap.md)
+  navigator:=own      our own navigator in place of bt_navigator and waypoint_follower
+                      (aav_navigator, a trial); with planner:=own costmap:=own
+                      tracker:=mppi_lag reversing:=false, no Nav2 server navigates
+                      (docs/own-navigator.md)
   behaviour:=true    the behaviour states and a speed cap on Nav2 from the stopping law
                       (aav_behaviour, a trial: docs/stopping.md)
   amcl:=true          stock AMCL beside the global EKF, scored only (docs/trials.md): only
@@ -314,6 +318,7 @@ def launch_setup(context):
                                reversing=str(flag['reversing']).lower(),
                                controller=controller, tracker=tracker, planner=planner,
                                costmap=vehicle.check_costmap(arg('costmap')),
+                               navigator=vehicle.check_navigator(arg('navigator')),
                                lattice_headings=arg('lattice_headings'),
                                diffusion_model=arg('diffusion_model'),
                                # A trial tracker may be swapped live here (the debug
@@ -521,6 +526,10 @@ def generate_launch_description():
         DeclareLaunchArgument('behaviour', default_value='false',
                               description='true: the behaviour states and a speed cap on '
                                           'Nav2 (aav_behaviour, a trial)'),
+        DeclareLaunchArgument('navigator', default_value=vehicle.DEFAULT_NAVIGATOR,
+                              description="nav2 or own: our own navigator in bt_navigator's "
+                                          'place (aav_navigator, a trial; '
+                                          'docs/own-navigator.md)'),
         DeclareLaunchArgument('costmap', default_value=vehicle.DEFAULT_COSTMAP,
                               description="nav2 or own: our own costmaps beside Nav2's "
                                           '(aav_costmap, a trial; docs/own-costmap.md)'),

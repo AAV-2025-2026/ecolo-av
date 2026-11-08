@@ -45,6 +45,7 @@ Launch: `ros2 launch aav_navigation navigation.launch.py [args]`
 | `lattice_headings` | 16 | with `planner:=lattice`: 16 headings (`config/lattice_ackermann.json`) or 32, a trial (`config/lattice_ackermann_32.json`) |
 | `plan_around` | true | false: the planner sees only the map, so the car stops (stop tests) |
 | `tracker` | `none` | a trial follower (`aav_track`): `pure_pursuit`, `stanley`, `lqr`, `mpc`, `mpc_full`; or `mppi_lag` (`aav_mppi_lag`: Nav2's MPPI with the lag). It serves `follow_path`; controller_server's becomes `follow_path_unused`. Refused with `reversing:=true` (`docs/trials.md`) |
+| `navigator` | `nav2` | `own`: our own navigator (`aav_navigator`) in place of `bt_navigator` and `waypoint_follower`, its actions under `/drivers/nav/navigator/`; with `planner:=own costmap:=own tracker:=mppi_lag` also no `planner_server`, `controller_server` or `behavior_server` (`docs/own-navigator.md`). `car.launch.py` always passes `nav2` |
 | `amcl` | false | true (needs `lidar:=true`): stock AMCL, scored only, on `/localization/amcl/pose` (`config/amcl.yaml`: `tf_broadcast: false`) |
 | `amcl_x`, `amcl_y`, `amcl_yaw` | 0 | AMCL's start pose, map frame (`sim.launch.py` gives the sim's start) |
 | `amcl_map` | empty | empty: AMCL reads Nav2's `/map`; else its own map YAML, on `/localization/amcl/map` (`sim.launch.py`: `maps/example_lot_amcl.yaml`, [why](./maps/README.md#why-amcl-has-a-map-of-its-own)) |

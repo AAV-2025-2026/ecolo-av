@@ -326,6 +326,69 @@ def check_costmap(costmap):
     return name
 
 
+# Whose navigator (navigator:=, docs/own-navigator.md): nav2 (bt_navigator and
+# waypoint_follower: the default, and the car's) or own (aav_navigator, a trial). Each
+# one's actions, by Nav2's own short names: a goal sender asks navigator_action() for its.
+NAVIGATORS = ('nav2', 'own')
+DEFAULT_NAVIGATOR = 'nav2'
+NAVIGATOR_ACTIONS = ('navigate_to_pose', 'navigate_through_poses', 'follow_waypoints',
+                     'follow_gps_waypoints')
+OWN_NAVIGATOR_PREFIX = '/drivers/nav/navigator/'
+
+
+def check_navigator(navigator):
+    """Return the navigator's name (lower case), or raise ValueError saying what to pick."""
+    name = str(navigator).strip().lower()
+    if name not in NAVIGATORS:
+        raise ValueError(f'navigator:={navigator}: pick one of {", ".join(NAVIGATORS)}')
+    return name
+
+
+def navigator_action(navigator, action):
+    """
+    Return the action's full name for a navigator.
+
+    '/navigate_to_pose' for Nav2's, or '/drivers/nav/navigator/navigate_to_pose' for ours.
+    action: one of NAVIGATOR_ACTIONS.
+    """
+    if action not in NAVIGATOR_ACTIONS:
+        raise ValueError(f'{action}: one of {", ".join(NAVIGATOR_ACTIONS)}')
+    prefix = OWN_NAVIGATOR_PREFIX if check_navigator(navigator) == 'own' else '/'
+    return prefix + action
+
+
+def all_ours(navigator, planner, costmap, tracker):
+    """
+    Return True when every navigation piece is ours.
+
+    Then no Nav2 server is needed for navigation (planner_server, controller_server,
+    behavior_server, bt_navigator, waypoint_follower stay off). map_server, the velocity
+    smoother and collision_monitor still run: the map, and the command line in front of
+    the safety locks.
+    """
+    return (navigator, planner, costmap, tracker) == ('own', 'own', 'own', 'mppi_lag')
+
+
+def navigator_params(v, reversing, waypoints='pass_through'):
+    """
+    Return aav_navigator's settings (navigator:=own) as a dict, for its JSON parameter.
+
+    The trees' numbers (behavior_trees/*_car*.xml): replanning at 1 Hz (through-poses
+    0.333 Hz), the final approach (final_approach(v), TODO 17), 6 recoveries, Wait 5 s,
+    BackUp 1 m at half max_reverse_speed only with reversing, RemovePassedGoals' 1 m.
+    waypoints: pass_through (ours: one through-poses goal, TODO 140) or stop_at_each
+    (Nav2's waypoint_follower).
+    """
+    out = {'replan_period': 1.0, 'through_replan_period': 3.0,
+           'final_approach': round(final_approach(v), 3), 'path_end_tolerance': 0.5,
+           'path_max_age': 20.0, 'retries': 6, 'wait': 5.0, 'pass_radius': 1.0,
+           'on_path': 2.0, 'waypoints': waypoints, 'stop_on_failure': False,
+           'replan_failures': 3, 'backup': None}
+    if reversing:
+        out['backup'] = {'distance': 1.0, 'speed': 0.5 * float(v['max_reverse_speed'])}
+    return out
+
+
 # Nav2's planners (planner:=, docs/controllers.md "Planners"), each under the one plugin name
 # the behaviour trees ask for, GridBased. hybrid (SmacPlannerHybrid, the default) and lattice
 # (SmacPlannerLattice, on our own primitives: tools/lattice_primitives.py) keep to the car's
@@ -345,6 +408,8 @@ CAR_PLANNERS = ('hybrid', 'lattice')
 TRIAL_PLANNERS = {'diffusion': 'lattice', 'own': 'lattice'}
 # planner:=own: our planner's action; bt_navigator's compute_path_to_pose is pointed here.
 OWN_PLANNER_ACTION = '/drivers/nav/planner/compute_path_to_pose'
+# ... and its through-poses action (bt_navigator's, and our navigator's, are pointed here).
+OWN_PLANNER_THROUGH_ACTION = '/drivers/nav/planner/compute_path_through_poses'
 # ... and planner_server's own /plan goes here (ours publishes /plan).
 OWN_PLANNER_NAV2_PLAN = '/drivers/nav/planner/nav2_plan'
 # The lattice is the default (Ben, 1 Nov): with reversing on, every leg of the lot tour,

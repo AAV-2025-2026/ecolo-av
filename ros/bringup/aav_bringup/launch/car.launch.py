@@ -558,6 +558,10 @@ def launch_setup(context):
                                                   or rear_camera),
                                camera_obstacles=on('camera_obstacles'),
                                camera_guard=rear_camera,
+                               # Nav2's own navigator and costmaps, always: our trials
+                               # (navigator:=own, costmap:=own) never reach the car.
+                               navigator=vehicle.DEFAULT_NAVIGATOR,
+                               costmap=vehicle.DEFAULT_COSTMAP,
                                reversing=reversing))
         # What this run uses, in words, for the cockpit's Algorithms table (aav_run_info).
         # The car has no trial localizers and no trial trackers: Nav2's own follower.

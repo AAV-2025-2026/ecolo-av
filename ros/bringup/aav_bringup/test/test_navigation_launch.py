@@ -387,6 +387,59 @@ def test_own_planner_takes_the_trees_compute_path_to_pose():
     assert p['costmap_updates_topic'] == ''
 
 
+def managed(nodes):
+    """Return the servers lifecycle_manager_navigation brings up."""
+    return given(nodes['lifecycle_manager_navigation'])['node_names']
+
+
+def test_own_navigator_takes_bt_navigators_place_beside_nav2s_servers():
+    nodes = nav_nodes()
+    assert 'navigator' not in nodes and 'bt_navigator' in nodes
+    nodes = nav_nodes(navigator='own')
+    assert 'bt_navigator' not in nodes and 'waypoint_follower' not in nodes
+    assert {'planner_server', 'controller_server'} <= set(nodes)
+    assert 'bt_navigator' not in managed(nodes)
+    p = given(nodes['navigator'])
+    assert p['planner_action'] == '/compute_path_to_pose'
+    assert p['follow_action'] == '/follow_path'
+    assert p['clear_local'] == '/local_costmap/clear_entirely_local_costmap'
+    assert p['navsat_file'].endswith('aav_localization/config/navsat.yaml')
+    s = json.loads(p['settings'])
+    assert (s['backup'], s['retries'], s['waypoints']) == (None, 6, 'pass_through')
+    # Reversing: BackUp through behavior_server, half the car's reverse speed.
+    p = given(nav_nodes(navigator='own', reversing='true')['navigator'])
+    assert p['backup_action'] == '/backup'
+    assert json.loads(p['settings'])['backup']['speed'] == pytest.approx(REVERSE / 2)
+
+
+def test_all_ours_runs_no_nav2_server_for_navigation():
+    nodes = nav_nodes(navigator='own', planner='own', costmap='own', tracker='mppi_lag')
+    for nav2 in ('planner_server', 'controller_server', 'behavior_server', 'bt_navigator',
+                 'waypoint_follower'):
+        assert nav2 not in nodes, nav2
+    # Left: the map, and the command line in front of the safety locks.
+    assert set(managed(nodes)) <= {'map_server', 'velocity_smoother', 'collision_monitor'}
+    p = given(nodes['navigator'])
+    assert p['planner_action'] == vehicle.OWN_PLANNER_ACTION
+    assert p['planner_through_action'] == vehicle.OWN_PLANNER_THROUGH_ACTION
+    assert p['clear_local'] == '/drivers/nav/costmap/clear_entirely_local'
+    assert p['clear_global'] == '/drivers/nav/costmap/clear_entirely_global'
+    assert p['backup_action'] == ''
+    # Nav2's trees, with our planner: both their planner calls come to ours.
+    remapped = remaps(nav_nodes(planner='own')['bt_navigator'])
+    assert ('compute_path_through_poses', vehicle.OWN_PLANNER_THROUGH_ACTION) in remapped
+
+
+def test_the_sim_passes_the_navigator_on_and_the_car_never_does():
+    assert sent_to_navigation(SIM)['navigator'] == 'nav2'
+    assert sent_to_navigation(SIM, navigator='own')['navigator'] == 'own'
+    with pytest.raises(ValueError, match='navigator:='):
+        sent_to_navigation(SIM, navigator='mine')
+    assert vehicle.navigator_action('own', 'follow_gps_waypoints') == (
+        '/drivers/nav/navigator/follow_gps_waypoints')
+    assert vehicle.navigator_action('nav2', 'navigate_to_pose') == '/navigate_to_pose'
+
+
 PLUGINS = {'hybrid': 'nav2_smac_planner::SmacPlannerHybrid',
            'lattice': 'nav2_smac_planner::SmacPlannerLattice',
            'smac2d': 'nav2_smac_planner::SmacPlanner2D',

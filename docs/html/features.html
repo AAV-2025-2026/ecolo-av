@@ -61,6 +61,7 @@
 <a href="mppi-lag.html">MPPI with lag</a>
 <a href="own-costmap.html">Our own costmap</a>
 <a href="own-planner.html">Our own planner</a>
+<a href="own-navigator.html">Our own navigator</a>
 <a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
@@ -519,6 +520,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <tr>
 <td><a href="own-planner.html">Our own planner</a> (<code>aav_planner</code>, <code>planner:=own</code>)</td>
 <td>Ben, 8 Nov: move off Nav2 one piece at a time; the planner after the costmap. Nav2's State Lattice (our default) ported to Rust: the same primitives file, nav2.yaml's penalties, the Reeds-Shepp finish and the smoother, on Nav2's global costmap or ours. It answers Nav2's own ComputePathToPose, so the behaviour trees call it and nothing else changes. Test lot, 3 runs each: 12 of 12 legs as Nav2's lattice, the same paths and times; campus: about 20 % slower on 250 m legs (both lost the same legs to MPPI). Nav2 stays the default</td>
+<td>Ben</td>
+<td>2026-11-08</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="own-navigator.html">Our own navigator</a> (<code>aav_navigator</code>, <code>navigator:=own</code>; all ours: <code>navigator:=own planner:=own costmap:=own tracker:=mppi_lag</code>)</td>
+<td>Ben, 8 Nov: move off Nav2 one piece at a time; the navigator is the last piece. What bt_navigator, our behaviour trees and waypoint_follower do (plan, follow, replan, keep the path on the final approach, recover, give up; through-poses; GPS waypoints by the datum) as a Rust state machine, serving Nav2's four actions under our own names. GPS waypoints are passed as one through-poses goal, not stop-and-face at each (TODO 140's bends). All ours runs no Nav2 server for navigation. Nav2 stays the default</td>
 <td>Ben</td>
 <td>2026-11-08</td>
 <td>sim</td>

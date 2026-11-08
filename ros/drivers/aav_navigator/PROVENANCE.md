@@ -1,0 +1,43 @@
+# Provenance
+
+The `navigator` crate follows what Nav2's `bt_navigator`, our behaviour trees
+(`aav_navigation/behavior_trees/*_car*.xml`, themselves Nav2's trees changed for a car)
+and `waypoint_follower` do for us. It is not a behaviour-tree engine: the trees' logic is
+rewritten as one plain state machine in Rust's own style (enums, no plugins, no ROS).
+
+## Where it came from
+
+| | |
+|---|---|
+| Repo | https://github.com/ros-planning/navigation2 |
+| Packages | `nav2_bt_navigator`, `nav2_behavior_tree`, `nav2_waypoint_follower` |
+| Commit | the Jazzy commit in `vendor/ros2-src.repos` (645abd95, as `aav_costmap`'s and `aav_planner`'s) |
+| Licence | Apache-2.0 (Samsung Research America, Steve Macenski and the Nav2 authors) |
+| Read 8 Nov 2026 | our four trees; `nav2_behavior_tree`'s `RecoveryNode`, `PipelineSequence`, `RateController`, `RoundRobin`, `RemovePassedGoals`, `WouldAPlannerRecoveryHelp`, `WouldAControllerRecoveryHelp`; `nav2_msgs`' action error codes; `waypoint_follower.cpp` (`stop_on_failure`, the missed waypoints) |
+| Datum | `aav_hud`'s `map-core` `earth.rs` (ours): navsat_transform's UTM steps |
+
+## What was taken
+
+| Ours | Nav2's |
+|---|---|
+| plan every `replan_period` (1 s; through-poses 3 s) | `RateController hz="1.0"` / `"0.333"` |
+| keep the path within `final_approach` of the goal, while it ends there and is under 20 s old | our trees' `PlanUnlessOnTheFinalApproach` (TODO 17) |
+| a failed plan: clear the global costmap, plan once more | the inner `RecoveryNode` with `WouldAPlannerRecoveryHelp` |
+| a failed follow: clear the local costmap, follow once more | the inner `RecoveryNode` with `WouldAControllerRecoveryHelp` |
+| then, 6 times at most: clear both, wait 5 s, back up 1 m (reversing), in turn | the outer `RecoveryNode` and `RoundRobin` |
+| which error codes a recovery can fix | `WouldA*RecoveryHelp`'s lists |
+| drop passed through-poses (1 m) | `RemovePassedGoals` |
+| waypoints one by one, missed ones listed, `stop_on_failure` | `waypoint_follower` (`WaypointMode::StopAtEach`) |
+| lat/lon to the map | `follow_gps_waypoints` calls `/fromLL`; we do its maths with the datum |
+
+## What changed, and why
+
+| Change | Why |
+|---|---|
+| A failed replan while the follower drives a good path doesn't stop the car; only 4 in a row do | Nav2's `PipelineSequence` halts FollowPath at the first failed replan: a stop for nothing |
+| Through-poses also drops a pose once the car has passed it along the path | a car cutting a bend by more than 1 m never came back for it otherwise |
+| Waypoints run as one through-poses goal by default (`pass_through`) | TODO 140: each waypoint a stop-and-face goal left the car half-turned at a sharp bend |
+| The final approach also on a through-poses goal's last leg | the same circling near the goal (TODO 17) |
+| A new goal on any action replaces the running one | Nav2 refuses a goal on a second navigator while one runs; one navigator is simpler for the screens and tools |
+| No `IsPathValid` on the final approach | the navigator reads no costmap; the follower's own checks and collision_monitor still stop the car |
+| Spin, DriveOnHeading, `GoalUpdated` within a recovery | not used by our trees, or covered by "a new goal replaces" |

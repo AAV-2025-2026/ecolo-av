@@ -29,6 +29,9 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
                                             against ours while the car stands still)
     pixi run sim-check --tracker mppi_lag  (every run with that path follower, tracker:=;
                                             with --costmap own it reads our costmap)
+    pixi run sim-check --navigator own     (every run with our own navigator, navigator:=own,
+                                            aav_navigator; with --planner own --costmap own
+                                            --tracker mppi_lag, no Nav2 server navigates)
     pixi run sim-check --legs-only --lidar-obstacle --plan-around
                                            (only the extra runs named, not the road
                                             world's first run: the costmap's scoring)
@@ -498,7 +501,9 @@ class Probe(Node):
         self.drive_to_point = ActionClient(self, DriveToPoint, '/drive_to_point')
         self.estop = self.create_publisher(Bool, '/safety/estop', 10)
         self.to_ll = self.create_client(ToLL, '/toLL')
-        self.nav = ActionClient(self, NavigateToPose, '/navigate_to_pose')
+        # Nav2's navigator, or ours (--navigator own: navigation.launch.py navigator:=own).
+        self.nav = ActionClient(self, NavigateToPose,
+                                vehicle.navigator_action(NAVIGATOR, 'navigate_to_pose'))
         self.stop, self.stop_picture, self.picture, self.stop_sign = False, None, None, None
         self.create_subscription(Bool, '/perception/stop_sign', self.on_stop, 10)
         self.create_subscription(Image, '/perception/detections/image',
@@ -2095,6 +2100,10 @@ WATCHDOG_TOPICS = ('/safety/sensor_watchdog/lock', '/safety/sensor_watchdog/stat
 
 EVERY_RUN = []   # launch arguments every session adds: --speed-loop's, --simulator's
 SIMULATOR = None      # --simulator gazebo or own; else sim.launch.py's default (main)
+NAVIGATOR = 'nav2'    # --navigator own: aav_navigator in bt_navigator's place
+# All ours (--navigator own --planner own --costmap own --tracker mppi_lag): Nav2's
+# costmaps don't run at all, so they aren't missing from the graph.
+ALL_OURS = False
 COSTMAP = 'nav2'      # --costmap own: aav_costmap beside Nav2's (sim.launch.py costmap:=)
 LOCAL_COSTMAP = {'nav2': '/local_costmap/costmap', 'own': '/drivers/nav/costmap/local'}
 SIMULATOR_NAMES = {'gazebo': 'Gazebo', 'own': 'our simulator'}
@@ -2311,6 +2320,8 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spin
         ignore = tuple(ignore) + ('/sensors/lidar/scan',)
     if KISS_EKF and 'lidar:=false' not in launch_args:
         launch_args = list(launch_args) + ['kiss_ekf:=true']
+    if ALL_OURS:
+        ignore = tuple(ignore) + ('/global_costmap/costmap', '/local_costmap/costmap')
     ignore = (tuple(ignore) + (LIDAR_TOPICS if 'lidar:=false' in launch_args else ())
               + (WATCHDOG_TOPICS if 'watchdog:=false' in launch_args else ()))
     env = dict(os.environ)
@@ -2448,8 +2459,11 @@ def main():
         SIMULATOR = DEFAULT_SIMULATOR
     # Always said: the checks place models and read logs the way this simulator wants.
     EVERY_RUN.append(f'simulator:={SIMULATOR}')
-    global COSTMAP
-    for flag_name, choices in (('--costmap', vehicle.COSTMAPS), ('--tracker', vehicle.TRACKERS)):
+    global COSTMAP, NAVIGATOR, ALL_OURS
+    chosen = {}
+    for flag_name, choices in (('--costmap', vehicle.COSTMAPS), ('--tracker', vehicle.TRACKERS),
+                               ('--navigator', vehicle.NAVIGATORS),
+                               ('--planner', vehicle.PLANNERS)):
         if flag_name in args:
             at = args.index(flag_name)
             if at + 1 >= len(args) or args[at + 1] not in choices:
@@ -2460,6 +2474,11 @@ def main():
                 EVERY_RUN.append('reversing:=false')     # the trial trackers: forward only
             if flag_name == '--costmap':
                 COSTMAP = args[at + 1]
+            if flag_name == '--navigator':
+                NAVIGATOR = args[at + 1]
+            chosen[flag_name[2:]] = args[at + 1]
+    ALL_OURS = vehicle.all_ours(chosen.get('navigator'), chosen.get('planner'),
+                                chosen.get('costmap'), chosen.get('tracker'))
     log = os.environ.get('AAV_SIM_LOG', '/tmp/aav-sim-check.log')
     logs = [log]
     if not {'--drive-to-point-only', '--speed-steps-only', '--spine-points-only',

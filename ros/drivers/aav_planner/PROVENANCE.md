@@ -42,3 +42,4 @@ ROS. The curves come from OMPL, as Nav2 takes them.
 | No 2D, Hybrid-A* or omni models; no costmap downsampling; no debug markers | our nav2.yaml runs the lattice for a car (Hybrid-A* is a later piece) |
 | The node reads one JSON block (`vehicle.planner_params`) | the launch file makes it from the same tuned nav2.yaml Nav2 gets |
 | The car's pose comes from `/tf` (map -> odom -> base_link), latest | rclrs has no tf2 yet |
+| `Planner::plan_through` (8 Nov): one plan a leg, each from the last goal, joined (the repeated join pose dropped); the failing leg is named | `PlannerServer::computePlanThroughPoses`, which does the same with any planner plugin; for `ComputePathThroughPoses` |

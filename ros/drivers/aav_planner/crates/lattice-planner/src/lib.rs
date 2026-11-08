@@ -294,6 +294,44 @@ impl Planner {
             total_time: began.elapsed().as_secs_f64(),
         })
     }
+
+    /// Plan from `start` through each of `goals` in turn, as Nav2's planner_server does
+    /// for `ComputePathThroughPoses`: one plan a leg, each leg starting at the last goal,
+    /// joined into one path. On a failure, the leg's number (0 = start to the first goal)
+    /// and why. No goals: [`PlanError::NoValidPath`] on leg 0.
+    pub fn plan_through(
+        &self,
+        grid: &Grid,
+        start: &Pose,
+        goals: &[Pose],
+        cancelled: &dyn Fn() -> bool,
+    ) -> Result<Plan, (usize, PlanError)> {
+        if goals.is_empty() {
+            return Err((0, PlanError::NoValidPath));
+        }
+        let mut whole = Plan {
+            poses: Vec::new(),
+            raw: Vec::new(),
+            iterations: 0,
+            search_time: 0.0,
+            total_time: 0.0,
+        };
+        let mut from = *start;
+        for (leg, goal) in goals.iter().enumerate() {
+            let plan = self
+                .plan(grid, &from, goal, cancelled)
+                .map_err(|e| (leg, e))?;
+            // Each leg after the first starts where the last one ended: drop the repeat.
+            let skip = usize::from(leg > 0);
+            whole.poses.extend(plan.poses.iter().skip(skip));
+            whole.raw.extend(plan.raw.iter().skip(skip));
+            whole.iterations += plan.iterations;
+            whole.search_time += plan.search_time;
+            whole.total_time += plan.total_time;
+            from = *goal;
+        }
+        Ok(whole)
+    }
 }
 
 /// A path's length, m.

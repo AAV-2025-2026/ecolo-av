@@ -61,6 +61,7 @@
 <a href="mppi-lag.html">MPPI with lag</a>
 <a href="own-costmap.html">Our own costmap</a>
 <a class="here" href="own-planner.html">Our own planner</a>
+<a href="own-navigator.html">Our own navigator</a>
 <a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
@@ -180,9 +181,9 @@ planner_server (Nav2's lattice) keeps running beside it: /compute_path_to_pose</
 </tr>
 </tbody>
 </table></div>
-<p><strong>How the swap works.</strong> <code>navigation.launch.py</code> remaps one name in <code>bt_navigator</code>:
-<code>compute_path_to_pose</code> → ours. The costmap step did the same with the clear service.
-<code>navigate_through_poses</code> still plans with Nav2's lattice (not ported yet).</p>
+<p><strong>How the swap works.</strong> <code>navigation.launch.py</code> remaps two names in <code>bt_navigator</code>:
+<code>compute_path_to_pose</code> and <code>compute_path_through_poses</code> → ours. The costmap step did the
+same with the clear service. Our navigator (<a href="own-navigator.html">page</a>) calls both too.</p>
 </section>
 <section class="card"><h2 id="what-it-does">What it does</h2>
 <pre class="highlight"><code>start ─▶ A* over the moves ─▶ now and then: one curve straight to the goal? ─▶ smooth ─▶ path
@@ -422,12 +423,14 @@ Before each leg, both planners plan <strong>from the same spot on the same map</
 <ul>
 <li><strong>Hybrid-A</strong>* (the forward-only default on the car): not ported. <code>planner:=own</code> with
   <code>reversing:=false</code> plans Dubins moves on the lattice instead.</li>
-<li><strong><code>navigate_through_poses</code></strong> still uses Nav2's planner (<code>ComputePathThroughPoses</code>).</li>
-<li><strong>The navigator step</strong> (next) must call ours for both, and clear our global costmap.</li>
+<li><strong><code>ComputePathThroughPoses</code></strong>: done 8 Nov (<code>/drivers/nav/planner/compute_path_through_poses</code>,
+  a plan a leg, joined, as Nav2's planner_server does).</li>
+<li><strong>The navigator step</strong>: done 8 Nov (<a href="own-navigator.html">our own navigator</a>): it calls
+  ours for both, and clears our global costmap.</li>
 <li><strong>On the car:</strong> untested; the car refuses <code>planner:=own</code>.</li>
 </ul></section>
 <nav class="prevnext"><a class="prev" href="own-costmap.html"><small>Previous</small>← Our own costmap</a>
-<a class="next" href="stopping.html"><small>Next</small>How the car stops →</a></nav>
+<a class="next" href="own-navigator.html"><small>Next</small>Our own navigator →</a></nav>
 </main>
 <footer>Source: <code>docs/own-planner.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

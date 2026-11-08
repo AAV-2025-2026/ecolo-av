@@ -98,6 +98,8 @@ PAGES = [
     ('mppi-lag.md', 'MPPI with lag', "Nav2's MPPI in Rust, planning with the actuators' lag"),
     ('own-costmap.md', 'Our own costmap', "Nav2's costmap layers in Rust, beside Nav2's"),
     ('own-planner.md', 'Our own planner', "Nav2's State Lattice planner in Rust, beside Nav2's"),
+    ('own-navigator.md', 'Our own navigator',
+     "Nav2's navigator in Rust: goals, replanning, recoveries, waypoints; all ours vs all Nav2"),
     ('stopping.md', 'How the car stops',
      'One stopping law, the behaviour planner, and where the car really stops'),
     ('a-to-b.md', 'A to B', 'Drive from A to B and stop: three ways, and the point driver'),

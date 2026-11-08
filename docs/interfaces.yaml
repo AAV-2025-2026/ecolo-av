@@ -821,7 +821,7 @@ topics:
   /goal_pose:
     type: geometry_msgs/msg/PoseStamped
     pub: [rviz2, map, dev_window]
-    sub: [bt_navigator, map]
+    sub: [bt_navigator, navigator, map]
     note: RViz "2D Goal Pose", or the map window's place search (map, aav_hud - only after DRIVE HERE then CONFIRM, map frame, facing from the car, refused off Nav2's /map or with no car), starts a navigate_to_pose. The map window shows it until Nav2 plans for it.
   /local_costmap/costmap:
     type: nav_msgs/msg/OccupancyGrid
@@ -846,6 +846,11 @@ topics:
     pub: [planner_server]
     sub: []
     note: Only with planner:=own - planner_server's own /plan, renamed - Nav2's lattice's path, when something still asks it (navigate_through_poses, controller_compare's head-to-head).
+  /drivers/nav/navigator/status:
+    type: diagnostic_msgs/msg/DiagnosticStatus
+    pub: [navigator]
+    sub: []
+    note: Only with navigator:=own (aav_navigator, a trial; docs/own-navigator.md) - 2 Hz and at each goal's end. name navigator; level OK, or WARN while recovering; message the step (idle, planning, following, recovering - clearing costmaps or backing up). values step, succeeded, failed (goals since start), last_end (the last goal's number and how it ended), and with a goal running goal, distance_remaining_m (along the path), recoveries, waypoint (passed, or driven to), poses_remaining.
   /drivers/nav/planner/status:
     type: diagnostic_msgs/msg/DiagnosticStatus
     pub: [planner]
@@ -987,7 +992,7 @@ services:
   /drivers/nav/costmap/clear_entirely_global:
     type: nav2_msgs/srv/ClearEntireCostmap
     server: costmap
-    note: The same for our global costmap. Nothing calls it yet - the trees' global clear stays Nav2's, whose global costmap the planner reads (the navigator step will call ours).
+    note: The same for our global costmap. Our navigator (navigator:=own, aav_navigator) calls it with costmap:=own - its planner recovery and its clear-both recovery; bt_navigator's trees still clear Nav2's.
   /spine/arm:
     type: std_srvs/srv/SetBool
     server: spine_bridge
@@ -1061,10 +1066,14 @@ actions:
     type: nav2_msgs/action/ComputePathToPose
     server: planner
     note: Only with planner:=own (aav_planner, a trial; docs/own-planner.md). Our planner - Nav2's State Lattice in Rust, the same primitives file, penalties and smoothing - one path from the car (map -> odom -> base_link on /tf, or the goal's start with use_start) to a map pose, on the global costmap costmap:= picks. navigation.launch.py remaps bt_navigator's compute_path_to_pose here, so the trees call ours; planner_server's /compute_path_to_pose keeps answering beside it (controller_compare asks both from the same spot). Error codes as Nav2's (203-208). Planning only, nothing moves.
+  /drivers/nav/planner/compute_path_through_poses:
+    type: nav2_msgs/action/ComputePathThroughPoses
+    server: planner
+    note: Only with planner:=own (aav_planner). One path through each goal in turn - a plan a leg, each leg from the last goal, joined - as planner_server does. bt_navigator's compute_path_through_poses is remapped here, and our navigator calls it for through-poses goals and waypoints. Error codes as Nav2's (303-309); the message names the leg that failed.
   /navigate_to_pose:
     type: nav2_msgs/action/NavigateToPose
     server: bt_navigator
-    note: Drive to one map-frame pose.
+    note: Drive to one map-frame pose. Nav2's (navigator:=nav2, the default); a goal sender reaches whichever runs through aav_description vehicle.navigator_action().
   /navigate_through_poses:
     type: nav2_msgs/action/NavigateThroughPoses
     server: bt_navigator
@@ -1074,7 +1083,23 @@ actions:
   /follow_gps_waypoints:
     type: nav2_msgs/action/FollowGPSWaypoints
     server: waypoint_follower
-    note: Lat/lon waypoints. street_router sends its street route here (asked on /drivers/nav/route/follow). Phase 2. language_drive (aav_language) sends one point for go_to_gps(), at most 200 m away.
+    note: Lat/lon waypoints. street_router sends its street route here (asked on /drivers/nav/route/follow). Phase 2. language_drive (aav_language) sends one point for go_to_gps(), at most 200 m away. With navigator:=own both send to /drivers/nav/navigator/follow_gps_waypoints instead (their navigator parameter).
+  /drivers/nav/navigator/navigate_to_pose:
+    type: nav2_msgs/action/NavigateToPose
+    server: navigator
+    note: Only with navigator:=own (aav_navigator, a trial; docs/own-navigator.md), in bt_navigator's place - our behaviour trees' logic in Rust - plan (the planner's ComputePathToPose), follow (FollowPath), replan every second except on the final approach, recover (clear the local or global costmap, then in turn clear both, wait 5 s, back up 1 m when reversing; 6 times), else give up with the step's Nav2 error code. A newer goal on any of its actions replaces this one (aborted, code 0). Feedback as Nav2's (distance along the path, recoveries).
+  /drivers/nav/navigator/navigate_through_poses:
+    type: nav2_msgs/action/NavigateThroughPoses
+    server: navigator
+    note: Only with navigator:=own. One path through each pose (the planner's ComputePathThroughPoses), replanned every 3 s from the car through the poses not yet passed - passed within 1 m, or passed along the path.
+  /drivers/nav/navigator/follow_waypoints:
+    type: nav2_msgs/action/FollowWaypoints
+    server: navigator
+    note: Only with navigator:=own. Map poses, driven as one through-poses goal (waypoints - pass_through, the default - no stop and no turn to face at each, TODO 140) or as Nav2's waypoint_follower does (stop_at_each). missed_waypoints - those not reached when it ends.
+  /drivers/nav/navigator/follow_gps_waypoints:
+    type: nav2_msgs/action/FollowGPSWaypoints
+    server: navigator
+    note: Only with navigator:=own. Lat/lon waypoints, put on the map by navsat_transform's datum (aav_localization navsat.yaml - the same UTM steps as /fromLL, map-core's earth.rs), then as follow_waypoints. street_router (navigator - own) and language_drive send here.
 
 frames:
   map: {parent: null, by: "ekf_global (map -> odom)", note: "x east, y north; origin = the navsat datum"}

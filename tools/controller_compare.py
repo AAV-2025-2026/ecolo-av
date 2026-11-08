@@ -56,6 +56,17 @@ The trials (docs/trials.md):
                     our own planner (aav_planner, planner:=own: Nav2's lattice in Rust)
                     beside Nav2's: before each leg both plan from the same spot on the same
                     map, and the leg's note gives Nav2's length, time and tightest turn
+    pixi run measure controllers --stacks nav2 own --tours lot obstacle --runs 3
+                    all of Nav2 (bt_navigator, the lattice, Nav2's costmaps, MPPI) against
+                    all of ours (navigator:=own planner:=own costmap:=own
+                    tracker:=mppi_lag: aav_navigator, aav_planner, aav_costmap,
+                    aav_mppi_lag), forward only (mppi_lag can't reverse). Each sends
+                    goals to its own navigator's actions (docs/own-navigator.md)
+    pixi run measure controllers --stacks nav2 own --tours fieldhouse --speed 2.5
+                    the campus route, P4 to the Fieldhouse (453 m, TODO 140): the campus
+                    graph's GPS waypoints, as street_router makes them, sent to each
+                    navigator's follow_gps_waypoints. Nav2's waypoint_follower stops and
+                    faces each one; ours passes them as one through-poses goal
     pixi run measure controllers --planners lattice diffusion --reversing --tours lot
                     the diffusion trial beside the lattice: each leg's note says how many
                     plans came from the model, how many from the lattice (the guard's
@@ -115,14 +126,16 @@ from ackermann_msgs.msg import AckermannDriveStamped  # noqa: E402
 from action_msgs.msg import GoalStatus  # noqa: E402
 from diagnostic_msgs.msg import DiagnosticStatus  # noqa: E402
 import drive_metrics  # noqa: E402
+from geographic_msgs.msg import GeoPose  # noqa: E402
 from geometry_msgs.msg import PoseWithCovarianceStamped, TwistStamped  # noqa: E402
-from nav2_msgs.action import ComputePathToPose, NavigateToPose  # noqa: E402
+from nav2_msgs.action import ComputePathToPose, FollowGPSWaypoints, NavigateToPose  # noqa: E402
 from nav2_msgs.msg import CollisionMonitorState  # noqa: E402
 from nav_msgs.msg import Odometry, Path  # noqa: E402
 import rclpy  # noqa: E402
 from rclpy.action import ActionClient  # noqa: E402
 from rclpy.node import Node  # noqa: E402
 from rclpy.parameter import Parameter  # noqa: E402
+from robot_localization.srv import FromLL  # noqa: E402
 from std_msgs.msg import Bool, String  # noqa: E402
 from std_srvs.srv import Trigger  # noqa: E402
 import yaml  # noqa: E402
@@ -145,7 +158,20 @@ TOURS = {
         ('along the road', 165.0, -111.0, -40.0),
         ('round the bend', 139.0, -190.0, -100.0),
     ]},
+    # TODO 140: directions on the campus, P4 to the Fieldhouse, as GPS waypoints (route:
+    # from, to, by the campus graph). The leg's goal is the last waypoint, put on the map
+    # by /fromLL when the run starts (None until then).
+    'fieldhouse': {'obstacle': False, 'world': worlds.CAMPUS, 'route': ('P4', 'Fieldhouse'),
+                   'legs': [('P4 to the Fieldhouse', None, None, None)]},
 }
+# --stacks: every navigation piece Nav2's, or every one ours (forward only: mppi_lag).
+STACKS = {
+    'nav2': ('controller', vehicle.DEFAULT_CONTROLLER,
+             ['planner:=lattice', 'costmap:=nav2', 'navigator:=nav2']),
+    'own': ('tracker', 'mppi_lag',
+            ['planner:=own', 'costmap:=own', 'navigator:=own']),
+}
+STACK_LABELS = {'nav2': 'all-nav2', 'own': 'all-ours'}
 BOX = 1.0               # m: the bench's obstacle, a cube (aav_gazebo models/obstacle)
 UP_TIME = 150.0         # s for Gazebo, the EKF, then Nav2, to come up
 SETTLE = 5.0            # s after that, before the first goal
@@ -160,7 +186,7 @@ COLOURS = {'rpp': '#1f6fb4', 'mppi': '#e8590c', 'pure_pursuit': '#2b8a3e', 'stan
            # --planners: a column is a planner's name when one follower drives them all.
            'hybrid': '#e8590c', 'lattice': '#1f6fb4', 'smac2d': '#2b8a3e',
            'navfn': '#862e9c', 'theta_star': '#c92a2a', 'lattice32': '#5f3dc4',
-           'own': '#0b7285'}
+           'own': '#0b7285', 'all-nav2': '#1f6fb4', 'all-ours': '#0b7285'}
 PLAN_TIME = 15.0        # s (wall) for the planner alone to answer, before each leg
 # NDT's map of the test lot (tools/ndt_map.py; maps/ is not in git).
 NDT_MAP = os.path.join(ROOT, 'maps', 'ndt', 'test_lot.pcd')
@@ -213,7 +239,7 @@ def follower_pid(pgid, name='controller_server'):
 class Recorder(Node):
     """Where the car really is, what Nav2 planned and asked for, and the safety layers."""
 
-    def __init__(self):
+    def __init__(self, navigator=vehicle.DEFAULT_NAVIGATOR):
         # On Gazebo's clock, like every node in the sim.
         super().__init__('controller_compare', parameter_overrides=[
             Parameter('use_sim_time', value=True)])
@@ -256,7 +282,12 @@ class Recorder(Node):
         self.create_subscription(String, '/safety/sensor_watchdog/state', self.on_state, 10)
         self.create_subscription(CollisionMonitorState, '/safety/collision_monitor/state',
                                  self.on_monitor, 10)
-        self.nav = ActionClient(self, NavigateToPose, '/navigate_to_pose')
+        # Nav2's navigator's actions, or ours (--stacks own: navigator:=own).
+        self.nav = ActionClient(self, NavigateToPose,
+                                vehicle.navigator_action(navigator, 'navigate_to_pose'))
+        self.gps = ActionClient(self, FollowGPSWaypoints,
+                                vehicle.navigator_action(navigator, 'follow_gps_waypoints'))
+        self.from_ll = self.create_client(FromLL, '/fromLL')
         self.planner = ActionClient(self, ComputePathToPose, '/compute_path_to_pose')
         # planner:=own: ours (aav_planner), beside planner_server's lattice.
         self.own_planner = ActionClient(self, ComputePathToPose, vehicle.OWN_PLANNER_ACTION)
@@ -395,6 +426,30 @@ class Recorder(Node):
         self.spin_for(wall_seconds, future.done)
         return future.result() if future.done() else None
 
+    def send_route(self, waypoints):
+        """Send the navigator GPS waypoints; return its handle, or None if refused."""
+        goal = FollowGPSWaypoints.Goal()
+        for w in waypoints:
+            pose = GeoPose()
+            pose.position.latitude, pose.position.longitude = w.lat, w.lon
+            pose.position.altitude = 0.0
+            pose.orientation.z = math.sin(w.yaw / 2.0)
+            pose.orientation.w = math.cos(w.yaw / 2.0)
+            goal.gps_poses.append(pose)
+        if not self.gps.wait_for_server(timeout_sec=10.0):
+            return None
+        handle = self.wait(self.gps.send_goal_async(goal), 10.0)
+        return handle if handle is not None and handle.accepted else None
+
+    def on_map(self, lat, lon):
+        """Return (x, y) of a lat/lon on the map, from navsat_transform's /fromLL; None."""
+        if not self.from_ll.wait_for_service(timeout_sec=10.0):
+            return None
+        request = FromLL.Request()
+        request.ll_point.latitude, request.ll_point.longitude = lat, lon
+        answer = self.wait(self.from_ll.call_async(request), 10.0)
+        return None if answer is None else (answer.map_point.x, answer.map_point.y)
+
     def send(self, x, y, yaw):
         """Send Nav2 a goal in the map frame; return its handle, or None if refused."""
         goal = NavigateToPose.Goal()
@@ -459,14 +514,16 @@ def ready(rec):
 
 
 def drive_leg(rec, pgid, goal, speed, body, obstacle, process='controller_server',
-              amcl=False, ndt=False, lock_radius=None, kiss=False, own_planner=False):
+              amcl=False, ndt=False, lock_radius=None, kiss=False, own_planner=False,
+              route=None):
     """
     Send one goal and record it; return (drive_metrics leg, notes).
 
     lock_radius (m, --planners): first ask the planner alone for the leg's path, and score
     its turns against the car's full lock. own_planner (planner:=own): ask ours, then
     Nav2's lattice (planner_server, still running beside it) for the same leg from the
-    same spot, and say Nav2's numbers in a note: the two on the same map.
+    same spot, and say Nav2's numbers in a note: the two on the same map. route: GPS
+    waypoints (a tour's 'route'), sent to follow_gps_waypoints instead of one goal.
     """
     notes = ready(rec)
     planned = planned_nav2 = None
@@ -492,7 +549,7 @@ def drive_leg(rec, pgid, goal, speed, body, obstacle, process='controller_server
     rec.start()
     start = rec.now()
     reached = False
-    handle = rec.send(x, y, yaw)
+    handle = rec.send_route(route) if route else rec.send(x, y, yaw)
     if handle is None:
         notes.append('Nav2 refused the goal')
     else:
@@ -505,6 +562,12 @@ def drive_leg(rec, pgid, goal, speed, body, obstacle, process='controller_server
         if result.done():
             done = result.result()
             reached = done.status == GoalStatus.STATUS_SUCCEEDED
+            missed = list(getattr(done.result, 'missed_waypoints', []))
+            if missed:
+                # waypoint_follower succeeds with waypoints missed: not there.
+                notes.append(f'{len(missed)} of {len(route)} waypoints missed '
+                             f'({", ".join(str(m.index) for m in missed[:8])})')
+                reached = reached and done.result.missed_waypoints[-1].index != len(route) - 1
             if not reached:
                 why = getattr(done.result, 'error_msg', '') or f'status {done.status}'
                 notes.append(f'Nav2 gave up: {why}')
@@ -656,6 +719,21 @@ def stop(launch, grace=30.0):
     return False
 
 
+def campus_route(start, end):
+    """
+    Return (waypoints, the last one): the campus graph's route between two places.
+
+    Cut into GPS waypoints as street_router does (aav_routes; maps/carla/carleton.osm).
+    """
+    from aav_routes import campus_graph, osrm_route
+    site = os.path.join(ROOT, 'ros', 'drivers', 'aav_routes', 'config', 'campus_site.yaml')
+    campus = campus_graph.Campus(site, ROOT)
+    route = campus.route(campus_graph.target(campus.find(start)),
+                         campus_graph.target(campus.find(end)))
+    waypoints = osrm_route.waypoints(route.points)
+    return waypoints, waypoints[-1]
+
+
 def tour_legs(tour, args):
     """Return the tour's legs to drive: all, or only the first --legs."""
     return TOURS[tour]['legs'][:args.legs]
@@ -665,10 +743,14 @@ def followers(args):
     """
     Return [(kind, name, planner, label)]: each follower with each planner, as asked.
 
+    --stacks: [('stack', 'nav2' or 'own', None, 'all-nav2' or 'all-ours')] instead.
+
     Nav2's controllers, then the trial trackers. With --planners alone, the default
     controller (MPPI) drives behind each planner; without --planners, planner is None (the
     launch's own default) and the label is the follower's name, as before.
     """
+    if args.stacks:
+        return [('stack', word, None, STACK_LABELS[word]) for word in args.stacks]
     controllers = args.controllers
     if controllers is None:
         # --trackers alone runs only the trackers; --planners alone, Nav2's default
@@ -723,6 +805,10 @@ def session(tour, follower, args, out_dir, body, used, run=1):
     """Start the simulator for one tour and follower, drive its legs, stop it."""
     plan = TOURS[tour]
     kind, controller, planner, label = follower
+    extra, navigator = [], vehicle.DEFAULT_NAVIGATOR
+    if kind == 'stack':
+        kind, controller, extra = STACKS[follower[1]]
+        navigator = 'own' if follower[1] == 'own' else vehicle.DEFAULT_NAVIGATOR
     tag = f'{label}-{run}' if args.runs > 1 else label
     log_path = os.path.join(out_dir, f'sim-{tour}-{tag}.log')
     command = ['ros2', 'launch', 'aav_bringup', 'sim.launch.py',
@@ -735,6 +821,7 @@ def session(tour, follower, args, out_dir, body, used, run=1):
                f'reversing:={str(args.reversing).lower()}']
     if planner:
         command += planner_launch(planner)
+    command += extra
     if args.amcl:
         command.append('amcl:=true')
     if args.ndt_ekf:
@@ -768,11 +855,12 @@ def session(tour, follower, args, out_dir, body, used, run=1):
         launch = subprocess.Popen(command, cwd=ROOT, env=dict(os.environ), stdout=log,
                                   stderr=subprocess.STDOUT, start_new_session=True)
         rclpy.init()
-        rec = Recorder()
+        rec = Recorder(navigator)
         rec.watchdog = not args.gps_off
         try:
             up = rec.spin_for(UP_TIME, lambda: rec.last_truth is not None and rec.glob)
-            if not (up and rec.spin_for(UP_TIME, rec.nav.server_is_ready)):
+            server = rec.gps if plan.get('route') else rec.nav
+            if not (up and rec.spin_for(UP_TIME, server.server_is_ready)):
                 print(f'   it never came up: see {log_path}', flush=True)
                 return [(tour, name, label, None, ['never came up'], {'run': run})
                         for name, *_ in tour_legs(tour, args)]
@@ -780,16 +868,26 @@ def session(tour, follower, args, out_dir, body, used, run=1):
             if args.gps_off:
                 # After the EKF's first fix (the wait above): it knows where it started.
                 print(f'   {gps_off(rec)}', flush=True)
+            route = None
+            if plan.get('route'):
+                route, end = campus_route(*plan['route'])
+                goal_xy = rec.on_map(end.lat, end.lon)
+                if goal_xy is None:
+                    print('   no /fromLL: the route has no goal on the map', flush=True)
+                    return [(tour, name, label, None, ['no /fromLL'], {'run': run})
+                            for name, *_ in tour_legs(tour, args)]
             for name, x, y, heading in tour_legs(tour, args):
+                if route:
+                    (x, y), heading = goal_xy, math.degrees(route[-1].yaw)
                 leg, notes = drive_leg(rec, launch.pid, (x, y, math.radians(heading)),
                                        args.speed or 1.0, body, obstacle,
                                        follower_process(kind, controller), args.amcl,
                                        args.ndt,
                                        lock if planner else None, args.kiss_icp,
-                                       planner == 'own')
+                                       planner == 'own', route)
                 row = drive_metrics.summary(leg)
                 # t, x, y, yaw: where the car was, and where the global EKF put it.
-                drawn = {'run': run,
+                drawn = {'run': run, 'goal': [round(x, 2), round(y, 2)],
                          'track': [[round(v, 3) for v in s]
                                    for s in drive_metrics.thin(leg['truth'], TRACK_EVERY)],
                          'belief': [[round(v, 3) for v in s]
@@ -963,7 +1061,10 @@ def open_picture(results, tour, args):
         line = [(x, y) for r in runs if r[2] == controller for _, x, y, *_ in r[5]['track']]
         tracks.append((f'{controller}: where the car went', COLOURS.get(controller, 'black'),
                        [line], False))
-    marks = [(x, y, name) for name, x, y, _ in tour_legs(tour, args)]
+    # A route's goal is only known once a run asked /fromLL: from its first leg.
+    marks = [(x, y, name) for name, x, y, _ in tour_legs(tour, args) if x is not None]
+    marks += [(r[5]['goal'][0], r[5]['goal'][1], r[1]) for r in runs[:1]
+              if r[5].get('goal') and not marks]
     xs = [p[0] for _, _, lines, _ in tracks for p in lines[0]] + [m[0] for m in marks]
     ys = [p[1] for _, _, lines, _ in tracks for p in lines[0]] + [m[1] for m in marks]
     return drive_metrics.svg((min(xs) - 5, min(ys) - 5, max(xs) + 5, max(ys) + 5), tracks, (),
@@ -1014,6 +1115,9 @@ def main():
                         help="Nav2's planners (planner:=): " + ', '.join(PLANNER_WORDS) +
                              ' (lattice32: the lattice on its 32-heading file); each '
                              'behind MPPI unless --controllers or --trackers say')
+    parser.add_argument('--stacks', nargs='+', choices=list(STACKS), default=None,
+                        help="every navigation piece Nav2's (nav2) or ours (own: "
+                             'navigator, planner, costmap, mppi_lag); forward only')
     parser.add_argument('--runs', type=int, default=1,
                         help='drive each follower this many times (default 1; 3 for a real '
                              'comparison: the mean and spread)')
@@ -1053,6 +1157,11 @@ def main():
         args.trackers = list(dict.fromkeys(t for names in args.trackers for t in names))
     if args.planners:
         args.planners = list(dict.fromkeys(p for names in args.planners for p in names))
+    if args.stacks and (args.trackers or args.controllers or args.planners):
+        parser.error('--stacks sets the follower and planner: leave out --trackers, '
+                     '--controllers and --planners')
+    if args.stacks and args.reversing:
+        parser.error("--stacks drive forwards only (mppi_lag can't reverse)")
     if args.trackers and args.reversing:
         parser.error('--trackers drive forwards only: leave out --reversing')
     if args.runs < 1:
