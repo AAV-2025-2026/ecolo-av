@@ -101,6 +101,17 @@ a lock or Nav2's goal check makes every final stop.
 | `/drivers/nav/behaviour/state` | `diagnostic_msgs/DiagnosticStatus`, 5 Hz | for the screens: state, reason, cap, left |
 | `/perception/stop_sign/distance` | `geometry_msgs/PointStamped` | new, from the watcher: where the sign is |
 
+### In Gazebo (8 Nov, `pixi run sim-check --behaviour`)
+
+| Stop | Result |
+|---|---|
+| Obstacle | passed 2 of 4 runs: APPROACH, cap down to 0.3 m/s, the stop zone fired at 0.50 m/s, the bumper 0.8 m from the box |
+| Obstacle, the other 2 | the car went round the box (the lidar is on, so MPPI may steer round it): no stop to score |
+| Goal | APPROACH from 2 m out, lowest cap 0.48-0.68 m/s; reached, 0.9 m from the goal |
+| Stop sign (`-e ml ... --perception`) | the lock stopped the car 3.5 m before the sign, but the behaviour **never entered APPROACH(sign)**: still to find out why |
+
+At 1 m/s the law's cap binds only in the last 2 m, so the slowing is short.
+
 ### Not built yet
 
 | Part | Why it waits |
