@@ -185,7 +185,8 @@ def score(sampler_fn, ds, data_dirs, limit, seed=0, gear_smooth=True):
     for i in idx:
         name, k, _ = meta[i]
         if name not in grids:
-            d = np.load(name if os.path.isabs(name) else os.path.join(data_dirs[0], name))
+            # The dataset keeps each file's path as given (newer), or its name (2 Nov's).
+            d = np.load(name if os.path.exists(name) else os.path.join(data_dirs[0], name))
             grids[name] = (window.Grid(d['costmap'], float(d['origin'][0]),
                                        float(d['origin'][1]), float(d['resolution'])), d)
         grid, d = grids[name]
@@ -293,9 +294,11 @@ def main():
         torch.save(m.state_dict(), os.path.join(args.out, 'planner.pt'))
         export(m, onnx_path, args.steps)
         metrics = {'dataset': info, 'training': trained}
-    else:
+    elif os.path.exists(metrics_path):
         with open(metrics_path) as f:
             metrics = json.load(f)
+    else:
+        metrics = {'dataset': info}     # training stopped before its score was written
     if args.what == 'export':
         m = net.FlowPlanner()
         m.load_state_dict(torch.load(os.path.join(args.out, 'planner.pt'), map_location='cpu'))
