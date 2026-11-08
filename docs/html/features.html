@@ -1128,6 +1128,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>sim</td>
 </tr>
 <tr>
+<td><a href="hud.html#the-squiggly-line-ahead">The squiggly line</a> (AHEAD on the HUD, key T on the developer window): ego's trace bold, coloured by how far it strays from the plan; the plan faint; a bar where the front bumper stops on a full brake now (<code>/ego/stop_point</code>, from the car model); the room to the goal or the first obstacle. Worked out once in <code>aav_ego</code> (<code>stop_ahead.py</code>, <code>look_ahead</code>), drawn by both screens, pretend data too</td>
+<td>Ben, 7 Nov, of his Tesla's line: "gets shorter when braking and longer when accelerating and it curves to show the predictive path", and "show that we will stop based on the model in the correct location"</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
 <td><a href="simulation.html">Screens as heartbeats</a> (<code>watch_screens:=dev_window,hw_panel</code>)</td>
 <td>Test what stops the car when a screen dies: the window and the hardware panel each beat, and with <code>spine:=true</code> the spine's own state machine latches. Refused for the real car</td>
 <td>Ben</td>

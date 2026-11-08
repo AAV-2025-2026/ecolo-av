@@ -10,7 +10,12 @@ use debug_core::{
     ndt::{MapCells, NdtStatus},
     orbit::Orbit,
 };
-use hud_core::{gate::Light, origin::Origins, vehicle::VehicleStatus};
+use hud_core::{
+    ahead::{self, Ahead, PlanSource, Summary, Tone},
+    gate::Light,
+    origin::Origins,
+    vehicle::VehicleStatus,
+};
 use map_core::{
     geom::{Point, Pose},
     grid::{Grid, Palette},
@@ -96,6 +101,8 @@ pub struct Layers {
     pub ndt_map: bool,
     pub scan: bool,
     pub plan: bool,
+    /// The squiggly line: the trace, the plan ahead, the stop bar and their words (key T).
+    pub ahead: bool,
 }
 
 impl Default for Layers {
@@ -108,6 +115,7 @@ impl Default for Layers {
             ndt_map: true,
             scan: true,
             plan: true,
+            ahead: true,
         }
     }
 }
@@ -218,6 +226,10 @@ pub struct WorldNews {
     ndt_pose: Option<Pose>,
     pub picture_size: Option<[u32; 2]>,
     pub plan: Vec<Point>,
+    /// The squiggly line, in base_link, and when its trace and numbers were last heard.
+    pub ahead: Ahead,
+    trace_heard: Option<Instant>,
+    summary_heard: Option<Instant>,
     map: GridLayer,
     costmap: GridLayer,
     origins: Origins,
@@ -282,9 +294,61 @@ impl WorldNews {
             Update::Vehicle(status) => self.vehicle = Some(status),
             Update::Gate(text) => self.gate.set(text, now),
             Update::Watchdog(text) => self.watchdog.set(text, now),
+            Update::Trace(points) => {
+                self.ahead.trace = points;
+                self.trace_heard = Some(now);
+            }
+            Update::PlanAhead(points) => self.ahead.plan = points,
+            Update::StopPoint(stop) => self.ahead.stop = Some(stop),
+            Update::Ahead(summary) => {
+                self.ahead.summary = Some(summary);
+                self.summary_heard = Some(now);
+            }
         }
     }
+
+    /// The squiggly line while ego's trace is fresh, with its numbers while they are.
+    pub fn ahead_now(&self, now: Instant) -> Option<Ahead> {
+        let fresh = |at: Option<Instant>| {
+            at.is_some_and(|at| now.saturating_duration_since(at) <= feed::STALE_AFTER)
+        };
+        if !fresh(self.trace_heard) {
+            return None;
+        }
+        let mut ahead = self.ahead.clone();
+        if !fresh(self.summary_heard) {
+            ahead.summary = None;
+        }
+        Some(ahead)
+    }
 }
+
+/// The squiggly line's colours: the plan faint, the trace by how well it keeps to the plan.
+pub const AHEAD_PLAN_RGB: [u8; 3] = [150, 156, 164];
+pub const AHEAD_NO_PLAN_RGB: [u8; 3] = [245, 245, 245];
+pub const AHEAD_STOP_RGB: [u8; 3] = [255, 255, 255];
+
+/// The trace's colour: green, amber or red by the gap; white with no plan or no numbers.
+pub fn trace_rgb(summary: Option<&Summary>) -> [u8; 3] {
+    match summary {
+        Some(s) if s.plan != PlanSource::None && s.gap.is_some() => tone_rgb(s.grade.into()),
+        _ => AHEAD_NO_PLAN_RGB,
+    }
+}
+
+/// A word's colour by its meaning (`hud_core::ahead::Tone`).
+pub fn tone_rgb(tone: Tone) -> [u8; 3] {
+    match tone {
+        Tone::Plain => [235, 235, 235],
+        Tone::Good => [45, 210, 110],
+        Tone::Warn => [240, 190, 70],
+        Tone::Bad => [255, 95, 95],
+        Tone::Dim => [150, 150, 150],
+    }
+}
+
+/// Half the car's width, for the stop bar, metres: the scene's car box is 1.2 m wide.
+pub const STOP_BAR_HALF: f64 = 0.6;
 
 /// Whose eyes the main view has.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -440,6 +504,11 @@ pub fn draw(
     panel(&mut root, console_rect, |ui| console_panel(ui, state));
     cubes_panel(&mut root, cubes_rect, state);
     ndt_line(&root, cubes_rect, &state.world, state.layers.ndt_cubes);
+    if state.layers.ahead {
+        let now = Instant::now();
+        ahead_words(&root, cubes_rect, &state.world, now);
+        ahead_inset(&root, cubes_rect, &state.world, now);
+    }
     panel(&mut root, map_rect, |ui| map_panel(ui, state, feed));
     panel(&mut root, corner_rect, |ui| corner_panel(ui, state));
 
@@ -488,6 +557,7 @@ fn read_keys(ctx: &egui::Context, state: &mut UiState) {
             (egui::Key::M, &mut layers.ndt_map),
             (egui::Key::S, &mut layers.scan),
             (egui::Key::P, &mut layers.plan),
+            (egui::Key::T, &mut layers.ahead),
         ] {
             if input.key_pressed(key) {
                 *layer = !*layer;
@@ -765,6 +835,130 @@ fn ndt_line(root: &egui::Ui, rect: egui::Rect, world: &WorldNews, ndt_cubes: boo
     }
 }
 
+fn colour([r, g, b]: [u8; 3]) -> egui::Color32 {
+    egui::Color32::from_rgb(r, g, b)
+}
+
+/// The squiggly line on a flat view: the plan faint and thin, the trace bold in its grade's
+/// colour, the stop bar across the way. `place` puts a base_link point on the screen.
+fn paint_ahead(
+    painter: &egui::Painter,
+    squiggle: &Ahead,
+    place: impl Fn((f64, f64)) -> egui::Pos2,
+) {
+    if squiggle.plan.len() >= 2 {
+        let line = squiggle.plan.iter().map(|p| place(*p)).collect();
+        painter.add(egui::Shape::line(
+            line,
+            egui::Stroke::new(2.0, colour(AHEAD_PLAN_RGB)),
+        ));
+    }
+    if squiggle.trace.len() >= 2 {
+        let line = squiggle.trace.iter().map(|p| place(*p)).collect();
+        let rgb = trace_rgb(squiggle.summary.as_ref());
+        painter.add(egui::Shape::line(line, egui::Stroke::new(5.0, colour(rgb))));
+    }
+    if let Some(stop) = squiggle.stop {
+        let (sin, cos) = stop.yaw.sin_cos();
+        let end = |side: f64| place((stop.x - side * sin, stop.y + side * cos));
+        painter.line_segment(
+            [end(STOP_BAR_HALF), end(-STOP_BAR_HALF)],
+            egui::Stroke::new(4.0, colour(AHEAD_STOP_RGB)),
+        );
+    }
+}
+
+/// The squiggly line's three lines of words, at the scene's bottom left, on a dark band.
+fn ahead_words(root: &egui::Ui, rect: egui::Rect, world: &WorldNews, now: Instant) {
+    let squiggle = world.ahead_now(now);
+    let summary = squiggle.as_ref().and_then(|s| s.summary.as_ref());
+    let lines = ahead::lines(summary);
+    let source = summary.map_or("", |s| s.plan.label());
+    let size = 18.0;
+    let gap = 24.0;
+    let height = gap * 4.0 + 8.0;
+    let band = egui::Rect::from_min_size(
+        egui::pos2(rect.left() + 8.0, rect.bottom() - height - 8.0),
+        egui::vec2(250.0, height),
+    );
+    root.painter()
+        .rect_filled(band, 4.0, egui::Color32::from_gray(10));
+    let mut y = band.top() + 6.0;
+    root.painter().text(
+        egui::pos2(band.left() + 8.0, y),
+        egui::Align2::LEFT_TOP,
+        format!("AHEAD (T)   {source}"),
+        egui::FontId::proportional(14.0),
+        egui::Color32::from_gray(190),
+    );
+    y += gap;
+    for line in lines.iter().filter(|l| !l.text.is_empty()) {
+        root.painter().text(
+            egui::pos2(band.left() + 8.0, y),
+            egui::Align2::LEFT_TOP,
+            &line.text,
+            egui::FontId::proportional(size),
+            colour(tone_rgb(line.tone)),
+        );
+        y += gap;
+    }
+}
+
+/// Metres the inset shows ahead of the rear axle, and behind it.
+const INSET_AHEAD: f64 = 8.0;
+const INSET_BEHIND: f64 = 1.5;
+/// The car's outline in the inset, base_link metres: (rear, front, half width). Only a
+/// picture: the scene's car box is the same size.
+const INSET_CAR: (f64, f64, f64) = (-0.5, 2.1, 0.6);
+
+/// The squiggly line from above, close up, at the scene's right: at the scene's own scale
+/// two seconds of driving is a few pixels. Forward is up; a faint line every 2 m.
+fn ahead_inset(root: &egui::Ui, rect: egui::Rect, world: &WorldNews, now: Instant) {
+    let Some(squiggle) = world.ahead_now(now) else {
+        return;
+    };
+    let width = 170.0;
+    let inset = egui::Rect::from_min_max(
+        egui::pos2(rect.right() - width - 8.0, rect.top() + 60.0),
+        egui::pos2(rect.right() - 8.0, rect.bottom() - 8.0),
+    );
+    let painter = root.painter_at(inset);
+    painter.rect_filled(inset, 4.0, egui::Color32::from_gray(10));
+    let view = ahead::View {
+        rect: (inset.left(), inset.top(), inset.width(), inset.height()),
+        ahead: INSET_AHEAD,
+        behind: INSET_BEHIND,
+    };
+    let at = |p: (f64, f64)| {
+        let (x, y) = view.to_panel(p);
+        egui::pos2(x, y)
+    };
+    for metres in (2..=INSET_AHEAD as i32).step_by(2) {
+        let m = f64::from(metres);
+        let y = at((m, 0.0)).y;
+        painter.line_segment(
+            [egui::pos2(inset.left(), y), egui::pos2(inset.right(), y)],
+            egui::Stroke::new(1.0, egui::Color32::from_gray(45)),
+        );
+        painter.text(
+            egui::pos2(inset.left() + 4.0, y - 2.0),
+            egui::Align2::LEFT_BOTTOM,
+            format!("{metres} m"),
+            egui::FontId::proportional(12.0),
+            egui::Color32::from_gray(140),
+        );
+    }
+    let (rear, front, half) = INSET_CAR;
+    painter.rect_stroke(
+        egui::Rect::from_two_pos(at((front, half)), at((rear, -half))),
+        2.0,
+        egui::Stroke::new(1.5, egui::Color32::from_rgb(140, 190, 255)),
+        egui::StrokeKind::Middle,
+    );
+    // painter_at clips to the inset: a line that runs off the top just stops there.
+    paint_ahead(&painter, &squiggle, at);
+}
+
 fn screen(p: ScreenPoint) -> egui::Pos2 {
     egui::pos2(p.x as f32, p.y as f32)
 }
@@ -777,6 +971,7 @@ fn map_panel(ui: &mut egui::Ui, state: &mut UiState, feed: &mut dyn feed::Feed) 
         ui.toggle_value(&mut layers.ndt_map, "NDT");
         ui.toggle_value(&mut layers.scan, "Cubes");
         ui.toggle_value(&mut layers.plan, "Plan");
+        ui.toggle_value(&mut layers.ahead, "Ahead");
     });
 
     let rect = ui.available_rect_before_wrap();
@@ -903,6 +1098,12 @@ fn map_panel(ui: &mut egui::Ui, state: &mut UiState, feed: &mut dyn feed::Feed) 
             egui::Stroke::new(2.5, egui::Color32::from_rgb(90, 200, 255)),
         ));
     }
+    if layers.ahead {
+        if let Some(squiggle) = world.ahead_now(Instant::now()) {
+            let place = |p: (f64, f64)| to(feed::from_base(car, p));
+            paint_ahead(&painter, &squiggle, place);
+        }
+    }
     if let Some(goal) = state.goal.point() {
         painter.circle_stroke(to(goal), 7.0, egui::Stroke::new(2.5, egui::Color32::YELLOW));
     }
@@ -1024,6 +1225,11 @@ fn keys_tab(ui: &mut egui::Ui, state: &UiState) {
         ("M", "NDT's map", on(layers.ndt_map)),
         ("S", "cubes on the map", on(layers.scan)),
         ("P", "plan", on(layers.plan)),
+        (
+            "T",
+            "squiggly line: trace, plan ahead, stop",
+            on(layers.ahead),
+        ),
         ("C", "camera", state.camera.label()),
         ("R", "reset the camera", ""),
     ];

@@ -277,8 +277,11 @@ def nodes(context):
             ('plan', '/drivers/nav/diffusion/lattice_plan')] if diffusion else []),
         # With a trial tracker, it keeps running but its FollowPath goes unused: rcl_action
         # resolves action names with the node's remappings, as topics are.
+        # MPPI's chosen future (visualize: true in nav2.yaml) is the screens' faint line,
+        # /drivers/nav/local_plan (aav_ego look_ahead). Regulated Pure Pursuit has none.
         ('nav2_controller', 'controller_server', [('cmd_vel', 'cmd_vel_nav')] + (
-            [('follow_path', 'follow_path_unused')] if tracker != 'none' else [])),
+            [('follow_path', 'follow_path_unused')] if tracker != 'none' else
+            [('optimal_trajectory', '/drivers/nav/local_plan')])),
         ('nav2_behaviors', 'behavior_server', [('cmd_vel', 'cmd_vel_nav')]),
         ('nav2_bt_navigator', 'bt_navigator', []),
         ('nav2_waypoint_follower', 'waypoint_follower', []),

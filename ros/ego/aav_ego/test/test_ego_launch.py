@@ -26,8 +26,13 @@ def nodes(**config):
 
 
 def test_no_caps_by_default():
-    (node,) = nodes()
-    assert isinstance(node, Node)
+    ego, look_ahead = nodes()
+    assert isinstance(ego, Node) and isinstance(look_ahead, Node)
+
+
+def test_look_ahead_can_be_left_out():
+    (ego,) = nodes(look_ahead='false')
+    assert isinstance(ego, Node)
 
 
 def test_max_speed_can_only_lower():

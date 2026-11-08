@@ -11,7 +11,8 @@ Ben, 7 Nov: "we really want the ego to have a mathematical model for steering, b
 |---|---|---|
 | 127 | **One car model**, Python (`aav_description` `car_model.py`) and Rust (`car-model`), shared vectors; dead times; the bicycle; `step`, `predict` | ✅ 7 Nov. Gazebo unchanged |
 | 128 | **ego's lag lead** (`lag_lead: auto`, sim only), off under a lag-aware driver (`/drivers/<slot>/lag_aware`) | ✅ 7 Nov, sim. ⬜ `on` for the car after tests 3.10-3.12, 4.1-4.5 |
-| 129 | **ego's trace** (`/ego/trace`, 2 s, `base_link`) | ✅ 7 Nov. ⬜ drivers match it to their plan; a screen draws it |
+| 129 | **ego's trace** (`/ego/trace`, 2 s, `base_link`) | ✅ 7 Nov; the HUD and the developer window draw it (136). ⬜ drivers match it to their plan |
+| 136 | **The squiggly line** ([page](docs/hud.md#the-squiggly-line-ahead)): ego's trace (bold, green / amber / red by the gap to the plan), the plan (faint), the stop bar from `/ego/stop_point` (the car model, full brake now), the room to the goal or an obstacle; on the HUD (AHEAD) and the developer window (key T), pretend data too | ✅ 7 Nov built. ⬜ stop lines (no topic yet); the line drawn on the camera picture (Q22); the car's real numbers (tests 3.10-3.12, 4.1-4.5) |
 | 130 | The lag-aware drivers publish `/drivers/nav/lag_aware`: `aav_track`'s MPC, the Rust MPPI | ⬜ their agents |
 
 ## 0.3: how the car stops, and the behaviour planner (7 Nov)
