@@ -1,0 +1,7 @@
+# The localization Pi (.113): the IMU and GPS plug into its USB, so it runs their drivers
+# and publishes the raw sensor topics (/sensors/imu/..., /sensors/gps/fix). The Orin's
+# localization part consumes them over the network and runs the EKFs. Parts not listed
+# default off. TODO 75.
+parts:
+  imu: true    # the Yahboom IMU (aav_imu_yahboom), on this Pi's USB
+  gps: true    # the u-blox ZED-F9R (ublox_gps), on this Pi's USB
