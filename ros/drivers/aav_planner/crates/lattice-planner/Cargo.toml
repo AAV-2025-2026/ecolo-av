@@ -1,0 +1,13 @@
+[package]
+name = "lattice-planner"
+description = "A State Lattice path planner for a car, ported from Nav2's nav2_smac_planner"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+# Our costmap's grid, outline and inflation (aav_costmap), so both read costs the same way.
+costmap = { path = "../../../aav_costmap/crates/costmap" }
+# The lattice primitives file is JSON.
+serde_json = "1"

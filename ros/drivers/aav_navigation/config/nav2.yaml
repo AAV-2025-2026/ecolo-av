@@ -166,7 +166,10 @@ controller_server:
       transform_tolerance: 0.5              # s, as FollowPath's: a busy computer's map -> odom
       temperature: 0.15                     # lower: the best futures count for more
       gamma: 0.015
-      visualize: false                      # true: its futures on /trajectories, for RViz
+      visualize: true                       # its chosen future on optimal_trajectory, renamed
+                                            # /drivers/nav/local_plan (the screens' faint line);
+                                            # all its futures on /trajectories, for RViz. Each is
+                                            # built only while someone subscribes
       critics: ["ConstraintCritic", "CostCritic", "GoalCritic", "GoalAngleCritic",
                 "PathAlignCritic", "PathFollowCritic", "PathAngleCritic", "PreferForwardCritic"]
       CostCritic:

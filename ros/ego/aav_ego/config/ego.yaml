@@ -20,3 +20,17 @@ ego:
     rate_hz: 50.0
     frame_id: base_link
     use_stamped: true
+    # The lag lead (aav_ego lag_lead.py, docs/vehicle-model.md): asks a little ahead so the
+    # slow actuators answer on time. auto: in a simulator only (use_sim_time) - SAFE on the
+    # car, where it stays off; on: the car too, only once tests 3.10-3.12 and 4.1-4.5 have
+    # measured the lags (every number is a guess until then); off: never. Never while a
+    # lag-aware driver drives (/drivers/<d>/lag_aware). Live: ros2 param set /ego lag_lead off
+    lag_lead: auto
+    lag_lead_filter: 0.1        # s: the car then answers about this fast
+    lag_lead_max_speed: 0.3     # m/s the lead may add or take; max_speed still caps
+    lag_lead_max_steer: 0.1     # rad the lead may add or take; the steering limits still cap
+    lag_aware_drivers: [scripted, point, nav, ai]
+    # The trace (aav_ego trace_ahead.py): /ego/trace, where the car goes, in base_link.
+    trace_horizon: 2.0          # s ahead
+    trace_rate_hz: 10.0         # 0: none
+    trace_speed_loop: default   # the speed loop the car model assumes (the spine's profile)

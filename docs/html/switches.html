@@ -7,7 +7,7 @@
 <!-- Generated from docs/switches.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Switches: what you can swap in the simulated car</h1>
-<div class="meta">8 min read · 6 sections</div></header>
+<div class="meta">10 min read · 6 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -29,10 +29,11 @@
 <a href="car-evening.html">Tonight: drive as is</a>
 <a href="car-day.html">Car day</a>
 <a href="car-setup.html">Car setup</a>
+<a href="rollout.html">Rolling out on the car</a>
 <a href="tests.html">Every test</a>
 <a href="know-the-car.html">Know the car</a>
-<a href="measure-the-car.html">Measure the car</a>
 <span class="sep">Learn:</span>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <a href="learn-car.html">The car, box by box</a>
@@ -47,8 +48,8 @@
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
 <a href="campus.html">The campus</a>
-<a href="maps-and-position.html">Maps and position</a>
 <span class="sep">Reference:</span>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <a href="learn-can.html">Learn: CAN</a>
 <a href="status.html">Status</a>
@@ -57,6 +58,10 @@
 <a href="path-followers.html">Path followers</a>
 <a class="here" href="switches.html">Switches</a>
 <a href="trials.html">Trials</a>
+<a href="mppi-lag.html">MPPI with lag</a>
+<a href="own-costmap.html">Our own costmap</a>
+<a href="own-planner.html">Our own planner</a>
+<a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -74,12 +79,15 @@
 <a href="simulation.html">Simulation</a>
 <a href="sim-and-car.html">Sim and the car</a>
 <a href="full-simulation.html">Full simulation</a>
+<a href="own-simulator.html">Our own simulator</a>
+<a href="own-simulator-cameras.html">Our simulator&#x27;s cameras</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="hardware-debug.html">Hardware debug</a>
 <a href="learn-state-space.html">Learn: state space</a>
 <a href="vehicle-model.html">The car as a linear model</a>
+<a href="car-model.html">One car model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="geofence.html">The geofence</a>
 <a href="sources-and-targets.html">Sources and targets</a>
@@ -209,6 +217,11 @@ the U-turn. The real car takes only <code>hybrid</code> or <code>lattice</code> 
 <td>ours: MPC that plans the speed too</td>
 <td>10 of 12</td>
 </tr>
+<tr>
+<td><code>tracker:=mppi_lag</code></td>
+<td>ours: Nav2's MPPI in Rust, knowing the steering and pedals lag (<a href="mppi-lag.html">page</a>)</td>
+<td>7 Nov, a loaded computer: 0.13 m off the path while it drove (Nav2's MPPI 0.20 m), but it gave up when the odometry stalled; <a href="mppi-lag.html#in-gazebo">not fair yet</a></td>
+</tr>
 </tbody>
 </table></div>
 <p>Our trackers drive forward only: give them <code>reversing:=false</code> (the menu does).
@@ -303,6 +316,10 @@ KISS-ICP needs its own environment once: <code>pixi install --locked -e kiss</co
 <td>where the car is (<code>sim</code> only; the demos use the test lot)</td>
 </tr>
 <tr>
+<td><code>simulator:=gazebo</code></td>
+<td>Gazebo plays the world, not our simulator (the default since 8 Nov: <a href="own-simulator.html">page</a>)</td>
+</tr>
+<tr>
 <td><code>reversing:=false</code></td>
 <td>Nav2 drives forward only</td>
 </tr>
@@ -321,6 +338,14 @@ KISS-ICP needs its own environment once: <code>pixi install --locked -e kiss</co
 <tr>
 <td><code>voxels:=true</code></td>
 <td>Nav2 sees the lidar as 0.25 m cubes, not a flat scan (a trial: <a href="trials.html#voxels-30-oct-the-lidar-as-cubes">Trials</a>)</td>
+</tr>
+<tr>
+<td><code>costmap:=own</code></td>
+<td>our own costmaps (Rust) beside Nav2's; <code>tracker:=mppi_lag</code> then reads ours. 8 Nov: the same grid as Nav2's, half the CPU; with its clear service, the obstacle legs 3 of 3 as Nav2's (<a href="own-costmap.html">page</a>)</td>
+</tr>
+<tr>
+<td><code>planner:=own</code></td>
+<td>our own planner (Rust: Nav2's lattice ported) answers the behaviour trees, Nav2's lattice beside it; with <code>costmap:=own</code> it plans on our global costmap. 8 Nov: the test lot 12 of 12 as Nav2's, about 20 % slower on the campus's long legs (<a href="own-planner.html">page</a>)</td>
 </tr>
 </tbody>
 </table></div>
@@ -406,6 +431,14 @@ and drives a leg in Gazebo. Nothing was switched on release day.</p>
 <td>on</td>
 <td>they hold Nav2 when the pose or a sensor goes bad</td>
 <td><code>geofence:=false</code> (sim only)</td>
+</tr>
+<tr>
+<td>Who plays the world</td>
+<td>ours (<code>simulator:=own</code>, since 8 Nov)</td>
+<td>-</td>
+<td>-</td>
+<td>every <code>sim-check</code> leg Gazebo passes, 3 times each; no GPU-less start-up crashes</td>
+<td><code>simulator:=gazebo</code> (and on a computer with no GPU)</td>
 </tr>
 </tbody>
 </table></div>

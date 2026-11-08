@@ -108,7 +108,7 @@ Which test fits which number, and when to stop repeating it: [Know the car](know
 |---|---|---|---|---|
 | 4.1 | **Speed up** | from still, a fixed throttle (25%, 50%, full), 10 m. `actuator-test speed-up`: a speed command, so the speed loop picks the throttle | acceleration in **g** (IMU), and the time to 1, 2, 3 m/s | 🔧 |
 | 4.2 | **Coast** | at 2 m/s, let go: no throttle, no brake. `actuator-test coast` (with the spine; not the ESP32) | how fast it slows: rolling resistance and drag | 🔧 |
-| 4.3 | **Brake** | at 1, 2, 3 m/s, a fixed brake (50%, full). `actuator-test brake`: a normal stop, as no brake command exists | stopping distance and deceleration in **g** | 🔧 |
+| 4.3 | **Brake** | at 1, 2, 3 m/s, a fixed brake (50%, full). `actuator-test brake`: a normal stop, as no brake command exists. **Twice: the car empty, then with a person (or sandbags, weighed)** | stopping distance and deceleration in **g**, for each load: how much weaker the same brake is with a person | 🔧 |
 | 4.4 | **Throttle map** | repeat 4.1 at several throttles; `actuator-test throttle-map` | a table: throttle % → acceleration; and the deadband (the throttle where it starts to move) | 🔧 |
 
 ### 4b. Steering on the ground

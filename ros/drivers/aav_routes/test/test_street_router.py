@@ -38,6 +38,7 @@ try:
     from std_srvs.srv import Trigger
 except ImportError:
     StreetRouter = None
+from test_campus_graph import ll, write_osm  # noqa: I100 (this folder's own test)
 
 pytestmark = pytest.mark.skipif(StreetRouter is None, reason='needs ROS sourced: colcon test')
 
@@ -93,9 +94,11 @@ class Ros:
                      callback_group=group)
         self.fix = self.car.create_publisher(NavSatFix, '/localization/gps/fix', 10)
         self.fixing = False     # send_fix(): a fix at 10 Hz from then on, as a GPS does
+        self.at = CARLETON      # where the fix says the car is
         self.car.create_timer(0.1, self.tick, callback_group=group)
         self.dest = self.car.create_publisher(GeoPointStamped,
                                               '/drivers/nav/route/destination', 10)
+        self.place = self.car.create_publisher(String, '/drivers/nav/route/place', 10)
         latched = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL)
         self.got = {'status': [], 'waypoints': [], 'path': []}
         for name, kind in (('status', String), ('waypoints', GeoPath), ('path', PathMsg)):
@@ -126,7 +129,7 @@ class Ros:
     def tick(self):
         if self.fixing:
             msg = NavSatFix()
-            msg.latitude, msg.longitude = CARLETON
+            msg.latitude, msg.longitude = self.at
             self.fix.publish(msg)
 
     def go_to(self, lat_lon):
@@ -221,5 +224,34 @@ def test_too_long_is_refused(router):
         assert ros.wait(lambda: any('longer than max_length' in m.data
                                     for m in ros.got['status']))
         assert ros.got['waypoints'] == []
+    finally:
+        ros.close()
+
+
+def test_campus_a_place_by_name(tmp_path):
+    write_osm(tmp_path / 'tiny.osm')
+    (tmp_path / 'site.yaml').write_text('datum: [45.386, -75.696]\nosm: tiny.osm\n')
+    ros = Ros(router='campus', site_file=str(tmp_path / 'site.yaml'), root=str(tmp_path),
+              speed=2.0)
+    try:
+        assert ros.wait(lambda: ros.fix.get_subscription_count() > 0
+                        and ros.place.get_subscription_count() > 0)
+        assert ros.wait(lambda: any('the campus: 6 road corners' in m.data
+                                    for m in ros.got['status']))
+        ros.at = ll(0, 95)      # beside D
+        ros.send_fix()
+        time.sleep(0.3)
+        ros.place.publish(String(data='nobody'))
+        assert ros.wait(lambda: any('no place called' in m.data for m in ros.got['status']))
+        ros.place.publish(String(data='minto'))
+        assert ros.wait(lambda: any(m.data.startswith('to Minto Hall: route: ')
+                                    and 'this car at 2 m/s' in m.data
+                                    for m in ros.got['status']))
+        # It ends on the road nearest Minto Hall's middle.
+        minto = ros.node.campus.find('Minto Hall')
+        snap = ros.node.campus.graph.snap((minto.lat, minto.lon))
+        end = ros.got['waypoints'][-1].poses[-1].pose.position
+        assert (end.latitude, end.longitude) == pytest.approx((snap.lat, snap.lon), abs=1e-6)
+        assert ros.goals == []
     finally:
         ros.close()

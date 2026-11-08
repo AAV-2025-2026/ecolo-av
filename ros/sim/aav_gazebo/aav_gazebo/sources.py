@@ -29,11 +29,18 @@ RENDERED = [
 LIDAR = ('lidar', '/sensors/lidar/points')
 
 
-def simulated(rendered, lidar, radar=True, vehicle=True):
-    """Return (name, topic) for everything gazebo_adapter announces in this world."""
+def simulated(rendered, lidar, radar=True, vehicle=True, cameras=None):
+    """
+    Return (name, topic) for everything gazebo_adapter announces in this world.
+
+    cameras: whether the cameras are drawn too (None: wherever the world renders sensors,
+    as in Gazebo; our own simulator's cameras, aav_sim_cameras, draw them there too).
+    """
+    cameras = rendered if cameras is None else cameras
     out = (list(VEHICLE) if vehicle else []) + list(ALWAYS)
     if rendered:
-        out += [entry for entry in RENDERED if radar or entry[0] != 'radar']
+        out += [entry for entry in RENDERED
+                if (radar if entry[0] == 'radar' else cameras)]
         if lidar:
             out.append(LIDAR)
     return out

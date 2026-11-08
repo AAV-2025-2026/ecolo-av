@@ -144,7 +144,9 @@ EGM artifact directory: docs/designs
 - Gazebo on oirp-spss also needs `GZ_IP=127.0.0.1` (multicast doesn't loop back there)
   and its own `GZ_PARTITION`; without them the car never spawns.
   The road world's cameras need `tools/software_gl.sh` in front there (no GPU, as on
-  GitHub's runners): `tools/software_gl.sh pixi run sim-check`.
+  GitHub's runners): `tools/software_gl.sh pixi run sim-check --simulator gazebo`.
+- Our own simulator (`simulator:=own`, the default since 8 Nov) needs a GPU for its
+  cameras; on a computer without one, use `simulator:=gazebo`.
 
 ## Git
 

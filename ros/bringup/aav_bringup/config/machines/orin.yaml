@@ -7,8 +7,8 @@ parts:
   teleop: false         # the joystick receiver: see laptop.yaml
   scripted: true
   drive_to_point: true  # drive to a GPS point and stop (aav_drive_to_point): next to the mux
-  imu: true             # TODO is the IMU on the Orin's USB?
-  gps: true             # TODO is the u-blox on the Orin's USB?
+  imu: false            # the IMU is on the localization Pi (.113): machines/localization.yaml
+  gps: false            # the u-blox is on the localization Pi (.113): machines/localization.yaml
   radar: false          # perception, later
   lidar: true           # the roof Velodyne VLP-16: it sends its UDP packets to the Jetson only
   battery: false

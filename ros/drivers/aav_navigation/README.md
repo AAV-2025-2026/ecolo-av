@@ -41,10 +41,10 @@ Launch: `ros2 launch aav_navigation navigation.launch.py [args]`
 | `reversing` | false | true: Reeds-Shepp paths, reverse to `-max_reverse_speed`, trees back up 1 m |
 | `max_speed` | empty (1.0 m/s) | Nav2's top speed (`sim.launch.py sim_speed:=`) |
 | `controller` | `mppi` | or `rpp` (Regulated Pure Pursuit); `docs/path-followers.md` |
-| `planner` | `lattice` (`car.launch.py`: `lattice`, or `hybrid` forward only) | the planner behind `GridBased`: `lattice` (SmacPlannerLattice, `config/lattice_ackermann.json`; refused if it no longer fits `vehicle.yaml` or the map's cells) or `hybrid` (SmacPlannerHybrid) keep to the turning radius; `smac2d`, `navfn`, `theta_star` don't (trials; `car.launch.py` refuses them). `docs/controllers.md`, Planners |
+| `planner` | `lattice` (`car.launch.py`: `lattice`, or `hybrid` forward only) | the planner behind `GridBased`: `lattice` (SmacPlannerLattice, `config/lattice_ackermann.json`; refused if it no longer fits `vehicle.yaml` or the map's cells) or `hybrid` (SmacPlannerHybrid) keep to the turning radius; `smac2d`, `navfn`, `theta_star` don't (trials; `car.launch.py` refuses them); `own`: our own planner (`aav_planner`, Nav2's lattice in Rust) answers the trees, Nav2's lattice beside it (`docs/own-planner.md`). `docs/controllers.md`, Planners |
 | `lattice_headings` | 16 | with `planner:=lattice`: 16 headings (`config/lattice_ackermann.json`) or 32, a trial (`config/lattice_ackermann_32.json`) |
 | `plan_around` | true | false: the planner sees only the map, so the car stops (stop tests) |
-| `tracker` | `none` | a trial follower (`aav_track`): `pure_pursuit`, `stanley`, `lqr`, `mpc`. It serves `follow_path`; controller_server's becomes `follow_path_unused`. Refused with `reversing:=true` (`docs/trials.md`) |
+| `tracker` | `none` | a trial follower (`aav_track`): `pure_pursuit`, `stanley`, `lqr`, `mpc`, `mpc_full`; or `mppi_lag` (`aav_mppi_lag`: Nav2's MPPI with the lag). It serves `follow_path`; controller_server's becomes `follow_path_unused`. Refused with `reversing:=true` (`docs/trials.md`) |
 | `amcl` | false | true (needs `lidar:=true`): stock AMCL, scored only, on `/localization/amcl/pose` (`config/amcl.yaml`: `tf_broadcast: false`) |
 | `amcl_x`, `amcl_y`, `amcl_yaw` | 0 | AMCL's start pose, map frame (`sim.launch.py` gives the sim's start) |
 | `amcl_map` | empty | empty: AMCL reads Nav2's `/map`; else its own map YAML, on `/localization/amcl/map` (`sim.launch.py`: `maps/example_lot_amcl.yaml`, [why](./maps/README.md#why-amcl-has-a-map-of-its-own)) |
@@ -64,7 +64,7 @@ Nodes started:
 | `collision_monitor` | `/control/cmd_vel_smoothed` -> `/drivers/nav/cmd_vel`; publishes `/safety/collision_monitor/state`, `stop_zone`, `collision_points_marker` |
 | `lidar_scan`, `ghost_obstacle` | with `lidar:=true`, `ghost:=true` |
 | `voxels` (`aav_voxels`) | with `voxels:=true` |
-| `track` (`aav_track`) | with `tracker:=` on: `follow_path` -> `cmd_vel_nav`, in controller_server's place |
+| `track` (`aav_track`), or `mppi_lag` (`aav_mppi_lag`) with `tracker:=mppi_lag` | with `tracker:=` on: `follow_path` -> `cmd_vel_nav`, in controller_server's place |
 | `amcl`, `lifecycle_manager_localization` | with `amcl:=true`: AMCL and its own lifecycle manager; with `amcl_map:=`, also `amcl_map_server` |
 | `lifecycle_manager_navigation` | brings the servers up |
 

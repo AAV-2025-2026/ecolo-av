@@ -18,12 +18,12 @@ from pathlib import Path
 import sys
 
 ROOT = Path(__file__).resolve().parents[2]
-PORT = ROOT / 'ros/sim/aav_gazebo/aav_gazebo/actuator_model.py'
+PORT = ROOT / 'ros/bringup/aav_description/aav_description/car_model.py'
 OUT = ROOT / 'firmware/spine/speed_loop_vectors.txt'
 
-spec = importlib.util.spec_from_file_location('actuator_model', PORT)
+spec = importlib.util.spec_from_file_location('car_model', PORT)
 port = importlib.util.module_from_spec(spec)
-sys.modules['actuator_model'] = port  # dataclasses look the module up while loading
+sys.modules['car_model'] = port  # dataclasses look the module up while loading
 spec.loader.exec_module(port)
 
 DT = 0.01

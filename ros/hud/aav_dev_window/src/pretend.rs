@@ -185,7 +185,17 @@ pub struct PretendFeed {
     next_picture: f64,
     next_slow: f64,
     next_line: u32,
+    next_ahead: f64,
     plan: Option<Point>,
+}
+
+/// The squiggly line's four updates at `t` seconds (`hud_core::ahead::pretend`), base_link.
+pub fn ahead_at(t: f64) -> Vec<Update> {
+    let ahead = hud_core::ahead::pretend(std::time::Duration::from_secs_f64(t.max(0.0)));
+    let mut updates = vec![Update::Trace(ahead.trace), Update::PlanAhead(ahead.plan)];
+    updates.extend(ahead.stop.map(Update::StopPoint));
+    updates.extend(ahead.summary.map(Update::Ahead));
+    updates
 }
 
 impl PretendFeed {
@@ -198,6 +208,7 @@ impl PretendFeed {
             next_picture: 0.0,
             next_slow: 0.0,
             next_line: 0,
+            next_ahead: 0.0,
             plan: None,
         }
     }
@@ -286,6 +297,11 @@ impl Feed for PretendFeed {
                 &picture_at(t),
             );
             updates.extend(picture.ok().map(Update::Picture));
+        }
+        if t >= self.next_ahead {
+            // ego and look_ahead send theirs at 10 Hz.
+            self.next_ahead = t + 0.1;
+            updates.extend(ahead_at(t));
         }
         if t >= self.next_slow {
             self.next_slow = t + 0.5;
@@ -392,6 +408,30 @@ mod tests {
         assert!(updates.iter().any(|u| matches!(u, Update::Map(_))));
         assert!(updates.iter().any(|u| matches!(u, Update::Picture(_))));
         assert!(updates.iter().any(|u| matches!(u, Update::Cubes(_))));
+    }
+
+    #[test]
+    fn the_first_drain_has_the_squiggly_line() {
+        let mut feed = PretendFeed::new(10);
+        let updates = feed.drain(Instant::now());
+        assert!(updates
+            .iter()
+            .any(|u| matches!(u, Update::Trace(t) if t.len() == 21)));
+        assert!(updates.iter().any(|u| matches!(u, Update::PlanAhead(_))));
+        assert!(updates.iter().any(|u| matches!(u, Update::StopPoint(_))));
+        assert!(updates.iter().any(|u| matches!(u, Update::Ahead(_))));
+    }
+
+    #[test]
+    fn the_pretend_trace_bends_left_mid_loop() {
+        let trace = ahead_at(6.0)
+            .into_iter()
+            .find_map(|u| match u {
+                Update::Trace(t) => Some(t),
+                _ => None,
+            })
+            .expect("a trace");
+        assert!(trace.last().is_some_and(|p| p.1 > 0.05));
     }
 
     #[test]

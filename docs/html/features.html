@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">48 min read · 14 sections</div></header>
+<div class="meta">58 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -29,10 +29,11 @@
 <a href="car-evening.html">Tonight: drive as is</a>
 <a href="car-day.html">Car day</a>
 <a href="car-setup.html">Car setup</a>
+<a href="rollout.html">Rolling out on the car</a>
 <a href="tests.html">Every test</a>
 <a href="know-the-car.html">Know the car</a>
-<a href="measure-the-car.html">Measure the car</a>
 <span class="sep">Learn:</span>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <a href="learn-car.html">The car, box by box</a>
@@ -47,8 +48,8 @@
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
 <a href="campus.html">The campus</a>
-<a href="maps-and-position.html">Maps and position</a>
 <span class="sep">Reference:</span>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <a href="learn-can.html">Learn: CAN</a>
 <a href="status.html">Status</a>
@@ -57,6 +58,10 @@
 <a href="path-followers.html">Path followers</a>
 <a href="switches.html">Switches</a>
 <a href="trials.html">Trials</a>
+<a href="mppi-lag.html">MPPI with lag</a>
+<a href="own-costmap.html">Our own costmap</a>
+<a href="own-planner.html">Our own planner</a>
+<a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -74,12 +79,15 @@
 <a href="simulation.html">Simulation</a>
 <a href="sim-and-car.html">Sim and the car</a>
 <a href="full-simulation.html">Full simulation</a>
+<a href="own-simulator.html">Our own simulator</a>
+<a href="own-simulator-cameras.html">Our simulator&#x27;s cameras</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="hardware-debug.html">Hardware debug</a>
 <a href="learn-state-space.html">Learn: state space</a>
 <a href="vehicle-model.html">The car as a linear model</a>
+<a href="car-model.html">One car model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="geofence.html">The geofence</a>
 <a href="sources-and-targets.html">Sources and targets</a>
@@ -332,6 +340,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>sim</td>
 </tr>
 <tr>
+<td><a href="perception.html">Lane drives, scored</a> (<code>measure lane</code>): a long lane-keeping drive on the road world or a campus road, Gazebo or ours; the campus's painted roads now have white edge lines</td>
+<td>Ben, 7 Nov: lane following for 0.3. Lateral error from the lane's centre by the truth, the time the lane is lost, and the speed: one number per run to compare finders and simulators</td>
+<td>Ben</td>
+<td>2026-11-08</td>
+<td>sim</td>
+</tr>
+<tr>
 <td>Radar clustering in Rust (<code>aav_radar_clusters</code>)</td>
 <td>Turns radar points into objects; our C++ moves to Rust, with the same answers bit for bit</td>
 <td>Ben</td>
@@ -488,6 +503,27 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>built</td>
 </tr>
 <tr>
+<td><a href="mppi-lag.html">MPPI that knows the lag</a> (<code>aav_mppi_lag</code>, <code>tracker:=mppi_lag</code>; <code>model: ideal</code> for the same MPPI without it)</td>
+<td>Ben, 7 Nov (0.3): "have the algorithms know about lag". Nav2's MPPI can't take our lag model without a C++ plugin, and we write no C++: so MPPI is ported to Rust, its eight critics as nav2.yaml runs them, on a model with ego's ramps, the spine's speed loop, the throttle, brake and steering lags and dead times. Nav2 still plans. Says <code>true</code> on <code>/drivers/nav/lag_aware</code> while it follows a path, so ego's lead stays off. Without ROS, on very slow actuators, it kept a corner and an S-curve within 0.1 m where the lag-free MPPI lost the path; at vehicle.yaml's guesses both stay within a few cm. 1.7 ms a tick (2000 x 56) on an M4 Max</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="own-costmap.html">Our own costmap</a> (<code>aav_costmap</code>, <code>costmap:=own</code>; <code>tracker:=mppi_lag</code> then reads it)</td>
+<td>Ben, 8 Nov: move off Nav2 to our own versions one piece at a time, the costmap first. Nav2's layers (the map, the sensors' marks with ray clearing, inflation round the car's outline) ported to Rust, local and global, from the same nav2.yaml blocks. In our simulator, stopped at a post, 100 % of its 40,000 cells matched Nav2's; 4-5 % of a core for both against 7-9 % for Nav2's local one. MPPI on it went round the box 3 of 3; the lidar-obstacle leg 2 of 3, then 3 of 3 once the behaviour trees' recovery cleared ours too. Nav2 stays the default</td>
+<td>Ben</td>
+<td>2026-11-08</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="own-planner.html">Our own planner</a> (<code>aav_planner</code>, <code>planner:=own</code>)</td>
+<td>Ben, 8 Nov: move off Nav2 one piece at a time; the planner after the costmap. Nav2's State Lattice (our default) ported to Rust: the same primitives file, nav2.yaml's penalties, the Reeds-Shepp finish and the smoother, on Nav2's global costmap or ours. It answers Nav2's own ComputePathToPose, so the behaviour trees call it and nothing else changes. Test lot, 3 runs each: 12 of 12 legs as Nav2's lattice, the same paths and times; campus: about 20 % slower on 250 m legs (both lost the same legs to MPPI). Nav2 stays the default</td>
+<td>Ben</td>
+<td>2026-11-08</td>
+<td>sim</td>
+</tr>
+<tr>
 <td><a href="controllers.html#planners">Trial planners</a> (<code>planner:=</code> hybrid, lattice, smac2d, navfn or theta_star; the lattice on our own primitives, <code>pixi run python3 tools/lattice_primitives.py</code>, 16 headings or 32 with <code>lattice_headings:=32</code>)</td>
 <td>To see whether another of Nav2's planners plans better or faster than Hybrid-A<em> on the same routes, scored by <code>measure controllers --planners</code> (<code>--reversing</code> for the car's own setting, <code>lattice32</code> for the 32-heading file), before any replaces the default. The lattice won (30 Oct, reversing: every leg, 29 s quicker a tour) and is the default since 1 Nov; the car, forward only until H5, keeps Hybrid-A</em>. Only hybrid and lattice keep to the turning radius, so the car refuses the other three</td>
 <td>Ben</td>
@@ -507,6 +543,20 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Ben</td>
 <td>2026-10-16</td>
 <td>sim</td>
+</tr>
+<tr>
+<td><a href="routes.html#on-the-campus">Directions on the campus</a> (<code>aav_routes</code> <code>router: campus</code>, <code>campus_graph.py</code>, <code>pixi run campus-route</code>)</td>
+<td>Ben, 7 Nov: Tesla-like directions, "higher level navigation", picked for 0.3 on the campus. Say a building's name; the route runs on the campus's own roads, the ones Nav2's map has free, one-way roads kept, with no server to start. The named places are the first piece of the site file (TODO 100)</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="stopping.html#2-the-behaviour-planner">The behaviour planner</a> (<code>aav_behaviour</code>, <code>behaviour:=true</code>, a trial): DRIVE, APPROACH, STOPPED, WAIT, GO, ASK; a speed cap on Nav2 from the stopping law for a stop sign, an obstacle in the lane, the fence and the goal; <code>/drivers/nav/behaviour/state</code></td>
+<td>Ben, 7 Nov: "we can use that to say if we have turned enough or slowing down enough". Today the sign's lock fires at cruise speed and nothing says why the car waits: this slows the car before each stop, and the locks still make every stop</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
 </tr>
 </tbody>
 </table></div>
@@ -570,6 +620,34 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Transfer functions and state space, to tune the loops and write the report in SYSC 3600's terms</td>
 <td>Ben</td>
 <td>2026-10-24</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="car-model.html">One car model</a> (<code>aav_description</code> <code>car_model.py</code>, its Rust twin <code>car-model</code>): actuator lags, dead times, the steering motor and the bicycle; <code>step</code> and <code>predict</code></td>
+<td>Ben, 7 Nov: "we really want the ego to have a mathematical model for steering, braking and acceleration": ego, the simulators and the Rust drivers share one model, Python and Rust checked against the same vectors. The simulator's and the Rust MPPI's <code>CarModel</code> traits take it too (feature <code>shared</code>: <code>SharedCar</code>, <code>SharedModel</code>), checked against their own copies</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="car-model.html#egos-lead">ego's lag lead</a> (<code>lag_lead</code>: auto, on or off; <code>aav_ego</code> <code>lag_lead.py</code>): asks a little ahead for the actuators' lag and dead time, before every limit; <code>auto</code> leads only in a simulator; off while a lag-aware driver drives (<code>/drivers/&lt;slot&gt;/lag_aware</code>)</td>
+<td>Ben, 7 Nov: "have the algorithms know about lag": the car answers about when the driver wanted, while ego stays a safety lock and nothing leads twice</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="car-model.html#egos-trace">ego's trace</a> (<code>/ego/trace</code>, <code>aav_ego</code> <code>trace_ahead.py</code>): where the car goes over the next 2 s, from the car model and a copy of ego</td>
+<td>Ben's idea, 7 Nov: "a trace of where it's going (like a tail but in front)", so drivers can match it to their plan and correct</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="stopping.html#1-the-stopping-law">One stopping law</a> (<code>aav_description</code> <code>stop_law.py</code>: S(v), the cap v_cap(d), from the car model's brake, lags and speed loop)</td>
+<td>Five parts of the stack each had their own answer to "how far do I need to stop?", and they disagreed (the design, TODO 110). Now one curve: the trial trackers use it, ego logs it, the point driver can (<code>stop_law:=hybrid</code>), the behaviour planner caps Nav2 with it. The locks keep their own laws; a test checks the geofence lock always counts on more room than the car model needs</td>
+<td>Ben</td>
+<td>2026-11-07</td>
 <td>built</td>
 </tr>
 </tbody>
@@ -921,7 +999,7 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 </tr>
 <tr>
 <td>Actuator model</td>
-<td>Lag and limits between ego and Gazebo, so the simulated car answers like a real one</td>
+<td>Lag and limits between ego and Gazebo, so the simulated car answers like a real one; since 7 Nov it is the shared car model (<code>aav_description</code> <code>car_model.py</code>), so ego predicts with the same car Gazebo drives</td>
 <td>Ben</td>
 <td>2026-10-15</td>
 <td>sim</td>
@@ -952,6 +1030,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Today's car runs the 2025-26 C++ ESP32, not the spine: Gazebo drives through the real UART bridge and that firmware's throttle ramp and brake, so its speed loop is tested before car day</td>
 <td>Ben</td>
 <td>2026-10-29</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="own-simulator.html">Our own simulator in Rust</a> (<code>aav_simulator</code>, <code>sim simulator:=own</code>)</td>
+<td>Ben, 7 Nov: "merge in everything from gazebo so its standalone in rust". Gazebo's worlds, car, lidar, radar stand-in, IMU, GPS, wheels and clock on Gazebo's own topics, so the stack runs unchanged; no GPU, a seed repeats every sensor, and the car stops at what it hits. Its cameras are <code>aav_sim_cameras</code>, started beside it. Since 8 Nov each wheel finds the ground: slopes tilt the car, a 0.3 m kerb stops it. <strong>The default since 8 Nov</strong> (<code>simulator:=gazebo</code> for Gazebo): every <code>sim-check</code> leg passes, <code>--perception</code>, <code>--faults</code> and <code>--drive-to-point</code> three times each</td>
+<td>Ben</td>
+<td>2026-11-08</td>
 <td>sim</td>
 </tr>
 <tr>
@@ -987,6 +1072,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>A recorded drive runs through the EKFs again, to check them; they match within 0.03 m. With the lidar, the first drive on the ground also gives NDT's map of the lot and real scores for the trials (tests.md 4e)</td>
 <td>Ben</td>
 <td>2026-10-09</td>
+<td>sim</td>
+</tr>
+<tr>
+<td><a href="own-simulator-cameras.html">Our simulator's cameras</a> (<code>aav_sim_cameras</code>, <code>pixi run sim-cameras</code>)</td>
+<td>Ben, 7 Nov: replace Gazebo with our own Rust simulator, every sensor. Bevy draws each car camera offscreen with Gazebo's picture, lens, rate and frame, so the detector and stop-sign watcher can't tell them apart. Joined to the core (8 Nov): they draw the same world files (test lot, road, campus: boxes, cylinders, planes, OBJ meshes and their pictures), so <code>simulator:=own</code> runs perception, lane and faults. Models placed while running (<code>spawn_entity</code>, the obstacle) are drawn too, from <code>/vehicle/sim/entities</code></td>
+<td>Ben</td>
+<td>2026-11-08</td>
 <td>sim</td>
 </tr>
 </tbody>
@@ -1076,10 +1168,17 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 </tr>
 <tr>
 <td><a href="campus.html">The campus</a> (<code>pixi run campus</code>, <code>world:=campus</code>): Carleton from OpenStreetMap: a Gazebo world with bump-mapped pavement, kerbs, grass, trees and buildings; one Nav2 map of the whole campus; a guessed NDT map</td>
-<td>Practice on the real place's shapes while the hardware catches up, then replace the guess with real drives. Runs in Gazebo only: not yet checked against the real campus</td>
+<td>Practice on the real place's shapes while the hardware catches up, then replace the guess with real drives. Painted roads have a yellow centre line and white edge lines (8 Nov), for lane keeping. Runs in Gazebo and in ours: not yet checked against the real campus</td>
 <td>Ben</td>
-<td>2026-11-05</td>
+<td>2026-11-08</td>
 <td>sim</td>
+</tr>
+<tr>
+<td><a href="hud.html#the-squiggly-line-ahead">The squiggly line</a> (AHEAD on the HUD, key T on the developer window): ego's trace bold, coloured by how far it strays from the plan; the plan faint; a bar where the front bumper stops on a full brake now (<code>/ego/stop_point</code>, from the car model); the room to the goal or the first obstacle. Worked out once in <code>aav_ego</code> (<code>stop_ahead.py</code>, <code>look_ahead</code>), drawn by both screens, pretend data too</td>
+<td>Ben, 7 Nov, of his Tesla's line: "gets shorter when braking and longer when accelerating and it curves to show the predictive path", and "show that we will stop based on the model in the correct location"</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
 </tr>
 <tr>
 <td><a href="simulation.html">Screens as heartbeats</a> (<code>watch_screens:=dev_window,hw_panel</code>)</td>
@@ -1262,6 +1361,13 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>Numbers for how well the car sped up, held its speed and stopped on B, the same for Gazebo and car runs; a tape-measured stop splits the GPS error from the control error</td>
 <td>Ben</td>
 <td>2026-10-26</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="stopping.html#3-where-the-car-really-stops">Stop-point check</a> (<code>pixi run sim-check --stop-point</code>, <code>tools/stop_points.py</code>)</td>
+<td>Ben, 7 Nov: where the car really stops after an e-stop against <code>/ego/stop_point</code>, by truth and by localization, at 0.5, 0.75 and 1 m/s (all within 0.25 m in Gazebo, 8 Nov); the same scorer can take a car bag once the real numbers are measured</td>
+<td>Ben</td>
+<td>2026-11-07</td>
 <td>built</td>
 </tr>
 </tbody>

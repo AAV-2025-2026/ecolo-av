@@ -1,0 +1,13 @@
+[package]
+name = "camera-core"
+description = "The simulator's cameras without an engine: lenses, mounts, the world they see, when each is due"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_yaml_ng = "0.10"
+# The core simulator's world reader: the same SDF worlds, read once, for the rays and the
+# cameras (`core_world`). No ROS and no Bevy either.
+sim-core = { path = "../../../aav_simulator/crates/sim-core" }

@@ -52,6 +52,10 @@ The trials (docs/trials.md):
     pixi run measure controllers --planners hybrid lattice lattice32 --reversing --runs 3
                     the same with reversing on (MPPI follows backwards too; the trackers
                     can't), and lattice32: the lattice on its 32-heading file
+    pixi run measure controllers --planners lattice own --reversing --tours lot campus
+                    our own planner (aav_planner, planner:=own: Nav2's lattice in Rust)
+                    beside Nav2's: before each leg both plan from the same spot on the same
+                    map, and the leg's note gives Nav2's length, time and tightest turn
     pixi run measure controllers --planners lattice diffusion --reversing --tours lot
                     the diffusion trial beside the lattice: each leg's note says how many
                     plans came from the model, how many from the lattice (the guard's
@@ -154,16 +158,24 @@ TRACK_EVERY = 0.5       # s between the saved track's points
 MAP_SPEC = os.path.join(ROOT, 'ros', 'drivers', 'aav_navigation', 'maps',
                         'example_lot.spec.yaml')
 COLOURS = {'rpp': '#1f6fb4', 'mppi': '#e8590c', 'pure_pursuit': '#2b8a3e', 'stanley': '#862e9c',
-           'lqr': '#c92a2a', 'mpc': '#e67700', 'mpc_full': '#5f3dc4',
+           'lqr': '#c92a2a', 'mpc': '#e67700', 'mpc_full': '#5f3dc4', 'mppi_lag': '#0b7285',
            # --planners: a column is a planner's name when one follower drives them all.
            'hybrid': '#e8590c', 'lattice': '#1f6fb4', 'smac2d': '#2b8a3e',
-           'navfn': '#862e9c', 'theta_star': '#c92a2a', 'lattice32': '#5f3dc4'}
+           'navfn': '#862e9c', 'theta_star': '#c92a2a', 'lattice32': '#5f3dc4',
+           'own': '#0b7285'}
 PLAN_TIME = 15.0        # s (wall) for the planner alone to answer, before each leg
 # NDT's map of the test lot (tools/ndt_map.py; maps/ is not in git).
 NDT_MAP = os.path.join(ROOT, 'maps', 'ndt', 'test_lot.pcd')
 NDT_CONFIG = os.path.join(ROOT, 'ros', 'localization', 'aav_ndt', 'config', 'ndt.yaml')
 # The process to time for each kind of follower (its command line, in the run's group).
-PROCESS = {'controller': 'controller_server', 'tracker': 'lib/aav_track/track'}
+PROCESS = {'controller': 'controller_server', 'tracker': 'lib/aav_track/track',
+           # tracker:=mppi_lag runs aav_mppi_lag's Rust node, not aav_track's.
+           'mppi_lag': 'lib/aav_mppi_lag/mppi_lag'}
+
+
+def follower_process(kind, controller):
+    """Return the command-line piece of the process to time for this follower."""
+    return PROCESS['mppi_lag'] if controller == 'mppi_lag' else PROCESS[kind]
 
 
 def seconds(stamp):
@@ -248,6 +260,8 @@ class Recorder(Node):
                                  self.on_monitor, 10)
         self.nav = ActionClient(self, NavigateToPose, '/navigate_to_pose')
         self.planner = ActionClient(self, ComputePathToPose, '/compute_path_to_pose')
+        # planner:=own: ours (aav_planner), beside planner_server's lattice.
+        self.own_planner = ActionClient(self, ComputePathToPose, vehicle.OWN_PLANNER_ACTION)
         self.clear = self.create_client(Trigger, '/safety/sensor_watchdog/clear')
 
     def start(self):
@@ -394,13 +408,15 @@ class Recorder(Node):
         return handle if handle is not None and handle.accepted else None
 
 
-def plan_alone(rec, goal, lock_radius):
+def plan_alone(rec, goal, lock_radius, client=None, name='/compute_path_to_pose'):
     """
     Ask the planner alone for a path from where the car stands; return (planned, notes).
 
     planned is drive_metrics' leg['planned']: the path, the planner's own time, the call's
-    wall time, and the car's full-lock radius. Nothing moves.
+    wall time, and the car's full-lock radius. Nothing moves. client, name: whose action
+    (None: Nav2's /compute_path_to_pose).
     """
+    client = client or rec.planner
     x, y, yaw = goal
     request = ComputePathToPose.Goal()
     request.goal.header.frame_id = 'map'
@@ -410,10 +426,10 @@ def plan_alone(rec, goal, lock_radius):
     request.planner_id = 'GridBased'      # whichever planner:= runs behind it
     request.use_start = False             # from the car, through TF, as bt_navigator asks
     out = {'path': [], 'ms': None, 'wall_ms': None, 'lock_radius': lock_radius}
-    if not rec.planner.wait_for_server(timeout_sec=5.0):
-        return out, ['the planner alone: no /compute_path_to_pose']
+    if not client.wait_for_server(timeout_sec=5.0):
+        return out, [f'the planner alone: no {name}']
     wall0 = time.monotonic()
-    handle = rec.wait(rec.planner.send_goal_async(request), 5.0)
+    handle = rec.wait(client.send_goal_async(request), 5.0)
     if handle is None or not handle.accepted:
         return out, ['the planner alone: refused']
     done = rec.wait(handle.get_result_async(), PLAN_TIME)
@@ -445,16 +461,29 @@ def ready(rec):
 
 
 def drive_leg(rec, pgid, goal, speed, body, obstacle, process='controller_server',
-              amcl=False, ndt=False, lock_radius=None, kiss=False):
+              amcl=False, ndt=False, lock_radius=None, kiss=False, own_planner=False):
     """
     Send one goal and record it; return (drive_metrics leg, notes).
 
     lock_radius (m, --planners): first ask the planner alone for the leg's path, and score
-    its turns against the car's full lock.
+    its turns against the car's full lock. own_planner (planner:=own): ask ours, then
+    Nav2's lattice (planner_server, still running beside it) for the same leg from the
+    same spot, and say Nav2's numbers in a note: the two on the same map.
     """
     notes = ready(rec)
-    planned = None
-    if lock_radius is not None:
+    planned = planned_nav2 = None
+    if lock_radius is not None and own_planner:
+        planned, more = plan_alone(rec, goal, lock_radius, rec.own_planner,
+                                   vehicle.OWN_PLANNER_ACTION)
+        notes += more
+        planned_nav2, more = plan_alone(rec, goal, lock_radius)
+        notes += [f"Nav2's lattice: {n}" for n in more]
+        nav2 = drive_metrics.plan_row(planned_nav2)
+        if nav2.get('plan_found'):
+            notes.append(f"Nav2's lattice on the same map: {nav2['plan_m']:.1f} m in "
+                         f"{nav2['plan_ms']:.0f} ms, {nav2['plan_cusps']} cusps, tightest "
+                         f"turn {drive_metrics.radius_cell(nav2['plan_tightest_m'])} m")
+    elif lock_radius is not None:
         planned, more = plan_alone(rec, goal, lock_radius)
         notes += more
     x, y, yaw = goal
@@ -519,6 +548,8 @@ def drive_leg(rec, pgid, goal, speed, body, obstacle, process='controller_server
         leg['diffusion'] = rec.diffusion
     if planned is not None:
         leg['planned'] = planned
+    if planned_nav2 is not None:
+        leg['planned_nav2'] = planned_nav2
     return leg, notes
 
 
@@ -763,8 +794,10 @@ def session(tour, follower, args, out_dir, body, used, run=1):
             for name, x, y, heading in tour_legs(tour, args):
                 leg, notes = drive_leg(rec, launch.pid, (x, y, math.radians(heading)),
                                        args.speed or 1.0, body, obstacle,
-                                       PROCESS[kind], args.amcl, args.ndt,
-                                       lock if planner else None, args.kiss_icp)
+                                       follower_process(kind, controller), args.amcl,
+                                       args.ndt,
+                                       lock if planner else None, args.kiss_icp,
+                                       planner == 'own')
                 row = drive_metrics.summary(leg)
                 # t, x, y, yaw: where the car was, and where the global EKF put it.
                 drawn = {'run': run,

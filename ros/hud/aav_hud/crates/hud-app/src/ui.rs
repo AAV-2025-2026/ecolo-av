@@ -5,18 +5,18 @@
 //!
 //! ```text
 //! +--------------------------------------------------------------------+
-//! | MODE | ARMED | GEAR | E-STOP | BATTERY | FAULTS               DEMO |
+//! | MODE | ARMED | GEAR | E-STOP | BATTERY | FAULTS | GPS        DEMO |
 //! +----------------+--------------------------+------------------------+
 //! | SPEED          | CAMERA                   |  [  E-STOP button  ]   |
 //! |   12 km/h      | (STOP SIGN banner)       |  sent / failed         |
 //! |                | (SIMULATED banner)       |                        |
 //! +----------------+--------------------------+------------------------+
-//! | (icon) GO      | TOPICS                   | GPS                    |
-//! | all REAL       |  /vehicle/status  SIM OK |  RTK FIXED             |
-//! +----------------+  /sensors/gps/fix  STALE |  lat, lon, accuracy    |
-//! | STEERING  ---  |                          |                        |
-//! | THROTTLE  ===  |                          |                        |
-//! | BRAKE     ===  |                          |                        |
+//! | (icon) GO      | TOPICS                   | AHEAD   MPPI           |
+//! | all REAL       |  /vehicle/status  SIM OK |   :  faint: the plan   |
+//! +----------------+  /sensors/gps/fix  STALE |   )  bold: the trace   |
+//! | STEERING  ---  |                          |  ===  stop bar         |
+//! | THROTTLE  ===  |                          |  [car]                 |
+//! | BRAKE     ===  |                          | STOPS IN / ON PLAN     |
 //! +--------------------------------------------------------------------+
 //! ```
 //!
@@ -24,6 +24,12 @@
 //! icon, a word and the one main reason (hud_core::gate). The orange SIMULATED / BENCH /
 //! REPLAY banner shows whenever `/system/source` says any data isn't from the real car;
 //! each topic it names gets a REAL / SIM tag under TOPICS.
+//!
+//! AHEAD is the squiggly line (Ben, 7 Nov; hud_core::ahead): from above, forward up, the
+//! plan the planner wants (faint), the trace the car will drive in the next 2 s (bold,
+//! green on the plan, amber off it, red far off), and a bar where a full brake now
+//! stops the car. Below it: how far that stop is, how far off the plan, and the room
+//! left before the goal or an obstacle. The GPS fix kind sits in the top strip.
 //!
 //! Every colour comes from the theme (`hud_core::theme`, `theme:` in config/hud.yaml):
 //! the panels are frosted glass over a soft background (hud_app::paint); GO, WAIT,
@@ -40,6 +46,7 @@ use std::time::{Duration, Instant};
 
 use hud_app::paint::{self, ToColor};
 use hud_core::{
+    ahead::{self, Tone, View},
     config::Topic,
     format,
     gate::{Light, Verdict},
@@ -99,7 +106,7 @@ mod area {
     pub const TOPICS: Area = (448.0, 404.0, 504.0, 308.0);
     pub const ESTOP: Area = (962.0, 94.0, 310.0, 184.0);
     pub const ESTOP_NOTE: Area = (962.0, 284.0, 310.0, 110.0);
-    pub const GPS: Area = (962.0, 404.0, 310.0, 308.0);
+    pub const AHEAD: Area = (962.0, 404.0, 310.0, 308.0);
 }
 
 /// raylib's font handle: one loaded from a file, or its built-in one.
@@ -291,7 +298,7 @@ impl Ui {
         camera(&mut c, state, now, self.camera.as_ref(), blink);
         topics(&mut c, state, now);
         estop(&mut c, state, &vehicle, hover);
-        gps(&mut c, state, now);
+        look_ahead(&mut c, state, now);
     }
 }
 
@@ -425,6 +432,13 @@ impl Canvas<'_, '_> {
         let (a, b) = (self.at(a), self.at(b));
         self.d
             .draw_line_ex(a, b, (thick * self.scale.k).max(1.0), colour.rl());
+    }
+
+    /// A filled circle, radius `r` canvas units.
+    fn dot(&mut self, centre: (f32, f32), r: f32, colour: Rgba) {
+        let at = self.at(centre);
+        self.d
+            .draw_circle_v(at, (r * self.scale.k).max(0.5), colour.rl());
     }
 
     /// A filled convex shape, its corners in order round it (either way round).
@@ -586,18 +600,19 @@ fn strip(
             (v.faults.to_string(), c.t.bad)
         }
     });
-    let cells: [(&str, (String, Rgba), f32); 6] = [
+    let cells: [(&str, (String, Rgba), f32); 7] = [
         ("MODE", mode, 190.0),
         ("COMPUTER", armed, 180.0),
         ("GEAR", gear, 90.0),
         ("E-STOP", estop, 120.0),
         ("BATTERY", charge, 140.0),
-        ("FAULTS", faults, 420.0),
+        ("FAULTS", faults, 240.0),
+        ("GPS", gps_cell(c.t, state, now), 170.0),
     ];
     let mut cx = x + 16.0;
     for (caption, (value, colour), w) in cells {
         // Old news is grey, whatever it says.
-        let colour = if caption == "BATTERY" {
+        let colour = if caption == "BATTERY" || caption == "GPS" {
             colour
         } else {
             vehicle.colour(colour)
@@ -1043,49 +1058,119 @@ fn estop(c: &mut Canvas, state: &HudState, vehicle: &Fresh<VehicleStatus>, hover
 }
 
 /// Is there GPS data? The answer first, big; then the numbers.
-fn gps(c: &mut Canvas, state: &HudState, now: Instant) {
-    let a = area::GPS;
-    let topic = state.config.topic(Topic::Gps);
-    c.panel(a, &format!("GPS  {topic}"));
-    let (x, w) = (a.0 + 16.0, a.2 - 32.0);
-    let health = state.health(Topic::Gps, now);
-    let fix = state.gps;
-    let (headline, colour) = match (health, fix) {
-        (Health::Never, _) | (_, None) => ("NO GPS DATA".to_owned(), c.t.bad),
-        (Health::Stale(_), _) => ("GPS SILENT".to_owned(), c.t.warn),
-        (Health::Ok(_), Some(f)) => (f.kind.to_string(), kind_colour(c.t, f.kind)),
-    };
-    c.fitted(x, a.1 + 40.0, 44.0, w, &headline, colour);
-
-    let dim_if_old = |col: Rgba| if health.is_ok() { col } else { c.t.dim };
-    let mut rows: Vec<(&str, String)> = Vec::new();
-    if let Some(f) = fix {
-        if !health.is_ok() {
-            rows.push(("LAST", f.kind.to_string()));
-        }
-        match f.position {
-            Some((lat, lon)) => {
-                rows.push(("LAT", format::latitude(lat)));
-                rows.push(("LON", format::longitude(lon)));
-            }
-            None => rows.push(("POS", "none".into())),
-        }
-        let acc = f
-            .horizontal_sigma
-            .map_or("not given".into(), |s| format!("+/- {}", format::metres(s)));
-        rows.push(("ACC", acc));
+/// The strip's GPS cell: the fix kind, or why there is none. Its panel became AHEAD.
+fn gps_cell(t: &Theme, state: &HudState, now: Instant) -> (String, Rgba) {
+    match (state.health(Topic::Gps, now), state.gps) {
+        (Health::Never, _) | (_, None) => ("NO GPS".into(), t.bad),
+        (Health::Stale(_), _) => ("SILENT".into(), t.warn),
+        (Health::Ok(_), Some(f)) => (f.kind.to_string(), kind_colour(t, f.kind)),
     }
-    let age = health.age().map_or("never".into(), format::age);
-    rows.push(("AGE", age));
-    for (i, (label, value)) in rows.iter().enumerate() {
-        let y = a.1 + 104.0 + i as f32 * 38.0;
-        c.text(x, y, 22.0, label, c.t.caption);
-        let colour = if *label == "AGE" {
-            health_colour(c.t, health)
-        } else {
-            dim_if_old(c.t.text)
+}
+
+/// Metres the AHEAD drawing shows ahead of the rear axle, and behind it (the car).
+const AHEAD_METRES: f64 = 6.0;
+const BEHIND_METRES: f64 = 0.6;
+
+/// The squiggly line: the plan (faint), the trace (bold, by the gap's colour), the car,
+/// a white bar where its front bumper stops if it brakes fully now, a red one at the
+/// first obstacle, and three lines of words (hud_core::ahead). The car's outline comes
+/// from /ego/ahead (vehicle.yaml), never a copy here.
+fn look_ahead(c: &mut Canvas, state: &HudState, now: Instant) {
+    let a = area::AHEAD;
+    let fresh = state.health(Topic::Trace, now).is_ok();
+    let summary = state
+        .ahead
+        .summary
+        .as_ref()
+        .filter(|_| state.health(Topic::Ahead, now).is_ok());
+    let source = summary.map_or("", |s| s.plan.label());
+    c.panel(a, &format!("AHEAD  {source}"));
+    let view = View {
+        rect: (a.0 + 10.0, a.1 + 44.0, a.2 - 20.0, 158.0),
+        ahead: AHEAD_METRES,
+        behind: BEHIND_METRES,
+    };
+    // A line every 2 m, faint, so a driver can read the distances.
+    for m in [2.0, 4.0] {
+        let (_, y) = view.to_panel((m, 0.0));
+        let (x0, x1) = (view.rect.0, view.rect.0 + view.rect.2);
+        c.line((x0, y), (x1, y), 1.0, c.t.dim);
+        c.text(x0 + 2.0, y + 2.0, 14.0, &format!("{m} m"), c.t.caption);
+    }
+    let body = summary.and_then(|s| s.body);
+    if let Some(b) = body {
+        let car = [
+            (b.rear, b.half_width),
+            (b.front, b.half_width),
+            (b.front, -b.half_width),
+            (b.rear, -b.half_width),
+        ];
+        let corners: Vec<(f32, f32)> = car.iter().map(|p| view.to_panel(*p)).collect();
+        for (i, from) in corners.iter().enumerate() {
+            c.line(*from, corners[(i + 1) % corners.len()], 2.0, c.t.text);
+        }
+    }
+    if !fresh {
+        let cx = view.rect.0 + view.rect.2 / 2.0;
+        c.centred(cx, view.rect.1 + 40.0, 24.0, "NO TRACE", c.t.caption);
+    } else {
+        polyline(c, &view.polyline(&state.ahead.plan), 3.0, c.t.caption);
+        let colour = match summary {
+            Some(s) if s.plan != ahead::PlanSource::None => tone(c.t, s.grade.into()),
+            _ => c.t.text,
         };
-        c.fitted(x + 70.0, y, 24.0, w - 70.0, value, colour);
+        polyline(c, &view.polyline(&state.ahead.trace), 9.0, colour);
+        let half = body.map_or(0.5, |b| b.half_width);
+        let front = body.map_or(0.0, |b| b.front);
+        // The first obstacle the bumper would meet: a red bar.
+        let obstacle = summary
+            .and_then(|s| s.obstacle)
+            .and_then(|o| state.ahead.point_along(o + front));
+        if let Some(p) = obstacle.filter(|p| view.shows(*p)) {
+            let (x, y) = view.to_panel(p);
+            let w = half as f32 * view.scale();
+            c.line((x - w, y), (x + w, y), 6.0, c.t.bad);
+        }
+        // Where the front bumper stops on a full brake now: a white bar across the way.
+        let stopped = state.health(Topic::StopPoint, now).is_ok();
+        let stop = state.ahead.bumper_stop().or(state.ahead.stop);
+        if let Some(stop) = stop.filter(|s| stopped && view.shows((s.x, s.y))) {
+            let (l, r) = view.stop_bar(stop, half * 1.2);
+            c.line(l, r, 7.0, c.t.text);
+        }
+    }
+    let lines = ahead::lines(summary);
+    for (i, line) in lines.iter().enumerate() {
+        let y = a.1 + 210.0 + i as f32 * 32.0;
+        let size = if i == 0 { 28.0 } else { 24.0 };
+        c.fitted(
+            a.0 + 16.0,
+            y,
+            size,
+            a.2 - 32.0,
+            &line.text,
+            tone(c.t, line.tone),
+        );
+    }
+}
+
+/// A thick line through points, with round joints.
+fn polyline(c: &mut Canvas, points: &[(f32, f32)], thick: f32, colour: Rgba) {
+    for pair in points.windows(2) {
+        c.line(pair[0], pair[1], thick, colour);
+    }
+    for p in points {
+        c.dot(*p, thick / 2.0, colour);
+    }
+}
+
+fn tone(t: &Theme, tone: Tone) -> Rgba {
+    match tone {
+        Tone::Plain => t.text,
+        Tone::Good => t.good,
+        Tone::Warn => t.warn,
+        Tone::Bad => t.bad,
+        Tone::Dim => t.caption,
     }
 }
 

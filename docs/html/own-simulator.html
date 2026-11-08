@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Our own simulator · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/own-simulator.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Our own simulator</h1>
+<div class="meta">10 min read · 8 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="release-0.2.html">The 0.2 guide</a>
+<a href="whats-new.html">What&#x27;s new</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-evening.html">Tonight: drive as is</a>
+<a href="car-day.html">Car day</a>
+<a href="car-setup.html">Car setup</a>
+<a href="rollout.html">Rolling out on the car</a>
+<a href="tests.html">Every test</a>
+<a href="know-the-car.html">Know the car</a>
+<span class="sep">Learn:</span>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-speed.html">Learn: speed</a>
+<a href="learn-lidar.html">Learn: lidar</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
+<span class="sep">Reference:</span>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="path-followers.html">Path followers</a>
+<a href="switches.html">Switches</a>
+<a href="trials.html">Trials</a>
+<a href="mppi-lag.html">MPPI with lag</a>
+<a href="own-costmap.html">Our own costmap</a>
+<a href="own-planner.html">Our own planner</a>
+<a href="stopping.html">How the car stops</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a class="here" href="own-simulator.html">Our own simulator</a>
+<a href="own-simulator-cameras.html">Our simulator&#x27;s cameras</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="hardware-debug.html">Hardware debug</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="car-model.html">One car model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="geofence.html">The geofence</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="esp32-safety.html">ESP32 safety rules</a>
+<a href="esp32-cpp-parity.html">ESP32 C++ parity</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#in-one-picture">In one picture</a><a href="#what-it-gives">What it gives</a><a href="#the-worlds">The worlds</a><a href="#the-car">The car</a><a href="#plug-in-points">Plug-in points</a><a href="#head-to-head-with-the-cameras-8-nov-bens-mac-quiet-load-4-15">Head to head, with the cameras (8 Nov, Ben&#x27;s Mac, quiet: load 4-15)</a><a href="#results-7-nov-bens-mac-other-agents-running-load-30-40">Results (7 Nov, Ben&#x27;s Mac, other agents running: load 30-40)</a><a href="#not-there-yet">Not there yet</a></nav>
+<div class="lead"><p>Ben, 7 Nov: "merge in everything from gazebo so its standalone in rust". This page is the
+simulator's <strong>core</strong>: the world, the car, the lidar, the radar, the IMU, the GPS, the wheels
+and the clock. The cameras are their own program (<a href="own-simulator-cameras.html">its page</a>),
+started beside it. The plan: <a href="../designs/2026-11-05_own-simulator.md">the design</a>.</p>
+<pre class="highlight"><code class="language-sh">pixi run sim world:=test_lot gui:=false rviz:=false     # ours: the default since 8 Nov
+pixi run sim-check                                     # the road world's checks, on ours
+pixi run sim simulator:=gazebo world:=test_lot         # Gazebo, as before</code></pre>
+<p><strong>Ours is the default since 8 Nov</strong>: it passed every <code>sim-check</code> leg Gazebo passes (below).
+Gazebo stays, as <code>simulator:=gazebo</code>: to compare, and on a computer with no GPU (GitHub's
+CI, oirp-spss), where our cameras can't draw (<code>sim_cameras</code> says "no GPU to draw with")
+but Gazebo's can, in software (<code>tools/software_gl.sh</code>).</p></div>
+<section class="card"><h2 id="in-one-picture">In one picture</h2>
+<pre class="highlight"><code class="language-text"> ego ─&gt; output mux ─&gt; gazebo_adapter ──/gazebo/cmd_vel──&gt; simulator (Rust)
+                      (actuator model)                      │ world: Gazebo's .sdf files
+                                                            │ car, rays, IMU, GPS, clock
+ gazebo_imu, gazebo_gps, gazebo_radar, gazebo_adapter &lt;─────┘ Gazebo's topics, rates, QoS
+   └─&gt; /sensors/*, /vehicle/*  ─&gt; localization, Nav2, safety: unchanged</code></pre>
+<p>It replaces <code>gz sim</code> <strong>and</strong> its bridges. Every node above them is the same one Gazebo uses.</p>
+</section>
+<section class="card"><h2 id="what-it-gives">What it gives</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Topic</th>
+<th>Rate</th>
+<th>Same as Gazebo?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/clock</code></td>
+<td>1 kHz</td>
+<td>yes: one per step</td>
+</tr>
+<tr>
+<td><code>/gazebo/odom</code>, <code>/vehicle/sim/truth</code></td>
+<td>50 Hz</td>
+<td>yes</td>
+</tr>
+<tr>
+<td><code>/gazebo/imu</code></td>
+<td>50 Hz, noise 0.02 rad/s, 0.2 m/s²</td>
+<td>yes (the xacro's)</td>
+</tr>
+<tr>
+<td><code>/gazebo/navsat</code></td>
+<td>5 Hz, noise 4.5e-6° (0.5 m)</td>
+<td>yes; exact WGS84 from the world's datum</td>
+</tr>
+<tr>
+<td><code>/joint_states</code></td>
+<td>100 Hz</td>
+<td>Gazebo sends 1 kHz; the car's wheels 100 Hz</td>
+</tr>
+<tr>
+<td><code>/sensors/lidar/points</code></td>
+<td>10 Hz, 1800 x 16, 0.5-100 m, 3 cm</td>
+<td>yes: packed as Gazebo's, organised, <code>inf</code> misses</td>
+</tr>
+<tr>
+<td><code>/gazebo/radar/points</code></td>
+<td>10 Hz, 61 x 3, 0.3-8.4 m, 5 cm</td>
+<td>yes</td>
+</tr>
+<tr>
+<td>the three car cameras, the chase camera</td>
+<td>10 Hz, 640 x 360</td>
+<td>yes: <code>aav_sim_cameras</code> draws the same world file</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="the-worlds">The worlds</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>World</th>
+<th>Read</th>
+<th>Triangles</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>empty</code>, <code>road</code>, <code>test_lot</code></td>
+<td><code>aav_gazebo/worlds/*.sdf</code>, with <code>model://stop_sign</code></td>
+<td>2 to 118</td>
+</tr>
+<tr>
+<td><code>campus</code></td>
+<td><code>maps/campus/campus.sdf</code> and its OBJ meshes (<code>pixi run campus</code>)</td>
+<td>595,845, read in 1.2 s</td>
+</tr>
+</tbody>
+</table></div>
+<p>The rays see what Gazebo's lidar sees: the <strong>visuals</strong>. One roof-lidar scan takes 1.7 ms in the
+test lot and 15 ms on the campus (Ben's Mac, 4 threads).</p>
+</section>
+<section class="card"><h2 id="the-car">The car</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Today</td>
+<td><code>gazebo_adapter</code>'s actuator model, then Gazebo's AckermannSteering (±10 m/s², the wheels steer at once), then the bicycle</td>
+</tr>
+<tr>
+<td>Hitting things</td>
+<td>the outline (<code>vehicle.yaml</code> <code>body:</code>) stops at what it meets, at 0.35, 0.8 and 1.3 m up, as Gazebo's physics does. The log says "the car hit something"</td>
+</tr>
+<tr>
+<td>The ground (8 Nov)</td>
+<td>each wheel finds the ground below it (a ray straight down). The car rides up a slope and tilts on it; a step up to 0.1 m (<code>ground_step</code>) it rolls up; a higher one (a 0.3 m kerb) stops it, as a wall does. The truth carries the height and tilt, so the cameras follow</td>
+</tr>
+<tr>
+<td>The trait</td>
+<td><code>sim-core</code> <code>CarModel</code>: <code>step</code>, <code>state</code>, <code>reset</code>, <code>hold</code>. The shared <code>car-model</code> crate goes in behind it at the merge</td>
+</tr>
+<tr>
+<td><code>ActuatorCar</code></td>
+<td>the actuator model itself, to <code>car-model</code>'s rules (exact lags, rate-limited motor, deadband, dead time). Tested; not wired in yet</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="plug-in-points">Plug-in points</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>For</th>
+<th>Where</th>
+<th>What it gets</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cameras, as their own program</td>
+<td><code>/vehicle/sim/truth</code></td>
+<td>the car's pose, 50 Hz, on sim time</td>
+</tr>
+<tr>
+<td>Cameras, in the loop</td>
+<td><code>sim-core</code> <code>SensorPlugin</code></td>
+<td>the world, the car, <code>base_link</code>, the time, at its own period</td>
+</tr>
+<tr>
+<td>The cameras' world</td>
+<td><code>World::shapes</code></td>
+<td>every shape as SDF draws it: box, cylinder, plane, mesh file; pose; colour</td>
+</tr>
+<tr>
+<td>Placing things</td>
+<td><code>/vehicle/sim/spawn_entity</code>, <code>delete_entity</code></td>
+<td><code>simulation_interfaces</code>: an SDF model, a pose</td>
+</tr>
+</tbody>
+</table></div>
+<p>With <code>simulator:=own</code>, <code>gazebo.launch.py</code> starts the cameras (<code>sim_cameras --ros --pose truth
+--world &lt;the world&gt;</code>) and sets <code>gazebo_adapter</code>'s <code>cameras</code> to true, so <code>/system/source</code>
+announces them, as with Gazebo.</p>
+</section>
+<section class="card"><h2 id="head-to-head-with-the-cameras-8-nov-bens-mac-quiet-load-4-15">Head to head, with the cameras (8 Nov, Ben's Mac, quiet: load 4-15)</h2>
+<p>The same <code>sim-check</code> legs on both, one run after the other, nothing else running.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Ours</th>
+<th>Gazebo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sim-check</code> (start-up, contract, sensors, all 3 cameras, lidar, scan, scripted drive, EKF, wheels) x 3</td>
+<td><strong>3 of 3 pass</strong>; 43-49 s a run; EKF vs truth 0.11-0.40 m</td>
+<td>2 of 3: once the EKF never came up in 120 s; 45-46 s; 0.10-0.14 m</td>
+</tr>
+<tr>
+<td><code>--obstacle</code> (the box)</td>
+<td>pass: 0.36 m before it, goal reached after</td>
+<td>pass: 0.28 m</td>
+</tr>
+<tr>
+<td><code>--lidar-obstacle</code> (the post)</td>
+<td>pass: 0.33 m</td>
+<td>pass: 0.25 m</td>
+</tr>
+<tr>
+<td><code>--speed-steps</code>: overshoot</td>
+<td>15.9, 15.2, 10.1 %; within 5 % after 10.9-13.3 s</td>
+<td>the same to 0.1 % and 0.1 s</td>
+</tr>
+<tr>
+<td>Those three legs together</td>
+<td>4 min 5 s</td>
+<td>4 min 22 s</td>
+</tr>
+<tr>
+<td><code>--lane-only</code> (road)</td>
+<td>pass: within 5 cm in 5.4 s, overshoot 3 cm</td>
+<td>pass: 5.1 s, 5 cm</td>
+</tr>
+<tr>
+<td><code>measure lane</code>, a campus road, 120 s</td>
+<td>171 m, error mean 4 cm, lane lost in 0-1 %</td>
+<td>60 m, ended in the other lane, lost in 68 %</td>
+</tr>
+<tr>
+<td><code>drop-in</code>, road world</td>
+<td>every camera, the lidar, the radar at 10 Hz: pass. <code>/perception/voxels/cubes</code> silent (the voxels trial is off)</td>
+<td>not run</td>
+</tr>
+<tr>
+<td><code>--perception</code> (RF-DETR and the stop-sign lock)</td>
+<td><strong>fail</strong>: the detector saw the sign but the lock never came on while driving</td>
+<td>pass: locked at 68 px, stood 3.9 m before it</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The stop sign on ours, what we know:</strong> parked 6 m from it (<code>start_x:=19</code>), RF-DETR finds
+it (score 0.93, 62 px tall: the watcher wants 55) and the lock comes on. Still pictures
+along the road: 0.84-0.94 from 19 m to 4 m away. Gazebo's box at the same place is taller
+(68 px against our 52). While driving, the lock never came on. <span class="badge b-untested">untested</span> why.</p>
+<h3 id="three-times-each-then-the-switch-8-nov-quiet-mac">Three times each, then the switch (8 Nov, quiet Mac)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check, on ours</th>
+<th>Runs</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--perception</code> (RF-DETR, the stop-sign lock)</td>
+<td>3</td>
+<td><strong>3 of 3 pass</strong>: locked at x = 17.7-18.2 m (56-71 px), stood 3.9-4.4 m before the sign. Before them, 4 of 5 with a listener</td>
+</tr>
+<tr>
+<td><code>--faults</code> (14 faults, the watchdog's own two)</td>
+<td>3</td>
+<td><strong>3 of 3</strong>: 25 of 25 checks each</td>
+</tr>
+<tr>
+<td><code>--drive-to-point-only</code> (1 and 3 m/s, cancel, e-stop, GPS fault)</td>
+<td>3</td>
+<td><strong>3 of 3</strong>: 17 of 17 checks each; B within 0.09-0.27 m</td>
+</tr>
+<tr>
+<td><code>--obstacle</code> with the box drawn in the pictures</td>
+<td>1</td>
+<td>pass: 0.35 m before it; the cameras drew it ("placed models: [obstacle]")</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The stop sign:</strong> the lock never came on while driving in 1 of the first 5 runs, and in
+none of the next 3. A listener logged every box: a picture every 0.1 s, no gaps, the
+detector's box 50 ms after each picture's stamp, growing smoothly as the car came near.
+No fault found in the sign's size, height or pose, or the camera's mount; the one failure's
+cause is not known. Our box is smaller than Gazebo's at the same place (52 px against 68);
+the lens's own sum gives about 49 px, so ours is the nearer.</p>
+<p><strong>Found and fixed on the way:</strong> with <code>faults:=true</code> our front left camera_info went to the
+relay's topic too, so <code>--faults</code> waited for the lens and failed; now only the picture moves
+(<code>--image-topic</code>), as Gazebo's bridge does.</p>
+<p>So on 8 Nov <code>DEFAULT_SIMULATOR</code> became <code>own</code>. <code>sim-check</code> says which simulator it runs, every
+time (<code>simulator:=</code>).</p>
+</section>
+<section class="card"><h2 id="results-7-nov-bens-mac-other-agents-running-load-30-40">Results (7 Nov, Ben's Mac, other agents running: load 30-40)</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check</th>
+<th>Ours</th>
+<th>Gazebo</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>drop-in</code>, test lot</td>
+<td>odom, status, IMU, GPS, radar, lidar: pass. Cameras: nothing (none yet)</td>
+<td>pass (5 Nov)</td>
+</tr>
+<tr>
+<td>A Nav2 goal, (14, 0) in the test lot</td>
+<td>succeeded; the truth 0.4 m short, 0.9 m aside</td>
+<td>succeeded (5 Nov)</td>
+</tr>
+<tr>
+<td><code>sim-check</code>: start-up, contract, lidar, scan, scripted drive, EKF vs truth (0.05-0.20 m), wheels vs IMU</td>
+<td>pass</td>
+<td>pass</td>
+</tr>
+<tr>
+<td><code>--lidar-obstacle</code> (the post)</td>
+<td>pass: stopped 0.20 m before it</td>
+<td>pass</td>
+</tr>
+<tr>
+<td><code>--obstacle</code> (the box)</td>
+<td>stopped <strong>0.33 m</strong> before it; then the goal failed: a TF lookup ran late on the loaded Mac</td>
+<td>0.23 m (3 Nov)</td>
+</tr>
+<tr>
+<td><code>--speed-steps</code> (-0.5, 1, 2 m/s): overshoot</td>
+<td>15.8, 15.2, 10.1 %; within 5 % after 10.9-13.3 s</td>
+<td>15.9, 15.2, 10.1 %; 11-13 s (TODO 27)</td>
+</tr>
+<tr>
+<td><code>--drive-to-point</code>, 1 m/s</td>
+<td>7 of 8 pass, B within 0.11-0.34 m; the +150° leg refused (B inside the tightest turn from where the last leg stopped)</td>
+<td>pass (0.2)</td>
+</tr>
+<tr>
+<td><code>--drive-to-point</code>, 3 m/s</td>
+<td>3 of 4 pass, B within 0.05-0.12 m; one leg held by the sensor watchdog (a stale sensor on the loaded Mac)</td>
+<td>pass (0.2)</td>
+</tr>
+<tr>
+<td>Real-time factor</td>
+<td>0.71-1.00 under that load</td>
+<td>not run here: its renderer didn't load in this worktree</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="not-there-yet">Not there yet</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Missing</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hills in a world</td>
+<td>the ground works on any mesh; none of our worlds has a slope yet</td>
+</tr>
+<tr>
+<td>The car's own body in the lidar</td>
+<td>Gazebo's lidar may see the car; ours doesn't</td>
+</tr>
+<tr>
+<td>The Bevy window drawing ours</td>
+<td>the window reads the same topics, so it works as with Gazebo; not run yet</td>
+</tr>
+<tr>
+<td><code>ActuatorCar</code> driving the node</td>
+<td>the Python actuator model stays in front, as with Gazebo</td>
+</tr>
+</tbody>
+</table></div></section>
+<nav class="prevnext"><a class="prev" href="full-simulation.html"><small>Previous</small>← Full simulation</a>
+<a class="next" href="own-simulator-cameras.html"><small>Next</small>Our simulator&#x27;s cameras →</a></nav>
+</main>
+<footer>Source: <code>docs/own-simulator.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

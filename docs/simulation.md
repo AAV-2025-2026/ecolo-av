@@ -43,7 +43,15 @@ driver. Publish `false` to clear it.
 pixi run sim                     # the empty world, with Nav2
 pixi run sim world:=test_lot     # the walled test lot, with its map
 pixi run sim world:=road         # the bench's road, for the car's camera and radar
+pixi run sim simulator:=gazebo   # Gazebo itself, not our simulator
 ```
+
+**Since 8 Nov the default is [our own simulator](own-simulator.md)** (`simulator:=own`): it
+plays `gz sim` and its bridges, on the same worlds and topics, so everything else runs
+unchanged. It passed every `sim-check` leg Gazebo passes, three times each. Gazebo stays as
+`simulator:=gazebo`: to compare, and on a computer with no GPU, where only Gazebo's cameras
+draw (in software: `tools/software_gl.sh pixi run sim simulator:=gazebo`). The rest of this
+page says Gazebo: both play the same part.
 
 | Argument | Default | Means |
 |---|---|---|
@@ -194,7 +202,7 @@ To drive it:
   Start it with `gui:=false`, and watch in RViz or Foxglove instead. The empty and
   test_lot worlds render nothing, so they run anywhere. The road world renders the cameras
   and the lidar: on Linux with no GPU, start it through `tools/software_gl.sh`, as
-  `tools/software_gl.sh pixi run sim gui:=false` (Mesa's software OpenGL). Without it,
+  `tools/software_gl.sh pixi run sim simulator:=gazebo gui:=false` (Mesa's software OpenGL). Without it,
   Gazebo crashes as the world loads (`Unable to load Ogre Plugin`), and the car never
   appears. [[works]] on oirp-spss, 23 Oct.
 

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Upgrade each computer: the quick note · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/upgrade.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Upgrade each computer: the quick note</h1>
+<div class="meta">2 min read · 5 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="release-0.2.html">The 0.2 guide</a>
+<a href="whats-new.html">What&#x27;s new</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-evening.html">Tonight: drive as is</a>
+<a href="car-day.html">Car day</a>
+<a href="car-setup.html">Car setup</a>
+<a class="here" href="upgrade.html">Upgrade each computer</a>
+<a href="tests.html">Every test</a>
+<a href="know-the-car.html">Know the car</a>
+<span class="sep">Learn:</span>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-speed.html">Learn: speed</a>
+<a href="learn-lidar.html">Learn: lidar</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
+<span class="sep">Reference:</span>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="path-followers.html">Path followers</a>
+<a href="switches.html">Switches</a>
+<a href="trials.html">Trials</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="hardware-debug.html">Hardware debug</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="geofence.html">The geofence</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="esp32-safety.html">ESP32 safety rules</a>
+<a href="esp32-cpp-parity.html">ESP32 C++ parity</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#which-computer-is-which">Which computer is which</a><a href="#for-the-esp32-a-usb-cable-from-a-laptop-with-the-repo">For the ESP32 (a USB cable, from a laptop with the repo)</a><a href="#for-a-pi-with-ubuntu-motor_pi-localization-dash">For a Pi with Ubuntu (motor_pi, localization, dash)</a><a href="#for-a-pi-with-pi-os-the-camera-pis-they-stay-on-pi-os">For a Pi with Pi OS (the camera Pis: they stay on Pi OS)</a><a href="#for-the-orin">For the Orin</a></nav>
+<div class="lead"><p>One page per kind of computer. The full steps: <a href="car-setup.html">Car setup</a> and, for the
+ESP32, <a href="esp32-bench.html">The ESP32 on the bench</a>. <strong>Back up first, every time.</strong></p></div>
+<section class="card"><h2 id="which-computer-is-which">Which computer is which</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Computer</th>
+<th>Role</th>
+<th>Plugged in</th>
+<th>Runs</th>
+<th>Its machine file</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Jetson Orin</td>
+<td><code>orin</code></td>
+<td>the lidar (over the network), CAN</td>
+<td>the brain: ego, Nav2, localization, perception</td>
+<td><code>machines/orin.yaml</code></td>
+</tr>
+<tr>
+<td>Pi wired to the ESP32</td>
+<td><code>motor_pi</code></td>
+<td>the ESP32 (UART)</td>
+<td>the bridge to the ESP32</td>
+<td><code>machines/motor_pi.yaml</code></td>
+</tr>
+<tr>
+<td>IMU and GPS Pi</td>
+<td><code>localization</code></td>
+<td>the IMU and the GPS (USB)</td>
+<td>only their drivers; the Orin does the maths</td>
+<td><code>machines/localization.yaml</code></td>
+</tr>
+<tr>
+<td>Camera Pi(s)</td>
+<td><code>camera_pi</code></td>
+<td>the two front cameras</td>
+<td>video streams, no ROS (Pi OS)</td>
+<td>none</td>
+</tr>
+<tr>
+<td>Dashboard Pi</td>
+<td><code>dash</code></td>
+<td>the two screens</td>
+<td>the HUD and the map</td>
+<td>none</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>The lidar</strong> is not a computer: it sends its packets straight to the Orin.</li>
+<li><strong>The ESP32 has no YAML.</strong> Its settings (steering limits, brake positions, speed limits,
+  timeouts) are built into its firmware. Its <code>CONFIG</code> line shows them all at boot.</li>
+</ul>
+</section>
+<section class="card"><h2 id="for-the-esp32-a-usb-cable-from-a-laptop-with-the-repo">For the ESP32 (a USB cable, from a laptop with the repo)</h2>
+<pre class="highlight"><code class="language-sh">pixi run esp tools                       # once per laptop
+vendor/cargo-tools/bin/espflash read-flash 0 0x400000 backup-esp32.bin
+                                         # the backup of the C++ (4 MB): keep it, never in git
+pixi run esp walk                        # talks you through: build, flash, the first check</code></pre>
+<p>To go back to the C++: <code>vendor/cargo-tools/bin/espflash write-bin 0 backup-esp32.bin</code>.
+No special build: <code>pixi run esp flash</code> builds the car's one.</p>
+</section>
+<section class="card"><h2 id="for-a-pi-with-ubuntu-motor_pi-localization-dash">For a Pi with Ubuntu (<code>motor_pi</code>, <code>localization</code>, <code>dash</code>)</h2>
+<pre class="highlight"><code class="language-sh"># make an image of the SD card first
+bash car_setup.sh &lt;role&gt;                 # a dry run: read what it will do
+bash car_setup.sh &lt;role&gt; --apply         # do it</code></pre>
+<p><code>motor_pi</code> won't upgrade until the Rust ESP32 has passed car day's session 6
+(<code>--after-esp32</code>).</p>
+</section>
+<section class="card"><h2 id="for-a-pi-with-pi-os-the-camera-pis-they-stay-on-pi-os">For a Pi with Pi OS (the camera Pis: they stay on Pi OS)</h2>
+<pre class="highlight"><code class="language-sh"># make an image of the SD card first
+bash car_setup.sh camera_pi upgrade --apply
+bash car_setup.sh camera_pi services --apply</code></pre>
+</section>
+<section class="card"><h2 id="for-the-orin">For the Orin</h2>
+<pre class="highlight"><code class="language-sh"># a full image first (NVIDIA's backup, from a host PC): car-day.md B3
+bash car_setup.sh orin                   # a dry run
+bash car_setup.sh orin --apply</code></pre>
+<p>Later (Day B): the reflash to JetPack 7.2, then <code>car_setup.sh orin</code> again. Not yet run
+on the real Orin.</p></section>
+<nav class="prevnext"><a class="prev" href="car-setup.html"><small>Previous</small>← Car setup</a>
+<a class="next" href="tests.html"><small>Next</small>Every test →</a></nav>
+</main>
+<footer>Source: <code>docs/upgrade.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

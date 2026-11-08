@@ -7,7 +7,7 @@
 <!-- Generated from docs/car-day.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Car day: the runbook</h1>
-<div class="meta">69 min read · 31 sections</div></header>
+<div class="meta">70 min read · 31 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -29,10 +29,11 @@
 <a href="car-evening.html">Tonight: drive as is</a>
 <a class="here" href="car-day.html">Car day</a>
 <a href="car-setup.html">Car setup</a>
+<a href="rollout.html">Rolling out on the car</a>
 <a href="tests.html">Every test</a>
 <a href="know-the-car.html">Know the car</a>
-<a href="measure-the-car.html">Measure the car</a>
 <span class="sep">Learn:</span>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <a href="learn-car.html">The car, box by box</a>
@@ -47,8 +48,8 @@
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
 <a href="campus.html">The campus</a>
-<a href="maps-and-position.html">Maps and position</a>
 <span class="sep">Reference:</span>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <a href="learn-can.html">Learn: CAN</a>
 <a href="status.html">Status</a>
@@ -57,6 +58,10 @@
 <a href="path-followers.html">Path followers</a>
 <a href="switches.html">Switches</a>
 <a href="trials.html">Trials</a>
+<a href="mppi-lag.html">MPPI with lag</a>
+<a href="own-costmap.html">Our own costmap</a>
+<a href="own-planner.html">Our own planner</a>
+<a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -74,12 +79,15 @@
 <a href="simulation.html">Simulation</a>
 <a href="sim-and-car.html">Sim and the car</a>
 <a href="full-simulation.html">Full simulation</a>
+<a href="own-simulator.html">Our own simulator</a>
+<a href="own-simulator-cameras.html">Our simulator&#x27;s cameras</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="hardware-debug.html">Hardware debug</a>
 <a href="learn-state-space.html">Learn: state space</a>
 <a href="vehicle-model.html">The car as a linear model</a>
+<a href="car-model.html">One car model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="geofence.html">The geofence</a>
 <a href="sources-and-targets.html">Sources and targets</a>
@@ -1408,9 +1416,28 @@ ground move</strong>, with whatever firmware is on the ESP32 now. Wheels off the
 <td>the file</td>
 <td></td>
 </tr>
+<tr>
+<td>6</td>
+<td>The brake's limits, with the hardware lead: in Pololu's Jrk program (on its USB), the brake actuator's target and feedback at <strong>released</strong>, at the <strong>touch point</strong> (where the pads start to grip: turn the wheel by hand while it moves slowly) and at <strong>full</strong></td>
+<td>released <strong><em>_</em>_ touch </strong><strong><em>_ full </em></strong>___ (the firmware uses 400 and 3500, never measured)</td>
+<td></td>
+</tr>
+<tr>
+<td>7</td>
+<td>The most the brake may ever be pushed (the hardware lead's choice): a target, a pressure or the actuator's current limit; and can it <strong>hold full brake for minutes</strong> without overheating (the ESP32 holds full at boot)</td>
+<td>max safe <strong><em>_</em>_ ; current limit </strong><strong><em>_ A ; hold OK? </em></strong>___</td>
+<td></td>
+</tr>
+<tr>
+<td>8</td>
+<td>Does the brake actuator report its position (analog feedback)?</td>
+<td>yes / no</td>
+<td></td>
+</tr>
 </tbody>
 </table></div>
-<p><strong>Stop point:</strong> 1-2 pass; 3-4 written down. The brake's strength is measured on the
+<p><strong>Stop point:</strong> 1-2 pass; 3-8 written down. Rows 6-8 are what the brake needs, like the
+steering's ends: the safe range a stronger stop may use when the car is loaded. The brake's strength is measured on the
 ground later (tests 4.3, <a href="know-the-car.html">Know the car</a>).</p>
 </section>
 <section class="card"><h2 id="a7b-the-motor-pis-uart-ready">A7b · The Motor Pi's UART, ready</h2>

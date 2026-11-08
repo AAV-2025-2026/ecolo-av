@@ -378,7 +378,7 @@ discrete speed loop against the spine's own code, line by line.
 
 ## 6. Gazebo's car against the model
 
-Gazebo's car runs our actuator model (`aav_gazebo` `actuator_model.py`, the same
+Gazebo's car runs our car model (`aav_description` `car_model.py`, [One car model](car-model.md), the same
 numbers), then Gazebo's own Ackermann plugin:
 
 | | Speed | Steering |
@@ -461,8 +461,8 @@ In code, `model.with_measured(report.yaml)` takes the actuator tests' report as 
 
 **One key list.** Three readers take `vehicle.yaml`'s `actuators:`: this model, Gazebo's
 actuator model and ego. Each one uses a key or lists it as ignored (`NOT_LINEAR` here,
-`IGNORED` in `actuator_model.py`). `tools/tests/test_vehicle_model_tool.py` fails if a new
-key reaches only one. Gazebo ignores the dead times for now.
+`IGNORED` in `car_model.py`). `tools/tests/test_vehicle_model_tool.py` fails if a new
+key reaches only one. Since 7 Nov the car model (and so Gazebo) uses the dead times too: 0 until measured.
 
 **Check the path before you paste.** Each number the tests print says which signal it goes
 from and to ([Trusting the fits](actuator-tests.md#trusting-the-fits)). `throttle_lag` is

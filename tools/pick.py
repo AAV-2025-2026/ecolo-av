@@ -47,6 +47,8 @@ FOLLOWERS = [
      ['tracker:=mpc', 'reversing:=false']),
     ('mpc_full', 'ours: MPC that plans the speed too',
      ['tracker:=mpc_full', 'reversing:=false']),
+    ('mppi_lag', "ours: Nav2's MPPI in Rust, knowing the steering and pedals lag",
+     ['tracker:=mppi_lag', 'reversing:=false']),
 ]
 
 # Who draws the route: Nav2's planner (planner:=). Gazebo, the lot tour, MPPI: hybrid
@@ -63,6 +65,8 @@ PLANNERS = [
      ['planner:=theta_star']),
     ('diffusion', 'a model draws it, a guard checks it, the lattice if it fails (a trial)',
      ['planner:=diffusion']),
+    ('own', "our own planner: Nav2's lattice in Rust, beside Nav2's (a trial)",
+     ['planner:=own']),
 ]
 
 # Where-am-I finders that run beside the EKF and are scored (they never steer yet); with

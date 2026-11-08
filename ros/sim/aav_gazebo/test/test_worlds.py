@@ -64,6 +64,33 @@ def test_the_road_and_lot_worlds_render_sensors():
     assert renders('test_lot')
 
 
+def test_both_simulators_render_cameras_where_the_world_has_sensors():
+    road = worlds.world_file(str(PACKAGE), 'road')
+    empty = worlds.world_file(str(PACKAGE), 'empty')
+    assert worlds.DEFAULT_SIMULATOR == 'own'
+    for simulator in ('gazebo', 'own'):
+        assert worlds.has_cameras(road, simulator)
+        assert not worlds.has_cameras(empty, simulator)
+    with pytest.raises(ValueError, match='simulator:=unity'):
+        worlds.check_simulator('unity')
+
+
+def test_our_cameras_run_from_the_repository_on_the_world_file():
+    root = worlds.repo_root(__file__)
+    assert (Path(root) / worlds.SIM_CAMERAS).is_file()
+    cmd = worlds.sim_cameras_command(root, '/w/road.sdf', ['/m1', '/m2'], chase=False,
+                                     relay='/gazebo/camera/front_left/image_raw')
+    assert cmd[:2] == ['cargo', 'run'] and '--features' in cmd
+    tail = cmd[cmd.index('--') + 1:]
+    assert tail[:3] == ['--ros', '--pose', 'truth']
+    assert tail[tail.index('--world') + 1] == '/w/road.sdf'
+    assert tail[tail.index('--models') + 1] == '/m1:/m2'
+    assert tail[tail.index('--cameras') + 1] == 'front_left,front_right,rear'
+    relay = 'front_left=/gazebo/camera/front_left/image_raw'
+    assert tail[tail.index('--image-topic') + 1] == relay
+    assert '--cameras' not in worlds.sim_cameras_command(root, 'w', [])
+
+
 def test_every_world_is_named_aav_and_sits_on_the_datum():
     navsat = SRC / 'localization' / 'aav_localization' / 'config' / 'navsat.yaml'
     lat, lon, _ = yaml.safe_load(navsat.read_text())['navsat_transform']['ros__parameters'][

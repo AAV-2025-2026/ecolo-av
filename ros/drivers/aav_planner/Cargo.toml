@@ -1,0 +1,17 @@
+[workspace]
+resolver = "2"
+# lattice-planner: our own path planner (Nav2's Smac State Lattice, ported). No ROS:
+#   cargo test -p lattice-planner
+#   cargo run --release -p lattice-planner --example scenes    (the hand-made maps, timed)
+# planner-node: the ROS node (rclrs), binary planner. colcon builds it through CMakeLists.txt.
+members = ["crates/lattice-planner", "crates/planner-node"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+# Nav2's nav2_smac_planner, which lattice-planner ports, is Apache-2.0 (PROVENANCE.md).
+license = "Apache-2.0"
+publish = false
+
+[profile.test]
+opt-level = 3

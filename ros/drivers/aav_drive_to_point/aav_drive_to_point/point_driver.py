@@ -41,6 +41,8 @@ import signal
 import time
 
 from aav_actuator_tests.safety import source_kind, taken_over
+from aav_description import stop_law, vehicle
+from aav_description.car_model import ActuatorConfig
 from aav_drive_to_point import rules
 from aav_drive_to_point.approach import Approach, planned_deceleration, STOPPING
 from aav_drive_to_point.drive import Drive, Steering
@@ -63,7 +65,10 @@ from robot_localization.srv import FromLL
 from sensor_msgs.msg import NavSatFix, NavSatStatus
 from std_msgs.msg import Bool
 
-EGO_PARAMS = ('max_speed', 'max_acceleration', 'max_deceleration')
+EGO_PARAMS = ('max_speed', 'max_acceleration', 'max_deceleration', 'max_jerk')
+# How it slows into B: approach.py's sqrt(2 a (d - lead v)) (the default), or hybrid, the
+# stopping law (aav_description stop_law.py), a trial until it wins.
+STOP_LAWS = ('approach', 'hybrid')
 TAKEOVER_TIME = 0.3   # s of twist_mux passing someone else's commands: stop
 ZEROS = 5             # zero commands at the end, so twist_mux and ego see the stop
 
@@ -85,8 +90,13 @@ class PointDriver(Node):
             ('wheelbase', 1.57), ('max_steering_angle', 0.5),
             ('max_distance', 200.0), ('pose_timeout', 0.5), ('gps_timeout', 2.0),
             ('require_gps', True), ('watchdog_timeout', 1.0), ('stuck_time', 5.0),
-            ('still_speed', 0.05), ('still_time', 1.0))}
+            ('still_speed', 0.05), ('still_time', 1.0), ('stop_law', 'approach'))}
         self.p = p
+        if p['stop_law'] not in STOP_LAWS:
+            raise ValueError(f"stop_law:={p['stop_law']}: pick one of {', '.join(STOP_LAWS)}")
+        # hybrid: the stopping law, from the shared car model's brake (vehicle.yaml).
+        self.car = (ActuatorConfig.from_vehicle_yaml(vehicle.config_path())
+                    if p['stop_law'] == 'hybrid' else None)
         self.limits = rules.Limits(max_distance=p['max_distance'],
                                    pose_timeout=p['pose_timeout'],
                                    gps_timeout=p['gps_timeout'], require_gps=p['require_gps'],
@@ -250,8 +260,11 @@ class PointDriver(Node):
         cruise = min(cruise, caps.get('max_speed', 1.0))
         accel = min(accel, caps.get('max_acceleration', accel))
         decel = min(decel, caps.get('max_deceleration', decel))
+        curve = None if self.car is None else stop_law.from_car_model(
+            self.car, caps.get('max_deceleration', 2.0), caps.get('max_jerk', 2.0))
         return Approach(cruise=cruise, accel=accel, decel=decel, lead=p['brake_lead'],
-                        stop_band=p['stop_band'], creep=min(p['creep'], cruise)), None
+                        stop_band=p['stop_band'], creep=min(p['creep'], cruise),
+                        curve=curve), None
 
     async def execute(self, handle):
         # A coroutine on one thread, driven by a timer, as aav_scripted's driver: a

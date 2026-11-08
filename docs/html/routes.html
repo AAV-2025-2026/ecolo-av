@@ -7,7 +7,7 @@
 <!-- Generated from docs/routes.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Street routes (PLAN S8)</h1>
-<div class="meta">8 min read · 7 sections</div></header>
+<div class="meta">13 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -29,10 +29,11 @@
 <a href="car-evening.html">Tonight: drive as is</a>
 <a href="car-day.html">Car day</a>
 <a href="car-setup.html">Car setup</a>
+<a href="rollout.html">Rolling out on the car</a>
 <a href="tests.html">Every test</a>
 <a href="know-the-car.html">Know the car</a>
-<a href="measure-the-car.html">Measure the car</a>
 <span class="sep">Learn:</span>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <a href="learn-car.html">The car, box by box</a>
@@ -47,8 +48,8 @@
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
 <a href="campus.html">The campus</a>
-<a href="maps-and-position.html">Maps and position</a>
 <span class="sep">Reference:</span>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <a href="learn-can.html">Learn: CAN</a>
 <a href="status.html">Status</a>
@@ -57,6 +58,10 @@
 <a href="path-followers.html">Path followers</a>
 <a href="switches.html">Switches</a>
 <a href="trials.html">Trials</a>
+<a href="mppi-lag.html">MPPI with lag</a>
+<a href="own-costmap.html">Our own costmap</a>
+<a href="own-planner.html">Our own planner</a>
+<a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a class="here" href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -74,12 +79,15 @@
 <a href="simulation.html">Simulation</a>
 <a href="sim-and-car.html">Sim and the car</a>
 <a href="full-simulation.html">Full simulation</a>
+<a href="own-simulator.html">Our own simulator</a>
+<a href="own-simulator-cameras.html">Our simulator&#x27;s cameras</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="hardware-debug.html">Hardware debug</a>
 <a href="learn-state-space.html">Learn: state space</a>
 <a href="vehicle-model.html">The car as a linear model</a>
+<a href="car-model.html">One car model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="geofence.html">The geofence</a>
 <a href="sources-and-targets.html">Sources and targets</a>
@@ -103,9 +111,10 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#which-router-the-survey">Which router? (the survey)</a><a href="#run-it">Run it</a><a href="#the-parts">The parts</a><a href="#topics">Topics</a><a href="#what-was-tested-16-october-a-mac">What was tested (16 October, a Mac)</a><a href="#things-to-know">Things to know</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-picture">The picture</a><a href="#which-router-the-survey">Which router? (the survey)</a><a href="#run-it">Run it</a><a href="#on-the-campus">On the campus</a><a href="#the-parts">The parts</a><a href="#topics">Topics</a><a href="#what-was-tested-16-october-a-mac">What was tested (16 October, a Mac)</a><a href="#things-to-know">Things to know</a></nav>
 <div class="lead"><p>Pick a destination, get the way there <strong>along real streets</strong>, and hand it to Nav2 as GPS
-waypoints. Built 16 October.</p>
+waypoints. Built 16 October. <strong>On the campus</strong> (7 Nov): by a building's name, on the
+campus's own road graph, no server: <a href="#on-the-campus">On the campus</a>.</p>
 <div class="admonition warning">
 <p class="admonition-title">For real streets later: the lot first</p>
 <p>This is for driving on streets, after the car has proven itself in a lot (PLAN C8, C9).
@@ -232,6 +241,235 @@ tools/ros.sh ros2 service call /drivers/nav/route/follow std_srvs/srv/Trigger</c
 <p><code>ROUTES_DIR=/elsewhere</code> puts it all somewhere else; <code>ROUTES_PBF=file.osm.pbf</code> uses your
 own extract (Geofabrik's Ontario, 1 GB, for a bigger area).</p>
 </section>
+<section class="card"><h2 id="on-the-campus">On the campus</h2>
+<p>Directions to a building, Tesla-like (Ben, 7 Nov: TODO 140). Say where; the car gets the
+way along the campus roads, as waypoints for Nav2.</p>
+<pre class="highlight"><code>"Fieldhouse"  ──►  the place's middle  ──►  the nearest road the car may use
+car's GPS fix ──►  the nearest road    ──►  shortest way on the campus graph ──► waypoints</code></pre>
+<h3 id="run-it_1">Run it</h3>
+<pre class="highlight"><code class="language-bash">pixi run campus                    # once: the map, the world (about 10 s)
+pixi run campus-route Fieldhouse   # no ROS: 453 m from P4 ...
+pixi run campus-route --list       # every place it knows</code></pre>
+<p>In Gazebo (the car starts in lot P4):</p>
+<pre class="highlight"><code class="language-bash">pixi run sim world:=campus reversing:=false gui:=false rviz:=false geofence_radius:=600
+tools/ros.sh --local ros2 launch aav_routes street_router.launch.py \
+  router:=campus use_sim_time:=true speed:=2.5
+tools/ros.sh --local ros2 topic pub --once /drivers/nav/route/place std_msgs/msg/String "{data: Fieldhouse}"
+tools/ros.sh --local ros2 service call /drivers/nav/route/follow std_srvs/srv/Trigger</code></pre>
+<p><code>geofence_radius:=600</code>: the fence is a circle round the start, 200 m by default; most of
+the campus is further.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Say where</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a place's name</td>
+<td><code>/drivers/nav/route/place</code>: "Mackenzie Building", "minto", "P4" (any case, part of a name if only one fits)</td>
+</tr>
+<tr>
+<td>a lat/lon</td>
+<td><code>/drivers/nav/route/destination</code>, as on streets</td>
+</tr>
+<tr>
+<td>a click on a map</td>
+<td><code>/drivers/nav/route/goal</code> (a map point), as on streets</td>
+</tr>
+</tbody>
+</table></div>
+<p>The route shows where the screens already draw <code>/drivers/nav/route/path</code> (<code>nav_msgs/Path</code>,
+map frame, latched): the map window, RViz, Foxglove.</p>
+<h3 id="why-our-own-small-graph-not-valhalla">Why our own small graph, not Valhalla</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Campus graph (picked)</th>
+<th>Valhalla on a campus extract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Server</td>
+<td>none: in <code>street_router</code></td>
+<td><code>valhalla_service</code>, tiles built first</td>
+</tr>
+<tr>
+<td>Its map</td>
+<td><code>maps/carla/carleton.osm</code>, the one Gazebo's world and Nav2's map come from</td>
+<td>a <code>.pbf</code>: a second download or a conversion</td>
+</tr>
+<tr>
+<td>Roads</td>
+<td>exactly the kinds <code>campus_world.py</code> draws free on Nav2's map</td>
+<td>its car profile avoids parking aisles and private service roads: most of a campus</td>
+</tr>
+<tr>
+<td>Size</td>
+<td>1,665 corners, 1,749 road pieces; a route in about 2 ms</td>
+<td>built for a city</td>
+</tr>
+<tr>
+<td>Licence</td>
+<td>ours</td>
+<td>MIT</td>
+</tr>
+</tbody>
+</table></div>
+<p>So a small Dijkstra in Python, with tests. Valhalla stays for real streets.</p>
+<h3 id="the-site-file">The site file</h3>
+<p><code>ros/drivers/aav_routes/config/campus_site.yaml</code>: the first piece of TODO 100's site file.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>datum</code></td>
+<td>must be <code>navsat.yaml</code>'s (a test checks)</td>
+</tr>
+<tr>
+<td><code>osm</code></td>
+<td>the map the graph is built from</td>
+</tr>
+<tr>
+<td><code>roads</code></td>
+<td>road kinds the car may use. Not trunk or primary (Bronson, the Airport Parkway); never footways, paths, cycleways, tunnels, <code>access=no</code></td>
+</tr>
+<tr>
+<td><code>oneway</code></td>
+<td>one-way roads driven one way (true)</td>
+</tr>
+<tr>
+<td><code>max_snap</code></td>
+<td>80 m: a place further from any road has no route</td>
+</tr>
+<tr>
+<td><code>places</code></td>
+<td>19 named places: engineering, the middle, sport, lots. Any building or lot OpenStreetMap names works too (76 in all)</td>
+</tr>
+</tbody>
+</table></div>
+<p>A place's point is the middle of its building. The route ends on the nearest road to it:
+up to 56 m away (Tory). Add <code>stop: [lat, lon]</code> to a place for the real drop-off point.</p>
+<h3 id="routes-from-p4-no-ros">Routes from P4 (no ROS)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>To</th>
+<th>Length</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fieldhouse</td>
+<td>453 m</td>
+</tr>
+<tr>
+<td>Richcraft Hall</td>
+<td>592 m</td>
+</tr>
+<tr>
+<td>P18</td>
+<td>634 m</td>
+</tr>
+<tr>
+<td>Minto Centre</td>
+<td>956 m</td>
+</tr>
+<tr>
+<td>Mackenzie Building</td>
+<td>1,091 m</td>
+</tr>
+<tr>
+<td>MacOdrum Library</td>
+<td>1,480 m</td>
+</tr>
+</tbody>
+</table></div>
+<p>Long ways round are the map's: one-way roads, and buildings whose nearest road is a dead
+end. Gazebo's map lets Nav2 go either way on a one-way road; the route doesn't.</p>
+<h3 id="what-was-tested-7-8-nov-a-mac">What was tested (7-8 Nov, a Mac)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test_campus_graph.py</code>: a made-up map, 19 tests; every site place reached from P4 on the real map</td>
+<td>all pass</td>
+</tr>
+<tr>
+<td><code>test_street_router.py</code>: a place by name, with a fake car and Nav2 (<code>colcon test</code>)</td>
+<td>passes</td>
+</tr>
+<tr>
+<td>Gazebo, <code>world:=campus</code>, headless: P4 to <strong>Fieldhouse</strong> (route 453 m, 18 waypoints)</td>
+<td><strong>did not arrive</strong> (below)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The route, the waypoints and the follow call all worked. Nav2 did not finish the drive:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Run</th>
+<th>Drove</th>
+<th>Stopped at</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>reversing:=false</code></td>
+<td>45 m in 50 s</td>
+<td>the lot's exit, a sharp right turn</td>
+<td>MPPI: "Optimizer fail to compute path", then patience exceeded on every try</td>
+</tr>
+<tr>
+<td><code>reversing:=true</code></td>
+<td>310 m in 300 s (sim), through the lot's exit after a 90 s three-point turn</td>
+<td>the bend by the roundabout, 143 m short</td>
+<td>the car ended on a blocked cell at the road's edge: the planner said "Start occupied" from then on</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What it shows.</strong> Straight roads are fine: about 1.4 m/s between the bends. The bends are
+not. Each waypoint is a Nav2 goal <em>at</em> the corner, facing the next road, so the car must
+stop on the corner already turned. Our car can't turn that tightly there.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Next (TODO 140)</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>put a bend's waypoint a few metres <em>before</em> the corner, facing along the road in</td>
+<td>no stop half-turned at a corner; Nav2 plans the turn itself</td>
+</tr>
+<tr>
+<td>or send one goal through all the points (Nav2's <code>navigate_through_poses</code>)</td>
+<td>no stop at each waypoint at all</td>
+</tr>
+<tr>
+<td><code>stop:</code> points for the places, measured on the day</td>
+<td>the middle of a building is not where a car pulls up</td>
+</tr>
+</tbody>
+</table></div>
+<p>NDT was off in these runs (its campus floor is still TODO 121); the EKF used GPS.</p>
+</section>
 <section class="card"><h2 id="the-parts">The parts</h2>
 <div class="table-wrap"><table>
 <thead>
@@ -256,6 +494,21 @@ own extract (Geofabrik's Ontario, 1 GB, for a bigger area).</p>
 <td>Its settings</td>
 <td><code>config/street_router.yaml</code></td>
 <td>router URL, spacing, <code>max_length</code></td>
+</tr>
+<tr>
+<td>The campus graph, no ROS</td>
+<td><code>aav_routes/campus_graph.py</code></td>
+<td>roads from the <code>.osm</code>, places, snapping, Dijkstra</td>
+</tr>
+<tr>
+<td>The campus's site file</td>
+<td><code>config/campus_site.yaml</code></td>
+<td>roads the car may use, named places</td>
+</tr>
+<tr>
+<td>Directions without ROS</td>
+<td><code>tools/campus_route.py</code></td>
+<td><code>pixi run campus-route</code></td>
 </tr>
 <tr>
 <td>The map window</td>
@@ -332,6 +585,11 @@ own extract (Geofabrik's Ontario, 1 GB, for a bigger area).</p>
 <td><code>/drivers/nav/route/goal</code></td>
 <td><code>geometry_msgs/PoseStamped</code> (map)</td>
 <td>in: where to go, as a map point</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/place</code></td>
+<td><code>std_msgs/String</code></td>
+<td>in: where to go, by name (<code>router: campus</code> only)</td>
 </tr>
 <tr>
 <td><code>/drivers/nav/route/waypoints</code></td>

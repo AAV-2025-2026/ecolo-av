@@ -49,6 +49,30 @@ pixi run dev-window --cubes 60000 --seconds 8 --screenshot /tmp/window.png
 | V | outline every live cube | S | live scan |
 | N | NDT's cells, dark to light purple (off, the default: cubes by height) | P | plan |
 | O | costmap | C, R | from behind it (the default) or the car; reset |
+| T | the squiggly line (on) | | |
+
+### The squiggly line (Ben, 7 Nov)
+
+Like a Tesla's line in front of the car, in the 3D scene and on the map (`docs/hud.md`):
+
+| Part | Looks | From |
+|---|---|---|
+| what the car WILL do, 2 s | bold line: green on the plan, amber off it, red far off; white with no plan | `/ego/trace` |
+| what the planner WANTS | thin grey line | `/ego/plan_ahead` |
+| where a full brake now stops | white bar across the way (two posts in 3D) | `/ego/stop_point` |
+| the words | STOPS IN, ON / OFF PLAN, GOAL or OBSTACLE room: bottom left of the scene | `/ego/ahead` |
+| a close-up from above | the same, 8 m ahead, a line every 2 m: right of the scene | all four |
+
+All four are base_link, placed with the car's newest pose (odom in 3D, map on the map).
+Silent for 2 s: not drawn. The maths is `hud_core::ahead` and `aav_ego look_ahead`.
+Pretend data plays `hud_core::ahead::pretend`'s 12 s loop.
+
+![The squiggly line, pretend data](../../../docs/img/dev-window-squiggly.png)
+
+Live (8 Nov, `--live` beside our own simulator, after its Nav2 goal had finished): parked,
+so the stop bar sits at the car and the words say NO PLAN, STOPS IN 0.00 m.
+[The picture](../../../docs/img/dev-window-squiggly-live.png). The drive itself was caught
+by the HUD (`docs/hud.md`).
 
 Mouse on the cubes: drag turns the head and the wheel zooms. From behind, right-drag also moves. On the map: click picks a goal,
 right-drag moves, wheel zooms.

@@ -142,6 +142,20 @@ enum Look {
 #[derive(Component)]
 struct CubesCamera;
 
+/// The squiggly line's faint plan: its own gizmo group, for its own line width.
+#[derive(Default, Reflect, GizmoConfigGroup)]
+struct PlanAheadGizmos;
+
+/// The squiggly line's bold trace and stop bar.
+#[derive(Default, Reflect, GizmoConfigGroup)]
+struct TraceGizmos;
+
+/// The lines' widths, pixels.
+const PLAN_AHEAD_WIDTH: f32 = 3.0;
+const TRACE_WIDTH: f32 = 8.0;
+/// How high over the road the squiggly line floats, metres, so the road cubes don't hide it.
+const AHEAD_LIFT: f32 = 0.12;
+
 /// One material per height band.
 #[derive(Resource)]
 struct LookMaterials(Vec<(Look, Handle<StandardMaterial>)>);
@@ -243,12 +257,14 @@ fn main() -> AppExit {
             ..default()
         }))
         .add_plugins(EguiPlugin::default())
-        .add_systems(Startup, setup)
+        .init_gizmo_group::<PlanAheadGizmos>()
+        .init_gizmo_group::<TraceGizmos>()
+        .add_systems(Startup, (setup, set_line_widths))
         .add_systems(
             Update,
             (
                 take_news,
-                (draw_cubes, draw_wireframes, aim_camera),
+                (draw_cubes, draw_wireframes, draw_ahead, aim_camera),
                 click_goal,
                 speed_test,
             )
@@ -574,6 +590,66 @@ fn draw_wireframes(state: Res<panels::UiState>, mut gizmos: Gizmos) {
                     .with_scale(Vec3::splat(pretend::CUBE_SIDE)),
                 Color::srgb(0.9, 0.15, 0.15),
             );
+        }
+    }
+}
+
+/// The squiggly line's widths, and drawn over the cubes rather than behind them.
+fn set_line_widths(mut store: ResMut<GizmoConfigStore>) {
+    let plan = store.config_mut::<PlanAheadGizmos>().0;
+    plan.line.width = PLAN_AHEAD_WIDTH;
+    plan.depth_bias = -0.5;
+    let trace = store.config_mut::<TraceGizmos>().0;
+    trace.line.width = TRACE_WIDTH;
+    trace.depth_bias = -0.5;
+}
+
+/// The squiggly line in the scene: ego's trace (bold, coloured by how well it keeps to the
+/// plan), the plan ahead (faint), the stop bar. Sent in base_link: placed with the car in odom.
+fn draw_ahead(
+    state: Res<panels::UiState>,
+    mut plan_gizmos: Gizmos<PlanAheadGizmos>,
+    mut trace_gizmos: Gizmos<TraceGizmos>,
+) {
+    if !state.layers.ahead {
+        return;
+    }
+    let world = &state.world;
+    let Some(squiggle) = world.ahead_now(Instant::now()) else {
+        return;
+    };
+    let car = world.car_odom;
+    let place = |p: (f64, f64), lift: f32| {
+        let at = feed::from_base(car, p);
+        Vec3::new(at.x as f32, at.y as f32, lift)
+    };
+    if squiggle.plan.len() >= 2 {
+        plan_gizmos.linestrip(
+            squiggle.plan.iter().map(|p| place(*p, AHEAD_LIFT)),
+            rgb(panels::AHEAD_PLAN_RGB),
+        );
+    }
+    if squiggle.trace.len() >= 2 {
+        trace_gizmos.linestrip(
+            squiggle.trace.iter().map(|p| place(*p, AHEAD_LIFT + 0.02)),
+            rgb(panels::trace_rgb(squiggle.summary.as_ref())),
+        );
+    }
+    if let Some(stop) = squiggle.stop {
+        let (sin, cos) = stop.yaw.sin_cos();
+        let half = panels::STOP_BAR_HALF;
+        let end = |side: f64| {
+            place(
+                (stop.x - side * sin, stop.y + side * cos),
+                AHEAD_LIFT + 0.04,
+            )
+        };
+        let colour = rgb(panels::AHEAD_STOP_RGB);
+        trace_gizmos.line(end(half), end(-half), colour);
+        // Two short posts, so the bar reads as a wall to stop at from behind the car.
+        for side in [half, -half] {
+            let foot = end(side);
+            trace_gizmos.line(foot, foot + Vec3::Z * 0.5, colour);
         }
     }
 }

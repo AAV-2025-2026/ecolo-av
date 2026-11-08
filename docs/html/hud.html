@@ -7,7 +7,7 @@
 <!-- Generated from docs/hud.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>The HUD (in-car screen)</h1>
-<div class="meta">70 min read · 8 sections</div></header>
+<div class="meta">74 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -29,10 +29,11 @@
 <a href="car-evening.html">Tonight: drive as is</a>
 <a href="car-day.html">Car day</a>
 <a href="car-setup.html">Car setup</a>
+<a href="rollout.html">Rolling out on the car</a>
 <a href="tests.html">Every test</a>
 <a href="know-the-car.html">Know the car</a>
-<a href="measure-the-car.html">Measure the car</a>
 <span class="sep">Learn:</span>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <a href="learn-car.html">The car, box by box</a>
@@ -47,8 +48,8 @@
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
 <a href="campus.html">The campus</a>
-<a href="maps-and-position.html">Maps and position</a>
 <span class="sep">Reference:</span>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <a href="learn-can.html">Learn: CAN</a>
 <a href="status.html">Status</a>
@@ -57,6 +58,10 @@
 <a href="path-followers.html">Path followers</a>
 <a href="switches.html">Switches</a>
 <a href="trials.html">Trials</a>
+<a href="mppi-lag.html">MPPI with lag</a>
+<a href="own-costmap.html">Our own costmap</a>
+<a href="own-planner.html">Our own planner</a>
+<a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -74,12 +79,15 @@
 <a href="simulation.html">Simulation</a>
 <a href="sim-and-car.html">Sim and the car</a>
 <a href="full-simulation.html">Full simulation</a>
+<a href="own-simulator.html">Our own simulator</a>
+<a href="own-simulator-cameras.html">Our simulator&#x27;s cameras</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="hardware-debug.html">Hardware debug</a>
 <a href="learn-state-space.html">Learn: state space</a>
 <a href="vehicle-model.html">The car as a linear model</a>
+<a href="car-model.html">One car model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="geofence.html">The geofence</a>
 <a href="sources-and-targets.html">Sources and targets</a>
@@ -166,7 +174,7 @@ a second program. Each opens full screen on its own monitor at boot:
 <tbody>
 <tr>
 <td>Top strip</td>
-<td>mode, armed, gear (D/R/P), e-stop on/off, battery, faults</td>
+<td>mode, armed, gear (D/R/P), e-stop on/off, battery, faults, the GPS fix (NO GPS, SILENT, NO FIX, 2D, 3D, DGPS, RTK FLOAT, RTK FIXED)</td>
 </tr>
 <tr>
 <td>Speed</td>
@@ -197,11 +205,95 @@ a second program. Each opens full screen on its own monitor at boot:
 <td>every topic it listens to: OK, STALE (quiet for 1 s) or NEVER, and how long ago; a REAL / SIM / BENCH / REPLAY tag where <code>/system/source</code> names it</td>
 </tr>
 <tr>
-<td>GPS</td>
-<td>is there GPS data? NO GPS DATA, GPS SILENT, or the fix: NO FIX, 2D, 3D, DGPS, RTK FLOAT, RTK FIXED. Then lat, lon, accuracy, age</td>
+<td>AHEAD (7 Nov)</td>
+<td>the squiggly line: where the car will go, what the planner wants, where a full brake stops it: <a href="#the-squiggly-line-ahead">below</a>. Until 7 Nov this panel was the GPS's</td>
 </tr>
 </tbody>
 </table></div>
+<h3 id="the-squiggly-line-ahead">The squiggly line (AHEAD)</h3>
+<p>Ben, 7 Nov, of his Tesla: "the squiggly line gets shorter when braking and longer when
+accelerating and it curves to show the predictive path and what it's avoiding ... We also
+want that to compare to the map and the localization information to show that we will stop
+based on the model in the correct location." He chose both lines and a stop marker, on the
+HUD and on the developer window.</p>
+<p><img alt="AHEAD while the car bends left, a little off the plan (amber), pretend data" src="../img/hud-squiggly.png" /></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>On screen</th>
+<th>Means</th>
+<th>From</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>bold line</strong></td>
+<td>where the car WILL go in the next 2 s, from the car model: shorter when braking, longer when speeding up, bent where it turns</td>
+<td><code>/ego/trace</code> (ego)</td>
+</tr>
+<tr>
+<td>its colour</td>
+<td><strong>green</strong>: within 0.3 m of the plan. <strong>amber</strong>: within 0.6 m. <strong>red</strong>: further. White: no plan (a person drives)</td>
+<td><code>/ego/ahead</code></td>
+</tr>
+<tr>
+<td>thin grey line</td>
+<td>what the planner WANTS: MPPI's own future, or Nav2's plan ahead</td>
+<td><code>/ego/plan_ahead</code></td>
+</tr>
+<tr>
+<td>white bar across</td>
+<td>where the <strong>front bumper</strong> stops if the car brakes fully now</td>
+<td><code>/ego/stop_point</code></td>
+</tr>
+<tr>
+<td>red bar</td>
+<td>the first obstacle in the local costmap the bumper would meet</td>
+<td><code>/ego/ahead</code></td>
+</tr>
+<tr>
+<td>the box</td>
+<td>the car, from <code>vehicle.yaml</code> (sent by <code>look_ahead</code>, never copied)</td>
+<td><code>/ego/ahead</code></td>
+</tr>
+<tr>
+<td>STOPS IN</td>
+<td>how far a full brake now takes the car</td>
+<td><code>/ego/ahead</code> stop_m</td>
+</tr>
+<tr>
+<td>ON PLAN / OFF PLAN / FAR OFF</td>
+<td>how far the bold line strays from the grey one: "have we turned enough, slowed enough?"</td>
+<td>gap_m</td>
+</tr>
+<tr>
+<td>GOAL: SHORT / PAST, OBSTACLE, HITS</td>
+<td>room left between the stop and the goal (along the plan), or the obstacle; HITS in red when a full brake now still reaches it</td>
+<td>goal_m, room_m</td>
+</tr>
+</tbody>
+</table></div>
+<p>While braking for the goal, the bold line shrinks to the bar and goes green:</p>
+<p><img alt="AHEAD braking for the goal: the line short, on the plan" src="../img/hud-squiggly-braking.png" /></p>
+<p><strong>Live, 8 Nov</strong> (our own simulator, <code>simulator:=own world:=test_lot</code>, a Nav2 goal at
+(14, 3), which succeeded): the faint line is Nav2's MPPI's own future
+(<code>/drivers/nav/local_plan</code>). <code>/ego/ahead</code> said ON PLAN 0.01-0.18 m and "13.4 m short of
+the goal" while it drove; here the trace runs 0.31 m off MPPI's future (amber): MPPI plans
+without the lag, ego's model has it.</p>
+<p><img alt="AHEAD live in our own simulator, driving to a Nav2 goal" src="../img/hud-squiggly-live.png" /></p>
+<p><strong>One answer for every screen.</strong> The maths lives in ROS, once; the screens only draw:</p>
+<pre class="highlight"><code class="language-text">ego ──▶ /ego/trace       (base_link)  the car model, 2 s ahead
+    └─▶ /ego/stop_point  (base_link)  the car model, full brake now   (stop_ahead.py)
+look_ahead ──▶ /ego/plan_ahead (base_link)  the plan, moved with TF, cut ahead
+           └─▶ /ego/ahead      the gap, the stop, the goal, the room  (look_ahead.py)</code></pre>
+<p>All four are in base_link, so the screens need no TF. The stop-point check in <code>sim-check</code>
+reads the same <code>/ego/stop_point</code>. The faint line is <code>/drivers/nav/local_plan</code> while a
+follower sends one (Nav2's MPPI, the default, and <code>mppi_lag</code>), else Nav2's <code>/plan</code>.</p>
+<p>The GPS fix moved into the top strip (GPS: 3D FIX, RTK FIXED, NO GPS, SILENT) to make room.
+Its lat, lon and accuracy are on the hardware panel and the map window.</p>
+<p><strong>Not yet:</strong> stop lines (no topic says where one is); the camera picture with the line
+drawn on the road (it needs the camera's calibration, Q22). Every number of the car model
+is a guess until car tests 3.10-3.12 and 4.1-4.5.</p>
 <h3 id="may-the-car-move-the-go-stop-panel">May the car move? (the GO / STOP panel)</h3>
 <p>For the safety drivers (Ben, 24 Oct: "fix the hud?"). Under the speed, the whole panel in
 one colour:</p>

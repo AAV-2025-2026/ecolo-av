@@ -475,6 +475,80 @@ def test_track_params_are_nav2s_own_checks_and_speeds():
     assert vehicle.track_params(nav2, cfg, ego, max_speed=3.0)['cruise_speed'] == 3.0
 
 
+def test_behaviour_params_from_nav2_the_body_and_ego():
+    nav2 = yaml.safe_load(NAV2_YAML.read_text())
+    cfg = vehicle.load(CONFIG)
+    ego = yaml.safe_load(EGO_YAML.read_text())['ego']['ros__parameters']
+    server = nav2['controller_server']['ros__parameters']
+    p = vehicle.behaviour_params(nav2, cfg, ego)
+    assert p['base_speed'] == server['MPPI']['vx_max']
+    assert vehicle.behaviour_params(nav2, cfg, ego, controller='rpp')['base_speed'] == \
+        server['FollowPath']['desired_linear_vel']
+    assert vehicle.behaviour_params(nav2, cfg, ego, max_speed=3.0)['base_speed'] == 3.0
+    # The stop zone's own front edge, width and reach.
+    zone = vehicle.stop_zone_points(cfg['vehicle'])
+    assert p['front'] == pytest.approx(zone[2][0])
+    assert p['half_width'] == pytest.approx(zone[0][1])
+    assert p['front'] + p['stop_gap'] == pytest.approx(zone[0][0])
+    assert p['max_deceleration'] == ego['max_deceleration'] and p['max_jerk'] == ego['max_jerk']
+
+
+def test_mppi_lag_params_are_nav2s_mppi_and_the_cars_lag():
+    nav2 = yaml.safe_load(NAV2_YAML.read_text())
+    cfg = vehicle.load(CONFIG)
+    ego = yaml.safe_load(EGO_YAML.read_text())['ego']['ros__parameters']
+    p = vehicle.mppi_lag_params(nav2, cfg, ego)
+    server = nav2['controller_server']['ros__parameters']
+    mppi = server['MPPI']
+    assert 'mppi_lag' in vehicle.TRACKERS
+    assert p['critics'] == mppi['critics']
+    for name in ('time_steps', 'batch_size', 'temperature', 'gamma', 'vx_std'):
+        assert p[name] == mppi[name], name
+    assert isinstance(p['time_steps'], int) and isinstance(p['model_dt'], float)
+    assert p['model_dt'] == pytest.approx(1.0 / p['rate_hz'])
+    assert p['vx_max'] == mppi['vx_max'] and p['vx_min'] == 0.0
+    assert p['GoalAngleCritic.threshold_to_consider'] == 2.5
+    assert p['PathAlignCritic.use_path_orientations'] is True
+    assert p['xy_goal_tolerance'] == server['general_goal_checker']['xy_goal_tolerance']
+    # Every actuator number from vehicle.yaml; the unset dead times are 0.
+    for key, value in cfg['actuators'].items():
+        if key in vehicle.MPPI_LAG_ACTUATORS:
+            assert p[f'actuators.{key}'] == value, key
+    assert p['actuators.steer_dead_time'] == cfg['actuators'].get('steer_dead_time', 0.0)
+    assert p['ego.max_steering_rate'] == ego['max_steering_rate']
+    assert len(p['footprint']) == 8
+    # sim_speed:= 3: faster, and the path ahead stretched to fit 2.8 s of it.
+    fast = vehicle.mppi_lag_params(nav2, cfg, ego, max_speed=3.0)
+    assert fast['vx_max'] == 3.0
+    assert fast['prune_distance'] >= 3.0 * 2.8
+
+
+def test_costmap_params_read_nav2s_costmaps_as_nav2_does():
+    nav2 = yaml.safe_load(NAV2_YAML.read_text())
+    v = vehicle.load(CONFIG)['vehicle']
+    tuned = vehicle.nav2_tuned(nav2, v, radar=False, lidar=True)
+    p = vehicle.costmap_params(tuned, v)
+    local, plan = p['local'], p['global']
+    assert local['rolling'] and local['global_frame'] == 'odom'
+    assert (local['width'], local['resolution'], local['update_frequency']) == (20.0, 0.1, 5.0)
+    assert local['footprint'] == vehicle.footprint_points(v)
+    assert local['inflation'] == {'radius': 2.0, 'scaling': 3.0}
+    # The radar's and the cameras' layers are off unless asked for; the lidar's is on.
+    names = [layer['name'] for layer in local['layers']]
+    assert names == ['lidar_layer']
+    lidar = local['layers'][0]['sources'][0]
+    assert lidar['topic'] == '/sensors/lidar/scan' and lidar['inf_is_valid'] is True
+    assert (lidar['obstacle_max_range'], lidar['raytrace_max_range']) == (12.0, 15.0)
+    assert not plan['rolling'] and plan['track_unknown'] and plan['static_layer']
+    # The planner sees the lidar too (plan_around, the default).
+    assert [layer['name'] for layer in plan['layers']] == ['lidar_layer']
+    with_radar = vehicle.costmap_params(vehicle.nav2_tuned(nav2, v, radar=True), v, radar=True)
+    radar = with_radar['local']['layers'][0]
+    assert radar['name'] == 'obstacle_layer'
+    assert radar['sources'][0]['observation_persistence'] == 0.2
+    json.dumps(p)   # one JSON parameter each
+
+
 def test_an_s_bend_needs_room_ahead():
     # Two quarter-turns side by side: 2 radii across, 2 radii ahead.
     assert math.isclose(vehicle.s_bend_length(3.0, 6.0), 6.0)
@@ -509,7 +583,7 @@ def test_planners_lattice_by_default_hybrid_forward_only_and_only_car_shaped_one
     assert vehicle.check_planner(' Lattice ') == 'lattice'
     assert vehicle.check_planner('navfn') == 'navfn'
     assert vehicle.check_planner('lattice', real=True) == 'lattice'
-    for name in ('smac2d', 'navfn', 'theta_star'):
+    for name in ('smac2d', 'navfn', 'theta_star', 'own'):
         with pytest.raises(ValueError, match='turning radius'):
             vehicle.check_planner(name, real=True)
     with pytest.raises(ValueError, match='a trial'):
@@ -553,6 +627,31 @@ def test_the_diffusion_trial_stands_on_the_lattice():
                               lattice_file='/x/l.json')['planner_server'][
                                   'ros__parameters']['GridBased']
     assert grid['plugin'].endswith('SmacPlannerLattice') and grid['allow_reverse_expansion']
+
+
+def test_our_planner_reads_the_lattice_block_the_car_and_the_inflation():
+    # planner:=own: aav_planner gets Nav2's own Lattice block, so both plan alike.
+    assert vehicle.server_planner('own') == 'lattice'
+    assert 'own' not in vehicle.CAR_PLANNERS
+    nav2 = yaml.safe_load(NAV2_YAML.read_text())
+    v = vehicle.load(CONFIG)['vehicle']
+    for reversing in (False, True):
+        tuned = vehicle.nav2_tuned(nav2, v, reversing=reversing, planner='own',
+                                   lattice_file='/x/l.json')
+        p = vehicle.planner_params(tuned, v)
+        lattice = nav2['planner_server']['ros__parameters']['Lattice']
+        assert p['lattice_filepath'] == '/x/l.json'
+        assert p['allow_reverse_expansion'] is reversing
+        for key in ('reverse_penalty', 'change_penalty', 'non_straight_penalty',
+                    'cost_penalty', 'retrospective_penalty', 'tolerance',
+                    'analytic_expansion_max_length', 'smooth_path'):
+            assert p[key] == lattice[key], key
+        assert p['footprint'] == vehicle.footprint_points(v)
+        inflation = nav2['global_costmap']['global_costmap']['ros__parameters'][
+            'inflation_layer']
+        assert p['inflation'] == {'radius': inflation['inflation_radius'],
+                                  'scaling': inflation['cost_scaling_factor']}
+    assert set(vehicle.GLOBAL_COSTMAP_TOPICS) == set(vehicle.COSTMAPS)
 
 
 def test_lattice_needs_its_file_and_reverses_only_with_reversing():

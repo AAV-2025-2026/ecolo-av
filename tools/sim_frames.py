@@ -63,7 +63,9 @@ def main(argv=None) -> int:
           f"partition {os.environ['GZ_PARTITION']} (log {args.log})", flush=True)
     log = open(args.log, 'w')
     launch = subprocess.Popen(
-        ['ros2', 'launch', 'aav_bringup', 'sim.launch.py', 'world:=road', 'gui:=false',
+        # Gazebo's: the car is moved with its set_pose service.
+        ['ros2', 'launch', 'aav_bringup', 'sim.launch.py', 'world:=road', 'simulator:=gazebo',
+         'gui:=false',
          'rviz:=false', 'nav:=false', 'lidar:=false', 'radar:=false', 'watchdog:=false'],
         cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
     rclpy.init()

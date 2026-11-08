@@ -1,0 +1,21 @@
+[workspace]
+resolver = "2"
+# mppi-lag: MPPI ported from Nav2, on a car model with the actuators' lag. No ROS:
+#   cargo test -p mppi-lag
+#   cargo run --release -p mppi-lag --example timing    (how long a tick takes)
+# mppi-node: the ROS node (rclrs), binary mppi_lag. colcon builds it through CMakeLists.txt.
+members = ["crates/mppi-lag", "crates/mppi-node"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+# Nav2's MPPI, which mppi-lag ports, is Apache-2.0 (PROVENANCE.md).
+license = "Apache-2.0"
+publish = false
+
+# The closed-loop tests roll out thousands of futures a tick: build them optimised.
+[profile.test]
+opt-level = 3
+
+[profile.dev.package.mppi-lag]
+opt-level = 3

@@ -25,7 +25,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 from aav_ego import dynamics
 from aav_ego.dynamics import Body
@@ -136,12 +136,17 @@ class EgoModel:
         self.steering = 0.0
         self.accel = 0.0         # m/s^2, signed: the last tick's change of speed
 
-    def step(self, cmd: Optional[Tuple[float, float]], dt: float) -> Tuple[float, float, float]:
+    def step(self, cmd: Optional[Tuple[float, float]], dt: float,
+             lead: Optional[Callable[[float, float, float], Tuple[float, float]]] = None
+             ) -> Tuple[float, float, float]:
         """
         Advance one tick.
 
         cmd is (v, w) from /control/cmd_vel, or None when it is missing or stale,
         which means stop. Returns (speed, steering angle, acceleration limit).
+
+        lead, if given, is lag_lead.LagLead.step (speed, angle, dt) -> (speed, angle): it
+        changes the request before every limit below, never a stop (cmd None).
         """
         lim = self.lim
         if cmd is None:
@@ -150,6 +155,9 @@ class EgoModel:
             v, w = cmd
             # Keep the requested curvature w / v even when the speed is capped.
             target_d = steering_angle(v, w, lim, self.steering)
+            if lead is not None:
+                v, target_d = lead(v, target_d, dt)
+                target_d = clamp(target_d, -lim.max_steering_angle, lim.max_steering_angle)
             target_v = clamp(v, -lim.max_reverse_speed, lim.max_speed)
         speed_up = None
         if self.body is not None:

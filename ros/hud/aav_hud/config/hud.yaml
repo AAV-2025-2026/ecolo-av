@@ -13,6 +13,10 @@ hud:
     source_topic: /system/source                          # aav_interfaces/msg/DataSource, latched: the SIMULATED banner
     watchdog_topic: /safety/sensor_watchdog/state         # std_msgs/msg/String: the sensor watchdog's verdict, a banner unless OK
     output_mux_topic: /safety/output_mux/state            # std_msgs/msg/String: the output mux's gate, OPEN / WAIT / STOP: the GO / STOP panel
+    trace_topic: /ego/trace                               # nav_msgs/msg/Path, base_link: the squiggly line's bold line (what the car WILL do)
+    plan_ahead_topic: /ego/plan_ahead                     # nav_msgs/msg/Path, base_link: its faint line (what the planner WANTS)
+    stop_point_topic: /ego/stop_point                     # geometry_msgs/msg/PoseStamped, base_link: where a full brake now stops the car
+    ahead_topic: /ego/ahead                               # diagnostic_msgs/msg/DiagnosticStatus: the gap, the room, the goal (aav_ego look_ahead)
     heartbeat_topic: /hud/heartbeat                       # std_msgs/msg/UInt64: published, 10 Hz while the screen draws (frames drawn)
     stale_after: 1.0                                      # s: a topic this quiet shows STALE
     max_speed: 1.0                                        # m/s: ego's forward cap (aav_ego config/ego.yaml); the gauge's redline starts here. hud.launch.py copies ego.yaml's
