@@ -2009,8 +2009,25 @@ VOXELS = False   # --voxels: every session with the lidar takes voxels:=true
 KISS_EKF = False  # --kiss-ekf: every session with the lidar takes kiss_ekf:=true
 
 
-STOP_SPEEDS = (1.0, 2.0, 3.0)   # m/s: --stop-point's drives
+STOP_SPEEDS = (1.0, 1.5, 2.0)   # m/s: --stop-point's drives (the scripted driver's top: 2)
 STOP_RAMP = 1.0                 # m/s^2 the set speed falls at: the stopping law's a
+
+
+def programs_held(probe, wait=120.0):
+    """
+    Wait until programs may drive; return '' then, or why they are still held.
+
+    The geofence holds them until the global pose settles (STARTING), the watchdog while a
+    sensor is late: a drive sent before then runs while twist_mux holds it.
+    """
+    fence = []
+    sub = probe.create_subscription(String, '/safety/geofence/state',
+                                    lambda m: fence.append(m.data), 10)
+    ready = probe.spin_for(wait, lambda: bool(fence) and fence[-1].startswith('OK')
+                           and probe.lock is False)
+    probe.destroy_subscription(sub)
+    return '' if ready else (f'programs still held after {wait:g} s: geofence '
+                             f'{fence[-1] if fence else "silent"}, watchdog {probe.state}')
 
 
 def set_ego(probe, **values):
@@ -2042,9 +2059,15 @@ def check_stop_point(probe, profile='default'):
     with open(os.path.join(ROOT, 'ros', 'ego', 'aav_ego', 'config', 'ego.yaml')) as f:
         ego = yaml.safe_load(f)['ego']['ros__parameters']
     law = from_car_model(cfg, ego['max_deceleration'], ego['max_jerk'], loop=loop)
+    held = programs_held(probe)
+    if held:
+        result('stop point', False, held)
+        return
     lead_off = set_ego(probe, lag_lead='off')
     stops = []
+    stem = os.path.splitext(LAUNCH.get('log', '/tmp/aav-sim-check.log'))[0]
     for speed in STOP_SPEEDS:
+        probe.spin_for(30.0, lambda: abs(probe.speed()) < STILL)
         begin = probe.now()
         sent = probe.drive.send_goal_async(ScriptedDrive.Goal(
             target_speed=speed, acceleration=0.5, deceleration=STOP_RAMP, hold_time=3.0))
@@ -2058,9 +2081,18 @@ def check_stop_point(probe, profile='default'):
         probe.spin_for(30.0, lambda: probe.now() - rest > 3.0)    # 3 s to come to rest
         track = [stop_points.Sample(*row) for row in probe.track]
         glob = [stop_points.Sample(*row) for row in probe.glob_track]
-        t0 = stop_points.slowing_start([c for c in probe.commands if c[0] >= begin], speed)
+        commands = [c for c in probe.commands if c[0] >= begin]
+        # Everything this drive saw, for a look later (and the same columns a car bag gives).
+        with open(f'{stem}-{speed:g}.csv', 'w') as out:
+            out.write('kind,t,x,y,yaw,v\n')
+            out.writelines(f'cmd,{t:.3f},,,,{v:.4f}\n' for t, v in commands)
+            out.writelines(f'truth,{s.t:.3f},{s.x:.4f},{s.y:.4f},{s.yaw:.4f},{s.v:.4f}\n'
+                           for s in track if s.t >= begin)
+            out.writelines(f'ekf,{s.t:.3f},{s.x:.4f},{s.y:.4f},{s.yaw:.4f},{s.v:.4f}\n'
+                           for s in glob if s.t >= begin)
+        t0 = stop_points.slowing_start(commands, speed)
         origin = stop_points.at(track, t0) if t0 is not None else None
-        end = stop_points.stopped(track, t0) if t0 is not None else None
+        end = stop_points.stopped(track, t0, STILL) if t0 is not None else None
         if origin is None or end is None or origin.v < 0.5 * speed:
             result(f'stop point {speed:g} m/s', False,
                    'never slowed' if t0 is None else
@@ -2108,6 +2140,10 @@ def check_behaviour(probe, sign=False):
     """
     if not probe.spin_for(30.0, lambda: bool(probe.behaviour)):
         result('behaviour', False, 'nothing on /drivers/nav/behaviour/state')
+        return
+    held = programs_held(probe)
+    if held:
+        result('behaviour', False, held)
         return
     if sign:
         since = probe.now()
