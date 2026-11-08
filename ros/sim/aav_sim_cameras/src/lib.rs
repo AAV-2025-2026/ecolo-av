@@ -60,6 +60,8 @@ pub enum RenderError {
     Copy(ShortCopy),
     /// A shape's picture couldn't be read.
     Texture(String),
+    /// A shape's OBJ file couldn't be read.
+    Mesh(String),
 }
 
 impl fmt::Display for RenderError {
@@ -72,6 +74,7 @@ impl fmt::Display for RenderError {
             Self::WarmUp => write!(f, "the shaders weren't ready after the warm-up"),
             Self::Copy(e) => write!(f, "{e}"),
             Self::Texture(e) => write!(f, "a shape's picture: {e}"),
+            Self::Mesh(e) => write!(f, "a shape's mesh: {e}"),
         }
     }
 }

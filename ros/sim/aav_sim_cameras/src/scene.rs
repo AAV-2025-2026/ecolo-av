@@ -2,6 +2,7 @@
 
 use std::f32::consts::FRAC_PI_2;
 
+use bevy::image::{ImageAddressMode, ImageSampler, ImageSamplerDescriptor};
 use bevy::{
     asset::RenderAssetUsages,
     camera::{visibility::RenderLayers, Exposure},
@@ -10,7 +11,8 @@ use bevy::{
     prelude::*,
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
-use camera_core::{Geometry, Look, Shape, SimWorld};
+use camera_core::{Geometry, Look, Shape, SimWorld, TriMesh};
+use std::path::Path;
 
 use crate::{transform, CarRoot, RenderError};
 
@@ -84,9 +86,8 @@ fn spawn_shape(
     layers: RenderLayers,
     parent: Option<Entity>,
 ) -> Result<Entity, RenderError> {
-    let mesh = ecs
-        .resource_mut::<Assets<Mesh>>()
-        .add(mesh(&shape.geometry));
+    let mesh = mesh(&shape.geometry)?;
+    let mesh = ecs.resource_mut::<Assets<Mesh>>().add(mesh);
     let material = material(ecs, &shape.look)?;
     let mut e = ecs.spawn((
         Mesh3d(mesh),
@@ -102,8 +103,8 @@ fn spawn_shape(
 }
 
 /// SDF's shapes in SDF's own axes (a cylinder along z, a plane facing z).
-fn mesh(geometry: &Geometry) -> Mesh {
-    match *geometry {
+fn mesh(geometry: &Geometry) -> Result<Mesh, RenderError> {
+    Ok(match *geometry {
         Geometry::Plane { x, y } => {
             Plane3d::new(Vec3::Z, Vec2::new(x as f32 / 2.0, y as f32 / 2.0))
                 .mesh()
@@ -116,7 +117,57 @@ fn mesh(geometry: &Geometry) -> Mesh {
             .build()
             .rotated_by(Quat::from_rotation_x(FRAC_PI_2)),
         Geometry::Octagon { across, thickness } => octagon(across as f32, thickness as f32),
+        Geometry::Mesh { ref file, scale } => obj_mesh(file, scale)?,
+    })
+}
+
+/// An OBJ file, as triangles with the file's normals and picture coordinates.
+fn obj_mesh(file: &Path, scale: [f64; 3]) -> Result<Mesh, RenderError> {
+    let text = std::fs::read_to_string(file)
+        .map_err(|e| RenderError::Mesh(format!("{}: {e}", file.display())))?;
+    let soup = TriMesh::from_obj(&text)
+        .map_err(|e| RenderError::Mesh(format!("{}: {e}", file.display())))?
+        .scaled(scale.map(|s| s as f32));
+    // OBJ's v grows upwards; a picture's rows go down.
+    let uvs: Vec<[f32; 2]> = soup.uvs.iter().map(|[u, v]| [*u, 1.0 - v]).collect();
+    Ok(Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::RENDER_WORLD,
+    )
+    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, soup.positions)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, soup.normals)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, uvs))
+}
+
+/// A picture, tiled (the campus's road and grass repeat every few metres), with its
+/// smaller copies (mipmaps), so a far-off road is its average colour, not a flicker.
+fn tiled_image(picture: image::RgbaImage) -> Image {
+    let (w, h) = picture.dimensions();
+    let levels = 32 - w.max(h).max(1).leading_zeros();
+    let mut data = picture.as_raw().clone();
+    let mut level = picture;
+    for _ in 1..levels {
+        let (lw, lh) = ((level.width() / 2).max(1), (level.height() / 2).max(1));
+        level = image::imageops::resize(&level, lw, lh, image::imageops::FilterType::Triangle);
+        data.extend_from_slice(level.as_raw());
     }
+    let mut img = Image::new_uninit(
+        Extent3d {
+            width: w,
+            height: h,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::RENDER_WORLD,
+    );
+    img.data = Some(data);
+    img.texture_descriptor.mip_level_count = levels;
+    let mut sampler = ImageSamplerDescriptor::linear();
+    sampler.set_address_mode(ImageAddressMode::Repeat);
+    sampler.set_anisotropic_filter(16);
+    img.sampler = ImageSampler::Descriptor(sampler);
+    img
 }
 
 /// A flat octagon facing +x, its flats up, down and to the sides. The picture's square
@@ -166,19 +217,10 @@ fn material(ecs: &mut World, look: &Look) -> Result<Handle<StandardMaterial>, Re
             let picture = image::open(path)
                 .map_err(|e| RenderError::Texture(format!("{}: {e}", path.display())))?
                 .to_rgba8();
-            let (w, h) = picture.dimensions();
-            let img = Image::new(
-                Extent3d {
-                    width: w,
-                    height: h,
-                    depth_or_array_layers: 1,
-                },
-                TextureDimension::D2,
-                picture.into_raw(),
-                TextureFormat::Rgba8UnormSrgb,
-                RenderAssetUsages::RENDER_WORLD,
-            );
-            Some(ecs.resource_mut::<Assets<Image>>().add(img))
+            Some(
+                ecs.resource_mut::<Assets<Image>>()
+                    .add(tiled_image(picture)),
+            )
         }
         None => None,
     };

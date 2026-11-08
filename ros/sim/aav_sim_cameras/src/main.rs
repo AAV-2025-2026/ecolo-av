@@ -8,6 +8,9 @@
 //! sim_cameras --bench 300             # draw as fast as it can: the most pictures a second
 //! sim_cameras --ros                   # publish Gazebo's camera topics (feature `ros`)
 //! sim_cameras --ros --pose truth      # draw where /vehicle/sim/truth says, stamped with its time
+//! sim_cameras --world road.sdf        # a Gazebo world (the core's reader), not the test copy
+//! sim_cameras --at 49,-71,0          # parked there (m, m, rad), in the map frame
+//! sim_cameras --topic front_left=/x   # one camera on another topic (the faults relay)
 //! ```
 //!
 //! Without `--ros` nothing is published: it renders, times and prints.
@@ -16,7 +19,7 @@
 mod ros;
 
 use std::{
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::ExitCode,
     time::{Duration, Instant, SystemTime, UNIX_EPOCH},
 };
@@ -31,6 +34,8 @@ const STOP_SIGN: &str = concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../aav_gazebo/models/stop_sign/materials/textures/stop_sign.png"
 );
+/// aav_gazebo's models, for `model://` in a world file.
+const MODELS: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../aav_gazebo/models");
 /// The scripted drive turns back after this far, m.
 const LAP: f64 = 60.0;
 
@@ -53,6 +58,10 @@ struct Options {
     from: f64,
     plain_sign: bool,
     bench: Option<usize>,
+    world: Option<PathBuf>,
+    models: Vec<PathBuf>,
+    topics: Vec<(String, String)>,
+    at: Option<[f64; 3]>,
 }
 
 impl Options {
@@ -67,6 +76,10 @@ impl Options {
             from: 0.0,
             plain_sign: false,
             bench: None,
+            world: None,
+            models: Vec::new(),
+            topics: Vec::new(),
+            at: None,
         };
         while let Some(arg) = args.next() {
             let mut value = |name: &str| args.next().ok_or(format!("{name} needs a value"));
@@ -94,6 +107,28 @@ impl Options {
                             .map_err(|e| format!("--bench: {e}"))?,
                     )
                 }
+                "--at" => {
+                    let v = value("--at")?;
+                    let n = v.split(',').map(number).collect::<Result<Vec<_>, _>>()?;
+                    let [x, y, yaw] = n[..] else {
+                        return Err(format!("--at {v}: x,y,yaw"));
+                    };
+                    o.at = Some([x, y, yaw]);
+                }
+                "--world" => o.world = Some(PathBuf::from(value("--world")?)),
+                "--models" => o.models.extend(
+                    value("--models")?
+                        .split(':')
+                        .filter(|p| !p.is_empty())
+                        .map(PathBuf::from),
+                ),
+                "--topic" => {
+                    let v = value("--topic")?;
+                    let (name, topic) = v
+                        .split_once('=')
+                        .ok_or(format!("--topic {v}: camera=/topic"))?;
+                    o.topics.push((name.to_owned(), topic.to_owned()));
+                }
                 "-h" | "--help" => return Err(USAGE.to_owned()),
                 other => return Err(format!("unknown option {other}\n{USAGE}")),
             }
@@ -106,7 +141,7 @@ impl Options {
 }
 
 const USAGE: &str = "sim_cameras [--ros] [--pose script|truth] [--seconds S] \
-[--cameras front_left,front_right,rear,chase] [--save DIR] [--speed M/S] [--from X] [--plain-sign] [--bench N]";
+[--cameras front_left,front_right,rear,chase] [--save DIR] [--speed M/S] [--from X] [--plain-sign] [--bench N] [--at X,Y,YAW] [--world FILE.sdf] [--models DIR:DIR] [--topic camera=/topic]";
 
 fn number(s: &str) -> Result<f64, String> {
     s.parse().map_err(|e| format!("{s}: {e}"))
@@ -158,10 +193,49 @@ fn run(o: &Options) -> Result<(), String> {
             return Err(format!("no camera called {}", names.join(" or ")));
         }
     }
-    let mut world = SimWorld::test_world()
-        .with_car(VEHICLE)
+    for (name, topic) in &o.topics {
+        let spec = rig
+            .cameras
+            .iter_mut()
+            .find(|c| &c.name == name)
+            .ok_or(format!("--topic: no camera called {name}"))?;
+        spec.topic = topic.clone();
+    }
+    let world = match &o.world {
+        Some(path) => sdf_world(path, &o.models)?,
+        None => test_world(o.plain_sign),
+    };
+    let world = world.with_car(VEHICLE).map_err(|e| e.to_string())?;
+    run_in(o, rig, &world)
+}
+
+/// A Gazebo world, read as the core simulator reads it: `model://` from `models`, then
+/// aav_gazebo's models, then GZ_SIM_RESOURCE_PATH.
+fn sdf_world(path: &Path, models: &[PathBuf]) -> Result<SimWorld, String> {
+    let mut dirs = models.to_vec();
+    dirs.push(PathBuf::from(MODELS));
+    if let Some(more) = std::env::var_os("GZ_SIM_RESOURCE_PATH") {
+        dirs.extend(std::env::split_paths(&more));
+    }
+    let start = Instant::now();
+    let core = sim_core::world::World::load(path, &dirs, sim_core::world::Surfaces::Visual)
         .map_err(|e| e.to_string())?;
-    if !o.plain_sign {
+    for w in &core.warnings {
+        eprintln!("sim_cameras: {}: {w}", path.display());
+    }
+    eprintln!(
+        "sim_cameras: {} read in {:.1} s: {} shapes",
+        path.display(),
+        start.elapsed().as_secs_f64(),
+        core.shapes.len()
+    );
+    Ok(SimWorld::from_core(&core))
+}
+
+/// The road world's copy in camera-core, with Gazebo's stop sign picture unless `plain`.
+fn test_world(plain: bool) -> SimWorld {
+    let mut world = SimWorld::test_world();
+    if !plain {
         let texture = PathBuf::from(STOP_SIGN);
         if texture.exists() {
             world.shapes.retain(|s| !s.name.starts_with("stop_sign"));
@@ -173,8 +247,12 @@ fn run(o: &Options) -> Result<(), String> {
             ));
         }
     }
+    world
+}
+
+fn run_in(o: &Options, rig: Rig, world: &SimWorld) -> Result<(), String> {
     let start = Instant::now();
-    let renderer = BevyRenderer::new(&rig, &world).map_err(|e| e.to_string())?;
+    let renderer = BevyRenderer::new(&rig, world).map_err(|e| e.to_string())?;
     eprintln!(
         "sim_cameras: Bevy ready in {:.1} s; cameras: {}",
         start.elapsed().as_secs_f64(),
@@ -219,8 +297,13 @@ fn run(o: &Options) -> Result<(), String> {
                 let wall = SystemTime::now()
                     .duration_since(UNIX_EPOCH)
                     .map_err(|e| e.to_string())?;
-                let x = (o.from + elapsed.as_secs_f64() * o.speed) % LAP;
-                (wall, Pose::planar(x, 0.0, 0.0))
+                let car = match o.at {
+                    Some([x, y, yaw]) => Pose::planar(x, y, yaw),
+                    None => {
+                        Pose::planar((o.from + elapsed.as_secs_f64() * o.speed) % LAP, 0.0, 0.0)
+                    }
+                };
+                (wall, car)
             }
             PoseSource::Truth => {
                 #[cfg(feature = "ros")]

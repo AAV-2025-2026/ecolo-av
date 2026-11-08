@@ -71,6 +71,26 @@ pub struct Shape {
     pub pose: Pose,
     /// SDF's `<diffuse>` (linear RGBA, 0..1), if the shape has one.
     pub colour: Option<[f64; 4]>,
+    /// SDF's `<pbr><metal><albedo_map>`: the picture laid over it, if it has one.
+    pub texture: Option<PathBuf>,
+}
+
+/// How the world is lit and its sky, as SDF's `<scene>` and its directional `<light>`.
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Lighting {
+    /// `<scene><background>` (linear RGBA).
+    pub background: Option<[f64; 4]>,
+    /// `<scene><ambient>` (linear RGBA).
+    pub ambient: Option<[f64; 4]>,
+    /// The first directional `<light>`: the sun.
+    pub sun: Option<Sunlight>,
+}
+
+/// A directional light: which way it shines, and its `<diffuse>` colour.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Sunlight {
+    pub direction: Vec3,
+    pub diffuse: [f64; 4],
 }
 
 /// A shape's geometry, as SDF says it.
@@ -99,6 +119,8 @@ pub struct World {
     pub warnings: Vec<String>,
     /// Every shape read, as the file draws it: for a renderer (the cameras).
     pub shapes: Vec<Shape>,
+    /// The sky and the light, for a renderer.
+    pub lighting: Lighting,
 }
 
 impl World {
@@ -114,7 +136,9 @@ impl World {
                 geometry: Geometry::Plane { x: size, y: size },
                 pose: Pose::IDENTITY,
                 colour: None,
+                texture: None,
             }],
+            lighting: Lighting::default(),
         }
     }
 
@@ -149,6 +173,7 @@ impl World {
             models: reader.names,
             warnings: reader.warnings,
             shapes: reader.shapes,
+            lighting: lighting(world),
         })
     }
 
@@ -215,6 +240,33 @@ fn pose_of(node: Node) -> Pose {
     let n = text(node, "pose").map(numbers).unwrap_or_default();
     let at = |i: usize| n.get(i).copied().unwrap_or(0.0);
     Pose::from_xyz_rpy([at(0), at(1), at(2)], [at(3), at(4), at(5)])
+}
+
+fn colour(node: Node, tag: &str) -> Option<[f64; 4]> {
+    text(node, tag)
+        .map(numbers)
+        .filter(|n| n.len() >= 3)
+        .map(|n| [n[0], n[1], n[2], n.get(3).copied().unwrap_or(1.0)])
+}
+
+fn lighting(world: Node) -> Lighting {
+    let scene = child(world, "scene");
+    let sun = world
+        .children()
+        .filter(|n| n.has_tag_name("light"))
+        .find(|n| n.attribute("type") == Some("directional"))
+        .and_then(|light| {
+            let d = text(light, "direction").map(numbers).unwrap_or_default();
+            (d.len() >= 3).then(|| Sunlight {
+                direction: Vec3::new(d[0], d[1], d[2]),
+                diffuse: colour(light, "diffuse").unwrap_or([1.0; 4]),
+            })
+        });
+    Lighting {
+        background: scene.and_then(|s| colour(s, "background")),
+        ambient: scene.and_then(|s| colour(s, "ambient")),
+        sun,
+    }
 }
 
 fn datum(world: Node) -> Option<Datum> {
@@ -313,11 +365,16 @@ impl Reader<'_> {
                 if let Some((mesh, kind)) = self.geometry(geometry, folder)? {
                     let placed = at.then(&pose_of(shape));
                     self.triangles.extend(mesh.transformed(&placed).triangles);
-                    let colour = child(shape, "material")
-                        .and_then(|m| text(m, "diffuse"))
-                        .map(numbers)
-                        .filter(|n| n.len() >= 3)
-                        .map(|n| [n[0], n[1], n[2], n.get(3).copied().unwrap_or(1.0)]);
+                    let material = child(shape, "material");
+                    let colour = material.and_then(|m| colour(m, "diffuse"));
+                    let texture = match material
+                        .and_then(|m| child(m, "pbr"))
+                        .and_then(|p| child(p, "metal"))
+                        .and_then(|m| text(m, "albedo_map"))
+                    {
+                        Some(uri) => Some(self.mesh_path(uri, folder)?),
+                        None => None,
+                    };
                     let model = self.names.last().cloned().unwrap_or_default();
                     let name = shape.attribute("name").unwrap_or("");
                     self.shapes.push(Shape {
@@ -325,6 +382,7 @@ impl Reader<'_> {
                         geometry: kind,
                         pose: placed,
                         colour,
+                        texture,
                     });
                 }
             }

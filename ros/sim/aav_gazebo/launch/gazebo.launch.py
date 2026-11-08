@@ -78,8 +78,11 @@ simulator:=own puts our own Rust simulator (aav_simulator, docs/own-simulator.md
 place of gz sim and all its bridges: it reads the same world file and models, and publishes
 the bridges' topics (/clock, /gazebo/odom, /gazebo/imu, /gazebo/navsat, /joint_states,
 /vehicle/sim/truth, /sensors/lidar/points, /gazebo/radar/points) and takes /gazebo/cmd_vel,
-so gazebo_adapter and the sensor nodes above run unchanged. No cameras yet (and so no
-chase camera, and faults:=true has no camera to relay); no window. Gazebo stays the default.
+so gazebo_adapter and the sensor nodes above run unchanged. Its cameras are their own
+program (aav_sim_cameras, Bevy, offscreen): they draw the same world file where
+/vehicle/sim/truth puts the car, on the same camera topics (the chase camera too; with
+faults:=true the front left picture goes to gazebo_camera). No window. Gazebo stays the
+default.
 
 Everything else (sensors filter, localization, Nav2, mux, ego) runs as on the car,
 with use_sim_time:=true. aav_bringup sim.launch.py starts the lot.
@@ -198,6 +201,20 @@ def chase_camera(share, sim_time):
     ]
 
 
+def model_paths(share):
+    """model://: aav_gazebo's models first, then wherever Gazebo would look."""
+    return [os.path.join(share, 'models')] + [
+        p for p in os.environ.get('GZ_SIM_RESOURCE_PATH', '').split(os.pathsep) if p]
+
+
+def own_cameras(share, world, chase, relay):
+    """Our simulator's cameras (aav_sim_cameras): the world file, drawn where the car is."""
+    cmd = worlds.sim_cameras_command(worlds.repo_root(__file__), world, model_paths(share),
+                                     chase=chase,
+                                     relay=faults.CAMERA_RELAYED if relay else '')
+    return ExecuteProcess(cmd=cmd, name='sim_cameras', output='screen')
+
+
 def own_simulator(context, share, world, car, lidar, radar):
     """Our Rust simulator, in the place of gz sim, the car's spawn and every bridge."""
     v = car['vehicle']
@@ -206,9 +223,7 @@ def own_simulator(context, share, world, car, lidar, radar):
     def mount(link, part):
         return [float(n) for n in mounts[link][part]]
 
-    # model://: aav_gazebo's models first, then wherever Gazebo would look.
-    models = [os.path.join(share, 'models')] + [
-        p for p in os.environ.get('GZ_SIM_RESOURCE_PATH', '').split(os.pathsep) if p]
+    models = model_paths(share)
     start = {k: float(LaunchConfiguration(k).perform(context))
              for k in ('start_x', 'start_y', 'start_yaw')}
     x, y = worlds.OBSTACLE
@@ -238,7 +253,7 @@ def launch_setup(context):
     simulator = worlds.check_simulator(LaunchConfiguration('simulator').perform(context))
     own = simulator == 'own'
     sensors = worlds.has_sensors(world)
-    # Cameras only where Gazebo renders them: ours casts rays, but draws no pictures yet.
+    # Cameras where the world renders sensors: Gazebo's, or ours (aav_sim_cameras, Bevy).
     cameras = worlds.has_cameras(world, simulator)
     # The lidar only where the world renders it: elsewhere it would publish nothing.
     lidar = sensors and flag(context, 'lidar')
@@ -321,7 +336,11 @@ def launch_setup(context):
                                       output='screen'))
     if gui and flag(context, 'follow') and not own:
         actions.append(ExecuteProcess(cmd=[FOLLOW], shell=True, name='follow_car'))
-    if cameras:
+    if cameras and own:
+        # Ours: the pictures straight onto the camera topics (the radar's rays are the
+        # simulator's own), so no road bridge.
+        actions.append(own_cameras(share, world, chase, relay))
+    elif cameras:
         bridge = os.path.join(share, 'config', 'bridge_road.yaml')
         if relay:
             # The front left picture to gazebo_camera, which passes it on through its fault.
@@ -342,7 +361,8 @@ def launch_setup(context):
             parameters=[{'config_file': os.path.join(share, 'config', 'bridge_lidar.yaml')},
                         sim_time]))
     if chase:
-        actions += chase_camera(share, sim_time)
+        # Ours publishes the chase picture itself: only the JPEG for Lichtblick.
+        actions += chase_camera(share, sim_time)[1 if own else 0:]
     if flag(context, 'obstacle') and not own:
         x, y = worlds.OBSTACLE
         actions.append(Node(
@@ -407,7 +427,7 @@ def generate_launch_description():
                                           '(aav_spine_bridge) or python (aav_spine)'),
         DeclareLaunchArgument('simulator', default_value=worlds.DEFAULT_SIMULATOR,
                               description='gazebo, or own: our Rust simulator (aav_simulator) '
-                                          'in the place of gz sim and its bridges; no '
-                                          'cameras yet'),
+                                          'in the place of gz sim and its bridges, its '
+                                          'cameras by Bevy (aav_sim_cameras)'),
         OpaqueFunction(function=launch_setup),
     ])

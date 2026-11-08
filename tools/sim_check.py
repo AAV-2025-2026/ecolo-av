@@ -10,7 +10,8 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
     pixi run sim-check --plan-around       (a box in the lane the planner sees: the car must
                                             drive round it without stopping, in a second
                                             run: 3 more minutes)
-    pixi run sim-check --lane              (adds lane keeping, in a second run: 2 more minutes)
+    pixi run sim-check --lane              (adds lane keeping, in a second run: 2 more minutes;
+                                           --lane-only: that run alone)
     pixi run sim-check --lidar-obstacle    (the lidar alone, radar off, stops for a post: a
                                             second run, 3 more minutes)
     pixi run sim-check --rear-obstacle     (backing up, the lidar stops the car for a post
@@ -144,9 +145,9 @@ this tests it against Gazebo's camera and radar stand-in, which see the road wor
    pass or fail) if every try was spoiled. The samples go to /tmp/aav-sim-speed-steps.csv.
 
 With --simulator own: every run on our own Rust simulator (aav_simulator,
-   docs/own-simulator.md) in gz sim's place, simulator:=own. It draws no cameras yet: the
-   camera's checks say so and pass by, and the contract leaves the camera topics out; the
-   obstacles go in through its /vehicle/sim/spawn_entity and delete_entity services.
+   docs/own-simulator.md) in gz sim's place, simulator:=own, with its cameras
+   (aav_sim_cameras). The obstacles go in through its /vehicle/sim/spawn_entity and
+   delete_entity services; the cameras don't draw them yet.
 
 Times are Gazebo's, simulated; only the limits on waiting are wall-clock. Prints a table and
 exits 1 if anything failed. The launch logs go to /tmp/aav-sim-check.log and, with --lane,
@@ -608,9 +609,6 @@ def check_contract(probe, env, tag, ignore=(), profile='road'):
 def check_sensors(probe):
     """Check the camera is the bench camera, in camera_left_link, and the radar the TI's."""
     probe.spin_for(5.0)     # a few seconds of each, for their rates
-    if SIMULATOR != 'gazebo':
-        check_radar(probe)
-        return
     image, info, cloud = probe.image, probe.info, probe.cloud
     camera_ok = (image.width, image.height, image.header.frame_id) == (
         BENCH['width'], BENCH['height'], 'camera_left_link')
@@ -633,19 +631,6 @@ def check_sensors(probe):
            f'{cloud.width * cloud.height} points with nothing within 8.4 m')
 
 
-def check_radar(probe):
-    """Check the radar stand-in alone: our own simulator draws no camera yet."""
-    cloud = probe.cloud
-    fields = [f.name for f in cloud.fields]
-    radar_hz = rate(probe.cloud_stamps)
-    ok = (cloud.header.frame_id == 'radar_link' and fields == RADAR_FIELDS
-          and cloud.width * cloud.height == 0 and abs(radar_hz - 10.0) < 1.5)
-    result('sensors', ok,
-           f'no camera ({SIMULATOR} draws none yet); radar stand-in in '
-           f'{cloud.header.frame_id} at {radar_hz:.1f} Hz, fields {",".join(fields)}, '
-           f'{cloud.width * cloud.height} points with nothing within 8.4 m')
-
-
 def check_cameras(probe):
     """
     Check the other two cameras: front right and rear, each in its own frame.
@@ -653,9 +638,6 @@ def check_cameras(probe):
     At 5 Hz or more: they send 10, but on a busy Mac two more reliable picture streams lose
     some. The front left camera's own check (check_sensors) holds 10 Hz.
     """
-    if SIMULATOR != 'gazebo':
-        result('cameras', None, f'{SIMULATOR} draws no cameras yet: not tested')
-        return
     # Only for this check, as the lidar's: two more picture streams would load the run.
     got = {'front_right': [], 'rear': []}
     subs = [probe.create_subscription(Image, f'/sensors/camera/{name}/image_raw',
@@ -1962,15 +1944,11 @@ def check_speed_steps(probe, profile):
 
 
 LIDAR_TOPICS = ('/sensors/lidar/points', '/sensors/lidar/scan')
-# What a simulator that draws no cameras leaves out: every camera's topics, and the chase
-# camera's, from the contract.
-with open(os.path.join(ROOT, 'docs', 'interfaces.yaml')) as _contract:
-    CAMERA_TOPICS = tuple(t for t in yaml.safe_load(_contract)['topics'] if 'camera' in t)
 WATCHDOG_TOPICS = ('/safety/sensor_watchdog/lock', '/safety/sensor_watchdog/state')
 
 
 EVERY_RUN = []   # launch arguments every session adds: --speed-loop's, --simulator's
-SIMULATOR = 'gazebo'   # --simulator own: our Rust simulator, which draws no cameras yet
+SIMULATOR = 'gazebo'   # --simulator own: our Rust simulator, and its cameras
 SIMULATOR_NAMES = {'gazebo': 'Gazebo', 'own': 'our simulator'}
 VOXELS = False   # --voxels: every session with the lidar takes voxels:=true
 KISS_EKF = False  # --kiss-ekf: every session with the lidar takes kiss_ekf:=true
@@ -1989,9 +1967,7 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spin
     """
     road = world == 'road'
     radar = radar and road
-    cameras = road and SIMULATOR == 'gazebo'
-    if road and not cameras:
-        ignore = tuple(ignore) + CAMERA_TOPICS
+    cameras = road
     watchdog = 'watchdog:=false' not in launch_args
     tag = f' ({label})' if label else ''
     # What a run leaves out on purpose isn't missing from the graph.
@@ -2134,13 +2110,10 @@ def main():
             return 2
         SIMULATOR = args[at + 1]
         EVERY_RUN.append(f'simulator:={SIMULATOR}')
-        if SIMULATOR != 'gazebo' and ({'--perception', '--lane', '--faults'} & set(args)):
-            print(f'--perception, --lane and --faults need cameras: {SIMULATOR} draws none yet',
-                  file=sys.stderr)
-            return 2
     log = os.environ.get('AAV_SIM_LOG', '/tmp/aav-sim-check.log')
     logs = [log]
-    if not {'--drive-to-point-only', '--speed-steps-only', '--spine-points-only'} & set(args):
+    if not {'--drive-to-point-only', '--speed-steps-only', '--spine-points-only',
+            '--lane-only'} & set(args):
         # With --obstacle the planner is blind to the box, so the stop zone must stop the car.
         session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}']
                 + (['plan_around:=false'] if '--obstacle' in args else []),
@@ -2219,7 +2192,7 @@ def main():
         session(['spine:=true', 'nav:=false', 'lidar:=false', 'radar:=false', 'sim_speed:=2'],
                 [lambda probe: check_speed_steps(probe, profile)], logs[-1],
                 f'speed steps, spine, {profile}', ignore=NAV_TOPICS, spine=True, world='empty')
-    if '--lane' in args:
+    if {'--lane', '--lane-only'} & set(args):
         # Its own run: control_interface drives whenever it sees the lane, so it would take
         # the wheel between the other checks. Nothing else drives here: no Nav2.
         stem, ext = os.path.splitext(log)

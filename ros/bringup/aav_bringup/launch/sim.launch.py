@@ -135,9 +135,8 @@ bench's argument names:
                       vehicle.yaml's actuators:), to compare the two
   simulator:=own      our own Rust simulator (aav_simulator, docs/own-simulator.md) in
                       gz sim's place: the same worlds, topics and rates, the lidar and
-                      radar by ray casting, no window. No cameras yet, so the camera's
-                      parts (perception, lane, camera_obstacles) refuse it. Gazebo is
-                      the default
+                      radar by ray casting, the cameras by Bevy (aav_sim_cameras), no
+                      window. Gazebo is the default
 
 The empty and test_lot worlds render nothing, so they run headless anywhere, and the
 camera's parts need world:=road. Every node runs on simulated time.
@@ -239,7 +238,7 @@ def launch_setup(context):
                          '(world:=test_lot or road, lidar:=true)')
     if wanted and not cameras:
         raise ValueError(f'{", ".join(wanted)}: world:={world} has no camera with '
-                         f'simulator:={simulator}. Use world:=road, simulator:=gazebo')
+                         f'simulator:={simulator}. Use world:=road, test_lot or campus')
     nav_share = FindPackageShare('aav_navigation').perform(context)
     actions = [
         # Every node on simulated time, those in the included files too.
@@ -536,6 +535,6 @@ def generate_launch_description():
                                           'stops for it'),
         DeclareLaunchArgument('simulator', default_value=worlds.DEFAULT_SIMULATOR,
                               description="gazebo, or own: our Rust simulator in gz sim's "
-                                          'place (aav_simulator; no cameras yet)'),
+                                          'place (aav_simulator, aav_sim_cameras)'),
         OpaqueFunction(function=launch_setup),
     ])

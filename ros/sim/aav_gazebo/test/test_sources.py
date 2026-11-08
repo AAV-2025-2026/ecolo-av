@@ -33,7 +33,7 @@ def test_with_the_spine_in_the_loop_spine_bridge_announces_the_car():
     assert 'imu' in got and 'gps' in got and 'camera_front_left' in got
 
 
-def test_our_own_simulator_announces_the_rays_but_no_cameras():
+def test_without_cameras_only_the_rays_are_announced():
     topics = {t for _, t in sources.simulated(rendered=True, lidar=True, cameras=False)}
     assert {'/sensors/radar/points', '/sensors/lidar/points'} <= topics
     assert not any('camera' in t for t in topics)

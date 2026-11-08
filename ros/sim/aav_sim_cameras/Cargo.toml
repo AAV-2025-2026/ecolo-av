@@ -25,6 +25,8 @@ ros = ["dep:rclrs", "dep:ros-env"]
 
 [dependencies]
 camera-core = { path = "crates/camera-core" }
+# The core simulator's world reader (--world): Gazebo's SDF files, as the rays see them.
+sim-core = { path = "../aav_simulator/crates/sim-core" }
 # The same Bevy as the developer window. "3d" is all it draws with; no window is opened.
 bevy = { version = "0.20", default-features = false, features = ["3d"] }
 image = { version = "0.25", default-features = false, features = ["png"] }

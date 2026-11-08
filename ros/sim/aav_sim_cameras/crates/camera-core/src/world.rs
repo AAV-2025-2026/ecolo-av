@@ -54,6 +54,9 @@ pub enum Geometry {
     /// flat side to flat side. A picture on it fills the square around it, its right edge
     /// to the octagon's +y (as seen from in front).
     Octagon { across: f64, thickness: f64 },
+    /// An OBJ file (`crate::obj`), scaled along each axis, in its own frame: the campus's
+    /// meshes, the stop sign's plate. Its picture coordinates come from the file.
+    Mesh { file: PathBuf, scale: [f64; 3] },
 }
 
 /// How a shape looks.

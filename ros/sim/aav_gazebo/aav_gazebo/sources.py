@@ -34,8 +34,7 @@ def simulated(rendered, lidar, radar=True, vehicle=True, cameras=None):
     Return (name, topic) for everything gazebo_adapter announces in this world.
 
     cameras: whether the cameras are drawn too (None: wherever the world renders sensors,
-    as in Gazebo). Our own simulator (simulator:=own) casts the radar's and lidar's rays
-    but draws no cameras yet.
+    as in Gazebo; our own simulator's cameras, aav_sim_cameras, draw them there too).
     """
     cameras = rendered if cameras is None else cameras
     out = (list(VEHICLE) if vehicle else []) + list(ALWAYS)
