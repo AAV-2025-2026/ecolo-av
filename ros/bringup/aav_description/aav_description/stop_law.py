@@ -82,7 +82,7 @@ class StopCurve:
         return v * self.tau + v * v / (2.0 * self.a)
 
     def cap(self, left: float) -> float:
-        """Return the cap v_cap(d): the fastest speed that still stops in `left` m (0 if none)."""
+        """Return v_cap, the fastest speed that still stops in `left` m; 0 if none."""
         if not math.isfinite(left):
             return math.inf if left > 0 else 0.0
         if left <= 0.0:

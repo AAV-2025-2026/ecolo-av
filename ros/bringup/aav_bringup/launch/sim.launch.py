@@ -11,7 +11,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [amcl:=false] [voxels:=false]
       [ndt:=false] [ndt_ekf:=false] [ndt_map:=maps/ndt/test_lot.pcd] [kiss_icp:=false]
       [kiss_ekf:=false]
-      [plan_around:=true]
+      [plan_around:=true] [behaviour:=false]
       [watchdog:=true] [geofence:=true] [geofence_radius:=200.0]
       [watch_hud:=false] [faults:=false] [spine:=false] [arm:=true]
       [esp32:=false] [esp32_loop:=pi]
@@ -79,6 +79,8 @@ bench's argument names:
   tracker:=lqr        a trial path follower (aav_track: pure_pursuit, stanley, lqr or mpc)
                       in controller_server's place, on Nav2's same planner, smoother and
                       collision_monitor. Forward only: with reversing:=false (docs/trials.md)
+  behaviour:=true     the behaviour states and a speed cap on Nav2 from the stopping law
+                      (aav_behaviour, a trial: docs/stopping.md)
   amcl:=true          stock AMCL beside the global EKF, scored only (docs/trials.md): only
                       in world:=test_lot with nav:=true and the lidar, from the start pose
   voxels:=true        Nav2's local costmap and collision_monitor read the lidar as 0.25 m
@@ -194,7 +196,7 @@ def launch_setup(context):
             for n in ('nav', 'teleop', 'rviz', 'perception', 'camera_obstacles', 'hud',
                       'map', 'foxglove', 'reversing', 'watchdog', 'faults',
                       'ghost', 'plan_around', 'watch_hud', 'geofence', 'voxels',
-                      'screen_cubes')}
+                      'screen_cubes', 'behaviour')}
     lane = arg('lane').lower()
     if lane not in ('false', 'true', 'fake'):
         raise ValueError(f'lane:={lane}: use true (the lane finder), fake or false')
@@ -317,7 +319,8 @@ def launch_setup(context):
                                amcl_map=(os.path.join(nav_share, 'maps',
                                                       'example_lot_amcl.yaml')
                                          if amcl else ''),
-                               plan_around=str(flag['plan_around']).lower()))
+                               plan_around=str(flag['plan_around']).lower(),
+                               behaviour=str(flag['behaviour']).lower()))
     if ndt:
         # Scored only (measure controllers --ndt), unless ndt_ekf:=true: then ekf_global
         # reads its pose (measure controllers --ndt-ekf scores the difference).
@@ -508,6 +511,9 @@ def generate_launch_description():
                               default_value=str(vehicle.LATTICE_HEADINGS[0]),
                               description='with planner:=lattice: 16 headings (the default) '
                                           'or 32 (a trial file)'),
+        DeclareLaunchArgument('behaviour', default_value='false',
+                              description='true: the behaviour states and a speed cap on '
+                                          'Nav2 (aav_behaviour, a trial)'),
         DeclareLaunchArgument('tracker', default_value=vehicle.DEFAULT_TRACKER,
                               description="a trial path follower in controller_server's "
                                           'place: ' + ', '.join(vehicle.TRACKERS) +

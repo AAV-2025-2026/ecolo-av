@@ -14,6 +14,16 @@ Ben, 7 Nov: "we really want the ego to have a mathematical model for steering, b
 | 129 | **ego's trace** (`/ego/trace`, 2 s, `base_link`) | ✅ 7 Nov. ⬜ drivers match it to their plan; a screen draws it |
 | 130 | The lag-aware drivers publish `/drivers/nav/lag_aware`: `aav_track`'s MPC, the Rust MPPI | ⬜ their agents |
 
+## 0.3: how the car stops, and the behaviour planner (7 Nov)
+
+Ben, 7 Nov: "We need navigation planning and lane following and we need an obstacle avoidance planner to avoid tricky situations ... we can use that to say if we have turned enough or slowing down enough". His picks for 0.3: the behaviour planner and a stop-point check. The page: [how the car stops](docs/stopping.md).
+
+| # | Task | Status |
+|---|---|---|
+| 137 | **The behaviour planner** (`aav_behaviour`, `behaviour:=true`, a trial): DRIVE, APPROACH, STOPPED, WAIT, GO, ASK; a speed cap on Nav2 (`/drivers/nav/speed_limit`) from **one stopping law** (`aav_description` `stop_law.py`, TODO 110) for a stop sign, an obstacle in the lane, the fence and the goal; `/drivers/nav/behaviour/state` for the screens; the watcher's `/perception/stop_sign/distance` | ✅ 7 Nov built, every transition tested; the sim runs: see the page. ⬜ the `patient` progress checker, ASK's reply, the trackers reading the cap, the car (stage gates) |
+| 138 | **The stop-point check** (`pixi run sim-check --stop-point`): drives at 1, 2, 3 m/s, slows at 1 m/s², and scores where the car stopped (truth and localization) against the car model's `stop_point`; `tools/stop_points.py` can score a car bag later, with a tape for truth | ✅ 7 Nov, numbers on the page. ⬜ on the car, after tests 4.1-4.5, with the real numbers |
+| 139 | **Wiring**: the shared `car-model` crate behind `sim-core`'s and `mppi-lag`'s `CarModel` traits (feature `shared`) | ✅ 7 Nov, tested against their own copies. ⬜ the nodes switched over, after a quiet-machine sim-check |
+
 ## 0.3: Gazebo merged into Rust (7 Nov)
 
 Ben, 7 Nov: "Does the bevy tool still use gazebo in the background. I would love to merge in everything from gazebo so its standalone in rust." His picks: everything in 0.3, all sensors.
@@ -63,7 +73,7 @@ Ben, 4 Nov: "think about the areas of this car and what is the weakest ... ideas
 | 107 | **One developer window** ([design](docs/designs/2026-11-05_one-window.md)) (Ben, 5 Nov: "a single screen just for the developers and a list of algo so you can swap"): `demo` opens Gazebo headless and **one** Rust window: 3D, the Nav2 map you click on, NDT and ICP, the algorithm list with SWAP. RViz off unless `--rviz`. The street map and the HUD stay in the car. Not Gazebo's renderer compiled into Rust | ⬜ 0.3; the design corrected after the EGM review. Proposed: raylib, with Gazebo's real picture as a panel; Bevy only on a written test (D1, Ben's). Replaces TODO 73's merge into the cockpit |
 | 108 | **Shadow mode** (research thread 3, step 1): while a person drives, Nav2 and the other automatic drivers keep publishing under a SHADOW lock (twist_mux 60), the bag records what each would have done, `shadow_score.py` scores the disagreement | ⬜ **not picked**: proposed, in stages ([design](docs/designs/2026-11-05_shadow-mode.md)): recording and a score on real bags first; a live lock only if that shows a need (S1, Ben's) |
 | 109 | **The EGM review of the 4-5 Nov designs** ([report](docs/designs/2026-11-05_egm-review.md)): none passed; all eight corrected after it, and all but `one-car` are now far too long for "short pages" | ✅ 5 Nov, uncommitted. ⬜ cut them down: the stopping design takes Part 3 of `knows-itself` and the requirements in `behaviour-and-speed`; `one-window` can split off SWAP |
-| 110 | **How the car stops** ([design](docs/designs/2026-11-05_how-the-car-stops.md)): Ben's first hybrid, one stopping law from `approach.py`, `dynamics.py`, `speed.py` and `geofence.py` | ⬜ next |
+| 110 | **How the car stops** ([design](docs/designs/2026-11-05_how-the-car-stops.md)): Ben's first hybrid, one stopping law from `approach.py`, `dynamics.py`, `speed.py` and `geofence.py` | ✅ 7 Nov `stop_law.py` (row 137), with the speed loop's lag in ρ; the trackers use it, the point driver with `stop_law:=hybrid`. ⬜ the point driver in Gazebo, 10 runs against `approach`; the CBF filter |
 | 111 | **The radar driver can die on a short frame**, in today's default mode too: `unpack` returns `None`, the generator raises, and the publisher reuses the dead generator (`TI.py:117, 125`; `pc_publisher.py:110, 143`). Read, not run | ⬜ |
 | 112 | **`vehicle.yaml` has three duplicate keys** under `vehicle:` (`centre_of_mass`, `tyre_grip`, `encoder_counts_per_rev`). The values match today, so harmless until someone edits only one: delete the copies | ⬜ |
 | 113 | **The stop-sign watcher lets rear-camera boxes trip the lock** (`stop_sign_watcher.py:34`). Reviewer's word, not checked | ⬜ |

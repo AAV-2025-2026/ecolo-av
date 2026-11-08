@@ -48,7 +48,7 @@ the pretend car. `loop=None` gives the design's ρ 0.35.
 | Point driver (`aav_drive_to_point`) | `√(2a(d − 0.8v))` | the same; **`stop_law:=hybrid`** picks the law (a trial) | stops at B on the pretend car (`test_drive.py`) |
 | ego's start-up log | `0.4v + v²/2a` | both lines: the hardest stop, and the planned one | the plan is never shorter (`test_dynamics.py`) |
 | Behaviour planner | none | the law | below |
-| The geofence's lock | RSS | **unchanged** (Simplex) | the lock always counts on more room than the law, every backend, every speed (`test_geofence.py`) |
+| The geofence's lock | RSS | **unchanged** (Simplex) | its worst case is never shorter than where the car model stops (`test_geofence.py`). Above about 0.7 m/s the law plans **more** room than the lock (1.97 against 1.40 m at 1 m/s on the spine), so the car slows before the lock closes |
 | The stop sign's lock | 4.7 m | **unchanged** | |
 
 ### Point driver, pretend car (ego and Gazebo's actuator model)
@@ -61,3 +61,61 @@ the pretend car. `loop=None` gives the design's ρ 0.35.
 | 3 m/s, 30 m | hybrid | +0.09 m | **0.78 m/s²** | 19.9 s |
 
 Gentler at speed, 5 cm further past B. Not yet run in Gazebo.
+
+## 2. The behaviour planner
+
+`aav_behaviour` (a trial, **off by default**): `pixi run sim world:=road behaviour:=true`.
+It knows why the car should slow, and sends Nav2 a speed cap. **It can't stop the car**:
+a lock or Nav2's goal check makes every final stop.
+
+```text
+ DRIVE ─► APPROACH ─► STOPPED ─► WAIT ─► GO ─► DRIVE
+  (no cap)  (cap falls)  (lock on,  (lock on)  (cap rises)
+                         still)        │
+                                       └─► ASK (a person is told)
+```
+
+| Stop for | `left` | The final stop |
+|---|---|---|
+| A stop sign | camera range to the sign − 4.7 m | the `stop_sign` lock |
+| An obstacle in the lane | lidar: nearest point ahead − bumper − stop zone | collision_monitor, then the `stop_zone` lock |
+| The fence | along the plan to where the geofence would say NEAR | the geofence's lock |
+| The goal | along the plan to its end | Nav2's goal check |
+
+### The cap
+
+| Rule | Why |
+|---|---|
+| `v_cap(left)` of the lowest stop | the stopping law, above |
+| 0.0, or between 0.3 m/s and Nav2's top speed | Nav2 reads 0.0 as **no limit** |
+| Falls no faster than 2 m/s² | MPPI cuts its turn rate at once, its speed later |
+| The sign's cap never rises in APPROACH | a new picture can't speed the car up |
+| Rises at 0.5 m/s² in GO | |
+| Odometry stale: the floor | |
+
+### Topics
+
+| Topic | Type | |
+|---|---|---|
+| `/drivers/nav/speed_limit` | `nav2_msgs/SpeedLimit`, 20 Hz | controller_server reads it with `behaviour:=true` |
+| `/drivers/nav/behaviour/state` | `diagnostic_msgs/DiagnosticStatus`, 5 Hz | for the screens: state, reason, cap, left |
+| `/perception/stop_sign/distance` | `geometry_msgs/PointStamped` | new, from the watcher: where the sign is |
+
+### Not built yet
+
+| Part | Why it waits |
+|---|---|
+| The `patient` progress checker | a stock tree edit; holds over 10 s still look stuck to Nav2 |
+| ASK's reply (`/hud/ask/answer`) | the HUD has no reply path |
+| The trial trackers reading the cap | they ignore `/drivers/nav/speed_limit` |
+| The car | the stage gates in the design: `pi` mode first |
+
+## 3. Where the car really stops
+
+`pixi run sim-check --stop-point` (the empty world, about 3 minutes): a scripted drive at
+1, 2 and 3 m/s; then the set speed falls at 1 m/s². Where the car stopped, by Gazebo's
+truth and by the global EKF, against `stop_law.stop_point`: the car model, the same speed
+loop, from the speed the car had. ego's lead is off meanwhile (the model has none).
+
+Pass: within 0.25 m, or 10 % of the distance if more. The maths is `tools/stop_points.py`:
+it can score a bag from the car later, with a tape measure for the truth.

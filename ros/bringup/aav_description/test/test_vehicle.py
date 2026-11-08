@@ -475,6 +475,24 @@ def test_track_params_are_nav2s_own_checks_and_speeds():
     assert vehicle.track_params(nav2, cfg, ego, max_speed=3.0)['cruise_speed'] == 3.0
 
 
+def test_behaviour_params_from_nav2_the_body_and_ego():
+    nav2 = yaml.safe_load(NAV2_YAML.read_text())
+    cfg = vehicle.load(CONFIG)
+    ego = yaml.safe_load(EGO_YAML.read_text())['ego']['ros__parameters']
+    server = nav2['controller_server']['ros__parameters']
+    p = vehicle.behaviour_params(nav2, cfg, ego)
+    assert p['base_speed'] == server['MPPI']['vx_max']
+    assert vehicle.behaviour_params(nav2, cfg, ego, controller='rpp')['base_speed'] == \
+        server['FollowPath']['desired_linear_vel']
+    assert vehicle.behaviour_params(nav2, cfg, ego, max_speed=3.0)['base_speed'] == 3.0
+    # The stop zone's own front edge, width and reach.
+    zone = vehicle.stop_zone_points(cfg['vehicle'])
+    assert p['front'] == pytest.approx(zone[2][0])
+    assert p['half_width'] == pytest.approx(zone[0][1])
+    assert p['front'] + p['stop_gap'] == pytest.approx(zone[0][0])
+    assert p['max_deceleration'] == ego['max_deceleration'] and p['max_jerk'] == ego['max_jerk']
+
+
 def test_mppi_lag_params_are_nav2s_mppi_and_the_cars_lag():
     nav2 = yaml.safe_load(NAV2_YAML.read_text())
     cfg = vehicle.load(CONFIG)

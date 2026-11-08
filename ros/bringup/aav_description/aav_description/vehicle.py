@@ -514,6 +514,34 @@ def mppi_lag_params(nav2, cfg, ego=None, max_speed=None):
     return out
 
 
+def behaviour_params(nav2, cfg, ego=None, max_speed=None, controller=DEFAULT_CONTROLLER):
+    """
+    Return aav_behaviour's parameters: the cap's top, the lane ahead, ego's limits.
+
+    base_speed is the controller's own top speed (MPPI's vx_max, RPP's desired_linear_vel,
+    or `max_speed`, sim_speed:=): a higher cap would raise MPPI's envelope. front and
+    half_width are the body's front bumper and half its width plus the stop zone's margin;
+    stop_gap is the stop zone's reach (STOP_ZONE_AHEAD): the obstacle's final stop.
+    """
+    server = nav2['controller_server']['ros__parameters']
+    if max_speed:
+        base = float(max_speed)
+    elif controller == 'mppi':
+        base = float(server['MPPI']['vx_max'])
+    else:
+        base = float(server['FollowPath']['desired_linear_vel'])
+    v = cfg['vehicle']
+    body = v['body']
+    out = {'base_speed': base,
+           'front': float(body['length'] - body['rear_overhang']),
+           'half_width': float(body['width'] / 2.0 + STOP_ZONE_MARGIN),
+           'stop_gap': float(STOP_ZONE_AHEAD)}
+    for key in ('max_deceleration', 'max_jerk'):
+        if ego and key in ego:
+            out[key] = float(ego[key])
+    return out
+
+
 def nav2_rewrites(v, reversing=False, planner='hybrid'):
     """
     Values to substitute into aav_navigation/config/nav2.yaml.

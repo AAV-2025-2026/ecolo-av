@@ -56,6 +56,18 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
                                             the loop, at 1 and 3 m/s, drives only: two
                                             more runs; --spine-points-only skips the
                                             road world's run)
+    pixi run sim-check --stop-point        (where the car really stops against where the
+                                            car model says: scripted drives at 1, 2 and
+                                            3 m/s, then the set speed falls at 1 m/s^2;
+                                            truth and localization against stop_law's
+                                            stop_point, ego's lead off. The empty world,
+                                            one more run; --stop-point-only skips the road
+                                            world's run. docs/stopping.md)
+    pixi run sim-check --behaviour         (the behaviour trial, behaviour:=true: an
+                                            obstacle in the lane and a Nav2 goal, each
+                                            slowed by the speed cap, and with -e ml
+                                            --perception the stop sign too; one more run.
+                                            --behaviour-only skips the road world's run)
 
 bench_check.py tests the car's software against pretend sensors that draw a flat world;
 this tests it against Gazebo's camera and radar stand-in, which see the road world
@@ -190,6 +202,7 @@ from aav_interfaces.action import DriveToPoint, ScriptedDrive  # noqa: E402
 from aav_interfaces.msg import ActuatorState, SpineOutputs, VehicleStatus  # noqa: E402
 from aav_lane_geometry.msg import LaneGeometry  # noqa: E402
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus  # noqa: E402
+from geometry_msgs.msg import TwistStamped  # noqa: E402
 import gz_crash  # noqa: E402
 from nav2_msgs.action import NavigateToPose  # noqa: E402
 from nav2_msgs.msg import CollisionMonitorState  # noqa: E402
@@ -206,6 +219,7 @@ from sensor_msgs.msg import CameraInfo, Image, LaserScan, PointCloud2  # noqa: E
 from sensor_msgs_py import point_cloud2  # noqa: E402
 from std_msgs.msg import Bool, String, UInt64  # noqa: E402
 from std_srvs.srv import SetBool, Trigger  # noqa: E402
+import stop_points  # noqa: E402
 from vision_msgs.msg import Detection2DArray  # noqa: E402
 from visualization_msgs.msg import Marker  # noqa: E402
 import yaml  # noqa: E402
@@ -360,8 +374,17 @@ class Probe(Node):
         # starts as soon as the camera sees the lane, before its check begins.
         self.track, self.lanes, self.image_stamps, self.cloud_stamps = [], [], [], []
         self.create_subscription(Odometry, '/vehicle/sim/truth', self.on_truth, 10)
-        self.create_subscription(Odometry, '/localization/odom/global',
-                                 lambda m: setattr(self, 'glob', m), 10)
+        self.glob_track = []     # (t, x, y, yaw, v) of the global EKF, for --stop-point
+        self.create_subscription(Odometry, '/localization/odom/global', self.on_glob, 10)
+        # (stamp, v) of the one command ego obeys, for --stop-point
+        self.commands = []
+        self.create_subscription(TwistStamped, '/control/cmd_vel',
+                                 lambda m: self.commands.append(
+                                     (seconds(m.header.stamp), m.twist.linear.x)), 10)
+        # (t, state, reason, cap, left) from the behaviour trial (--behaviour)
+        self.behaviour = []
+        self.create_subscription(DiagnosticStatus, '/drivers/nav/behaviour/state',
+                                 self.on_behaviour, 10)
         self.create_subscription(LaneGeometry, '/perception/lane/geometry', self.on_lane, 10)
         self.create_subscription(Image, '/sensors/camera/front_left/image_raw', self.on_image, 2)
         self.create_subscription(CameraInfo, '/sensors/camera/front_left/camera_info',
@@ -430,6 +453,16 @@ class Probe(Node):
         self.create_subscription(DiagnosticStatus, '/perception/voxels/status',
                                  lambda m: self.voxels.append({v.key: v.value for v in m.values}),
                                  10)
+
+    def on_glob(self, msg):
+        self.glob = msg
+        self.glob_track.append((seconds(msg.header.stamp), msg.pose.pose.position.x,
+                                msg.pose.pose.position.y, yaw_of(msg), msg.twist.twist.linear.x))
+
+    def on_behaviour(self, msg):
+        v = {kv.key: kv.value for kv in msg.values}
+        self.behaviour.append((self.now(), v.get('state', ''), v.get('reason', ''),
+                               float(v.get('cap_mps', 'nan')), float(v.get('left_m', 'nan'))))
 
     def on_truth(self, msg):
         self.truth = msg
@@ -1976,6 +2009,143 @@ VOXELS = False   # --voxels: every session with the lidar takes voxels:=true
 KISS_EKF = False  # --kiss-ekf: every session with the lidar takes kiss_ekf:=true
 
 
+STOP_SPEEDS = (1.0, 2.0, 3.0)   # m/s: --stop-point's drives
+STOP_RAMP = 1.0                 # m/s^2 the set speed falls at: the stopping law's a
+
+
+def set_ego(probe, **values):
+    """Set ego's live parameters (lag_lead); True if it took them."""
+    client = AsyncParameterClient(probe, '/ego')
+    if not client.wait_for_services(timeout_sec=10.0):
+        return False
+    future = client.set_parameters([Parameter(k, value=v) for k, v in values.items()])
+    probe.spin_for(10.0, future.done)
+    return future.done() and all(r.successful for r in future.result().results)
+
+
+def check_stop_point(probe, profile='default'):
+    """
+    Drive at each of STOP_SPEEDS, slow at STOP_RAMP: check the car stops where the model says.
+
+    Each drive's commanded speed starts falling at t0; the car model (stop_law.stop_point,
+    the same speed loop) predicts from the truth's speed then. Truth and the global EKF are
+    measured along the heading at t0. ego's lag lead is off meanwhile (the model has no
+    lead), and back to auto after.
+    """
+    from aav_description.car_model import ActuatorConfig, speed_loop_profile
+    from aav_description.stop_law import from_car_model, stop_point
+    if not probe.drive.wait_for_server(timeout_sec=20.0):
+        result('stop point', False, 'no scripted driver')
+        return
+    cfg = ActuatorConfig.from_vehicle(vehicle.load())
+    loop = speed_loop_profile(profile)
+    with open(os.path.join(ROOT, 'ros', 'ego', 'aav_ego', 'config', 'ego.yaml')) as f:
+        ego = yaml.safe_load(f)['ego']['ros__parameters']
+    law = from_car_model(cfg, ego['max_deceleration'], ego['max_jerk'], loop=loop)
+    lead_off = set_ego(probe, lag_lead='off')
+    stops = []
+    for speed in STOP_SPEEDS:
+        begin = probe.now()
+        sent = probe.drive.send_goal_async(ScriptedDrive.Goal(
+            target_speed=speed, acceleration=0.5, deceleration=STOP_RAMP, hold_time=3.0))
+        probe.spin_for(10.0, sent.done)
+        if not sent.done() or not sent.result().accepted:
+            result(f'stop point {speed:g} m/s', False, 'the scripted drive was refused')
+            continue
+        done = sent.result().get_result_async()
+        probe.spin_for(90.0, done.done)
+        rest = probe.now()
+        probe.spin_for(30.0, lambda: probe.now() - rest > 3.0)    # 3 s to come to rest
+        track = [stop_points.Sample(*row) for row in probe.track]
+        glob = [stop_points.Sample(*row) for row in probe.glob_track]
+        t0 = stop_points.slowing_start([c for c in probe.commands if c[0] >= begin], speed)
+        origin = stop_points.at(track, t0) if t0 is not None else None
+        end = stop_points.stopped(track, t0) if t0 is not None else None
+        if origin is None or end is None or origin.v < 0.5 * speed:
+            result(f'stop point {speed:g} m/s', False,
+                   'never slowed' if t0 is None else
+                   f'from {origin.v if origin else float("nan"):.2f} m/s: never stood still')
+            continue
+        predicted, _ = stop_point(cfg, origin.v, STOP_RAMP, loop)
+        g0, g1 = stop_points.at(glob, t0), stop_points.at(glob, end.t + 1.0)
+        localized = stop_points.along(g0, g1) if g0 and g1 else None
+        stop = stop_points.Stop(speed=origin.v, predicted=predicted,
+                                truth=stop_points.along(origin, end), localized=localized,
+                                law=law.distance(origin.v))
+        stops.append(stop)
+        result(f'stop point {speed:g} m/s', stop.ok, stop.words())
+    if lead_off:
+        set_ego(probe, lag_lead='auto')
+    located = [s.localized_ok for s in stops if s.localized_ok is not None]
+    result('stop point, localization', all(located) if located else None,
+           f'{sum(located)} of {len(located)} within the tolerance + '
+           f'{stop_points.TOLERANCE:g} m (the global EKF; GPS noise 0.5 m); ego lead off: '
+           f'{lead_off}')
+
+
+def behaviour_seen(probe, since):
+    """Return the behaviour states seen since `since`, in order, each once: 'STATE(reason)'."""
+    seen = []
+    for t, state, reason, *_ in probe.behaviour:
+        word = f'{state}({reason})' if reason not in ('', '-') else state
+        if t >= since and (not seen or seen[-1] != word):
+            seen.append(word)
+    return seen
+
+
+def lowest_cap(probe, since):
+    caps = [cap for t, _, _, cap, _ in probe.behaviour if t >= since and cap > 0.0]
+    return min(caps) if caps else None
+
+
+def check_behaviour(probe, sign=False):
+    """
+    Check the behaviour trial (behaviour:=true): it slows for each stop; the locks still stop.
+
+    With `sign`, the stop sign first (check_stop_sign's rules, plus the speed as the lock
+    fired); then an obstacle in the lane (check_obstacle's rules, plus the speed as the
+    stop zone fired); then a Nav2 goal (reached, and how far off it stopped).
+    """
+    if not probe.spin_for(30.0, lambda: bool(probe.behaviour)):
+        result('behaviour', False, 'nothing on /drivers/nav/behaviour/state')
+        return
+    if sign:
+        since = probe.now()
+        fired = []
+        sub = probe.create_subscription(
+            Bool, '/perception/stop_sign',
+            lambda m: fired.append(abs(probe.speed())) if m.data and not fired else None, 10)
+        check_stop_sign(probe)
+        probe.destroy_subscription(sub)
+        seen = behaviour_seen(probe, since)
+        at = f'{fired[0]:.2f} m/s' if fired else 'never'
+        result('behaviour: sign', 'APPROACH(sign)' in seen and bool(fired) and fired[0] <= 0.5,
+               f'speed as the lock fired: {at}; lowest cap {lowest_cap(probe, since)}; '
+               f'states {" > ".join(seen)}')
+    since, monitor = probe.now(), len(probe.monitor)
+    speed_at = []
+
+    def watch():
+        if not speed_at and any(a == CollisionMonitorState.STOP and p == 'StopZone'
+                                for a, p in probe.monitor[monitor:]):
+            speed_at.append(abs(probe.speed()))
+        return False
+
+    timer = probe.create_timer(0.05, watch)
+    check_obstacle(probe, name='behaviour: obstacle (the stop zone)')
+    probe.destroy_timer(timer)
+    seen = behaviour_seen(probe, since)
+    at = f'{speed_at[0]:.2f} m/s' if speed_at else 'never'
+    result('behaviour: obstacle', 'APPROACH(obstacle)' in seen,
+           f'speed as the stop zone fired: {at}; lowest cap {lowest_cap(probe, since)}; '
+           f'states {" > ".join(seen)}')
+    since = probe.now()
+    check_nav_goal(probe)
+    seen = behaviour_seen(probe, since)
+    result('behaviour: goal', 'APPROACH(goal)' in seen,
+           f'lowest cap {lowest_cap(probe, since)}; states {" > ".join(seen)}')
+
+
 def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spine=False,
             world='road', retry=True):
     """
@@ -2140,7 +2310,8 @@ def main():
             return 2
     log = os.environ.get('AAV_SIM_LOG', '/tmp/aav-sim-check.log')
     logs = [log]
-    if not {'--drive-to-point-only', '--speed-steps-only', '--spine-points-only'} & set(args):
+    if not {'--drive-to-point-only', '--speed-steps-only', '--spine-points-only',
+            '--stop-point-only', '--behaviour-only'} & set(args):
         # With --obstacle the planner is blind to the box, so the stop zone must stop the car.
         session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}']
                 + (['plan_around:=false'] if '--obstacle' in args else []),
@@ -2219,6 +2390,23 @@ def main():
         session(['spine:=true', 'nav:=false', 'lidar:=false', 'radar:=false', 'sim_speed:=2'],
                 [lambda probe: check_speed_steps(probe, profile)], logs[-1],
                 f'speed steps, spine, {profile}', ignore=NAV_TOPICS, spine=True, world='empty')
+    if '--stop-point' in args or '--stop-point-only' in args:
+        # Its own run: the empty world, nothing else driving, ego's cap at the top speed.
+        stem, ext = os.path.splitext(log)
+        logs.append(f'{stem}-stop-point{ext}')
+        session(['nav:=false', 'lidar:=false', 'radar:=false',
+                 f'sim_speed:={max(STOP_SPEEDS):g}'],
+                [lambda probe: check_stop_point(probe, profile)], logs[-1], 'stop point',
+                ignore=NAV_TOPICS, world='empty')
+    if '--behaviour' in args or '--behaviour-only' in args:
+        # Its own run: the trial on, the planner blind to the box (the cap must slow, the
+        # stop zone must stop), the lidar on for the lane ahead.
+        stem, ext = os.path.splitext(log)
+        logs.append(f'{stem}-behaviour{ext}')
+        session(['behaviour:=true', 'lidar:=true', 'plan_around:=false',
+                 f'perception:={str(perception).lower()}'],
+                [lambda probe: check_behaviour(probe, sign=perception)], logs[-1],
+                'behaviour')
     if '--lane' in args:
         # Its own run: control_interface drives whenever it sees the lane, so it would take
         # the wheel between the other checks. Nothing else drives here: no Nav2.
