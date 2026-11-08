@@ -7,7 +7,7 @@ No ROS here. Built from aav_drive_to_point's own pieces:
 |---|---|
 | cruise | Regulated Pure Pursuit's `desired_linear_vel` (nav2.yaml), or sim_speed:= |
 | slow for a bend ahead | `line.turn_speed_limit`: at most `lateral_accel` sideways |
-| stop at the path's end | `approach.Approach` on the stopping law (stop_law.py): v = v_cap(d) (7 Nov) |
+| stop at the path's end | `approach.Approach` on the stopping law (stop_law.py): v_cap(d) |
 | speed up | the velocity smoother's `max_accel` |
 
 A tracker may lower it further (`Command.speed_cap`). The bend is looked for from the car
