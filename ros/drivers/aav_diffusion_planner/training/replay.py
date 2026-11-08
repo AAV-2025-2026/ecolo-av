@@ -12,7 +12,8 @@ or sampler is scored on the very plans the car asked for, without Gazebo.
 
 Runs in the learn environment (no ROS). It prints, and with --json writes: plans, the share
 with a sample that passes, samples passed, refusals by check, the model's time a plan,
-and the same split by what the node chose in the run (to compare before and after).
+and the same split by what the node chose in the run (to compare before and after);
+the JSON also each plan's file, its goal (x, y), whether a sample passed, and how many.
 """
 
 import argparse
@@ -50,7 +51,7 @@ def replay(plans, run, samples, seed=0, gear_smooth=True):
     rng = np.random.default_rng(seed)
     out = {'plans': 0, 'plans_with_a_pass': 0, 'samples': 0, 'samples_passed': 0,
            'refusals_by_check': dict.fromkeys(guard.CHECKS, 0), 'model_ms': [],
-           'guard_ms': [], 'by_run_source': {}}
+           'guard_ms': [], 'by_run_source': {}, 'each': []}
     for name, d in plans:
         grid = window.Grid(d['costmap'], float(d['origin'][0]), float(d['origin'][1]),
                            float(d['resolution']))
@@ -74,6 +75,8 @@ def replay(plans, run, samples, seed=0, gear_smooth=True):
                                                  lattice_len, again)
         out['guard_ms'].append(1000.0 * (time.perf_counter() - t0))
         out['plans'] += 1
+        out['each'].append([os.path.relpath(name), round(goal[0], 1), round(goal[1], 1),
+                            best is not None, passed])
         out['plans_with_a_pass'] += best is not None
         out['samples'] += len(smoothed)
         out['samples_passed'] += passed
@@ -112,11 +115,12 @@ def main():
     score['smoothing'] = 'average' if args.average_smooth else 'by gear'
     score['model'] = os.path.abspath(args.model)
     score['samples_a_plan'] = args.samples
+    each = score.pop('each')
     text = json.dumps(score, indent=1)
     print(text)
     if args.json:
         with open(args.json, 'w') as f:
-            f.write(text + '\n')
+            json.dump(dict(score, each=each), f, indent=1)
 
 
 if __name__ == '__main__':

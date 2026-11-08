@@ -197,9 +197,9 @@ def yaw_of(qz, qw):
 
 
 SMOOTH = 5              # points in the moving average (smooth())
-SMOOTH_AGAIN = 9        # the wider average for a sample whose only faults were its turns
-                        # or headings (guard.choose's again): 7 Nov, held-back maps, plans
-                        # with a passing sample 79 % -> 85 %
+# The wider average for a sample whose only faults were its turns or headings
+# (guard.choose's again). 7 Nov, held-back maps: plans with a passing sample 79 % -> 85 %.
+SMOOTH_AGAIN = 9
 MIN_GEAR_POINTS = 3     # a run of one gear shorter than this is the model's noise (smooth())
 
 

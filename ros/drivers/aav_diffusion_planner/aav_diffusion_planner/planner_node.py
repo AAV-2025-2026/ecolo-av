@@ -62,6 +62,7 @@ MODEL = os.path.join('models', 'diffusion', 'planner.onnx')
 LEARN_PYTHON = os.path.join('.pixi', 'envs', 'learn', 'bin', 'python')
 KEEP_ENV = ('HOME', 'PATH', 'LANG', 'TMPDIR')
 NO_VALID_PATH = ComputePathToPose.Result.NO_VALID_PATH
+LOAD_SECONDS = {'TensorrtExecutionProvider': 900.0}     # else 60 s for the first answer
 TF_ERROR = ComputePathToPose.Result.TF_ERROR
 
 
@@ -183,10 +184,12 @@ class DiffusionPlanner(Node):
                                     '-e learn; pixi run diffusion train)')
             return
         self.worker = Worker(self.python, self.model, self.provider)
-        # The first call loads the model: not in a real plan's budget.
+        # The first call loads the model: not in a real plan's budget. TensorRT builds its
+        # engine then, minutes on the Orin the first time (measure diffusion builds it first).
         noise = np.zeros((self.samples, window.POINTS, window.CHANNELS), np.float32)
         paths, _, why = self.worker.sample(np.zeros((window.SIZE, window.SIZE)),
-                                           np.zeros(window.COND), noise, 60.0)
+                                           np.zeros(window.COND), noise,
+                                           LOAD_SECONDS.get(self.provider, 60.0))
         if paths is None:
             self.get_logger().error(f'the model worker: {why}; the lattice plans alone')
             self.worker.close()
