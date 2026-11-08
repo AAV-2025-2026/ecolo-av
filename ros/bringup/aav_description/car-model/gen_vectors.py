@@ -83,6 +83,11 @@ CASES = [
      segments(0.02, (2.0, speed(1.0)), (3.0, speed(-0.5, -0.1)))),
     ('speed_loop_lqi', LAGGY, 'lqi',
      segments(0.02, (3.0, speed(2.0, 0.1)), (2.0, speed(0.5)))),
+    # A person aboard: the same pedals push and stop the heavier car less (share).
+    ('loaded_throttle_then_brake', cm.ActuatorConfig(payload=90.0), None,
+     segments(0.02, (2.0, pedals(1.0)), (1.0, pedals(brake=1.0)))),
+    ('loaded_speed_loop_stop', cm.ActuatorConfig(mass=150.0, payload=120.0), 'default',
+     segments(0.02, (4.0, speed(1.5)), (3.0, speed(0.0)))),
 ]
 
 

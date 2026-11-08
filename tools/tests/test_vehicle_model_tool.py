@@ -114,7 +114,8 @@ def test_every_actuator_key_is_used_or_ignored_by_each_reader():
             {k.split('.')[1] for k in tool.vm.YAML_KEYS if k.startswith('actuators.')},
             {k.split('.')[1] for k in tool.vm.NOT_LINEAR}),
         'car_model.py (ActuatorConfig, IGNORED)': (
-            {f for f in vars(tool.am.ActuatorConfig()) if f not in ('max_steering', 'wheelbase')},
+            {f for f in vars(tool.am.ActuatorConfig())
+             if f not in ('max_steering', 'wheelbase', 'mass', 'payload')},
             set(tool.am.IGNORED)),
         'vehicle.ego_params (EGO_PARAMS_IGNORES)': (ego_params_uses(keys), EGO_PARAMS_IGNORES),
     }

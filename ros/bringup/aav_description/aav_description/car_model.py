@@ -43,9 +43,11 @@ The maths of one step of dt (docs/vehicle-model.md, "One car model"):
      (throttle with its gear, brake, steering target). 0 (the default): no wait.
   2. Throttle and brake: each level follows its input with a first-order lag,
      level' = (u - level) / lag, stepped exactly: level += (u - level)(1 - e^(-dt/lag)).
-  3. Speed: v += max_accel * throttle (0 below throttle_deadband, - in reverse) * dt; then
-     (max_brake * brake + drag * |v|) * dt is taken off |v|, never past 0 (the brake and
-     drag stop the car, they never reverse it).
+  3. Speed: v += max_accel * share * throttle (0 below throttle_deadband, - in reverse) * dt;
+     then (max_brake * share * brake + drag * |v|) * dt is taken off |v|, never past 0 (the
+     brake and drag stop the car, they never reverse it). share = mass / (mass + payload):
+     the same motor and brakes push a heavier car less (a = F / m; ego's dynamics.py
+     load_share). max_accel and max_brake are the empty car's; payload 0 gives share 1.
   4. Steering: the motor's setpoint takes the target only when it differs by more than
      steer_deadband; the motor moves toward it at most steer_rate * dt; the linkage lags
      the motor (steer_lag); the wheels' angle is that plus steer_offset, within
@@ -88,6 +90,13 @@ class ActuatorConfig:
     brake_dead_time: float = 0.0    # s before the brake starts to answer
     steer_dead_time: float = 0.0    # s before the steering motor starts to answer
     wheelbase: float = 1.561        # m (vehicle.yaml vehicle: wheelbase)
+    mass: float = 181.0             # kg, the empty car (vehicle.yaml vehicle: mass)
+    payload: float = 0.0            # kg aboard: people, cargo. Not in vehicle.yaml: a run's own
+
+    @property
+    def share(self):
+        """Return mass / (mass + payload): how much of the empty car's push and braking is left."""
+        return self.mass / (self.mass + self.payload)
 
     @classmethod
     def from_vehicle(cls, cfg):
@@ -96,6 +105,8 @@ class ActuatorConfig:
         values = {k: float(v) for k, v in (cfg.get('actuators') or {}).items() if k in known}
         values['max_steering'] = float(cfg['vehicle']['max_steering_angle'])
         values['wheelbase'] = float(cfg['vehicle']['wheelbase'])
+        if 'mass' in cfg['vehicle']:
+            values['mass'] = float(cfg['vehicle']['mass'])
         return cls(**values)
 
     @classmethod
@@ -386,9 +397,10 @@ def step(cfg, state, command, dt, loop=None):
     throttle_level = lag(state.throttle_level, abs(signed), c.throttle_lag, dt)
     brake_level = lag(state.brake_level, brake, c.brake_lag, dt)
     pushing = throttle_level if throttle_level > c.throttle_deadband else 0.0
-    push = pushing * c.max_accel * (-1.0 if signed < 0.0 else 1.0)
+    share = c.share
+    push = pushing * c.max_accel * share * (-1.0 if signed < 0.0 else 1.0)
     v = state.v + push * dt
-    resist = (brake_level * c.max_brake + c.drag * abs(v)) * dt
+    resist = (brake_level * c.max_brake * share + c.drag * abs(v)) * dt
     v = max(0.0, v - resist) if v > 0.0 else min(0.0, v + resist)
 
     # 4. Steering: deadband, then the motor's rate limit, then the linkage's lag.
@@ -429,11 +441,18 @@ def predict(cfg, state, commands, dt, horizon, loop=None):
 
 
 class Actuators:
-    """The modelled car, as an object: the speed loop, then step()'s actuators."""
+    """
+    The modelled car, as an object: the speed loop, then step()'s actuators.
 
-    def __init__(self, cfg=ActuatorConfig(), loop=SpeedLoopConfig()):
+    brake: an adaptive_brake.AdaptiveBrake between the speed loop and the brake (None:
+    the loop's brake as it is). It reads the model's own speed, as the car's would read
+    the wheels. drive() (a firmware's outputs) never goes through it.
+    """
+
+    def __init__(self, cfg=ActuatorConfig(), loop=SpeedLoopConfig(), brake=None):
         self.cfg = cfg
         self.loop = SpeedLoop(loop)
+        self.brake_loop = brake
         self.state = CarState()
 
     # The actuators' insides, by their old names (the tests read and set them).
@@ -449,7 +468,11 @@ class Actuators:
         """Step ego's speed and angle: the speed loop (ours, in Python), then the actuators."""
         if dt <= 0.0:
             raise ValueError(f'dt must be positive, not {dt}')
-        return self.drive(self.loop.update(speed_command, self.speed, dt), steer_command, dt)
+        d = self.loop.update(speed_command, self.speed, dt)
+        if self.brake_loop is not None:
+            sent = self.brake_loop.update(d.throttle, d.brake, self.speed, dt)
+            d = Demand(d.throttle, sent.brake, d.reverse)
+        return self.drive(d, steer_command, dt)
 
     def drive(self, d, steer_command, dt):
         """Drive the actuators alone: a throttle, brake and gear Demand, and a steering target."""
