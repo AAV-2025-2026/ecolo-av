@@ -12,6 +12,7 @@ It makes, in maps/campus/ (not in git; this tool makes it again):
     meshes/, textures/    what the world draws, with bump maps
     campus.pgm, .yaml     one Nav2 map of the whole campus: only roads and lots are free
     place.yaml            where the car starts, what went in, the OpenStreetMap credit
+    lanes.yaml            the painted roads' centre lines and widths, to score lane keeping
 
 and maps/ndt/campus.pcd: NDT's map, **a guess** sampled from the same shapes. A real drive
 replaces it (pixi run ndt-map build); a drive suggests changes and a person accepts them.
@@ -88,7 +89,11 @@ ROAD_WIDTHS = {'trunk': 9.0, 'trunk_link': 6.0, 'primary': 9.0, 'primary_link': 
                'secondary': 8.0, 'secondary_link': 6.0, 'tertiary': 7.0, 'unclassified': 6.0,
                'residential': 6.0, 'service': 5.0}
 LANE_WIDTH = 3.5       # m
+# Roads with paint: a yellow dashed centre line, and a solid white line along each edge,
+# EDGE_INSET in from it, so the lane finder sees both sides of the car's lane.
 PAINTED = {'trunk', 'primary', 'secondary', 'tertiary'}
+LINE_WIDTH = 0.15      # m: every painted line
+EDGE_INSET = 0.5       # m: from the road's edge to its edge line's centre: tarmac each side
 PATHS = {'footway', 'path', 'cycleway', 'pedestrian', 'steps'}
 PATH_WIDTH = 2.0       # m
 GREEN = {'grass', 'meadow', 'park', 'garden', 'pitch', 'playground', 'allotments', 'farmland'}
@@ -346,6 +351,42 @@ def straighten(points, tolerance=0.02):
     fewer = cv2.approxPolyDP(np.array(points, dtype=np.float32).reshape(-1, 1, 2),
                              tolerance, False).reshape(-1, 2)
     return [tuple(map(float, p)) for p in fewer]
+
+
+def offset_line(points, d):
+    """
+    Return a line moved d metres to its left (right if d < 0), corner by corner.
+
+    Each corner moves along the mean of its two segments' left normals, scaled so both
+    segments stay d away (a mitre), at most 3 d at a sharp bend.
+    """
+    pts = [p for i, p in enumerate(points) if i == 0 or math.dist(p, points[i - 1]) > 1e-6]
+    if len(pts) < 2:
+        return list(pts)
+
+    def normal(a, b):
+        length = math.dist(a, b)
+        return (-(b[1] - a[1]) / length, (b[0] - a[0]) / length)
+
+    normals = [normal(a, b) for a, b in zip(pts, pts[1:])]
+    out = []
+    for i, p in enumerate(pts):
+        before, after = normals[max(i - 1, 0)], normals[min(i, len(normals) - 1)]
+        mx, my = before[0] + after[0], before[1] + after[1]
+        length = math.hypot(mx, my)
+        if length < 1e-6:          # a turn right back: keep the segment's own normal
+            mx, my, length = before[0], before[1], 1.0
+        mx, my = mx / length, my / length
+        scale = min(1.0 / max(mx * after[0] + my * after[1], 1e-6), 3.0)
+        out.append((p[0] + mx * d * scale, p[1] + my * d * scale))
+    return out
+
+
+def edge_lines(points, width):
+    """Return a painted road's two solid edge lines, as rectangles, EDGE_INSET in."""
+    shift = width / 2.0 - EDGE_INSET
+    return [shape for side in (1.0, -1.0)
+            for shape in strip_quads(offset_line(points, side * shift), LINE_WIDTH)]
 
 
 def dashes(points, width, on=3.0, off=6.0):
@@ -607,8 +648,8 @@ def kind_of_area(tags):
 
 
 def build(campus, box):
-    """Turn a Campus into meshes, Nav2's grid and the guessed NDT map's shapes."""
-    names = ['grass', 'green', 'water', 'lot', 'path', 'road', 'paint', 'rail', 'kerb',
+    """Turn a Campus into meshes, Nav2's grid, NDT's guessed shapes and the painted roads."""
+    names = ['grass', 'green', 'water', 'lot', 'path', 'road', 'paint', 'edge', 'rail', 'kerb',
              'brick', 'stone', 'roof', 'fence', 'bark', 'leaves']
     meshes = {name: Mesh() for name in names}
     solids = Mesh()
@@ -617,6 +658,7 @@ def build(campus, box):
     trees = [t for t in campus.trees if in_box(t, box)]
     walls = []            # (ring, height) for NDT's guess
     trunks = []           # (x, y, trunk radius, crown centre, crown radius)
+    lanes = []            # the painted roads, for lanes.yaml: scoring lane keeping
     report = {'buildings': 0, 'lots': 0, 'roads': 0, 'paths': 0, 'kerbs_m': 0.0, 'islands': 0,
               'fences': 0, 'greens': 0, 'water': 0, 'unknown_height': 0}
 
@@ -637,8 +679,14 @@ def build(campus, box):
                 meshes['road'].flat(shape, ROAD_Z, tile=8.0)
                 grid.fill(shape, 1)
             if highway in PAINTED:
-                for shape in dashes(line.points, 0.15):
+                for shape in dashes(line.points, LINE_WIDTH):
                     meshes['paint'].flat(shape, PAINT_Z)
+                for shape in edge_lines(line.points, width):
+                    meshes['edge'].flat(shape, PAINT_Z)
+                lanes.append({'name': line.tags.get('name', ''), 'kind': highway,
+                              'width': round(width, 2),
+                              'oneway': line.tags.get('oneway') in ('yes', '1', 'true'),
+                              'points': [[round(x, 2), round(y, 2)] for x, y in line.points]})
             report['roads'] += 1
     for area in by_kind['lot']:
         ring = simplify(area.ring)
@@ -761,7 +809,7 @@ def build(campus, box):
                  [(-far, south), (west, south), (west, north), (-far, north)],
                  [(east, south), (far, south), (far, north), (east, north)]):
         meshes['grass'].flat(ring, GRASS_Z, tile=6.0)
-    return meshes, solids, grid, walls, trunks, report, by_kind['lot']
+    return meshes, solids, grid, walls, trunks, report, by_kind['lot'], lanes
 
 
 def on_triangles(triangles, spacing):
@@ -890,8 +938,10 @@ def make_textures(folder):
     painted = np.full((64, 64, 3), 225, dtype=np.uint8)
     painted[..., 2] = 150
     Image.fromarray(painted).save(folder / 'paint.png')
-    Image.fromarray(np.full((64, 64, 3), (128, 128, 255), dtype=np.uint8)).save(
-        folder / 'paint_n.png')
+    flat = np.full((64, 64, 3), (128, 128, 255), dtype=np.uint8)
+    Image.fromarray(flat).save(folder / 'paint_n.png')
+    Image.fromarray(np.full((64, 64, 3), 235, dtype=np.uint8)).save(folder / 'edge.png')
+    Image.fromarray(flat).save(folder / 'edge_n.png')
     brick, bump = facade()
     save('brick', brick, bump, 3.0)
     stone, bump = facade(seed=9, wall=((158, 150, 134), (196, 188, 170)))
@@ -1016,7 +1066,7 @@ def main():
 
     campus = read_osm(args.osm, project)
     box = box_round()
-    meshes, solids, grid, walls, trunks, report, lots = build(campus, box)
+    meshes, solids, grid, walls, trunks, report, lots, lanes = build(campus, box)
     (args.out / 'meshes').mkdir(parents=True, exist_ok=True)
     names = [name for name, mesh in meshes.items() if mesh.vertices]
     triangles = 0
@@ -1042,6 +1092,10 @@ def main():
         'datum': [lat0, lon0], 'box': list(box), 'source': str(args.osm.name),
         'credit': '(c) OpenStreetMap contributors, ODbL', 'made': report,
     }))
+    (args.out / 'lanes.yaml').write_text(
+        '# The painted roads: centre line (m, map frame), width, one way or not. For scoring\n'
+        '# lane keeping (tools/lane_score.py). (c) OpenStreetMap contributors, ODbL.\n'
+        + yaml.safe_dump({'roads': lanes}, default_flow_style=None))
     print(f'{args.out}: {report}')
     print(f'start at {start}')
 

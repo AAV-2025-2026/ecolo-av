@@ -10,21 +10,25 @@
 #   stream       the camera stream end to end, without the car (pixi run get mediamtx first;
 #                docs/camera-pipeline.md)
 #   atob         score A-to-B runs from bags or CSVs (docs/a-to-b.md)
+#   lane         a long lane drive, scored by the truth: lateral error, lane lost, speed
+#                (Gazebo or ours; the road world or the campus; docs/perception.md)
 #   bandwidth    every topic of a running system: Hz, size, MB/s (docs/bandwidth.md)
 #
-# The first four start or read Gazebo on this computer only (tools/ros.sh --local), so they
-# never reach a real car. bandwidth measures whatever runs on this ROS domain: the car too.
+# All but bandwidth start or read a simulator on this computer only (tools/ros.sh
+# --local), so they never reach a real car. bandwidth measures whatever runs on this ROS
+# domain: the car too.
 # Each script's own --help lists its options.
 # Portable: bash 3.2 (a Mac), no GNU-only flags.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 usage() {
-  echo "usage: pixi run measure <controllers|timing|stream|atob|bandwidth> [args]" >&2
+  echo "usage: pixi run measure <controllers|timing|stream|atob|lane|bandwidth> [args]" >&2
   echo "  controllers  Pure Pursuit vs MPPI (and the trials) in Gazebo (about 15 min)" >&2
   echo "  timing       are messages on time? Gazebo parked, then driving (about 10 min)" >&2
   echo "  stream       the camera stream end to end, without the car" >&2
   echo "  atob         score A-to-B runs: pixi run measure atob <bag or CSV>..." >&2
+  echo "  lane         a long lane drive, scored: lateral error, lane lost, speed (2-5 min)" >&2
   echo "  bandwidth    every topic of a running system: Hz, size, MB/s" >&2
   echo "  add --help after one for its options" >&2
   exit 2
@@ -38,6 +42,7 @@ case "$what" in
   timing)      exec tools/ros.sh --local python3 tools/timing_test.py "$@" ;;
   stream)      exec tools/ros.sh --local python3 tools/stream_check.py "$@" ;;
   atob)        exec tools/ros.sh --local python3 tools/atob_score.py "$@" ;;
+  lane)        exec tools/ros.sh --local python3 tools/lane_drive.py "$@" ;;
   bandwidth)   exec tools/ros.sh python3 tools/bandwidth.py "$@" ;;
   *) usage ;;
 esac

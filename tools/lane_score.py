@@ -1,0 +1,163 @@
+"""
+How well the car kept its lane, by the simulator's truth. No ROS: tools/tests/ tests it.
+
+    roads = road_world()                          # the road world's one lane
+    roads = load_roads('maps/campus/lanes.yaml')  # the campus's painted roads
+    error, road = lane_error(roads, x, y, yaw)    # m, + = left of the lane's centre
+    print(score(samples, lanes))                  # the table's numbers
+
+A lane's centre:
+
+| Road | Its lane's centre |
+|---|---|
+| one lane (the road world) | the road's centre line |
+| two-way, two lanes | halfway from the centre line to the right edge line, as the car faces |
+| one-way, two lanes | the nearer of the two lane centres, the same distance either side |
+
+Units: m, rad, s. The map frame, x east, y north.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+import math
+from typing import List, Optional, Sequence, Tuple
+
+import yaml
+
+# m: from a painted road's edge to its edge line (tools/campus_world.py's EDGE_INSET).
+EDGE_INSET = 0.5
+
+
+@dataclass(frozen=True)
+class Road:
+    """One road: its centre line (map frame, m), its width, and how its lanes run."""
+
+    name: str
+    points: Tuple[Tuple[float, float], ...]
+    width: float
+    lanes: int = 2           # 1: the car drives down the middle
+    oneway: bool = False
+
+
+def road_world() -> List[Road]:
+    """Return the road world's lane: 3.5 m between the lines, east along y = 0 (road.sdf)."""
+    return [Road('road', ((-20.0, 0.0), (100.0, 0.0)), 3.5, lanes=1)]
+
+
+def load_roads(path: str) -> List[Road]:
+    """Return the campus's painted roads from lanes.yaml (tools/campus_world.py)."""
+    with open(path) as f:
+        data = yaml.safe_load(f)
+    return [Road(r.get('name') or r.get('kind', ''),
+                 tuple((float(p[0]), float(p[1])) for p in r['points']),
+                 float(r['width']), 2, bool(r.get('oneway')))
+            for r in data['roads'] if len(r['points']) >= 2]
+
+
+def nearest(road: Road, x: float, y: float) -> Tuple[float, float, float]:
+    """
+    Return (distance, signed offset, direction) to the road's centre line.
+
+    The offset is + left of the line as drawn; direction is the segment's heading (rad).
+    """
+    best = (math.inf, 0.0, 0.0)
+    for a, b in zip(road.points, road.points[1:]):
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        length2 = dx * dx + dy * dy
+        if length2 < 1e-12:
+            continue
+        t = max(0.0, min(1.0, ((x - a[0]) * dx + (y - a[1]) * dy) / length2))
+        px, py = a[0] + t * dx, a[1] + t * dy
+        d = math.hypot(x - px, y - py)
+        if d < best[0]:
+            side = (dx * (y - a[1]) - dy * (x - a[0])) / math.sqrt(length2)
+            best = (d, side, math.atan2(dy, dx))
+    return best
+
+
+def wrap(angle: float) -> float:
+    return math.atan2(math.sin(angle), math.cos(angle))
+
+
+def lane_error(roads: Sequence[Road], x: float, y: float,
+               yaw: float) -> Tuple[Optional[float], Optional[Road]]:
+    """
+    Return the car's offset from its lane's centre (m, + = left of it, the way it faces).
+
+    The road is the nearest whose surface the car is on (within half its width). Off every
+    road: (None, None).
+    """
+    found = None
+    for road in roads:
+        d, side, direction = nearest(road, x, y)
+        if d <= road.width / 2.0 and (found is None or d < found[0]):
+            found = (d, side, direction, road)
+    if found is None:
+        return None, None
+    _, side, direction, road = found
+    along = math.cos(wrap(yaw - direction)) >= 0.0
+    offset = side if along else -side           # + = left of the centre line, as the car faces
+    if road.lanes == 1:
+        return offset, road
+    quarter = (road.width / 2.0 - EDGE_INSET) / 2.0   # between the centre and edge lines
+    if road.oneway:
+        centre = quarter if offset > 0.0 else -quarter
+    else:
+        centre = -quarter                       # keep right
+    return offset - centre, road
+
+
+@dataclass(frozen=True)
+class Score:
+    """A lane drive's numbers."""
+
+    seconds: float
+    metres: float
+    mean_speed: float        # m/s
+    mean_error: float        # m, |lateral error| averaged over time
+    rms_error: float
+    p95_error: float
+    max_error: float
+    off_road: float          # s with the car on no road
+    lost: float              # fraction of lane messages with no line found
+    both: float              # fraction with both lines found
+
+    def line(self) -> str:
+        return (f'{self.metres:.0f} m in {self.seconds:.0f} s at {self.mean_speed:.2f} m/s; '
+                f'lateral error mean {100 * self.mean_error:.1f} cm, RMS '
+                f'{100 * self.rms_error:.1f}, 95 % {100 * self.p95_error:.1f}, max '
+                f'{100 * self.max_error:.1f} cm; off the road {self.off_road:.1f} s; lane '
+                f'lost in {100 * self.lost:.0f} % of pictures, both lines in '
+                f'{100 * self.both:.0f} %')
+
+
+def score(roads: Sequence[Road], track: Sequence[Tuple[float, float, float, float]],
+          lanes: Sequence[Tuple[float, bool, bool]] = ()) -> Score:
+    """
+    Score a drive.
+
+    track: (t, x, y, yaw) from the truth, in time order. lanes: (t, any line found, both
+    lines found) per lane message.
+    """
+    errors, off, metres = [], 0.0, 0.0
+    for (t0, x0, y0, _), (t1, x1, y1, yaw1) in zip(track, track[1:]):
+        dt = t1 - t0
+        metres += math.hypot(x1 - x0, y1 - y0)
+        error, _ = lane_error(roads, x1, y1, yaw1)
+        if error is None:
+            off += dt
+        else:
+            errors.append((abs(error), dt))
+    seconds = track[-1][0] - track[0][0] if len(track) > 1 else 0.0
+    weight = sum(dt for _, dt in errors) or 1.0
+    ordered = sorted(e for e, _ in errors)
+    n = len(lanes) or 1
+    return Score(
+        seconds=seconds, metres=metres, mean_speed=metres / seconds if seconds else 0.0,
+        mean_error=sum(e * dt for e, dt in errors) / weight,
+        rms_error=math.sqrt(sum(e * e * dt for e, dt in errors) / weight),
+        p95_error=ordered[int(0.95 * (len(ordered) - 1))] if ordered else 0.0,
+        max_error=ordered[-1] if ordered else 0.0, off_road=off,
+        lost=sum(not seen for _, seen, _ in lanes) / n,
+        both=sum(both for _, _, both in lanes) / n)
