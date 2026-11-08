@@ -6,6 +6,11 @@ Subscribes  /perception/detections  vision_msgs/Detection2DArray (from the detec
                                     /sensors/camera/<front_left, front_right, rear>/
                                     camera_info): its lens, kept by the frame it names
 Publishes   /perception/stop_sign        std_msgs/Bool, 10 Hz: true while the car must stay stopped
+            /perception/stop_sign/distance  geometry_msgs/PointStamped: where the tallest
+                                    stop sign seen by a forward camera is, in that camera's
+                                    frame at the picture's stamp (sign_point: the range from
+                                    its height, the bearing from its column and the lens).
+                                    Only while CLEAR: the behaviour planner slows for it
 
 A sign counts once it is stop_distance_m (4.7) away or closer: its box's height, the
 sign's (sign_height_m, 0.75) and the focal length of the camera that saw it, the fy of
@@ -23,7 +28,9 @@ Needs no PyTorch: it runs in the default environment.
 
 import signal
 
-from aav_detector.stop_sign import StopRule, StopSignWatcher
+from aav_detector.ground import is_optical
+from aav_detector.stop_sign import biggest_sign, CLEAR, sign_point, StopRule, StopSignWatcher
+from geometry_msgs.msg import Point, PointStamped
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
@@ -49,6 +56,11 @@ class Watcher(Node):
         )
         self.watcher = StopSignWatcher(rule)
         self.focal = {}                 # frame_id -> fy (px), from each camera's CameraInfo
+        self.lens = {}                  # frame_id -> (fx, cx) (px), for the sign's bearing
+        # The forward cameras' frames: a frame naming one of these words. The rear camera's
+        # signs face the other way, and must never slow the car.
+        self.forward = list(p('forward_words', ['front', 'left', 'right']).value)
+        self.backward = list(p('backward_words', ['rear']).value)
         for topic in p('camera_info_topics', CAMERA_INFO).value:
             self.create_subscription(CameraInfo, topic, self.on_camera_info, 10)
         self.get_logger().info(
@@ -56,6 +68,7 @@ class Watcher(Node):
             f'{rule.min_height_px():.0f} px tall with focal_px {rule.focal_px:g}, the lens '
             'of a camera without CameraInfo')
         self.pub = self.create_publisher(Bool, '/perception/stop_sign', 10)
+        self.point = self.create_publisher(PointStamped, '/perception/stop_sign/distance', 10)
         self.create_subscription(Detection2DArray, '/perception/detections', self.on_boxes, 10)
         self.create_timer(0.1, self.tick)
         self.state = self.watcher.state
@@ -65,6 +78,8 @@ class Watcher(Node):
 
     def on_camera_info(self, msg: CameraInfo):
         fy = float(msg.k[4])
+        if float(msg.k[0]) > 0:
+            self.lens[msg.header.frame_id] = (float(msg.k[0]), float(msg.k[2]))
         if fy > 0 and self.focal.get(msg.header.frame_id) != fy:
             self.get_logger().info(
                 f'{msg.header.frame_id}: focal length {fy:.0f} px: stops for a stop sign '
@@ -80,7 +95,25 @@ class Watcher(Node):
                 f'no CameraInfo for camera {msg.header.frame_id!r}: its stop signs are judged '
                 f'with focal_px {self.watcher.rule.focal_px:g}. Calibrate it, or set focal_px',
                 throttle_duration_sec=30.0)
+        if self.watcher.state == CLEAR and self.facing_forward(msg.header.frame_id):
+            self.publish_point(msg, focal)
         self.publish(self.watcher.update(boxes, self.now(), focal))
+
+    def facing_forward(self, frame: str) -> bool:
+        return (not any(w in frame for w in self.backward)
+                and any(w in frame for w in self.forward))
+
+    def publish_point(self, msg: Detection2DArray, focal):
+        sign = biggest_sign(
+            ((d.results[0].hypothesis.class_id, d.results[0].hypothesis.score, d.bbox.size_y,
+              d.bbox.center.position.x) for d in msg.detections if d.results),
+            self.watcher.rule.min_score)
+        if sign is None:
+            return
+        fx, cx = self.lens.get(msg.header.frame_id, (None, None))
+        x, y, z = sign_point(sign[0], sign[1], focal or self.watcher.rule.focal_px, fx, cx,
+                             is_optical(msg.header.frame_id), self.watcher.rule.sign_height_m)
+        self.point.publish(PointStamped(header=msg.header, point=Point(x=x, y=y, z=z)))
 
     def tick(self):
         self.publish(self.watcher.tick(self.now()))

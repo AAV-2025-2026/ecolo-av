@@ -22,6 +22,7 @@ the whole stack above them run unchanged. No cameras yet. Gazebo stays the defau
 | Crate | Holds | ROS? |
 |---|---|---|
 | `crates/sim-core` | the worlds (SDF, `model://`, OBJ), the car (`CarModel`), the lidars, the IMU and GPS, the loop, the camera plug-in point (`SensorPlugin`) | no, no Bevy |
+| `crates/sim-core`, feature `shared` | `SharedCar`: the shared `car-model` crate (`aav_description`) behind `CarModel`, the same states as `ActuatorCar` to 1e-9 (`shared_car.rs`). The node doesn't use it yet: it runs `TwistFollower` behind `gazebo_adapter`'s model, as with Gazebo | no |
 | `crates/sim-node` | the node, binary `simulator` (rclrs) | yes |
 
 ### Node `simulator`
@@ -60,7 +61,7 @@ them all.
 ## Verification
 
 ```sh
-cd ros/sim/aav_simulator && cargo test --locked -p sim-core
+cd ros/sim/aav_simulator && cargo test --locked -p sim-core --features shared
 pixi run sim-check --simulator own
 ```
 

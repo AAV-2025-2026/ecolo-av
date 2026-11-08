@@ -32,6 +32,8 @@ from dataclasses import dataclass
 import math
 from typing import List
 
+from aav_description import stop_law
+
 G = 9.81            # m/s^2
 MARGIN = 2.0        # ego stays at half the sliding and tipping limits: their inputs are guesses
 # s from an obstacle seen to the brakes biting: the radar, twist_mux, ego and the brake
@@ -107,8 +109,12 @@ def energy(body: Body, speed: float) -> float:
 
 
 def describe(body: Body, wheelbase: float, max_steering_angle: float, max_speed: float,
-             max_acceleration: float, max_deceleration: float) -> List[str]:
+             max_acceleration: float, max_deceleration: float,
+             max_jerk: float = 2.0) -> List[str]:
     """Return short lines for ego's log: what this body allows with ego's limits."""
+    # How far the drivers plan to stop: the one stopping law (aav_description stop_law.py),
+    # never shorter than the hardest stop below (test_dynamics.py).
+    curve = stop_law.from_numbers(braking_limit(body), max_deceleration, max_jerk or 2.0)
     speed_up = min(max_acceleration, speed_up_limit(body))
     brake = min(max_deceleration, braking_limit(body))
     lock = wheelbase / math.tan(max_steering_angle)
@@ -117,7 +123,8 @@ def describe(body: Body, wheelbase: float, max_steering_angle: float, max_speed:
         f'speeds up at {speed_up:.2f} m/s^2 at most (the motor could give '
         f'{speed_up_limit(body):.2f})',
         f'stops from {max_speed:g} m/s in {stopping_distance(body, max_speed, brake):.2f} m, '
-        f'braking at {brake:.2f} m/s^2 after {REACTION:g} s',
+        f'braking at {brake:.2f} m/s^2 after {REACTION:g} s; plans '
+        f'{curve.distance(max_speed):.2f} m ({curve.describe()})',
         f'turns: at most {lateral_limit(body):.1f} m/s^2 sideways (slides at '
         f'{sliding_accel(body):.1f}, tips at {tipping_accel(body):.1f}); full lock '
         f'({lock:.2f} m) at up to {curve_speed(body, 1.0 / lock):.1f} m/s',

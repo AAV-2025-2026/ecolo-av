@@ -6,7 +6,7 @@ Nav2 as one more driver: goals in, /drivers/nav/cmd_vel (TwistStamped) out to tw
       [camera_obstacles:=false] [ghost:=false] [voxels:=false]
       [reversing:=false] [max_speed:=] [controller:=mppi] [planner:=lattice]
       [diffusion_model:=] [diffusion_provider:=CPUExecutionProvider]
-      [plan_around:=true]
+      [plan_around:=true] [behaviour:=false]
       [tracker:=none] [live_swap:=false] [amcl:=false] [amcl_x:=0.0] [amcl_y:=0.0]
       [amcl_yaw:=0.0] [amcl_map:=]
       [use_sim_time:=false]
@@ -79,6 +79,11 @@ Trials (docs/trials.md), each beside the default and scored by pixi run measure 
                           local costmap's lidar_layer and collision_monitor read those
                           instead of /sensors/lidar/scan. lidar_scan then runs only for
                           amcl:=true (docs/designs/2026-10-30_voxels.md)
+  behaviour:=true         aav_behaviour's behaviour node (a trial, docs/stopping.md): the
+                          behaviour states, and a speed cap on Nav2 from the stopping law for
+                          a stop sign, an obstacle in the lane, the fence and the goal.
+                          controller_server reads /drivers/nav/speed_limit; the locks still
+                          make every stop. false (the default): the stock path, no cap
   amcl_map:=<yaml>        AMCL's own map (finer, obstacles as outlines: maps/README.md),
                           from amcl_map_server on /localization/amcl/map; empty: Nav2's /map
 
@@ -272,8 +277,11 @@ def nodes(context):
             ('plan', '/drivers/nav/diffusion/lattice_plan')] if diffusion else []),
         # With a trial tracker, it keeps running but its FollowPath goes unused: rcl_action
         # resolves action names with the node's remappings, as topics are.
+        # MPPI's chosen future (visualize: true in nav2.yaml) is the screens' faint line,
+        # /drivers/nav/local_plan (aav_ego look_ahead). Regulated Pure Pursuit has none.
         ('nav2_controller', 'controller_server', [('cmd_vel', 'cmd_vel_nav')] + (
-            [('follow_path', 'follow_path_unused')] if tracker != 'none' else [])),
+            [('follow_path', 'follow_path_unused')] if tracker != 'none' else
+            [('optimal_trajectory', '/drivers/nav/local_plan')])),
         ('nav2_behaviors', 'behavior_server', [('cmd_vel', 'cmd_vel_nav')]),
         ('nav2_bt_navigator', 'bt_navigator', []),
         ('nav2_waypoint_follower', 'waypoint_follower', []),
@@ -289,12 +297,30 @@ def nodes(context):
 
     # use_sim_time is passed on its own: RewrittenYaml only rewrites keys that already
     # exist, and nav2.yaml has none, so as a rewrite it was silently dropped.
+    behaviour = flag(context, 'behaviour')
+    # behaviour:=true: controller_server's speed limit comes from the behaviour node. A dict
+    # after the file: nav2.yaml doesn't name speed_limit_topic, so the dict wins.
+    own = {'controller_server': {'speed_limit_topic': '/drivers/nav/speed_limit'}} \
+        if behaviour else {}
     actions = [
         Node(package=pkg, executable=exe, name=exe, output='screen',
-             parameters=[params, {'use_sim_time': use_sim_time}],
+             parameters=[params, {'use_sim_time': use_sim_time, **own.get(exe, {})}],
              remappings=remaps)
         for pkg, exe, remaps in servers
     ]
+    if behaviour:
+        # Not a lifecycle node; respawns, so a dead one comes back in DRIVE (sending 0.0).
+        with open(f'{share}/config/nav2.yaml') as f:
+            nav2 = yaml.safe_load(f)
+        ego_file = FindPackageShare('aav_ego').perform(context) + '/config/ego.yaml'
+        with open(ego_file) as f:
+            ego = yaml.safe_load(f)['ego']['ros__parameters']
+        actions.append(Node(
+            package='aav_behaviour', executable='behaviour', name='behaviour',
+            output='screen', respawn=True, respawn_delay=1.0,
+            parameters=[vehicle.behaviour_params(nav2, cfg, ego,
+                                                 float(speed) if speed else None, controller),
+                        {'obstacles': lidar and not voxels, 'use_sim_time': use_sim_time}]))
     if collision_monitor:
         # Holds collision_monitor's stops (aav_safety stop_hold, twist_mux's stop_zone
         # lock): Jazzy's monitor flickers between stop and go at its zone's edge. Not a
@@ -478,6 +504,9 @@ def generate_launch_description():
                               description='true: the planner sees the radar and lidar too, '
                                           'and plans round what they see; false: the map '
                                           'only, so the car stops for it (the stop tests)'),
+        DeclareLaunchArgument('behaviour', default_value='false',
+                              description='true: aav_behaviour, the behaviour states and a '
+                                          'speed cap on Nav2 (a trial, docs/stopping.md)'),
         DeclareLaunchArgument('tracker', default_value=vehicle.DEFAULT_TRACKER,
                               description="a trial path follower in controller_server's "
                                           'place (aav_track; mppi_lag: aav_mppi_lag): ' +

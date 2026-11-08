@@ -5,6 +5,7 @@
 //! | [`world`] | the worlds Gazebo reads (`*.sdf`, `model://`, OBJ meshes), as triangles |
 //! | [`scene`] | what a ray can hit: a bounding volume tree, and objects placed while running |
 //! | [`car`] | the car: the [`car::CarModel`] trait, Gazebo's twist follower, the actuator model |
+//! | `shared_car` (feature `shared`) | `SharedCar`: the shared car-model crate behind the [`car::CarModel`] trait |
 //! | [`lidar`] | the roof lidar and the radar stand-in, by ray casting, packed as Gazebo's |
 //! | [`geo`] | the datum, and world positions as latitude and longitude |
 //! | [`sim`] | the loop: step the car, and which stream speaks when; the camera plug-in |
@@ -20,5 +21,7 @@ pub mod lidar;
 pub mod math;
 pub mod noise;
 pub mod scene;
+#[cfg(feature = "shared")]
+pub mod shared_car;
 pub mod sim;
 pub mod world;

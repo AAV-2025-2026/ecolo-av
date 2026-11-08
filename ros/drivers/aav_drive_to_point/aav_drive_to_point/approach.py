@@ -20,6 +20,11 @@ lag, the spine's speed loop) sees d shrink faster, and the command drops to matc
 corrects itself. Speeding up follows the time (a ramp), as sqrt(2 a d) from the start is
 zero at the start.
 
+The slowing law may also be the stopping law (aav_description stop_law.py, `curve`): then
+v = v_cap(d) = a (sqrt(tau^2 + 2 d / a) - tau), with no measured speed inside it, and a
+finite slope at B. point_driver's `stop_law:=hybrid` picks it; `approach` (the default)
+keeps sqrt(2 a (d - lead v)) until the curve wins (docs/designs/2026-11-05_how-the-car-stops.md).
+
 Why not aav_scripted's speed_profile.py: it holds for a distance or a time, then slows at a
 fixed rate from wherever it is. Here the slowing must END at B whatever happened before
 (a stop sign, a slow start), so it is computed from the distance left on every tick.
@@ -29,7 +34,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
-from typing import Tuple
+from typing import Optional, Tuple
+
+from aav_description.stop_law import StopCurve
 
 # The feedback's phases (aav_interfaces/action/DriveToPoint).
 TURN, ACCELERATE, HOLD, DECELERATE, STOPPING = 0, 1, 2, 3, 4
@@ -62,6 +69,7 @@ class Approach:
     stop_band: float = 0.05    # m: this close to B (or past it), command zero
     ahead: float = 0.5         # m/s: never command more than this above the measured speed
     creep: float = 0.1         # m/s: the least it asks for short of B (a speed loop's deadband)
+    curve: Optional[StopCurve] = None   # the stopping law instead of sqrt(2 a (d - lead v))
 
     def __post_init__(self):
         for name in ('cruise', 'accel', 'decel'):
@@ -72,7 +80,9 @@ class Approach:
             raise ValueError('lead, stop_band and creep must not be negative; ahead above 0')
 
     def braking_speed(self, left: float, measured: float = 0.0) -> float:
-        """Return the fastest speed from which slowing at `decel` stops at B."""
+        """Return the fastest speed from which slowing at `decel` (or the curve) stops at B."""
+        if self.curve is not None:
+            return self.curve.cap(left)
         room = left - max(measured, 0.0) * self.lead
         return math.sqrt(2.0 * self.decel * room) if room > 0 else 0.0
 
@@ -94,12 +104,20 @@ class Approach:
             phase = DECELERATE
             # Short of B but nearly stopped (the lead, a speed loop that won't creep):
             # keep rolling slowly, or it would stop before B and stay there.
-            speed = max(speed, min(self.creep, math.sqrt(2.0 * self.decel * left)))
+            speed = max(speed, min(self.creep, self.reach(left)))
         elif cruise <= up:
             phase = HOLD
         else:
             phase = ACCELERATE
         return max(speed, 0.0), phase
+
+    def reach(self, left: float) -> float:
+        """Return the speed that stops exactly at B with no lead: the creep's own limit."""
+        if left <= 0:
+            return 0.0
+        if self.curve is not None:
+            return self.curve.cap(left)
+        return math.sqrt(2.0 * self.decel * left)
 
     def ideal_time(self, distance: float) -> float:
         """Return the seconds a perfect car takes for `distance` m (for a time limit)."""

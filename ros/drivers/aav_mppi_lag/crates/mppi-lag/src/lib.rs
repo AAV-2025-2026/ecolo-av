@@ -17,6 +17,7 @@
 //! | [`costmap`] | the local costmap and the car's outline on it |
 //! | [`follower`] | one path: goal and progress checks, the estimate, MPPI |
 //! | [`rng`] | seedable random numbers |
+//! | `shared` (feature `shared`) | `SharedModel`: the shared `car-model` crate behind [`CarModel`] |
 
 pub mod costmap;
 pub mod critics;
@@ -28,6 +29,8 @@ pub mod model;
 pub mod optimizer;
 pub mod path;
 pub mod rng;
+#[cfg(feature = "shared")]
+pub mod shared;
 pub mod smoothing;
 
 pub use costmap::Costmap;
@@ -39,3 +42,5 @@ pub use lag::{Actuators, LagModel, SpeedLoop};
 pub use model::{CarModel, Command, Observation, Pose};
 pub use optimizer::{Optimizer, Plan, Scene, Settings};
 pub use path::GlobalPath;
+#[cfg(feature = "shared")]
+pub use shared::{SharedModel, SharedState};

@@ -49,6 +49,7 @@ Parameters (`config/drive_to_point.yaml`; `max_brake`, `wheelbase`, `max_steerin
 | `brake_fraction`, `deceleration` | 0.5, 0 | slow down at `max_brake x brake_fraction`, unless `deceleration` is set; ego's `max_deceleration` caps it |
 | `brake_lead` | 0.8 s | start slowing this much sooner, times the speed |
 | `stop_band`, `creep` | 0.05 m, 0.1 m/s | zero inside the band; the least it asks for short of B |
+| `stop_law` | `approach` | how it slows into B: `approach` (`sqrt(2 a (d - lead v))`) or `hybrid`, the stopping law (`aav_description` `stop_law.py`, a trial; launch `stop_law:=hybrid`) |
 | `lookahead_min`, `lookahead_time` | 2.0 m, 1.0 s | pure pursuit's carrot |
 | `lateral_accel` | 1.5 m/s² | slow down in tight turns |
 | `max_distance` | 200 m | refuse a B further away |

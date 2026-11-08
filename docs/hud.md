@@ -33,7 +33,7 @@ a second program. Each opens full screen on its own monitor at boot:
 
 | Panel | Shows |
 |---|---|
-| Top strip | mode, armed, gear (D/R/P), e-stop on/off, battery, faults |
+| Top strip | mode, armed, gear (D/R/P), e-stop on/off, battery, faults, the GPS fix (NO GPS, SILENT, NO FIX, 2D, 3D, DGPS, RTK FLOAT, RTK FIXED) |
 | Speed | km/h, big. Grey with "OLD" when `/vehicle/status` stops |
 | GO / STOP (24 Oct) | may the car move? A colour, an icon, a word, the one main reason: [below](#may-the-car-move-the-go-stop-panel) |
 | Controls | steering (left of centre = left), throttle, brake: one row each |
@@ -41,7 +41,61 @@ a second program. Each opens full screen on its own monitor at boot:
 | E-STOP | the button: `/safety/estop` true 5 times, 0.1 s apart. Never false. Says whether anything heard it |
 | (nothing on screen) | the heartbeat, `/hud/heartbeat`: below |
 | Topics | every topic it listens to: OK, STALE (quiet for 1 s) or NEVER, and how long ago; a REAL / SIM / BENCH / REPLAY tag where `/system/source` names it |
-| GPS | is there GPS data? NO GPS DATA, GPS SILENT, or the fix: NO FIX, 2D, 3D, DGPS, RTK FLOAT, RTK FIXED. Then lat, lon, accuracy, age |
+| AHEAD (7 Nov) | the squiggly line: where the car will go, what the planner wants, where a full brake stops it: [below](#the-squiggly-line-ahead). Until 7 Nov this panel was the GPS's |
+
+### The squiggly line (AHEAD)
+
+Ben, 7 Nov, of his Tesla: "the squiggly line gets shorter when braking and longer when
+accelerating and it curves to show the predictive path and what it's avoiding ... We also
+want that to compare to the map and the localization information to show that we will stop
+based on the model in the correct location." He chose both lines and a stop marker, on the
+HUD and on the developer window.
+
+![AHEAD while the car bends left, a little off the plan (amber), pretend data](img/hud-squiggly.png)
+
+| On screen | Means | From |
+|---|---|---|
+| **bold line** | where the car WILL go in the next 2 s, from the car model: shorter when braking, longer when speeding up, bent where it turns | `/ego/trace` (ego) |
+| its colour | **green**: within 0.3 m of the plan. **amber**: within 0.6 m. **red**: further. White: no plan (a person drives) | `/ego/ahead` |
+| thin grey line | what the planner WANTS: MPPI's own future, or Nav2's plan ahead | `/ego/plan_ahead` |
+| white bar across | where the **front bumper** stops if the car brakes fully now | `/ego/stop_point` |
+| red bar | the first obstacle in the local costmap the bumper would meet | `/ego/ahead` |
+| the box | the car, from `vehicle.yaml` (sent by `look_ahead`, never copied) | `/ego/ahead` |
+| STOPS IN | how far a full brake now takes the car | `/ego/ahead` stop_m |
+| ON PLAN / OFF PLAN / FAR OFF | how far the bold line strays from the grey one: "have we turned enough, slowed enough?" | gap_m |
+| GOAL: SHORT / PAST, OBSTACLE, HITS | room left between the stop and the goal (along the plan), or the obstacle; HITS in red when a full brake now still reaches it | goal_m, room_m |
+
+While braking for the goal, the bold line shrinks to the bar and goes green:
+
+![AHEAD braking for the goal: the line short, on the plan](img/hud-squiggly-braking.png)
+
+**Live, 8 Nov** (our own simulator, `simulator:=own world:=test_lot`, a Nav2 goal at
+(14, 3), which succeeded): the faint line is Nav2's MPPI's own future
+(`/drivers/nav/local_plan`). `/ego/ahead` said ON PLAN 0.01-0.18 m and "13.4 m short of
+the goal" while it drove; here the trace runs 0.31 m off MPPI's future (amber): MPPI plans
+without the lag, ego's model has it.
+
+![AHEAD live in our own simulator, driving to a Nav2 goal](img/hud-squiggly-live.png)
+
+**One answer for every screen.** The maths lives in ROS, once; the screens only draw:
+
+```text
+ego ──▶ /ego/trace       (base_link)  the car model, 2 s ahead
+    └─▶ /ego/stop_point  (base_link)  the car model, full brake now   (stop_ahead.py)
+look_ahead ──▶ /ego/plan_ahead (base_link)  the plan, moved with TF, cut ahead
+           └─▶ /ego/ahead      the gap, the stop, the goal, the room  (look_ahead.py)
+```
+
+All four are in base_link, so the screens need no TF. The stop-point check in `sim-check`
+reads the same `/ego/stop_point`. The faint line is `/drivers/nav/local_plan` while a
+follower sends one (Nav2's MPPI, the default, and `mppi_lag`), else Nav2's `/plan`.
+
+The GPS fix moved into the top strip (GPS: 3D FIX, RTK FIXED, NO GPS, SILENT) to make room.
+Its lat, lon and accuracy are on the hardware panel and the map window.
+
+**Not yet:** stop lines (no topic says where one is); the camera picture with the line
+drawn on the road (it needs the camera's calibration, Q22). Every number of the car model
+is a guess until car tests 3.10-3.12 and 4.1-4.5.
 
 ### May the car move? (the GO / STOP panel)
 

@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">90 min read · 4 sections</div></header>
+<div class="meta">97 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -58,6 +58,7 @@
 <a href="switches.html">Switches</a>
 <a href="trials.html">Trials</a>
 <a href="mppi-lag.html">MPPI with lag</a>
+<a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -240,7 +241,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/safety/sensor_watchdog/lock</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
 <td><code>sensor_watchdog</code></td>
-<td><code>twist_mux</code>, <code>point_driver</code></td>
+<td><code>twist_mux</code>, <code>point_driver</code>, <code>behaviour</code></td>
 <td>sim</td>
 <td>true while a sensor Nav2 or the AI slot needs is stale, NaN, frozen, jumped, or (the wheels) disagrees with the IMU; false otherwise (aav_safety sensor_watchdog, 10 Hz) - a heartbeat. A twist_mux lock at priority 30, as the stop sign - it holds Nav2 and the AI slot, never a person or a test. Fail-safe - the lock's 1 s timeout holds them too when the watchdog dies or hangs (aav_command_mux mux.launch.py sensor_lock, true wherever a watchdog runs - Gazebo with watchdog:=true, the bench, and the car next to the mux; false on the turtle).</td>
 </tr>
@@ -296,7 +297,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/safety/stop_hold/lock</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
 <td><code>stop_hold</code></td>
-<td><code>twist_mux</code>, <code>language_drive</code></td>
+<td><code>twist_mux</code>, <code>language_drive</code>, <code>behaviour</code></td>
 <td>bench, road</td>
 <td>true from collision_monitor's STOP until it has said anything else for 1 s without a break (aav_safety stop_hold, 10 Hz, wherever navigation.launch.py starts collision_monitor). A twist_mux lock at priority 21 - it holds Nav2 (20) and the AI slot (10) only, never the point driver, a person or a test. Timeout 0 - silence locks nothing (profiles without collision_monitor never publish it), and a stop_hold that dies while true keeps the stop. Without it, an obstacle at the stop zone's edge flickered the monitor between stop and go, and each go let the car creep on.</td>
 </tr>
@@ -304,7 +305,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/safety/geofence/lock</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
 <td><code>geofence</code></td>
-<td><code>twist_mux</code>, <code>language_drive</code>, <code>hw_panel</code></td>
+<td><code>twist_mux</code>, <code>language_drive</code>, <code>hw_panel</code>, <code>behaviour</code></td>
 <td>sim, car, bench</td>
 <td>true while a stopping path of the car - forward and back, straight and at full lock, each its RSS stopping distance long (reaction time and braking worked out from ego.yaml, vehicle.yaml and the backend's timeout, aav_safety geofence.py motion_from) - brings a corner within 1 m plus the global pose's spread of the fence's edge (NEAR; at a standstill a person drives it back in); while the car is outside the fence (OUTSIDE) or the global pose jumped (JUMP), both latched until a person calls /safety/geofence/clear; while the global pose is stale over 1 s, over 3 m unsure or NaN, or no GPS position has reached the EKF for 2 s (LOST); before 3 s of good poses (STARTING); and on a backend that coasts (COASTING - legacy_uart_bridge, in either speed_loop mode, until test 4.3 measures that mode's stop). false otherwise, and in stands mode (STANDS - car.launch.py stands:=true, said loudly); a heartbeat at 10 Hz (aav_safety geofence). The fence - a circle of radius m round the marked start spot (start_x, start_y - car 30, Gazebo 200, bench 100), or a site's polygon in the map frame drawn for navsat.yaml's datum (geofence.yaml sites; the machine file's geofence site). A twist_mux lock (geofence) at priority 51 - it holds every program (scripted 50, replay 40, point 25, nav 20, ai 10), never a person (joy, rc, keyboard) or the actuator tests (60, which stop themselves on its state). Fail-safe - the lock's 1 s timeout holds them when the geofence dies or hangs (mux.launch.py geofence_lock, a required argument - true wherever a geofence runs, the car next to the mux, the bench, Gazebo with geofence:=true; false on the turtle and CARLA). Independent of Nav2 (the 26 Oct review's F6). docs/geofence.md.</td>
 </tr>
@@ -312,7 +313,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/safety/geofence/state</code></td>
 <td><code>std_msgs/msg/String</code></td>
 <td><code>geofence</code></td>
-<td><code>actuator_test</code></td>
+<td><code>actuator_test</code>, <code>behaviour</code></td>
 <td>sim, car, bench</td>
 <td>One line for people, 10 Hz - the state (STARTING, OK, NEAR, OUTSIDE, JUMP, LOST, COASTING, STANDS), a colon, and why, such as "NEAR - a stopping path (1.4 m ahead, 0.9 m back) comes 0.9 m from the edge (needs 1.2 m) at 1.0 m/s". The actuator tests (aav_actuator_tests) stop a test on the ground on NEAR, OUTSIDE, JUMP or LOST, refuse one in STANDS, and on the real car refuse to start while it is silent.</td>
 </tr>
@@ -320,7 +321,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/safety/geofence/fence</code></td>
 <td><code>geometry_msgs/msg/PolygonStamped</code></td>
 <td><code>geofence</code></td>
-<td><code>point_driver</code>, <code>language_drive</code></td>
+<td><code>point_driver</code>, <code>language_drive</code>, <code>behaviour</code></td>
 <td>sim, car, bench</td>
 <td>The fence in the map frame (a circle as 36 corners), for RViz and Lichtblick, and so the point driver and the drive server refuse a goal outside it before the car moves. Reliable, transient local, depth 1 - sent once, at start-up.</td>
 </tr>
@@ -400,7 +401,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/safety/estop</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
 <td><code>joy_teleop</code>, <code>hud</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>hw_panel</code>, <code>dev_window</code></td>
-<td><code>twist_mux</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>carla_adapter</code>, <code>point_driver</code>, <code>hw_panel</code></td>
+<td><code>twist_mux</code>, <code>spine_bridge</code>, <code>legacy_uart_bridge</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>carla_adapter</code>, <code>point_driver</code>, <code>hw_panel</code>, <code>behaviour</code></td>
 <td>-</td>
 <td>true = stop. Lock on twist_mux (priority 255) and the backends brake at once. Cleared only by publishing false, from a laptop. The HUD's e-stop button (hud, aav_hud) only ever publishes true (five times in 0.5 s), reliable like the backends' subscriptions; language_drive (aav_language) does the same from its estop() tool, and the hardware panel (hw_panel) from its E-STOP button; actuator_test's preflight sets it when the car is still moving 5 s after its stop. None of them ever publishes false.</td>
 </tr>
@@ -416,9 +417,33 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/ego/trace</code></td>
 <td><code>nav_msgs/msg/Path</code></td>
 <td><code>ego</code></td>
-<td>-</td>
+<td><code>look_ahead</code>, <code>hud</code>, <code>dev_window</code></td>
 <td>turtle, sim, car, bench</td>
-<td>Where the car is going, like a tail but in front (Ben, 7 Nov) - ego's prediction over trace_horizon (2 s), 10 Hz (trace_rate_hz), a pose every 0.1 s from now (21 poses), frame base_link at the header's stamp (each pose stamped with its own time ahead). From the shared car model (aav_description car_model.py - the speed loop, dead times, lags, steering motor and bicycle), started from ego's twin of the car (its actuators as ego drove them, its speed the last /vehicle/odom), driven by a copy of ego with the request held (its lead, ramps and limits). base_link, not odom - ego needs no localization (stands, the turtle), and a driver turns it into odom with TF at the stamp. Every number is a guess until car tests 3.10-3.12 and 4.1-4.5. For drivers to match against their plan, and for screens. aav_ego trace_ahead.py.</td>
+<td>Where the car is going, like a tail but in front (Ben, 7 Nov) - ego's prediction over trace_horizon (2 s), 10 Hz (trace_rate_hz), a pose every 0.1 s from now (21 poses), frame base_link at the header's stamp (each pose stamped with its own time ahead). From the shared car model (aav_description car_model.py - the speed loop, dead times, lags, steering motor and bicycle), started from ego's twin of the car (its actuators as ego drove them, its speed the last /vehicle/odom), driven by a copy of ego with the request held (its lead, ramps and limits). base_link, not odom - ego needs no localization (stands, the turtle), and a driver turns it into odom with TF at the stamp. Every number is a guess until car tests 3.10-3.12 and 4.1-4.5. For drivers to match against their plan, and for screens - the squiggly line's bold line (docs/hud.md). aav_ego trace_ahead.py.</td>
+</tr>
+<tr>
+<td><code>/ego/stop_point</code></td>
+<td><code>geometry_msgs/msg/PoseStamped</code></td>
+<td><code>ego</code></td>
+<td><code>look_ahead</code>, <code>hud</code>, <code>dev_window</code></td>
+<td>turtle, sim, car, bench</td>
+<td>Where the car stops if it brakes fully now (Ben, 7 Nov) - the one answer every screen and the stop-point check read. ego, with each /ego/trace (10 Hz), from the same twin and shared car model (aav_ego stop_ahead.py) - the throttle let go, the brake full (its dead time and lag), the wheels held where they point, stepped until the speed is 0. Frame base_link, stamped as the trace (now), so TF at the stamp puts it in odom or map; (0, 0) when parked. Its distance is docs/designs/2026-11-05_how-the-car-stops.md's S(v) - v x the brake's delay + v^2 / 2 max_brake, a little less for the drag. Every number is a guess until car test 4.3.</td>
+</tr>
+<tr>
+<td><code>/ego/plan_ahead</code></td>
+<td><code>nav_msgs/msg/Path</code></td>
+<td><code>look_ahead</code></td>
+<td><code>hud</code>, <code>dev_window</code></td>
+<td>turtle, sim, car, bench</td>
+<td>The squiggly line's faint line - what the planner WANTS, in base_link, so a screen needs no TF (aav_ego look_ahead, 10 Hz while /ego/trace is fresh). /drivers/nav/local_plan while fresh (0.5 s), else Nav2's /plan, moved into base_link with the newest TF and cut from beside the car to plan_ahead_m (10 m) on. No poses - no plan (a person drives); it is still sent, so a screen clears its old line. Header as the trace's.</td>
+</tr>
+<tr>
+<td><code>/ego/ahead</code></td>
+<td><code>diagnostic_msgs/msg/DiagnosticStatus</code></td>
+<td><code>look_ahead</code></td>
+<td><code>hud</code>, <code>dev_window</code></td>
+<td>turtle, sim, car, bench</td>
+<td>The squiggly line's numbers, worked out once for every screen (aav_ego look_ahead look_ahead.py, 10 Hz with /ego/plan_ahead). name look_ahead; level OK (green - the trace keeps within gap_warn, 0.3 m, of the plan, or there is no plan), WARN (amber - within gap_bad, 0.6 m), ERROR (red - further); message one line for people, such as 'ON PLAN 0.12 m - stops in 1.4 m, 0.8 m short of the goal, 3.0 m before an obstacle'. values gap_m (the most a trace pose strays from the faint line), plan (local, global, none), stop_m (/ego/stop_point's distance), goal_m (from the stop point to /plan's end, along it - + short, - past), obstacle_m (how far base_link goes along the trace, then straight on to look_m, 15 m, before the front bumper meets a lethal cell of /local_costmap/costmap), room_m (obstacle_m - stop_m - below 0 a full brake now still hits it); 'nan' - unknown; front_m, rear_m, half_width_m - the body outline from base_link (vehicle.yaml), so a screen draws the car and where its front bumper stops without copying a measurement. No stop lines yet - no topic gives where one is.</td>
 </tr>
 <tr>
 <td><code>/ego/actuator_cmd</code></td>
@@ -824,7 +849,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/sensors/lidar/scan</code></td>
 <td><code>sensor_msgs/msg/LaserScan</code></td>
 <td><code>lidar_scan</code></td>
-<td><code>local_costmap</code>, <code>collision_monitor</code>, <code>amcl</code></td>
+<td><code>local_costmap</code>, <code>collision_monitor</code>, <code>amcl</code>, <code>behaviour</code></td>
 <td>road, car</td>
 <td>The roof lidar flattened (aav_lidar lidar_scan - navigation.launch.py lidar:=true) - in base_link, 720 ranges all the way round, each the nearest point between 0.3 m and the roof plus 0.5 m (vehicle.obstacle_heights), inf where there is none. Best effort, 10 Hz. Read by the local costmap's lidar_layer and collision_monitor's stop zone. From the roof, the lowest beam (15 degrees down from 1.8 m) meets a 1 m box only 3 m away, so low things close in front are the radar's.</td>
 </tr>
@@ -912,9 +937,17 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/perception/stop_sign</code></td>
 <td><code>std_msgs/msg/Bool</code></td>
 <td><code>stop_sign_watcher</code></td>
-<td><code>twist_mux</code>, <code>hud</code>, <code>language_drive</code></td>
+<td><code>twist_mux</code>, <code>hud</code>, <code>language_drive</code>, <code>behaviour</code></td>
 <td>car</td>
 <td>true while the car stops for a stop sign. A twist_mux lock at priority 30 - it holds Nav2 and the AI slot, never a person; never expires on silence. On the car, the stop_signs part - one watcher, on the machine with the mux.</td>
+</tr>
+<tr>
+<td><code>/perception/stop_sign/distance</code></td>
+<td><code>geometry_msgs/msg/PointStamped</code></td>
+<td><code>stop_sign_watcher</code></td>
+<td><code>behaviour</code></td>
+<td>-</td>
+<td>Where the tallest stop sign a forward camera sees is (sign_point, aav_detector stop_sign.py) - in that camera's frame (camera_left_link, or an _optical frame) at the picture's stamp, so a reader moves it with /tf at that stamp. The range along the camera's axis from the box's height and the lens (the same rule as the lock, sign_distance_m), the bearing from the box's centre column and the CameraInfo's fx and cx (straight ahead with no CameraInfo). Published with each detections message, only while the watcher is CLEAR and only for a frame naming front, left or right and not rear (forward_words, backward_words). For aav_behaviour's slowing before the lock; the lock itself is unchanged.</td>
 </tr>
 <tr>
 <td><code>/perception/camera_obstacles</code></td>
@@ -1056,7 +1089,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/localization/odom/local</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>ekf_local</code></td>
-<td><code>controller_server</code>, <code>bt_navigator</code>, <code>scripted_driver</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>sensor_watchdog</code>, <code>debug_hud</code>, <code>ndt</code>, <code>localization_health</code>, <code>dev_window</code></td>
+<td><code>controller_server</code>, <code>bt_navigator</code>, <code>scripted_driver</code>, <code>language_drive</code>, <code>actuator_test</code>, <code>sensor_watchdog</code>, <code>debug_hud</code>, <code>ndt</code>, <code>localization_health</code>, <code>dev_window</code>, <code>behaviour</code></td>
 <td>turtle, sim, car, replay, bench</td>
 <td>odom frame. Smooth; drifts.</td>
 </tr>
@@ -1064,7 +1097,7 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>/localization/odom/global</code></td>
 <td><code>nav_msgs/msg/Odometry</code></td>
 <td><code>ekf_global</code></td>
-<td><code>navsat_transform</code>, <code>map</code>, <code>sensor_watchdog</code>, <code>point_driver</code>, <code>point_cli</code>, <code>debug_hud</code>, <code>ndt</code>, <code>geofence</code>, <code>localization_health</code>, <code>dev_window</code></td>
+<td><code>navsat_transform</code>, <code>map</code>, <code>sensor_watchdog</code>, <code>point_driver</code>, <code>point_cli</code>, <code>debug_hud</code>, <code>ndt</code>, <code>geofence</code>, <code>localization_health</code>, <code>dev_window</code>, <code>behaviour</code></td>
 <td>sim, car, replay, bench</td>
 <td>map frame. Includes GPS; can jump. The map window (map, aav_hud) draws the car from it.</td>
 </tr>
@@ -1197,10 +1230,26 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>RViz "2D Goal Pose", or the map window's place search (map, aav_hud - only after DRIVE HERE then CONFIRM, map frame, facing from the car, refused off Nav2's /map or with no car), starts a navigate_to_pose. The map window shows it until Nav2 plans for it.</td>
 </tr>
 <tr>
+<td><code>/local_costmap/costmap</code></td>
+<td><code>nav_msgs/msg/OccupancyGrid</code></td>
+<td><code>local_costmap</code></td>
+<td><code>look_ahead</code></td>
+<td>sim, car</td>
+<td>Nav2's own name - the local costmap as a grid, odom, rolling with the car. look_ahead (aav_ego) finds the first obstacle ahead of the stop point in it.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/local_plan</code></td>
+<td><code>nav_msgs/msg/Path</code></td>
+<td><code>controller_server</code>, <code>mppi_lag</code></td>
+<td><code>look_ahead</code></td>
+<td>-</td>
+<td>What the path follower WANTS over its own horizon - the future its chosen commands lead to, odom. Nav2's MPPI (controller:=mppi, the default; nav2.yaml visualize true, its optimal_trajectory renamed here, sent only while someone listens) or aav_mppi_lag (tracker:=mppi_lag, every tick). Regulated Pure Pursuit and aav_track's trial trackers have none - then look_ahead falls back to /plan. Only while a path runs.</td>
+</tr>
+<tr>
 <td><code>/plan</code></td>
 <td><code>nav_msgs/msg/Path</code></td>
 <td><code>planner_server</code>, <code>diffusion_planner</code></td>
-<td><code>map</code>, <code>debug_hud</code>, <code>dev_window</code></td>
+<td><code>map</code>, <code>debug_hud</code>, <code>dev_window</code>, <code>look_ahead</code>, <code>behaviour</code></td>
 <td>-</td>
 <td>The planned path, for RViz/Foxglove, and the map window (map, aav_hud) - the line, the goal (its last point) and the distance left along it. Nav2 plans again every second while it drives. Which planner makes it is navigation.launch.py planner:= (docs/controllers.md, Planners) - hybrid (SmacPlannerHybrid, the default) or lattice (SmacPlannerLattice, our own primitives) keep to the car's turning radius; smac2d, navfn and theta_star, trials in sim and bench only, don't. Always the plugin GridBased, so the behaviour trees never change. With planner:=diffusion (aav_diffusion_planner, a trial) diffusion_planner publishes it - the path it returned, the model's or the lattice's - and planner_server's own goes to /drivers/nav/diffusion/lattice_plan.</td>
 </tr>
@@ -1235,6 +1284,22 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>controller_compare</code>, <code>debug_hud</code></td>
 <td>-</td>
 <td>aav_track's debug, every tick while it follows a path (20 Hz) - name track, message the tracker's name; values tracker, loop_ms (this tick's work), loop_ms_max, missed_ticks (since the path came, by the node's clock), cross_track_m (+ left of the path), heading_error_rad, steer_rad, speed_mps, left_m (along the path to its end). Only with tracker:= on. aav_mppi_lag's mppi_lag (tracker:=mppi_lag) publishes the same keys, message mppi_lag, and adds model (lag or ideal), est_steering_rad (its model's wheel angle), best_cost and collided_share (MPPI's cheapest sample, the share of samples that hit the costmap).</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/speed_limit</code></td>
+<td><code>nav2_msgs/msg/SpeedLimit</code></td>
+<td><code>behaviour</code></td>
+<td><code>controller_server</code></td>
+<td>-</td>
+<td>Only with behaviour:=true (navigation.launch.py, a trial - aav_behaviour, docs/stopping.md), 20 Hz - Nav2's speed cap, absolute m/s (percentage false), from the stopping law (aav_description stop_law.py, v_cap of the metres left to a stop sign's line, an obstacle in the lane, the fence or the goal). 0.0 means no limit to Nav2, so a cap is 0.0 or between the floor (0.3 m/s) and Nav2's own top speed, never lower - the cap slows the car, the locks and Nav2's goal check stop it. controller_server reads it as its speed_limit_topic only with behaviour:=true; it keeps the last value for ever, so a dead node leaves the car slower, never faster (respawn brings it back in DRIVE, sending 0.0). Trial trackers (tracker:=) don't read it yet.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/behaviour/state</code></td>
+<td><code>diagnostic_msgs/msg/DiagnosticStatus</code></td>
+<td><code>behaviour</code></td>
+<td>-</td>
+<td>-</td>
+<td>Only with behaviour:=true, 5 Hz - for the screens. name behaviour; message STATE and why; level OK, or WARN with a warning or in ASK. values state (DRIVE, APPROACH, STOPPED, WAIT, GO, ASK), reason (sign, obstacle, fence, goal, a lock's name, the e-stop), cap_mps (what /drivers/nav/speed_limit carries), left_m (to the binding stop's final stop, inf for none), warnings (sign passed, no lock; sign lost; odometry stale).</td>
 </tr>
 <tr>
 <td><code>/drivers/nav/route/destination</code></td>

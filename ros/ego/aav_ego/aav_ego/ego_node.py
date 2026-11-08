@@ -9,6 +9,10 @@ Subscribes  control/cmd_vel   geometry_msgs/TwistStamped (or Twist, use_stamped:
 Publishes   ego/actuator_cmd  ackermann_msgs/AckermannDriveStamped, at rate_hz
             ego/trace         nav_msgs/Path, frame base_link, at trace_rate_hz: where the
                               car goes over trace_horizon s (trace_ahead.py)
+            ego/stop_point    geometry_msgs/PoseStamped, frame base_link, with each trace:
+                              where a full brake now stops the car (stop_ahead.py);
+                              stamped as the trace (base_link now), so TF at the stamp
+                              puts it on the map
 Parameters  the limits (ackermann.Limits) and the body (dynamics.Body: mass, payload,
             track, centre of mass height, tyre grip, the throttle's and brake's
             accelerations, the sideways limit), read at start-up. Only max_steering_rate,
@@ -38,6 +42,7 @@ from aav_ego.ackermann import EgoModel, Limits, live_change, LIVE_LIMITS
 from aav_ego.dynamics import Body
 from aav_ego.lag_lead import (check_mode, command_key, LagAwareWatch, LagLead, lead_wanted,
                               LeadLimits, LeadTimes, START_ONLY)
+from aav_ego.stop_ahead import stop_point
 from aav_ego.trace_ahead import trace, Twin
 from ackermann_msgs.msg import AckermannDriveStamped
 from geometry_msgs.msg import PoseStamped, Twist, TwistStamped
@@ -81,6 +86,7 @@ class Ego(Node):
             self.create_subscription(Twist, 'control/cmd_vel', self.on_twist, 10)
         self.pub = self.create_publisher(AckermannDriveStamped, 'ego/actuator_cmd', 10)
         self.trace_pub = self.create_publisher(Path, 'ego/trace', 10)
+        self.stop_pub = self.create_publisher(PoseStamped, 'ego/stop_point', 10)
         self.create_subscription(Odometry, 'vehicle/odom', self.on_odom, 10)
         latched = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL,
                              reliability=ReliabilityPolicy.RELIABLE)
@@ -161,6 +167,18 @@ class Ego(Node):
             ps.pose.orientation.w = math.cos(pose.yaw / 2.0)
             out.poses.append(ps)
         self.trace_pub.publish(out)
+        self.publish_stop_point(now)
+
+    def publish_stop_point(self, now):
+        stop = stop_point(self.twin.cfg, self.twin.state)
+        ps = PoseStamped()
+        ps.header.frame_id = self.frame_id
+        ps.header.stamp = now.to_msg()
+        ps.pose.position.x = float(stop.x)
+        ps.pose.position.y = float(stop.y)
+        ps.pose.orientation.z = math.sin(stop.yaw / 2.0)
+        ps.pose.orientation.w = math.cos(stop.yaw / 2.0)
+        self.stop_pub.publish(ps)
 
     def declare_all(self, defaults):
         """Declare a parameter for each field of a dataclass; return {name: value}."""
@@ -174,7 +192,7 @@ class Ego(Node):
         lim = self.limits
         for line in dynamics.describe(self.body, lim.wheelbase, lim.max_steering_angle,
                                       lim.max_speed, lim.max_acceleration,
-                                      lim.max_deceleration):
+                                      lim.max_deceleration, lim.max_jerk):
             if line.startswith('WARNING'):
                 self.get_logger().warning(line[len('WARNING: '):])
             else:

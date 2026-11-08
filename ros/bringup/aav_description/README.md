@@ -81,6 +81,17 @@ still re-exports every name). Its Rust twin is [`car-model/`](./car-model/README
 | `predict(cfg, state, commands, dt, horizon, loop=None)` | the trace: a state every `dt` for `horizon` s (the loop copied) |
 | `Actuators`, `SpeedLoop`, `speed_loop_profile`, `Ideal`, `LQI_MODEL` | Gazebo's stateful car, the spine's speed loop (ported), the old instant car |
 
+### `aav_description.stop_law` (no ROS): how the car stops
+
+One stopping law for every planned stop (`docs/stopping.md`), from this car model's numbers.
+
+| Item | What |
+|---|---|
+| `StopCurve(a, j, rho)` | `distance(v)` = S(v), `cap(d)` = the speed that stops in d m, `demand(v)`, `h(room, v, margin)`, `tau` |
+| `from_car_model(cfg, ego_max_deceleration, max_jerk, input_delay, loop)`, `from_numbers(max_brake, ...)` | the curve for this car: a from the brake and ego, ρ from the brake's lag and dead time and the speed loop's lag (`loop_lag`) |
+| `nav2_cap(left, curve, base, floor)` | a speed limit for Nav2: 0.0 (none) or between the floor (0.3 m/s) and `base` |
+| `stop_point(cfg, speed, ramp, loop)` | where the car model stops when its set speed falls at `ramp`: (metres, seconds) |
+
 ### URDF (`urdf/`)
 
 `aav.urdf.xacro` builds `base_link`, `chassis`, four wheels with two steering joints,
