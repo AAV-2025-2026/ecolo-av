@@ -14,6 +14,14 @@ Ben, 7 Nov: "we really want the ego to have a mathematical model for steering, b
 | 129 | **ego's trace** (`/ego/trace`, 2 s, `base_link`) | ✅ 7 Nov. ⬜ drivers match it to their plan; a screen draws it |
 | 130 | The lag-aware drivers publish `/drivers/nav/lag_aware`: `aav_track`'s MPC, the Rust MPPI | ⬜ their agents |
 
+## 0.3: Gazebo merged into Rust (7 Nov)
+
+Ben, 7 Nov: "Does the bevy tool still use gazebo in the background. I would love to merge in everything from gazebo so its standalone in rust." His picks: everything in 0.3, all sensors.
+
+| # | Task | Status |
+|---|---|---|
+| 134 | **Our own simulator's core** ([page](docs/own-simulator.md), `aav_simulator`, `sim simulator:=own`): Gazebo's worlds (test lot, road, campus), the car (a `CarModel` trait, the car-model crate's rules), the roof lidar and the radar stand-in by ray casting, IMU, GPS, wheels, truth, `/clock`, TF through `/joint_states`; the car stops at what it hits; spawn and delete services; `sim-check --simulator own` | ✅ 7 Nov built; on a loaded Mac: drop-in pass (no cameras), a Nav2 goal reached, `sim-check` pass but the box run's last leg (a late TF), `--lidar-obstacle` pass. ⬜ the cameras plug in (another branch); `car-model` behind the trait; a quiet-machine run beside Gazebo's spread; then ours the default |
+
 ## Saturday 7 November: the hardware debug plan
 
 Ben, 7 Nov: the Rust replaces the C++, WiFi pages too, with JSON instead of streaming text; graphs of steering, brake and throttle in `hw_panel`; debug one part of the car at a time.
@@ -44,7 +52,7 @@ Ben, 4 Nov: "think about the areas of this car and what is the weakest ... ideas
 | 112 | **`vehicle.yaml` has three duplicate keys** under `vehicle:` (`centre_of_mass`, `tyre_grip`, `encoder_counts_per_rev`). The values match today, so harmless until someone edits only one: delete the copies | ⬜ |
 | 113 | **The stop-sign watcher lets rear-camera boxes trip the lock** (`stop_sign_watcher.py:34`). Reviewer's word, not checked | ⬜ |
 | 114 | **The developer window in Bevy** ([design](docs/designs/2026-11-05_own-simulator.md)) (Ben, 5 Nov): his layout, in `ros/hud/aav_dev_window` | 🔧 live on Gazebo, with goals through its gates (5 Nov). Next: a slower laptop, cancel a goal, the algorithm list, SWAP |
-| 115 | **Our own simulator in Rust and Bevy** ([design](docs/designs/2026-11-05_own-simulator.md)) (Ben, 5 Nov: "we want to replace gazebo"): every sensor Gazebo gives, beside Gazebo until it wins on the same routes | ⬜ EGM review first |
+| 115 | **Our own simulator in Rust and Bevy** ([design](docs/designs/2026-11-05_own-simulator.md)) (Ben, 5 Nov: "we want to replace gazebo"): every sensor Gazebo gives, beside Gazebo until it wins on the same routes | ▶ 7 Nov: the core is built (row 134); the cameras on their own branch |
 | 116 | **Does the car stop if Ben's MacBook drops off?** The LLM on the Mac sends Nav2 goals; a goal may carry on with the Mac gone. Check, then a heartbeat if so Screen heartbeats now exist for tests (`watch_screens:=`, `docs/simulation.md`), refused on the real car; what the car does about a lost Mac is still to decide | ⬜ before the LLM drives the real car |
 | 117 | **One RViz** (Ben, 5 Nov: "two nav screens"): `demo_all.sh` says `rviz:=false` | ✅ edited 5 Nov; not launched yet |
 | 118 | **Everything is a drop-in** (Ben, 5 Nov: "just swap out and test"): one conformance check against `docs/interfaces.yaml` for any sensor source or algorithm, and find what still depends on Gazebo by name | ✅ 5 Nov: `pixi run drop-in`, the contract's `drop_in` rules, `/vehicle/sim/` and `/control/sim/`, target `sim`. Against real sensors: not yet |

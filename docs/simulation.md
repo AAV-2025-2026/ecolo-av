@@ -43,7 +43,11 @@ driver. Publish `false` to clear it.
 pixi run sim                     # the empty world, with Nav2
 pixi run sim world:=test_lot     # the walled test lot, with its map
 pixi run sim world:=road         # the bench's road, for the car's camera and radar
+pixi run sim simulator:=own      # our own Rust simulator in Gazebo's place (no cameras yet)
 ```
+
+`simulator:=own` swaps `gz sim` and its bridges for [our own simulator](own-simulator.md): the
+same worlds and topics, so everything else runs unchanged. Gazebo stays the default.
 
 | Argument | Default | Means |
 |---|---|---|

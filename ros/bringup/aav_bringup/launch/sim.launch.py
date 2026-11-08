@@ -16,7 +16,7 @@ The whole stack in Gazebo: same nodes and configs as the car, simulated hardware
       [watch_hud:=false] [faults:=false] [spine:=false] [arm:=true]
       [esp32:=false] [esp32_loop:=pi]
       [bridge:=rust|python]
-      [ghost:=false]
+      [ghost:=false] [simulator:=gazebo|own]
   pixi run sim world:=road                         the road: the car's camera and radar
   pixi run -e ml sim world:=road perception:=true  adds YOLO and the stop-sign watcher
   pixi run sim world:=test_lot sim_speed:=3 hud:=true   Gazebo, RViz, Nav2 and the HUD window
@@ -133,6 +133,11 @@ bench's argument names:
                       (docs/ghost-obstacles.md)
   actuator_model:=false  the old instant car instead of the actuator model (gazebo_adapter;
                       vehicle.yaml's actuators:), to compare the two
+  simulator:=own      our own Rust simulator (aav_simulator, docs/own-simulator.md) in
+                      gz sim's place: the same worlds, topics and rates, the lidar and
+                      radar by ray casting, no window. No cameras yet, so the camera's
+                      parts (perception, lane, camera_obstacles) refuse it. Gazebo is
+                      the default
 
 The empty and test_lot worlds render nothing, so they run headless anywhere, and the
 camera's parts need world:=road. Every node runs on simulated time.
@@ -206,7 +211,11 @@ def launch_setup(context):
     kiss_ekf = arg('kiss_ekf').lower() == 'true'
     kiss_icp = arg('kiss_icp').lower() == 'true' or kiss_ekf
     gazebo_share = FindPackageShare('aav_gazebo').perform(context)
-    sensors = worlds.has_sensors(worlds.world_file(gazebo_share, world))
+    simulator = worlds.check_simulator(arg('simulator'))
+    world_path = worlds.world_file(gazebo_share, world)
+    # The lidar and radar where the world has them; the cameras only where they're drawn.
+    sensors = worlds.has_sensors(world_path)
+    cameras = worlds.has_cameras(world_path, simulator)
     # Each only where the world renders it, as gazebo.launch.py decides.
     radar = sensors and arg('radar').lower() == 'true'
     lidar = sensors and arg('lidar').lower() == 'true'
@@ -228,8 +237,9 @@ def launch_setup(context):
         raise ValueError('kiss_icp:=true (and kiss_ekf:=true) needs the lidar: '
                          f'world:={world} lidar:={arg("lidar")} has none '
                          '(world:=test_lot or road, lidar:=true)')
-    if wanted and not sensors:
-        raise ValueError(f'{", ".join(wanted)}: world:={world} has no camera. Use world:=road')
+    if wanted and not cameras:
+        raise ValueError(f'{", ".join(wanted)}: world:={world} has no camera with '
+                         f'simulator:={simulator}. Use world:=road, simulator:=gazebo')
     nav_share = FindPackageShare('aav_navigation').perform(context)
     actions = [
         # Every node on simulated time, those in the included files too.
@@ -240,7 +250,7 @@ def launch_setup(context):
                 actuator_model=arg('actuator_model'), speed_loop=arg('speed_loop'),
                 faults=flag['faults'],
                 spine=arg('spine'), arm=arg('arm'), bridge=arg('bridge'),
-                esp32=arg('esp32'), esp32_loop=arg('esp32_loop')),
+                esp32=arg('esp32'), esp32_loop=arg('esp32_loop'), simulator=simulator),
         include(context, 'aav_command_mux', 'mux.launch.py', use_sim_time='true',
                 sensor_lock=flag['watchdog'], geofence_lock=flag['geofence']),
         include(context, 'aav_ego', 'ego.launch.py', use_sim_time='true',
@@ -263,8 +273,10 @@ def launch_setup(context):
                 ndt_ekf=str(ndt_ekf).lower(), kiss_ekf=str(kiss_ekf).lower()),
     ]
     # What this run uses, in words, for the cockpit's Algorithms table (aav_run_info).
+    profile = f'sim world:={world}' + (
+        f' simulator:={simulator}' if simulator != worlds.DEFAULT_SIMULATOR else '')
     actions.append(Node(package='aav_run_info', executable='run_info', name='run_info',
-                        parameters=[{'use_sim_time': True, 'profile': f'sim world:={world}',
+                        parameters=[{'use_sim_time': True, 'profile': profile,
                                      'nav': flag['nav'], 'planner': planner,
                                      'controller': controller, 'tracker': tracker,
                                      'lidar': lidar, 'radar': radar,
@@ -322,7 +334,7 @@ def launch_setup(context):
     if flag['watchdog']:
         # What this world has, and the camera only where something reads it: watching it
         # costs one more stream of pictures.
-        camera = sensors and (flag['perception'] or flag['camera_obstacles'] or lane != 'false'
+        camera = cameras and (flag['perception'] or flag['camera_obstacles'] or lane != 'false'
                               or flag['faults'])
         inputs = (['odom', 'imu', 'gps', 'local', 'global'] + (['camera'] if camera else [])
                   + (['radar'] if radar else [])
@@ -369,7 +381,7 @@ def launch_setup(context):
                                foxglove_address='127.0.0.1', foxglove_port=8765,
                                use_sim_time=True, foxglove_control=True,
                                foxglove_topics='wifi',
-                               foxglove_preview='front_left' if sensors else ''))
+                               foxglove_preview='front_left' if cameras else ''))
     if flag['rviz']:
         actions.append(Node(
             package='rviz2', executable='rviz2', name='rviz2',
@@ -522,5 +534,8 @@ def generate_launch_description():
                               description="true: Nav2's planner plans round what the radar "
                                           'and lidar see; false: the map only, so the car '
                                           'stops for it'),
+        DeclareLaunchArgument('simulator', default_value=worlds.DEFAULT_SIMULATOR,
+                              description="gazebo, or own: our Rust simulator in gz sim's "
+                                          'place (aav_simulator; no cameras yet)'),
         OpaqueFunction(function=launch_setup),
     ])

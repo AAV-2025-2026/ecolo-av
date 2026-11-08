@@ -1,0 +1,11 @@
+[package]
+name = "sim-core"
+description = "Our own simulator's core, with no ROS and no Bevy: the worlds Gazebo reads, the car, the lidar, IMU and GPS"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+# Reads Gazebo's world files (SDF is XML).
+roxmltree = "0.20"

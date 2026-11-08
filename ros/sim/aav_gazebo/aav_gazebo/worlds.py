@@ -42,6 +42,12 @@ CAMPUS_NDT_FLOOR = 0.45
 CAMPUS_SPEED = '2.5'
 CAMPUS_CUBE_FLOOR = 0.12
 
+# Who plays the world (simulator:=, docs/own-simulator.md): Gazebo, or our own Rust simulator
+# (aav_simulator), a drop-in for gz sim and its bridges. Gazebo stays the default until ours
+# passes the same checks. Ours casts the lidar's and radar's rays but renders no cameras yet.
+SIMULATORS = ('gazebo', 'own')
+DEFAULT_SIMULATOR = 'gazebo'
+
 
 def world_file(share: str, world: str) -> str:
     """Return the path of a world in aav_gazebo's share folder, or say which ones exist."""
@@ -62,6 +68,18 @@ def campus_start(place_text: str) -> Tuple[float, float, float]:
     """Return where place.yaml says the car starts on the campus: x, y (m), yaw (rad)."""
     start = yaml.safe_load(place_text)['start']
     return float(start['x']), float(start['y']), float(start['yaw'])
+
+
+def check_simulator(name: str) -> str:
+    """Return the simulator's name, checked: one of SIMULATORS."""
+    if name not in SIMULATORS:
+        raise ValueError(f'simulator:={name}: pick one of {", ".join(SIMULATORS)}')
+    return name
+
+
+def has_cameras(path: str, simulator: str) -> bool:
+    """Return True if this world renders cameras with this simulator: Gazebo's only, today."""
+    return check_simulator(simulator) == 'gazebo' and has_sensors(path)
 
 
 def has_sensors(path: str) -> bool:

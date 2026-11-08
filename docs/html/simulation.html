@@ -74,6 +74,7 @@
 <a class="here" href="simulation.html">Simulation</a>
 <a href="sim-and-car.html">Sim and the car</a>
 <a href="full-simulation.html">Full simulation</a>
+<a href="own-simulator.html">Our own simulator</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
@@ -172,7 +173,10 @@ driver. Publish <code>false</code> to clear it.</p>
 <section class="card"><h2 id="gazebo">Gazebo</h2>
 <pre class="highlight"><code class="language-bash">pixi run sim                     # the empty world, with Nav2
 pixi run sim world:=test_lot     # the walled test lot, with its map
-pixi run sim world:=road         # the bench's road, for the car's camera and radar</code></pre>
+pixi run sim world:=road         # the bench's road, for the car's camera and radar
+pixi run sim simulator:=own      # our own Rust simulator in Gazebo's place (no cameras yet)</code></pre>
+<p><code>simulator:=own</code> swaps <code>gz sim</code> and its bridges for <a href="own-simulator.html">our own simulator</a>: the
+same worlds and topics, so everything else runs unchanged. Gazebo stays the default.</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
