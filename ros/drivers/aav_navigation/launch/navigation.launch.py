@@ -203,6 +203,9 @@ def lattice_for(share, v, map_yaml, headings=vehicle.LATTICE_HEADINGS[0]):
     return path
 
 
+DIFFUSION_WAIT_MS = 15000   # bt_navigator's wait for diffusion_planner's action (ms)
+
+
 def diffusion_params(nav2, v, reversing):
     """Return the guard's numbers for diffusion_planner: the outline, turns, the goal."""
     costmap = nav2['global_costmap']['global_costmap']['ros__parameters']
@@ -258,6 +261,12 @@ def nodes(context):
     if not flag(context, 'full_costmap'):
         rewrites['global_costmap.global_costmap.ros__parameters.always_send_full_costmap'] = (
             'false')
+    if planner == 'diffusion':
+        # Its node is Python and starts its model too: bt_navigator, waiting 1 s for
+        # compute_path_to_pose when it loads its trees, gave up before it was there (8 Nov,
+        # our own simulator: every goal refused). 15 s; a server that's gone still fails a
+        # goal within default_server_timeout.
+        rewrites['wait_for_service_timeout'] = str(DIFFUSION_WAIT_MS)
     rewrites.update({
         'yaml_filename': map_yaml,
         'default_nav_to_pose_bt_xml': f'{share}/behavior_trees/navigate_to_pose{trees}',

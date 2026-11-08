@@ -298,6 +298,9 @@ def test_diffusion_takes_compute_path_to_pose_with_the_lattice_behind_it():
     assert p['reversing'] is True
     assert p['min_radius'] == pytest.approx(0.95 * vehicle.min_turning_radius(v))
     assert p['goal_xy'] == 1.0 and p['goal_yaw'] == 0.75
+    # bt_navigator waits for the Python node's action (it loads a model too); others 1 s.
+    assert settings(planner='diffusion')['bt_navigator']['wait_for_service_timeout'] == 15000
+    assert settings()['bt_navigator']['wait_for_service_timeout'] == 1000
     assert p['model'] == '' and p['provider'] == 'CPUExecutionProvider'
     # The outline, padded as the global costmap pads it (0.05 m).
     front = yaml.safe_load(p['footprint'])[0]
