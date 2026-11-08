@@ -46,7 +46,6 @@ A STOP line ends the run before anything changes (with `--apply`, before the nex
 |---|---|---|
 | `reboot` | a reboot is waiting: an upgrade on top of it can break the boot | `sudo reboot`, log in, run it again |
 | `hostname` | this isn't the hostname the audit found for the role: maybe the wrong computer | check the address and the vault's entry. Right after all (a new card, a reflash)? add `--host-ok` |
-| `upgrade` on `localization` | its IMU and GPS drivers run on Humble, which 24.04 ends; no machine file of ours runs them yet | wait for `machines/localization.yaml` (TODO 75) |
 | `upgrade` on `motor_pi` | the 2025-26 `aav_serial_bridge` (Humble) is the way back to the C++ ESP32 | only after the Rust ESP32 passed car day's session 6: add `--after-esp32` |
 | `UART`, `udev` (in `check`, after an upgrade) | the ESP32's serial port, or the sensors' `/dev/aav` names, didn't come back | `enable_uart=1` in `/boot/firmware/config.txt` and reboot; the cables, then `sudo udevadm trigger` |
 
@@ -115,7 +114,7 @@ The kit's details: [From a USB stick](car-install.md). The camera Pis get only o
 
 | What | Which roles | How |
 |---|---|---|
-| Our stack, `car.launch.py machine:=<role>` | `orin`, `motor_pi` | `aav-car.service`, a user unit; linger starts it at boot |
+| Our stack, `car.launch.py machine:=<role>` | `orin`, `motor_pi`, `localization` | `aav-car.service`, a user unit; linger starts it at boot |
 | Its settings | the same | `~/.config/aav/car.env`: the machine file, `max_speed:=0.3` |
 | The two screens | `dash` | `aav-hud`, `aav-map` ([The two screens](car-screens.md)); turn on automatic login, by hand |
 | The camera stream | `camera_pi` | MediaMTX, enabled |
@@ -136,9 +135,8 @@ The kit's details: [From a USB stick](car-install.md). The camera Pis get only o
     starts at boot. Turn theirs off only when the team agrees:
     `sudo systemctl disable --now aav_serial_bridge`.
 
-The `localization` Pi gets no ROS service yet: no machine file has its IMU and GPS
-(`orin.yaml` assumes they're on the Orin: a TODO for the hardware lead's answer). For the
-same reason `upgrade` refuses there.
+The `localization` Pi runs `machines/localization.yaml`: only the IMU and GPS drivers,
+which publish to the Orin (TODO 75). Its `aav-car.service` starts them at boot.
 
 **The first moves** (`machine:=motor_pi_alone`, the joystick on the Motor Pi): car day's
 [A9b](car-day.md#a9b-the-joystick-on-stands).

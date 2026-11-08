@@ -87,6 +87,7 @@ default_machine() {
   case "$1" in
     orin) echo orin ;;
     motor_pi) echo motor_pi ;;
+    localization) echo localization ;;   # its IMU and GPS drivers (machines/localization.yaml)
     *) echo "" ;;
   esac
 }

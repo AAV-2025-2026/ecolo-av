@@ -177,7 +177,9 @@ def test_services_by_role(home):
     assert 'systemctl --user enable aav-car' in orin
     pi = run(home, 'motor_pi', 'services', '--machine', 'motor_pi_alone').stdout
     assert 'server 192.168.1.140' in pi and 'AAV_MACHINE=motor_pi_alone' in pi
-    for role in ('localization', 'dash', 'camera_pi', 'lab_desktop'):
+    loc = run(home, 'localization', 'services').stdout
+    assert 'AAV_MACHINE=localization' in loc and 'enable aav-car' in loc
+    for role in ('dash', 'camera_pi', 'lab_desktop'):
         assert 'enable aav-car' not in run(home, role, 'services').stdout
     assert 'enable mediamtx' in run(home, 'camera_pi', 'services').stdout
 
