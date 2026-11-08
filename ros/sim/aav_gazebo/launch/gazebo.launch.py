@@ -81,8 +81,9 @@ the bridges' topics (/clock, /gazebo/odom, /gazebo/imu, /gazebo/navsat, /joint_s
 so gazebo_adapter and the sensor nodes above run unchanged. Its cameras are their own
 program (aav_sim_cameras, Bevy, offscreen): they draw the same world file where
 /vehicle/sim/truth puts the car, on the same camera topics (the chase camera too; with
-faults:=true the front left picture goes to gazebo_camera). No window. Gazebo stays the
-default.
+faults:=true the front left picture goes to gazebo_camera). No window. Ours is the default
+since 8 Nov; simulator:=gazebo starts Gazebo (on a computer with no GPU, the only one whose
+cameras draw: tools/software_gl.sh).
 
 Everything else (sensors filter, localization, Nav2, mux, ego) runs as on the car,
 with use_sim_time:=true. aav_bringup sim.launch.py starts the lot.
@@ -426,8 +427,9 @@ def generate_launch_description():
                               description='with spine:=true: spine_bridge in rust '
                                           '(aav_spine_bridge) or python (aav_spine)'),
         DeclareLaunchArgument('simulator', default_value=worlds.DEFAULT_SIMULATOR,
-                              description='gazebo, or own: our Rust simulator (aav_simulator) '
-                                          'in the place of gz sim and its bridges, its '
-                                          'cameras by Bevy (aav_sim_cameras)'),
+                              description='own (the default): our Rust simulator '
+                                          '(aav_simulator) in the place of gz sim and its '
+                                          'bridges, its cameras by Bevy (aav_sim_cameras); '
+                                          'or gazebo'),
         OpaqueFunction(function=launch_setup),
     ])

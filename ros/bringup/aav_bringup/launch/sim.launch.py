@@ -135,10 +135,12 @@ bench's argument names:
                       (docs/ghost-obstacles.md)
   actuator_model:=false  the old instant car instead of the actuator model (gazebo_adapter;
                       vehicle.yaml's actuators:), to compare the two
-  simulator:=own      our own Rust simulator (aav_simulator, docs/own-simulator.md) in
-                      gz sim's place: the same worlds, topics and rates, the lidar and
-                      radar by ray casting, the cameras by Bevy (aav_sim_cameras), no
-                      window. Gazebo is the default
+  simulator:=own      the default (8 Nov): our own Rust simulator (aav_simulator,
+                      docs/own-simulator.md) in gz sim's place: the same worlds, topics
+                      and rates, the lidar and radar by ray casting, the cameras by Bevy
+                      (aav_sim_cameras; needs a GPU), no window.
+                      simulator:=gazebo: Gazebo, as before (on a computer with no GPU, with
+                      tools/software_gl.sh in front)
 
 The empty and test_lot worlds render nothing, so they run headless anywhere, and the
 camera's parts need world:=road. Every node runs on simulated time.

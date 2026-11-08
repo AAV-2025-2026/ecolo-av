@@ -322,6 +322,10 @@ IMU, GPS, wheels, clock) is built beside it. The plan:
 <td><code>simulator:=own</code> starts <code>sim_cameras --ros --pose truth --world &lt;the world&gt;</code>; <code>gazebo_adapter</code> announces the cameras</td>
 <td><code>aav_gazebo</code> <code>gazebo.launch.py</code></td>
 </tr>
+<tr>
+<td>Models placed while running (<code>obstacle:=true</code>, <code>spawn_entity</code>): the simulator lists them on <code>/vehicle/sim/entities</code>; the cameras read each SDF file and draw the world again</td>
+<td><code>sim-node</code>, <code>src/ros.rs</code>, <code>core_world::placed</code></td>
+</tr>
 </tbody>
 </table></div>
 </section>
@@ -421,10 +425,6 @@ IMU, GPS, wheels, clock) is built beside it. The plan:
 <tr>
 <td>The detector on these pictures</td>
 <td>the stop sign carries Gazebo's own picture: see <a href="own-simulator.html">own-simulator.md</a>'s results</td>
-</tr>
-<tr>
-<td>Models placed while running</td>
-<td><code>spawn_entity</code>'s box is in the rays, not yet in the pictures</td>
 </tr>
 <tr>
 <td>The campus at 10 Hz on a busy computer</td>

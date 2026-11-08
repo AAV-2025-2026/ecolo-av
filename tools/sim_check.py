@@ -1991,7 +1991,7 @@ WATCHDOG_TOPICS = ('/safety/sensor_watchdog/lock', '/safety/sensor_watchdog/stat
 
 
 EVERY_RUN = []   # launch arguments every session adds: --speed-loop's, --simulator's
-SIMULATOR = 'gazebo'   # --simulator own: our Rust simulator, and its cameras
+SIMULATOR = None      # --simulator gazebo or own; else sim.launch.py's default (main)
 SIMULATOR_NAMES = {'gazebo': 'Gazebo', 'own': 'our simulator'}
 VOXELS = False   # --voxels: every session with the lidar takes voxels:=true
 KISS_EKF = False  # --kiss-ekf: every session with the lidar takes kiss_ekf:=true
@@ -2338,7 +2338,11 @@ def main():
             print('--simulator takes gazebo or own', file=sys.stderr)
             return 2
         SIMULATOR = args[at + 1]
-        EVERY_RUN.append(f'simulator:={SIMULATOR}')
+    else:
+        from aav_gazebo.worlds import DEFAULT_SIMULATOR
+        SIMULATOR = DEFAULT_SIMULATOR
+    # Always said: the checks place models and read logs the way this simulator wants.
+    EVERY_RUN.append(f'simulator:={SIMULATOR}')
     log = os.environ.get('AAV_SIM_LOG', '/tmp/aav-sim-check.log')
     logs = [log]
     if not {'--drive-to-point-only', '--speed-steps-only', '--spine-points-only',

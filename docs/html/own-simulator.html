@@ -7,7 +7,7 @@
 <!-- Generated from docs/own-simulator.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Our own simulator</h1>
-<div class="meta">9 min read · 8 sections</div></header>
+<div class="meta">10 min read · 8 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -114,9 +114,13 @@
 simulator's <strong>core</strong>: the world, the car, the lidar, the radar, the IMU, the GPS, the wheels
 and the clock. The cameras are their own program (<a href="own-simulator-cameras.html">its page</a>),
 started beside it. The plan: <a href="../designs/2026-11-05_own-simulator.md">the design</a>.</p>
-<pre class="highlight"><code class="language-sh">pixi run sim simulator:=own world:=test_lot gui:=false rviz:=false
-pixi run sim-check --simulator own            # the road world's checks, on ours</code></pre>
-<p>Gazebo stays the default until ours passes the same checks.</p></div>
+<pre class="highlight"><code class="language-sh">pixi run sim world:=test_lot gui:=false rviz:=false     # ours: the default since 8 Nov
+pixi run sim-check                                     # the road world's checks, on ours
+pixi run sim simulator:=gazebo world:=test_lot         # Gazebo, as before</code></pre>
+<p><strong>Ours is the default since 8 Nov</strong>: it passed every <code>sim-check</code> leg Gazebo passes (below).
+Gazebo stays, as <code>simulator:=gazebo</code>: to compare, and on a computer with no GPU (GitHub's
+CI, oirp-spss), where our cameras can't draw (<code>sim_cameras</code> says "no GPU to draw with")
+but Gazebo's can, in software (<code>tools/software_gl.sh</code>).</p></div>
 <section class="card"><h2 id="in-one-picture">In one picture</h2>
 <pre class="highlight"><code class="language-text"> ego ─&gt; output mux ─&gt; gazebo_adapter ──/gazebo/cmd_vel──&gt; simulator (Rust)
                       (actuator model)                      │ world: Gazebo's .sdf files
@@ -333,10 +337,49 @@ announces them, as with Gazebo.</p>
 it (score 0.93, 62 px tall: the watcher wants 55) and the lock comes on. Still pictures
 along the road: 0.84-0.94 from 19 m to 4 m away. Gazebo's box at the same place is taller
 (68 px against our 52). While driving, the lock never came on. <span class="badge b-untested">untested</span> why.</p>
-<p><strong>Can ours be the default?</strong> Not yet: one leg fails (<code>--perception</code>). Every other leg
-passes on ours as on Gazebo, the numbers agree, and ours started every time. After the
-stop sign: run <code>--faults</code>, <code>--drive-to-point</code> and <code>--perception</code> three times each, then
-switch <code>DEFAULT_SIMULATOR</code>.</p>
+<h3 id="three-times-each-then-the-switch-8-nov-quiet-mac">Three times each, then the switch (8 Nov, quiet Mac)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Check, on ours</th>
+<th>Runs</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--perception</code> (RF-DETR, the stop-sign lock)</td>
+<td>3</td>
+<td><strong>3 of 3 pass</strong>: locked at x = 17.7-18.2 m (56-71 px), stood 3.9-4.4 m before the sign. Before them, 4 of 5 with a listener</td>
+</tr>
+<tr>
+<td><code>--faults</code> (14 faults, the watchdog's own two)</td>
+<td>3</td>
+<td><strong>3 of 3</strong>: 25 of 25 checks each</td>
+</tr>
+<tr>
+<td><code>--drive-to-point-only</code> (1 and 3 m/s, cancel, e-stop, GPS fault)</td>
+<td>3</td>
+<td><strong>3 of 3</strong>: 17 of 17 checks each; B within 0.09-0.27 m</td>
+</tr>
+<tr>
+<td><code>--obstacle</code> with the box drawn in the pictures</td>
+<td>1</td>
+<td>pass: 0.35 m before it; the cameras drew it ("placed models: [obstacle]")</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The stop sign:</strong> the lock never came on while driving in 1 of the first 5 runs, and in
+none of the next 3. A listener logged every box: a picture every 0.1 s, no gaps, the
+detector's box 50 ms after each picture's stamp, growing smoothly as the car came near.
+No fault found in the sign's size, height or pose, or the camera's mount; the one failure's
+cause is not known. Our box is smaller than Gazebo's at the same place (52 px against 68);
+the lens's own sum gives about 49 px, so ours is the nearer.</p>
+<p><strong>Found and fixed on the way:</strong> with <code>faults:=true</code> our front left camera_info went to the
+relay's topic too, so <code>--faults</code> waited for the lens and failed; now only the picture moves
+(<code>--image-topic</code>), as Gazebo's bridge does.</p>
+<p>So on 8 Nov <code>DEFAULT_SIMULATOR</code> became <code>own</code>. <code>sim-check</code> says which simulator it runs, every
+time (<code>simulator:=</code>).</p>
 </section>
 <section class="card"><h2 id="results-7-nov-bens-mac-other-agents-running-load-30-40">Results (7 Nov, Ben's Mac, other agents running: load 30-40)</h2>
 <div class="table-wrap"><table>
@@ -405,14 +448,6 @@ switch <code>DEFAULT_SIMULATOR</code>.</p>
 </tr>
 </thead>
 <tbody>
-<tr>
-<td>Ours as the default</td>
-<td>after the same checks pass on a quiet computer, and Gazebo's spread is measured</td>
-</tr>
-<tr>
-<td>Obstacles placed while running, in the pictures</td>
-<td>the rays see a spawned box; the cameras don't draw it yet</td>
-</tr>
 <tr>
 <td>Hills in a world</td>
 <td>the ground works on any mesh; none of our worlds has a slope yet</td>

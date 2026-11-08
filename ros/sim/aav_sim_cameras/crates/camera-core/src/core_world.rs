@@ -14,7 +14,7 @@
 
 use std::collections::HashMap;
 
-use sim_core::world::{Geometry as CoreGeometry, World};
+use sim_core::world::{Geometry as CoreGeometry, Shape as CoreShape, World};
 
 use crate::geom::{Pose, Rotation, Vec3};
 use crate::world::{Geometry, Look, Rgb, Shape, SimWorld, Sun};
@@ -63,6 +63,29 @@ fn geometry(g: &CoreGeometry) -> Geometry {
     }
 }
 
+/// One of the core's shapes as ours, moved by `at` (a placed model's pose in the map).
+fn convert(s: &CoreShape, name: String, at: &Pose) -> Shape {
+    Shape {
+        name,
+        geometry: geometry(&s.geometry),
+        pose: at.then(&pose(&s.pose)),
+        look: Look {
+            colour: rgb(s.colour.unwrap_or([PLAIN, PLAIN, PLAIN, 1.0])),
+            texture: s.texture.clone(),
+        },
+    }
+}
+
+/// A model placed while the world runs (sim-core `World::model_shapes`, in its own
+/// frame), as shapes in the map: each named `<name>/<shape>`.
+pub fn placed(name: &str, shapes: &[CoreShape], at: &Pose) -> Vec<Shape> {
+    shapes
+        .iter()
+        .enumerate()
+        .map(|(i, s)| convert(s, format!("{name}/{i}"), at))
+        .collect()
+}
+
 impl SimWorld {
     /// The core's world, as the cameras draw it. No car body: add it with `with_car`.
     pub fn from_core(world: &World) -> Self {
@@ -80,15 +103,7 @@ impl SimWorld {
                 } else {
                     format!("{}#{n}", s.name)
                 };
-                Shape {
-                    name,
-                    geometry: geometry(&s.geometry),
-                    pose: pose(&s.pose),
-                    look: Look {
-                        colour: rgb(s.colour.unwrap_or([PLAIN, PLAIN, PLAIN, 1.0])),
-                        texture: s.texture.clone(),
-                    },
-                }
+                convert(s, name, &Pose::IDENTITY)
             })
             .collect();
         SimWorld {
@@ -170,6 +185,20 @@ mod tests {
         let face = plate.pose.rotation.apply(Vec3::new(1.0, 0.0, 0.0));
         assert!(face.x < -0.999, "{face:?}");
         assert!((plate.pose.translation.z - 2.0).abs() < 1e-9);
+    }
+
+    #[test]
+    fn a_placed_box_sits_where_it_was_put() {
+        let file = gazebo().join("models/obstacle/model.sdf");
+        let shapes =
+            World::model_shapes(&file, &[gazebo().join("models")], Surfaces::Visual).unwrap();
+        let at = Pose::new(Vec3::new(15.5, 0.0, 0.0), Rotation::from_yaw(0.0));
+        let got = placed("obstacle", &shapes, &at);
+        assert_eq!(got.len(), 1);
+        // The model's link is 0.5 m up: the box's centre at (15.5, 0, 0.5).
+        let c = got[0].pose.translation;
+        assert!((c.x - 15.5).abs() < 1e-9 && c.y.abs() < 1e-9 && (c.z - 0.5).abs() < 1e-9);
+        assert!(matches!(got[0].geometry, Geometry::Cuboid { x, .. } if (x - 1.0).abs() < 1e-9));
     }
 
     #[test]

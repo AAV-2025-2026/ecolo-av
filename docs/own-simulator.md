@@ -6,11 +6,15 @@ and the clock. The cameras are their own program ([its page](own-simulator-camer
 started beside it. The plan: [the design](designs/2026-11-05_own-simulator.md).
 
 ```sh
-pixi run sim simulator:=own world:=test_lot gui:=false rviz:=false
-pixi run sim-check --simulator own            # the road world's checks, on ours
+pixi run sim world:=test_lot gui:=false rviz:=false     # ours: the default since 8 Nov
+pixi run sim-check                                     # the road world's checks, on ours
+pixi run sim simulator:=gazebo world:=test_lot         # Gazebo, as before
 ```
 
-Gazebo stays the default until ours passes the same checks.
+**Ours is the default since 8 Nov**: it passed every `sim-check` leg Gazebo passes (below).
+Gazebo stays, as `simulator:=gazebo`: to compare, and on a computer with no GPU (GitHub's
+CI, oirp-spss), where our cameras can't draw (`sim_cameras` says "no GPU to draw with")
+but Gazebo's can, in software (`tools/software_gl.sh`).
 
 ## In one picture
 
@@ -91,10 +95,28 @@ it (score 0.93, 62 px tall: the watcher wants 55) and the lock comes on. Still p
 along the road: 0.84-0.94 from 19 m to 4 m away. Gazebo's box at the same place is taller
 (68 px against our 52). While driving, the lock never came on. [[untested]] why.
 
-**Can ours be the default?** Not yet: one leg fails (`--perception`). Every other leg
-passes on ours as on Gazebo, the numbers agree, and ours started every time. After the
-stop sign: run `--faults`, `--drive-to-point` and `--perception` three times each, then
-switch `DEFAULT_SIMULATOR`.
+### Three times each, then the switch (8 Nov, quiet Mac)
+
+| Check, on ours | Runs | Result |
+|---|---|---|
+| `--perception` (RF-DETR, the stop-sign lock) | 3 | **3 of 3 pass**: locked at x = 17.7-18.2 m (56-71 px), stood 3.9-4.4 m before the sign. Before them, 4 of 5 with a listener |
+| `--faults` (14 faults, the watchdog's own two) | 3 | **3 of 3**: 25 of 25 checks each |
+| `--drive-to-point-only` (1 and 3 m/s, cancel, e-stop, GPS fault) | 3 | **3 of 3**: 17 of 17 checks each; B within 0.09-0.27 m |
+| `--obstacle` with the box drawn in the pictures | 1 | pass: 0.35 m before it; the cameras drew it ("placed models: [obstacle]") |
+
+**The stop sign:** the lock never came on while driving in 1 of the first 5 runs, and in
+none of the next 3. A listener logged every box: a picture every 0.1 s, no gaps, the
+detector's box 50 ms after each picture's stamp, growing smoothly as the car came near.
+No fault found in the sign's size, height or pose, or the camera's mount; the one failure's
+cause is not known. Our box is smaller than Gazebo's at the same place (52 px against 68);
+the lens's own sum gives about 49 px, so ours is the nearer.
+
+**Found and fixed on the way:** with `faults:=true` our front left camera_info went to the
+relay's topic too, so `--faults` waited for the lens and failed; now only the picture moves
+(`--image-topic`), as Gazebo's bridge does.
+
+So on 8 Nov `DEFAULT_SIMULATOR` became `own`. `sim-check` says which simulator it runs, every
+time (`simulator:=`).
 
 ## Results (7 Nov, Ben's Mac, other agents running: load 30-40)
 
@@ -114,8 +136,6 @@ switch `DEFAULT_SIMULATOR`.
 
 | Missing | Why it matters |
 |---|---|
-| Ours as the default | after the same checks pass on a quiet computer, and Gazebo's spread is measured |
-| Obstacles placed while running, in the pictures | the rays see a spawned box; the cameras don't draw it yet |
 | Hills in a world | the ground works on any mesh; none of our worlds has a slope yet |
 | The car's own body in the lidar | Gazebo's lidar may see the car; ours doesn't |
 | The Bevy window drawing ours | the window reads the same topics, so it works as with Gazebo; not run yet |

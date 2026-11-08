@@ -49,8 +49,11 @@ pixi run sim-cameras --world maps/campus/campus.sdf --at 49,-71,0 --save /tmp/pi
                                              # a Gazebo world, parked there (x, y, yaw)
 ```
 
-`pixi run sim simulator:=own` starts it with `--ros --pose truth --world <the world>`
-(`aav_gazebo` `worlds.sim_cameras_command`).
+`pixi run sim` (ours is the default) starts it with `--ros --pose truth --world <the world>`
+(`aav_gazebo` `worlds.sim_cameras_command`). With `--ros` it also reads
+`/vehicle/sim/entities` and draws each model placed while running. With `faults:=true` the
+front left picture goes elsewhere: `--image-topic front_left=/gazebo/camera/front_left/image_raw`
+(its camera_info stays). A computer with no GPU can't run it: use `simulator:=gazebo`.
 
 In Rust, for the core simulator (no ROS needed):
 

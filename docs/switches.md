@@ -84,6 +84,7 @@ KISS-ICP needs its own environment once: `pixi install --locked -e kiss`.
 | Switch | What |
 |---|---|
 | `world:=test_lot` / `road` / `empty` | where the car is (`sim` only; the demos use the test lot) |
+| `simulator:=gazebo` | Gazebo plays the world, not our simulator (the default since 8 Nov: [page](own-simulator.md)) |
 | `reversing:=false` | Nav2 drives forward only |
 | `sim_speed:=3` | a top speed above the car's 1 m/s, in Gazebo only |
 | `geofence:=false` | no geofence (it's on by default) |
@@ -109,6 +110,7 @@ and drives a leg in Gazebo. Nothing was switched on release day.
 | How far it moved | `ekf_local`: wheels, IMU | the same | the same | | `kiss_icp:=true` (scored), `kiss_ekf:=true` (no clear win) |
 | Speed loop | `default` (PI) | `default` | `default` (no switch on the car) | today's PI loop; `sim-check` 9 of 9 with each of the three | `lqi`, `smooth` (sim and bench) |
 | Geofence, sensor watchdog | on | on | on | they hold Nav2 when the pose or a sensor goes bad | `geofence:=false` (sim only) |
+| Who plays the world | ours (`simulator:=own`, since 8 Nov) | - | - | every `sim-check` leg Gazebo passes, 3 times each; no GPU-less start-up crashes | `simulator:=gazebo` (and on a computer with no GPU) |
 
 **Why the winners stay off:**
 

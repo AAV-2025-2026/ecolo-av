@@ -7,8 +7,8 @@ Our own simulator, in Rust: a drop-in for `gz sim` and its `ros_gz_bridge`s
 moves the car, casts the lidar's and radar's rays, and publishes on the topics the bridges
 use. `aav_gazebo`'s nodes (`gazebo_adapter`, `gazebo_imu`, `gazebo_gps`, `gazebo_radar`) and
 the whole stack above them run unchanged. The cameras are their own program,
-`aav_sim_cameras`, drawing the same world file; the launch starts both. Gazebo stays the
-default.
+`aav_sim_cameras`, drawing the same world file; the launch starts both. **The default
+since 8 Nov**; `simulator:=gazebo` starts Gazebo instead.
 
 ```text
 /control/sim/actuator_cmd ─> gazebo_adapter ─> /gazebo/cmd_vel ─> simulator (the car)
@@ -40,6 +40,7 @@ default.
 | pub | `/joint_states` | JointState, 100 Hz: four wheels, two steering joints |
 | pub | `/sensors/lidar/points` | PointCloud2, 10 Hz, `lidar_link`, 1800 x 16, reliable (`lidar`) |
 | pub | `/gazebo/radar/points` | PointCloud2, 10 Hz, `radar_link`, 61 x 3, best effort (`radar`) |
+| pub | `/vehicle/sim/entities` | MarkerArray, latched: every placed model (its SDF file, its pose), for the cameras |
 | service | `/vehicle/sim/spawn_entity`, `/vehicle/sim/delete_entity` | `simulation_interfaces`: place or remove a model |
 
 Parameters: `world`, `models`, `start_x`, `start_y`, `start_yaw`, the car's size and sensor

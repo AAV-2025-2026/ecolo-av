@@ -81,6 +81,7 @@ The shared types live in `camera-core`, which has no Bevy and no ROS:
 | Bevy draws them; pictures repeat (the campus's tarmac and grass), with smaller copies far off | `src/scene.rs` |
 | SDF's light is scaled by 0.6 to look like Gazebo's | `core_world::LIGHT` |
 | `simulator:=own` starts `sim_cameras --ros --pose truth --world <the world>`; `gazebo_adapter` announces the cameras | `aav_gazebo` `gazebo.launch.py` |
+| Models placed while running (`obstacle:=true`, `spawn_entity`): the simulator lists them on `/vehicle/sim/entities`; the cameras read each SDF file and draw the world again | `sim-node`, `src/ros.rs`, `core_world::placed` |
 
 ## Tests
 
@@ -114,7 +115,6 @@ So four cameras at the car's 15 Hz (60 pictures a second) should fit when the co
 | A computer with no GPU (CI, oirp-spss) | Bevy needs Vulkan or Metal: the picture tests can't run there. Only `camera-core` runs in CI |
 | A side-by-side with Gazebo's pictures | the looks match by eye (`docs/img/sim-cameras.png`); not measured |
 | The detector on these pictures | the stop sign carries Gazebo's own picture: see [own-simulator.md](own-simulator.md)'s results |
-| Models placed while running | `spawn_entity`'s box is in the rays, not yet in the pictures |
 | The campus at 10 Hz on a busy computer | 4 cameras on the campus: 9.1 Hz, 105 ms median (no ROS, load 11) |
 | Faults (freeze, stop) | `gazebo_camera` does them for Gazebo; the simulator's fault switch should cover these |
 | The JPEG topics | Gazebo has none either: `chase_jpeg` and `preview_jpeg` still make them |

@@ -177,6 +177,32 @@ impl World {
         })
     }
 
+    /// One model file's shapes as SDF draws them, in the model's own frame: for a renderer
+    /// to draw a model placed while the world runs.
+    pub fn model_shapes(
+        path: &Path,
+        models: &[PathBuf],
+        surfaces: Surfaces,
+    ) -> Result<Vec<Shape>, WorldError> {
+        let text = read(path)?;
+        let doc = parse(path, &text)?;
+        let model = doc
+            .descendants()
+            .find(|n| n.has_tag_name("model"))
+            .ok_or_else(|| WorldError::NoWorld(path.to_path_buf()))?;
+        let mut reader = Reader {
+            models,
+            surfaces,
+            triangles: Vec::new(),
+            names: vec![model.attribute("name").unwrap_or("model").to_string()],
+            warnings: Vec::new(),
+            shapes: Vec::new(),
+        };
+        let folder = path.parent().unwrap_or(Path::new("."));
+        reader.links(model, &Pose::IDENTITY, folder)?;
+        Ok(reader.shapes)
+    }
+
     /// One model file's shapes (`models/post/model.sdf`), in the model's own frame: for
     /// placing it while the world runs.
     pub fn model_mesh(

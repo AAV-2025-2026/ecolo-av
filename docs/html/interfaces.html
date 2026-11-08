@@ -1055,6 +1055,14 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td>Gazebo's spine profile only (sim.launch.py spine:=true). What the spine's logic (spine-core, in spine_sim) writes to its actuator drivers each tick, 100 Hz on Gazebo's clock - throttle and brake (0..1), reverse, the steering target (rad). On the car these never reach ROS. gazebo_adapter's actuator model turns them into what Gazebo's car does; silent for 0.2 s, it brakes fully.</td>
 </tr>
 <tr>
+<td><code>/vehicle/sim/entities</code></td>
+<td><code>visualization_msgs/msg/MarkerArray</code></td>
+<td><code>simulator</code></td>
+<td><code>sim_cameras</code></td>
+<td>-</td>
+<td>Our simulator only (simulator:=own). Every model placed while it runs (obstacle:=true, /vehicle/sim/spawn_entity), latched (transient local), sent again whole after each change - a DELETEALL, then one MESH_RESOURCE marker each - ns the model's name, mesh_resource its SDF file (file://), pose in the map frame. sim_cameras reads each SDF file and draws the model, so the cameras see what the rays hit. Gazebo has no such topic - its cameras see its own world.</td>
+</tr>
+<tr>
 <td><code>/vehicle/sim/esp32_outputs</code></td>
 <td><code>aav_interfaces/msg/SpineOutputs</code></td>
 <td><code>gazebo_esp32</code></td>

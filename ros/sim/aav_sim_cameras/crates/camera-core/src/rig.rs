@@ -56,11 +56,16 @@ pub struct CameraSpec {
     pub camera_info: bool,
     /// Sees the car's own body (only the chase camera).
     pub sees_car: bool,
+    /// The picture on this topic instead of `<topic>/image_raw` (camera_info stays): the
+    /// faults relay, as Gazebo's bridge does it (`aav_gazebo` `faults.relayed`).
+    pub image_override: Option<String>,
 }
 
 impl CameraSpec {
     pub fn image_topic(&self) -> String {
-        format!("{}/image_raw", self.topic)
+        self.image_override
+            .clone()
+            .unwrap_or_else(|| format!("{}/image_raw", self.topic))
     }
 
     pub fn info_topic(&self) -> String {
@@ -214,6 +219,7 @@ impl Rig {
                     far: c.far,
                     camera_info: c.camera_info,
                     sees_car: c.sees_car,
+                    image_override: None,
                 })
             })
             .collect::<Result<Vec<_>, _>>()?;

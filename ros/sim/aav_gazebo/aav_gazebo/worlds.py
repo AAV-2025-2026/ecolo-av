@@ -42,12 +42,14 @@ CAMPUS_NDT_FLOOR = 0.45
 CAMPUS_SPEED = '2.5'
 CAMPUS_CUBE_FLOOR = 0.12
 
-# Who plays the world (simulator:=, docs/own-simulator.md): Gazebo, or our own Rust simulator
-# (aav_simulator), a drop-in for gz sim and its bridges. Gazebo stays the default until ours
-# passes the same checks. Ours casts the lidar's and radar's rays; its cameras are their own
-# program (aav_sim_cameras, Bevy), drawing the same world file.
+# Who plays the world (simulator:=, docs/own-simulator.md): our own Rust simulator
+# (aav_simulator), a drop-in for gz sim and its bridges, the default since 8 Nov (it passed
+# the same checks as Gazebo); or Gazebo (simulator:=gazebo), kept for comparison and for a
+# computer with no GPU (CI, oirp-spss), where our cameras can't draw but Mesa's
+# software GL draws Gazebo's (tools/software_gl.sh). Ours casts the lidar's and radar's
+# rays; its cameras are their own program (aav_sim_cameras, Bevy), drawing the same world file.
 SIMULATORS = ('gazebo', 'own')
-DEFAULT_SIMULATOR = 'gazebo'
+DEFAULT_SIMULATOR = 'own'
 
 
 def world_file(share: str, world: str) -> str:
@@ -113,7 +115,7 @@ def sim_cameras_command(root: str, world: str, models, chase: bool = True,
     They draw world (an SDF file, model:// from models) where /vehicle/sim/truth puts the
     car, on Gazebo's camera topics. cargo builds them first if they changed (Bevy: minutes
     the first time). chase=False leaves out the chase camera. relay: the front left
-    picture's topic instead of its own, for gazebo_camera's faults.
+    picture's topic instead of its own (its camera_info stays), for gazebo_camera's faults.
     """
     cmd = ['cargo', 'run', '--release', '-q', '--features', 'ros',
            '--manifest-path', os.path.join(root, SIM_CAMERAS), '--',
@@ -121,7 +123,7 @@ def sim_cameras_command(root: str, world: str, models, chase: bool = True,
     if not chase:
         cmd += ['--cameras', 'front_left,front_right,rear']
     if relay:
-        cmd += ['--topic', 'front_left=' + relay.rsplit('/image_raw', 1)[0]]
+        cmd += ['--image-topic', 'front_left=' + relay]
     return cmd
 
 

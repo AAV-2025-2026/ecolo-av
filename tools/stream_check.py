@@ -384,8 +384,8 @@ def main():
         programs.start('mediamtx', [MEDIAMTX, conf], log=True)
         if not pattern:
             programs.start('gazebo', ['ros2', 'launch', 'aav_gazebo', 'gazebo.launch.py',
-                                      'world:=road', 'gui:=false', 'lidar:=false',
-                                      'radar:=false'], log=True)
+                                      'world:=road', 'simulator:=gazebo', 'gui:=false',
+                                      'lidar:=false', 'radar:=false'], log=True)
         time.sleep(1.0)
         enc = programs.start(
             'encoder', ['ffmpeg', '-hide_banner', '-loglevel', 'warning', '-f', 'rawvideo',

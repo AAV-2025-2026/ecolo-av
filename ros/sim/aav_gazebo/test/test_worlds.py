@@ -67,7 +67,7 @@ def test_the_road_and_lot_worlds_render_sensors():
 def test_both_simulators_render_cameras_where_the_world_has_sensors():
     road = worlds.world_file(str(PACKAGE), 'road')
     empty = worlds.world_file(str(PACKAGE), 'empty')
-    assert worlds.DEFAULT_SIMULATOR == 'gazebo'
+    assert worlds.DEFAULT_SIMULATOR == 'own'
     for simulator in ('gazebo', 'own'):
         assert worlds.has_cameras(road, simulator)
         assert not worlds.has_cameras(empty, simulator)
@@ -86,7 +86,8 @@ def test_our_cameras_run_from_the_repository_on_the_world_file():
     assert tail[tail.index('--world') + 1] == '/w/road.sdf'
     assert tail[tail.index('--models') + 1] == '/m1:/m2'
     assert tail[tail.index('--cameras') + 1] == 'front_left,front_right,rear'
-    assert tail[tail.index('--topic') + 1] == 'front_left=/gazebo/camera/front_left'
+    relay = 'front_left=/gazebo/camera/front_left/image_raw'
+    assert tail[tail.index('--image-topic') + 1] == relay
     assert '--cameras' not in worlds.sim_cameras_command(root, 'w', [])
 
 

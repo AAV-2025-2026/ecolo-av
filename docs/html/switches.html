@@ -314,6 +314,10 @@ KISS-ICP needs its own environment once: <code>pixi install --locked -e kiss</co
 <td>where the car is (<code>sim</code> only; the demos use the test lot)</td>
 </tr>
 <tr>
+<td><code>simulator:=gazebo</code></td>
+<td>Gazebo plays the world, not our simulator (the default since 8 Nov: <a href="own-simulator.html">page</a>)</td>
+</tr>
+<tr>
 <td><code>reversing:=false</code></td>
 <td>Nav2 drives forward only</td>
 </tr>
@@ -417,6 +421,14 @@ and drives a leg in Gazebo. Nothing was switched on release day.</p>
 <td>on</td>
 <td>they hold Nav2 when the pose or a sensor goes bad</td>
 <td><code>geofence:=false</code> (sim only)</td>
+</tr>
+<tr>
+<td>Who plays the world</td>
+<td>ours (<code>simulator:=own</code>, since 8 Nov)</td>
+<td>-</td>
+<td>-</td>
+<td>every <code>sim-check</code> leg Gazebo passes, 3 times each; no GPU-less start-up crashes</td>
+<td><code>simulator:=gazebo</code> (and on a computer with no GPU)</td>
 </tr>
 </tbody>
 </table></div>

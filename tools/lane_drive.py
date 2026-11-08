@@ -41,6 +41,7 @@ os.environ['ROS_AUTOMATIC_DISCOVERY_RANGE'] = 'LOCALHOST'
 os.environ['GZ_IP'] = '127.0.0.1'
 os.environ['GZ_PARTITION'] = os.environ.get('AAV_SIM_PARTITION', f'lane_drive_{DOMAIN}')
 
+from aav_gazebo.worlds import DEFAULT_SIMULATOR  # noqa: E402
 from aav_lane_geometry.msg import LaneGeometry  # noqa: E402
 import lane_score  # noqa: E402
 from nav_msgs.msg import Odometry  # noqa: E402
@@ -91,7 +92,8 @@ class Recorder(Node):
 def main():
     parser = argparse.ArgumentParser(description='A long lane drive, scored by the truth.')
     parser.add_argument('--world', default='road', help='road or campus')
-    parser.add_argument('--simulator', default='gazebo', help='gazebo or own')
+    parser.add_argument('--simulator', default=DEFAULT_SIMULATOR,
+                        help=f'gazebo or own (default {DEFAULT_SIMULATOR})')
     parser.add_argument('--road', default='Library Road', help="the campus's painted road")
     parser.add_argument('--from', dest='along', type=float, default=10.0,
                         help='m down the road to start')
