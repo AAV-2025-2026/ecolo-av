@@ -57,8 +57,9 @@ def test_a_dry_run_prints_every_step_and_changes_nothing(home, role):
     for step in ('backup', 'upgrade', 'install', 'services', 'check'):
         assert f'== {step}' in done.stdout
     assert list(home.iterdir()) == []
-    # Only the upgrade's two refusals may stop a whole dry run.
-    if role in ('motor_pi', 'localization'):
+    # Only motor_pi's upgrade refusal may stop a whole dry run now: localization is
+    # unblocked, since machines/localization.yaml runs its IMU and GPS (TODO 75).
+    if role == 'motor_pi':
         assert done.returncode == 1 and 'refused' in done.stdout
     else:
         assert done.returncode == 0, done.stdout + done.stderr
