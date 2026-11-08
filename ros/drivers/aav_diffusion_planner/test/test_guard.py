@@ -1,5 +1,6 @@
 """The guard: each check G1-G8 refuses what it should, and passes a good path."""
 
+from collections import Counter
 import math
 
 from aav_diffusion_planner import guard, window
@@ -154,3 +155,32 @@ def test_decide_falls_back_to_the_lattice():
 def test_gap():
     assert guard.gap(straight(), straight()) == pytest.approx(0.0, abs=0.2)
     assert guard.gap(straight() + [0.0, 1.0, 0.0], straight()) == pytest.approx(1.0, abs=0.01)
+
+
+def test_a_second_drawing_only_for_turns_and_headings_and_checked_in_full():
+    wide = straight()
+    tight = straight()
+    tight[30:33, 1] += [0.15, 0.3, 0.15]        # a kink: too tight a turn, sliding sideways
+    asked = []
+
+    def again(i):
+        asked.append(i)
+        return wide
+    start, goal = tuple(tight[0]), tuple(tight[-1])
+    assert set(run(tight)[0]) <= guard.AGAIN_ON and run(tight)[0]
+    # Only turns or headings failed: drawn again; the new one passes, and counts.
+    best, facts, refusals, passed = guard.choose([tight], grid(), start, goal, LIMITS, FOOT,
+                                                 None, again)
+    assert asked == [0] and best == 0 and passed == 1 and not refusals
+    assert np.allclose(facts['dense'][-1, :2], wide[-1, :2])
+    # Through a wall (G4): never drawn again.
+    wall = grid()
+    wall.data[40:48, 60:68] = window.LETHAL      # x 5-7 m, y 0-2 m: on the straight path
+    asked.clear()
+    best, _, refusals, _ = guard.choose([straight()], wall, (0.0, 0.0, 0.0),
+                                        (20.0, 0.0, 0.0), LIMITS, FOOT, None, again)
+    assert asked == [] and best is None and refusals['G4'] == 1
+    # The second drawing fails too: refused, with its own faults counted.
+    best, _, refusals, passed = guard.choose([tight], grid(), start, goal, LIMITS, FOOT,
+                                             None, lambda i: tight)
+    assert best is None and passed == 0 and refusals == Counter(run(tight)[0])

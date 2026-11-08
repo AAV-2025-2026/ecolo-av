@@ -95,14 +95,18 @@ def densify(path, step=DENSE_STEP):
     path = np.asarray(path, dtype=np.float64)
     if len(path) < 2:
         return path.copy()
-    out = [path[:1]]
-    for a, b in zip(path[:-1], path[1:]):
-        n = max(1, int(math.ceil(math.hypot(b[0] - a[0], b[1] - a[1]) / step)))
-        t = (np.arange(1, n + 1) / n)[:, None]
-        dyaw = math.atan2(math.sin(b[2] - a[2]), math.cos(b[2] - a[2]))
-        seg = np.concatenate([a[:2] + t * (b[:2] - a[:2]), a[2] + t * dyaw], axis=1)
-        out.append(seg)
-    dense = np.concatenate(out, axis=0)
+    a, b = path[:-1], path[1:]
+    n = np.maximum(1, np.ceil(np.hypot(b[:, 0] - a[:, 0], b[:, 1] - a[:, 1]) / step)
+                   ).astype(np.int64)
+    # Each segment's points: t = 1/n, 2/n .. 1 along it (vectorised: 0.8 ms a path in a
+    # loop, the guard's slowest part, 7 Nov).
+    seg = np.repeat(np.arange(len(n)), n)
+    first = np.concatenate([[0], np.cumsum(n)[:-1]])
+    t = ((np.arange(len(seg)) - first[seg] + 1) / n[seg])[:, None]
+    dyaw = np.arctan2(np.sin(b[:, 2] - a[:, 2]), np.cos(b[:, 2] - a[:, 2]))
+    xy = a[seg, :2] + t * (b[seg, :2] - a[seg, :2])
+    yaw = a[seg, 2:3] + t * dyaw[seg, None]
+    dense = np.concatenate([path[:1], np.concatenate([xy, yaw], axis=1)], axis=0)
     dense[:, 2] = np.arctan2(np.sin(dense[:, 2]), np.cos(dense[:, 2]))
     return dense
 
@@ -261,17 +265,29 @@ def cost(facts, cost_weight=0.05, cusp_price=5.0, reverse_price=1.0):
             cusp_price * facts['cusps'] + reverse_price * facts['reverse_m'])
 
 
-def choose(paths, grid, start, goal, limits, footprint, lattice_length=None):
+# A sample that fails only these (its turns or its headings, not where it goes) may be
+# drawn again, smoothed more (choose's `again`): the new one must pass every check too.
+AGAIN_ON = frozenset({'G5', 'G6'})
+
+
+def choose(paths, grid, start, goal, limits, footprint, lattice_length=None, again=None):
     """
     Return (the cheapest path that passed or None, its facts, refusals by check, passed).
 
     refusals: a Counter of check -> how many samples failed it (a sample may fail several);
-    passed: how many samples passed every check.
+    passed: how many samples passed every check. again: None, or a function of a sample's
+    number that returns it drawn again (window.smooth wider), tried when the sample fails
+    only AGAIN_ON. Nothing is waived: it is checked in full like any other, and its
+    refusals are the ones counted. The chosen index is the sample's either way; its facts
+    (facts['dense']) are the drawing that passed.
     """
     best, best_facts, best_price = None, None, math.inf
     refusals, passed = Counter(), 0
     for i, path in enumerate(paths):
         failed, facts = check(path, grid, start, goal, limits, footprint, lattice_length)
+        if failed and again is not None and set(failed) <= AGAIN_ON:
+            failed, facts = check(again(i), grid, start, goal, limits, footprint,
+                                  lattice_length)
         refusals.update(failed)
         if failed:
             continue
