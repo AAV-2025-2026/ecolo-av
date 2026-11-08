@@ -7,7 +7,7 @@
 <!-- Generated from docs/interfaces.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Interfaces</h1>
-<div class="meta">97 min read · 4 sections</div></header>
+<div class="meta">98 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -1316,6 +1316,14 @@ Check a running system against it with <code>pixi run check &lt;turtle|sim|road|
 <td><code>street_router</code></td>
 <td>-</td>
 <td>Where to go, as a map-frame point (RViz, or a screen); street_router turns it into lat/lon with /toLL, then as /drivers/nav/route/destination.</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/route/place</code></td>
+<td><code>std_msgs/msg/String</code></td>
+<td>-</td>
+<td><code>street_router</code></td>
+<td>-</td>
+<td>Where to go, by name ("Mackenzie Building", "P4", "minto"), with router campus only. The site file (aav_routes config/campus_site.yaml) and OpenStreetMap's named buildings and lots; the route runs on the campus's own road graph (campus_graph.py) to the nearest road the car may use. A name that fits several, or none, says why on /drivers/nav/route/status.</td>
 </tr>
 <tr>
 <td><code>/drivers/nav/route/waypoints</code></td>

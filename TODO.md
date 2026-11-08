@@ -9,7 +9,7 @@ Ben, 7 Nov: Tesla-like "higher level navigation for directions"; for 0.3, on the
 
 | # | Task | Status |
 |---|---|---|
-| 140 | **Directions on the campus**: a place's name (or lat/lon, or a map point) to a route on the campus's own road graph (`campus_graph.py`, from the `.osm` Gazebo's world comes from), cut into Nav2 GPS waypoints; `street_router router:=campus`, `/drivers/nav/route/place`; `pixi run campus-route`; 19 named places in the site file (`campus_site.yaml`, TODO 100's first piece) | ✅ 7 Nov built and tested without ROS. ⬜ Gazebo run (below). ⬜ real drop-off points (`stop:`) measured on the day; a screen to pick a place (the screens' agent) |
+| 140 | **Directions on the campus**: a place's name (or lat/lon, or a map point) to a route on the campus's own road graph (`campus_graph.py`, from the `.osm` Gazebo's world comes from), cut into Nav2 GPS waypoints; `street_router router:=campus`, `/drivers/nav/route/place`; `pixi run campus-route`; 19 named places in the site file (`campus_site.yaml`, TODO 100's first piece) | ✅ 7 Nov built and tested without ROS; in Gazebo the route goes to Nav2. ❌ 8 Nov Gazebo, P4 to Fieldhouse (453 m): **did not arrive**; 310 m driven, stuck half-turned at a sharp bend (each bend is a stop-and-face goal). ⬜ bend waypoints before the corner, or `navigate_through_poses`; then the run again. ⬜ real drop-off points (`stop:`) measured on the day; a screen to pick a place (the screens' agent) |
 
 ## 0.3: ego knows the car (7 Nov)
 

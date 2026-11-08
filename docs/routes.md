@@ -146,6 +146,33 @@ up to 56 m away (Tory). Add `stop: [lat, lon]` to a place for the real drop-off 
 Long ways round are the map's: one-way roads, and buildings whose nearest road is a dead
 end. Gazebo's map lets Nav2 go either way on a one-way road; the route doesn't.
 
+### What was tested (7-8 Nov, a Mac)
+
+| What | Result |
+|---|---|
+| `test_campus_graph.py`: a made-up map, 19 tests; every site place reached from P4 on the real map | all pass |
+| `test_street_router.py`: a place by name, with a fake car and Nav2 (`colcon test`) | passes |
+| Gazebo, `world:=campus`, headless: P4 to **Fieldhouse** (route 453 m, 18 waypoints) | **did not arrive** (below) |
+
+The route, the waypoints and the follow call all worked. Nav2 did not finish the drive:
+
+| Run | Drove | Stopped at | Why |
+|---|---|---|---|
+| `reversing:=false` | 45 m in 50 s | the lot's exit, a sharp right turn | MPPI: "Optimizer fail to compute path", then patience exceeded on every try |
+| `reversing:=true` | 310 m in 300 s (sim), through the lot's exit after a 90 s three-point turn | the bend by the roundabout, 143 m short | the car ended on a blocked cell at the road's edge: the planner said "Start occupied" from then on |
+
+**What it shows.** Straight roads are fine: about 1.4 m/s between the bends. The bends are
+not. Each waypoint is a Nav2 goal *at* the corner, facing the next road, so the car must
+stop on the corner already turned. Our car can't turn that tightly there.
+
+| Next (TODO 140) | Why |
+|---|---|
+| put a bend's waypoint a few metres *before* the corner, facing along the road in | no stop half-turned at a corner; Nav2 plans the turn itself |
+| or send one goal through all the points (Nav2's `navigate_through_poses`) | no stop at each waypoint at all |
+| `stop:` points for the places, measured on the day | the middle of a building is not where a car pulls up |
+
+NDT was off in these runs (its campus floor is still TODO 121); the EKF used GPS.
+
 ## The parts
 
 | Part | File | Does |
