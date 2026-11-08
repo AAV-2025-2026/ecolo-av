@@ -1,0 +1,19 @@
+[package]
+name = "car-model"
+description = "The car model, the Rust twin of aav_description's car_model.py: actuator lags, dead times, the steering motor and the kinematic bicycle; step and predict."
+version = "0.1.0"
+edition = "2021"
+license = "TODO"
+publish = false
+
+# Its own workspace: a std crate beside a ROS package, for Rust nodes and simulators.
+[workspace]
+
+[dependencies]
+# The spine's own speed loop (f32), the one car_model.py's SpeedLoop is a port of.
+spine-core = { path = "../../../../firmware/spine/crates/spine-core" }
+serde = { version = "1", features = ["derive"] }
+serde_yaml_ng = "0.10"
+
+[dev-dependencies]
+serde_json = "1"

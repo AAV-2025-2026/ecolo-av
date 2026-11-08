@@ -13,6 +13,7 @@ ament_python_install_package(${PROJECT_NAME})
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(test_vehicle test/test_vehicle.py)
+  ament_add_pytest_test(test_car_model test/test_car_model.py)
 endif()
 
 ament_package()

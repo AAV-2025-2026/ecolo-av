@@ -64,6 +64,22 @@ Constants: `SELF_MARGIN`, `SENSOR_HALF_SIZE` (m), `STOP_ZONE_AHEAD`, `STOP_ZONE_
 `DEFAULT_PLANNER = 'lattice'` and `FORWARD_ONLY_PLANNER = 'hybrid'` (`default_planner(reversing)` picks), `CAR_PLANNERS = ('hybrid', 'lattice')` (the ones that keep to
 the turning radius) and `PLANNER_BLOCKS` (each one's block in `nav2.yaml`).
 
+### `aav_description.car_model` (no ROS): one car model
+
+How the car answers a command, for ego (its lead and its trace), Gazebo's adapter and the
+drivers' tests (moved here from `aav_gazebo`'s `actuator_model.py`, 7 Nov; that module
+still re-exports every name). Its Rust twin is [`car-model/`](./car-model/README.md);
+`car-model/vectors.json` checks both. The page: `docs/vehicle-model.md`, "One car model".
+
+| Item | What |
+|---|---|
+| `ActuatorConfig` (`from_vehicle(cfg)`, `from_vehicle_yaml(path)`) | the `actuators:` numbers, the dead times (0 until measured), `max_steering`, `wheelbase` |
+| `Command(steer, throttle, brake, reverse, speed=None)` | one step's command: pedals, or a set speed for a speed loop |
+| `CarState` | `x, y, yaw, v, steer, throttle_level, brake_level`, the steering motor's insides, the delay lines |
+| `step(cfg, state, command, dt, loop=None)` | the next `CarState`: dead times, lags, speed, steering, the bicycle |
+| `predict(cfg, state, commands, dt, horizon, loop=None)` | the trace: a state every `dt` for `horizon` s (the loop copied) |
+| `Actuators`, `SpeedLoop`, `speed_loop_profile`, `Ideal`, `LQI_MODEL` | Gazebo's stateful car, the spine's speed loop (ported), the old instant car |
+
 ### URDF (`urdf/`)
 
 `aav.urdf.xacro` builds `base_link`, `chassis`, four wheels with two steering joints,
@@ -78,7 +94,9 @@ and one link per sensor in `vehicle.yaml`. `aav.gazebo.xacro` and
 - `max_steering_angle` is the virtual centre wheel (bicycle model), as ego and Nav2 use.
 - `firmware/spine`'s `spine-core` keeps copies of the steering limit and reverse speed.
   `test_vehicle.py` checks they match: change both together.
-- `vehicle.py` has no ROS imports, except `config_path()` (ament_index).
+- `vehicle.py` has no ROS imports, except `config_path()` (ament_index); `car_model.py` has none.
+- `car_model.py` and `car-model/` (Rust) give the same states: after changing either, run
+  `python3 car-model/gen_vectors.py`, then both test suites.
 
 ## Side Effects
 

@@ -92,6 +92,9 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Body model: mass and curve speed | ego knows the car weighs about 181 kg, so it slows for tight turns and heavy loads | Ben | 2026-10-22 | sim |
 | Jerk limit | A smoother start for the people in the car; braking is never softened | Ben | 2026-10-22 | sim |
 | [Linear model of the car](vehicle-model.md) (`vehicle_model.py`) | Transfer functions and state space, to tune the loops and write the report in SYSC 3600's terms | Ben | 2026-10-24 | built |
+| [One car model](car-model.md) (`aav_description` `car_model.py`, its Rust twin `car-model`): actuator lags, dead times, the steering motor and the bicycle; `step` and `predict` | Ben, 7 Nov: "we really want the ego to have a mathematical model for steering, braking and acceleration": ego, the simulators and the Rust drivers share one model, Python and Rust checked against the same vectors | Ben | 2026-11-07 | built |
+| [ego's lag lead](car-model.md#egos-lead) (`lag_lead`: auto, on or off; `aav_ego` `lag_lead.py`): asks a little ahead for the actuators' lag and dead time, before every limit; `auto` leads only in a simulator; off while a lag-aware driver drives (`/drivers/<slot>/lag_aware`) | Ben, 7 Nov: "have the algorithms know about lag": the car answers about when the driver wanted, while ego stays a safety lock and nothing leads twice | Ben | 2026-11-07 | built |
+| [ego's trace](car-model.md#egos-trace) (`/ego/trace`, `aav_ego` `trace_ahead.py`): where the car goes over the next 2 s, from the car model and a copy of ego | Ben's idea, 7 Nov: "a trace of where it's going (like a tail but in front)", so drivers can match it to their plan and correct | Ben | 2026-11-07 | built |
 
 ## Safety
 
@@ -153,7 +156,7 @@ Add a row in the same commit as the feature (`CLAUDE.md`).
 | Feature | Why | Who | Date | Status |
 |---|---|---|---|---|
 | [Gazebo road world](simulation.md) | Lane lines, a stop sign, an obstacle, and the car's camera, radar and roof lidar, to test the whole graph | Ben | 2026-10-11 | sim |
-| Actuator model | Lag and limits between ego and Gazebo, so the simulated car answers like a real one | Ben | 2026-10-15 | sim |
+| Actuator model | Lag and limits between ego and Gazebo, so the simulated car answers like a real one; since 7 Nov it is the shared car model (`aav_description` `car_model.py`), so ego predicts with the same car Gazebo drives | Ben | 2026-10-15 | sim |
 | [Bench mode](bench.md) (`aav_bench`, `aav_spine_sim`) | The car's own software on one laptop, with the spine's logic and pretend sensors | Ben | 2026-10-10 | sim |
 | Bench GPS that drifts (`aav_bench` `models.GpsError`) | A real receiver's error wanders slowly; fresh noise on every fix made Nav2 weave in a way the car never would (N7) | Ben | 2026-10-29 | built |
 | The spine in the loop (`sim spine:=true`) | Gazebo drives through the spine's real logic, so its stops and e-stops get tested | Ben | 2026-10-15 | sim |

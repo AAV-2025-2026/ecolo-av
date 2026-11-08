@@ -80,6 +80,7 @@
 <a href="hardware-debug.html">Hardware debug</a>
 <a href="learn-state-space.html">Learn: state space</a>
 <a class="here" href="vehicle-model.html">The car as a linear model</a>
+<a href="car-model.html">One car model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="geofence.html">The geofence</a>
 <a href="sources-and-targets.html">Sources and targets</a>
@@ -759,7 +760,7 @@ tests check the discrete model against the continuous one at every sample, and t
 discrete speed loop against the spine's own code, line by line.</p>
 </section>
 <section class="card"><h2 id="6-gazebos-car-against-the-model">6. Gazebo's car against the model</h2>
-<p>Gazebo's car runs our actuator model (<code>aav_gazebo</code> <code>actuator_model.py</code>, the same
+<p>Gazebo's car runs our car model (<code>aav_description</code> <code>car_model.py</code>, <a href="car-model.html">One car model</a>, the same
 numbers), then Gazebo's own Ackermann plugin:</p>
 <div class="table-wrap"><table>
 <thead>
@@ -1016,8 +1017,8 @@ rolling about 0.3 s late.</p>
 <p>In code, <code>model.with_measured(report.yaml)</code> takes the actuator tests' report as it is.</p>
 <p><strong>One key list.</strong> Three readers take <code>vehicle.yaml</code>'s <code>actuators:</code>: this model, Gazebo's
 actuator model and ego. Each one uses a key or lists it as ignored (<code>NOT_LINEAR</code> here,
-<code>IGNORED</code> in <code>actuator_model.py</code>). <code>tools/tests/test_vehicle_model_tool.py</code> fails if a new
-key reaches only one. Gazebo ignores the dead times for now.</p>
+<code>IGNORED</code> in <code>car_model.py</code>). <code>tools/tests/test_vehicle_model_tool.py</code> fails if a new
+key reaches only one. Since 7 Nov the car model (and so Gazebo) uses the dead times too: 0 until measured.</p>
 <p><strong>Check the path before you paste.</strong> Each number the tests print says which signal it goes
 from and to (<a href="actuator-tests.html#trusting-the-fits">Trusting the fits</a>). <code>throttle_lag</code> is
 throttle demand → throttle level. Through the wheel speed (today's ESP32) it is the
@@ -1363,7 +1364,7 @@ pixi run python3 tools/vehicle_model.py --lqi            # TODO 3: the speed LQI
 </tbody>
 </table></div></section>
 <nav class="prevnext"><a class="prev" href="learn-state-space.html"><small>Previous</small>← Learn: state space</a>
-<a class="next" href="ghost-obstacles.html"><small>Next</small>Ghost obstacles →</a></nav>
+<a class="next" href="car-model.html"><small>Next</small>One car model →</a></nav>
 </main>
 <footer>Source: <code>docs/vehicle-model.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
 </body></html>

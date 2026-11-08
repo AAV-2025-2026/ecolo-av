@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">48 min read · 14 sections</div></header>
+<div class="meta">50 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -80,6 +80,7 @@
 <a href="hardware-debug.html">Hardware debug</a>
 <a href="learn-state-space.html">Learn: state space</a>
 <a href="vehicle-model.html">The car as a linear model</a>
+<a href="car-model.html">One car model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="geofence.html">The geofence</a>
 <a href="sources-and-targets.html">Sources and targets</a>
@@ -572,6 +573,27 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 <td>2026-10-24</td>
 <td>built</td>
 </tr>
+<tr>
+<td><a href="car-model.html">One car model</a> (<code>aav_description</code> <code>car_model.py</code>, its Rust twin <code>car-model</code>): actuator lags, dead times, the steering motor and the bicycle; <code>step</code> and <code>predict</code></td>
+<td>Ben, 7 Nov: "we really want the ego to have a mathematical model for steering, braking and acceleration": ego, the simulators and the Rust drivers share one model, Python and Rust checked against the same vectors</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="car-model.html#egos-lead">ego's lag lead</a> (<code>lag_lead</code>: auto, on or off; <code>aav_ego</code> <code>lag_lead.py</code>): asks a little ahead for the actuators' lag and dead time, before every limit; <code>auto</code> leads only in a simulator; off while a lag-aware driver drives (<code>/drivers/&lt;slot&gt;/lag_aware</code>)</td>
+<td>Ben, 7 Nov: "have the algorithms know about lag": the car answers about when the driver wanted, while ego stays a safety lock and nothing leads twice</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
+<tr>
+<td><a href="car-model.html#egos-trace">ego's trace</a> (<code>/ego/trace</code>, <code>aav_ego</code> <code>trace_ahead.py</code>): where the car goes over the next 2 s, from the car model and a copy of ego</td>
+<td>Ben's idea, 7 Nov: "a trace of where it's going (like a tail but in front)", so drivers can match it to their plan and correct</td>
+<td>Ben</td>
+<td>2026-11-07</td>
+<td>built</td>
+</tr>
 </tbody>
 </table></div>
 </section>
@@ -921,7 +943,7 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 </tr>
 <tr>
 <td>Actuator model</td>
-<td>Lag and limits between ego and Gazebo, so the simulated car answers like a real one</td>
+<td>Lag and limits between ego and Gazebo, so the simulated car answers like a real one; since 7 Nov it is the shared car model (<code>aav_description</code> <code>car_model.py</code>), so ego predicts with the same car Gazebo drives</td>
 <td>Ben</td>
 <td>2026-10-15</td>
 <td>sim</td>
