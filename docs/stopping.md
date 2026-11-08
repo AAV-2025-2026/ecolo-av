@@ -112,10 +112,27 @@ a lock or Nav2's goal check makes every final stop.
 
 ## 3. Where the car really stops
 
-`pixi run sim-check --stop-point` (the empty world, about 3 minutes): a scripted drive at
-1, 2 and 3 m/s; then the set speed falls at 1 m/s². Where the car stopped, by Gazebo's
-truth and by the global EKF, against `stop_law.stop_point`: the car model, the same speed
-loop, from the speed the car had. ego's lead is off meanwhile (the model has none).
+`pixi run sim-check --stop-point` (the empty world, the spine in the loop, about 4 minutes).
 
-Pass: within 0.25 m, or 10 % of the distance if more. The maths is `tools/stop_points.py`:
-it can score a bag from the car later, with a tape measure for the truth.
+| Step | What happens |
+|---|---|
+| 1 | a scripted drive at 0.5, 0.75 and 1 m/s (the spine's top speed: 1 m/s) |
+| 2 | steady for 1.5 s, then the e-stop: the spine brakes fully |
+| 3 | the prediction: the first `/ego/stop_point` after the press (ego, the shared car model, full brake) |
+| 4 | moved to the map by `/tf` at its stamp |
+| 5 | scored against Gazebo's truth and the global EKF |
+
+Pass: within 0.25 m, or 10 % of the distance if more. A drive that never reached half
+its speed fails. The maths is `tools/stop_points.py`: it can score a bag from the car
+later, with a tape measure for the truth.
+
+### Numbers (8 Nov)
+
+| From | Predicted | Truth | Localization | Stop point after the press |
+|---|---|---|---|---|
+| 0.54 m/s | 0.11 m | 0.12 m | 0.37 m | 3 ms |
+| 0.77 m/s | 0.19 m | 0.18 m | 0.17 m | 43 ms |
+| 0.98 m/s | 0.30 m | 0.24 m | 0.33 m | 83 ms |
+
+The stopping law plans far more (0.95, 1.42 and 1.93 m): it plans a gentle stop at
+1 m/s², not a full brake.
