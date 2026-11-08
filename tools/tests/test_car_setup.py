@@ -98,6 +98,12 @@ def test_a_wrong_hostname_is_a_stop_on_linux_unless_host_ok(home):
     assert re.search(r'OK\s+hostname', run(home, 'orin', 'check').stdout)
 
 
+def test_the_planned_names_pass_as_well_as_the_old_ones(home):
+    for role, name in (('orin', 'aav-orin'), ('motor_pi', 'aav-motor'),
+                       ('localization', 'aav-localization'), ('dash', 'aav-dash')):
+        assert re.search(r'OK\s+hostname', run(home, role, 'check', host=name).stdout), role
+
+
 def test_upgrade_refuses_the_localization_pi_until_its_machine_file_exists(home):
     machines = TOOLS.parent / 'ros' / 'bringup' / 'aav_bringup' / 'config' / 'machines'
     if (machines / 'localization.yaml').is_file():
