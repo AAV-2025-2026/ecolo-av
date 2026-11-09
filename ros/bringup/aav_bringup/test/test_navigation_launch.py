@@ -443,7 +443,35 @@ def test_the_sim_passes_the_navigator_on_and_the_car_never_does():
     assert vehicle.navigator_action('nav2', 'navigate_to_pose') == '/navigate_to_pose'
 
 
-PLUGINS = {'hybrid': 'nav2_smac_planner::SmacPlannerHybrid',
+def test_own_smoother_takes_velocity_smoothers_place_under_its_name():
+    nodes = nav_nodes()
+    assert 'velocity_smoother' in managed(nodes)
+    nav2 = remaps(nodes['velocity_smoother'])
+    nodes = nav_nodes(smoother='own')
+    ours = nodes['velocity_smoother']
+    # Not a lifecycle node: the manager no longer waits for it.
+    assert 'velocity_smoother' not in managed(nodes)
+    assert (ours._Node__package, ours._Node__node_executable) == ('aav_smoother',
+                                                                   'car_smoother')
+    # The same topics, and nav2.yaml's block (the file) with the car's numbers beside it.
+    assert remaps(ours) == nav2
+    p = given(ours)
+    cfg = vehicle.load()
+    assert p['vehicle_yaml'] == vehicle.config_path()
+    assert p['steering_rate'] <= float(cfg['actuators']['steer_rate'])
+    assert p['min_speed_for_steering'] > 0.0
+    assert any(isinstance(x, ParameterFile) for x in ours._Node__parameters)
+    with pytest.raises(ValueError, match='smoother:='):
+        nav_nodes(smoother='mine')
+
+
+def test_the_sim_passes_the_smoother_on_and_the_car_never_does():
+    assert sent_to_navigation(SIM)['smoother'] == 'nav2'
+    assert sent_to_navigation(SIM, smoother='own')['smoother'] == 'own'
+    assert sent_to_navigation(CAR, machine='all')['smoother'] == 'nav2'
+
+
+PLUGINS = {'hybrid':'nav2_smac_planner::SmacPlannerHybrid',
            'lattice': 'nav2_smac_planner::SmacPlannerLattice',
            'smac2d': 'nav2_smac_planner::SmacPlanner2D',
            'navfn': 'nav2_navfn_planner::NavfnPlanner',

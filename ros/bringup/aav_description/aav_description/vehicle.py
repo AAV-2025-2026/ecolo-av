@@ -344,6 +344,36 @@ def check_navigator(navigator):
     return name
 
 
+# Whose velocity smoother (smoother:=, docs/own-smoother.md): nav2 (velocity_smoother: the
+# default, and the car's) or own (aav_smoother's car_smoother, a trial: the turn rate from
+# where the wheels can be). Ours runs under Nav2's node name, so it reads the same block.
+SMOOTHERS = ('nav2', 'own')
+DEFAULT_SMOOTHER = 'nav2'
+
+
+def check_smoother(smoother):
+    """Return the smoother's name (lower case), or raise ValueError saying what to pick."""
+    name = str(smoother).strip().lower()
+    if name not in SMOOTHERS:
+        raise ValueError(f'smoother:={smoother}: pick one of {", ".join(SMOOTHERS)}')
+    return name
+
+
+def smoother_params(cfg, ego, vehicle_yaml):
+    """
+    Return car_smoother's car parameters (smoother:=own), beside nav2.yaml's own block.
+
+    cfg: vehicle.yaml (load()); ego: ego.yaml's ros__parameters; vehicle_yaml: its path,
+    which the node reads through the car model. The steering rate is the tighter of the
+    steering actuator's (actuators.steer_rate) and ego's ramp, as track_params takes it.
+    """
+    rate = float(cfg['actuators']['steer_rate'])
+    if ego and 'max_steering_rate' in ego:
+        rate = min(rate, float(ego['max_steering_rate']))
+    return {'vehicle_yaml': str(vehicle_yaml), 'steering_rate': rate,
+            'min_speed_for_steering': float((ego or {}).get('min_speed_for_steering', 0.05))}
+
+
 def navigator_action(navigator, action):
     """
     Return the action's full name for a navigator.

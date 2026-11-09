@@ -1,0 +1,22 @@
+[package]
+name = "smoother-node"
+description = "car_smoother: the ROS 2 node around car-smoother, in Nav2's velocity_smoother's place"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "car_smoother"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+# The car's numbers from vehicle.yaml, read as the shared car model reads them.
+car-model = { path = "../../../../bringup/aav_description/car-model" }
+car-smoother = { path = "../car-smoother" }
+# SIGINT, plus SIGTERM and SIGHUP: rclrs 0.8 has no signal handling of its own yet.
+ctrlc = { version = "3", features = ["termination"] }
+rclrs = "0.8"
+# The message types: compiled from the Rust code that ships with Jazzy (AMENT_PREFIX_PATH).
+ros-env = "0.3"

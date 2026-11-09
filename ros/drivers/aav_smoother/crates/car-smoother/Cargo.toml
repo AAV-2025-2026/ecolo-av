@@ -1,0 +1,9 @@
+[package]
+name = "car-smoother"
+description = "A velocity smoother for a car: Nav2's velocity_smoother's speed limits, with the steering's rate and full lock"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]

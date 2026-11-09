@@ -1,0 +1,14 @@
+[workspace]
+resolver = "2"
+# car-smoother: our own velocity smoother, for a car (no ROS):
+#   cargo test -p car-smoother
+# smoother-node: the ROS node (rclrs), binary car_smoother. colcon builds it through
+# CMakeLists.txt.
+members = ["crates/car-smoother", "crates/smoother-node"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+# Nav2's nav2_velocity_smoother, whose behaviour it keeps, is Apache-2.0 (PROVENANCE.md).
+license = "Apache-2.0"
+publish = false

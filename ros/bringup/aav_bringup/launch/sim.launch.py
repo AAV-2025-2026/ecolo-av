@@ -332,6 +332,7 @@ def launch_setup(context):
                                controller=controller, tracker=tracker, planner=planner,
                                costmap=vehicle.check_costmap(arg('costmap')),
                                navigator=vehicle.check_navigator(arg('navigator')),
+                               smoother=vehicle.check_smoother(arg('smoother')),
                                lattice_headings=arg('lattice_headings'),
                                diffusion_model=arg('diffusion_model'),
                                diffusion_record=arg('diffusion_record'),
@@ -561,6 +562,10 @@ def generate_launch_description():
                               description="nav2 or own: our own navigator in bt_navigator's "
                                           'place (aav_navigator, a trial; '
                                           'docs/own-navigator.md)'),
+        DeclareLaunchArgument('smoother', default_value=vehicle.DEFAULT_SMOOTHER,
+                              description="nav2 or own: our own velocity smoother in Nav2's "
+                                          'place, for a car (aav_smoother, a trial; '
+                                          'docs/own-smoother.md)'),
         DeclareLaunchArgument('costmap', default_value=vehicle.DEFAULT_COSTMAP,
                               description="nav2 or own: our own costmaps beside Nav2's "
                                           '(aav_costmap, a trial; docs/own-costmap.md)'),

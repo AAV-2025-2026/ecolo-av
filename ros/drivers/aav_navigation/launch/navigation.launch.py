@@ -8,7 +8,7 @@ Nav2 as one more driver: goals in, /drivers/nav/cmd_vel (TwistStamped) out to tw
       [diffusion_model:=] [diffusion_provider:=CPUExecutionProvider] [diffusion_record:=]
       [diffusion_python:=] [diffusion_smoothing:=gear]
       [plan_around:=true] [behaviour:=false]
-      [tracker:=none] [costmap:=nav2] [navigator:=nav2] [live_swap:=false] [amcl:=false]
+      [tracker:=none] [costmap:=nav2] [navigator:=nav2] [smoother:=nav2] [live_swap:=false] [amcl:=false]
       [amcl_x:=0.0] [amcl_y:=0.0] [amcl_yaw:=0.0] [amcl_map:=]
       [use_sim_time:=false]
       [autostart:=true]
@@ -89,6 +89,11 @@ Trials (docs/trials.md), each beside the default and scored by pixi run measure 
                           planner:=own costmap:=own tracker:=mppi_lag (all ours) no Nav2
                           server runs for navigation: only map_server, the velocity smoother
                           and collision_monitor (docs/own-navigator.md)
+  smoother:=own           aav_smoother's car_smoother (Rust, a trial) in velocity_smoother's
+                          place, under its name, parameters and topics: Nav2's speed limits,
+                          and the turn rate from where the wheels can be (the steering's rate
+                          and full lock, vehicle.yaml through the car model; ego's ramp).
+                          Not a lifecycle node (docs/own-smoother.md)
   live_swap:=true         the tracker can change while it runs (`ros2 param set /track
                           tracker lqr`); sim.launch.py sets it, the car never does
   amcl:=true              stock nav2_amcl on the map and /sensors/lidar/scan (so only with
@@ -315,6 +320,9 @@ def nodes(context):
     nav2_planner = not (own_navigator and own_planner and costmap == 'own')
     nav2_controller = not (own_navigator and own_local)
     nav2_behaviors = not own_navigator or (reversing and nav2_controller)
+    # smoother:=own: aav_smoother's car_smoother in velocity_smoother's place, under its name.
+    own_smoother = vehicle.check_smoother(
+        LaunchConfiguration('smoother').perform(context)) == 'own'
     servers = [
         ('nav2_map_server', 'map_server', []),
         ('nav2_planner', 'planner_server', [
@@ -347,7 +355,8 @@ def nodes(context):
     dropped = ({'bt_navigator', 'waypoint_follower'} if own_navigator else set()) | (
         set() if nav2_planner else {'planner_server'}) | (
         set() if nav2_controller else {'controller_server'}) | (
-        set() if nav2_behaviors else {'behavior_server'})
+        set() if nav2_behaviors else {'behavior_server'}) | (
+        {'velocity_smoother'} if own_smoother else set())
     servers = [s for s in servers if s[1] not in dropped]
     if collision_monitor:
         # Its marker topic is private (~/collision_points_marker): move it next to the
@@ -464,6 +473,18 @@ def nodes(context):
                 'backup_action': '/backup' if reversing and nav2_behaviors else '',
                 'navsat_file': navsat,
                 'use_sim_time': use_sim_time}]))
+    if own_smoother:
+        # aav_smoother (Rust): Nav2's velocity_smoother's block from the same tuned file
+        # (its node name), the car from vehicle.yaml through the car model, ego's steering
+        # ramp. Not a lifecycle node.
+        with open(FindPackageShare('aav_ego').perform(context) + '/config/ego.yaml') as f:
+            ego = yaml.safe_load(f)['ego']['ros__parameters']
+        actions.append(Node(
+            package='aav_smoother', executable='car_smoother', name='velocity_smoother',
+            output='screen',
+            parameters=[params, vehicle.smoother_params(cfg, ego, vehicle.config_path()),
+                        {'use_sim_time': use_sim_time}],
+            remappings=[('cmd_vel', 'cmd_vel_nav'), ('cmd_vel_smoothed', smoothed)]))
     if tracker != 'none':
         # Not a lifecycle node: it serves follow_path from the start. Nav2's own numbers
         # (the speed, the checks), so every follower is held to the same.
@@ -646,6 +667,11 @@ def generate_launch_description():
                                           'waypoint_follower) or own: aav_navigator, our own, '
                                           'on /drivers/nav/navigator/*; car.launch.py refuses '
                                           'it (docs/own-navigator.md)'),
+        DeclareLaunchArgument('smoother', default_value=vehicle.DEFAULT_SMOOTHER,
+                              description="nav2 (the default: Nav2's velocity_smoother) or "
+                                          "own: aav_smoother's car_smoother in its place, "
+                                          'the turn rate from where the wheels can be (sim; '
+                                          'car.launch.py always passes nav2: docs/own-smoother.md)'),
         DeclareLaunchArgument('tracker', default_value=vehicle.DEFAULT_TRACKER,
                               description="a trial path follower in controller_server's "
                                           'place (aav_track; mppi_lag: aav_mppi_lag): ' +

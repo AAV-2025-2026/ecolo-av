@@ -58,6 +58,8 @@ if command -v cargo >/dev/null; then
   (cd ros/drivers/aav_planner && cargo test -q --locked -p lattice-planner)
   echo "== ros/drivers/aav_navigator: our own navigator's goals against a pretend planner and follower"
   (cd ros/drivers/aav_navigator && cargo test -q --locked -p navigator)
+  echo "== ros/drivers/aav_smoother: our own velocity smoother, for a car"
+  (cd ros/drivers/aav_smoother && cargo test -q --locked -p car-smoother)
   # Only the logic: the window (raylib) needs a screen's libraries, and colcon builds it.
   echo "== ros/hud/aav_hud: the HUD's state, GPS, e-stop and formatting; the map's maths; the hardware panel's buttons"
   (cd ros/hud/aav_hud && cargo test -q --locked -p hud-core -p map-core -p debug-core -p panel-core)
