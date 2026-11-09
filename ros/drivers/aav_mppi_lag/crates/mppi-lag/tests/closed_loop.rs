@@ -38,6 +38,9 @@ fn settings(speed: f64) -> Settings {
         batch_size: 1000,
         vx_max: speed,
         seed: 7,
+        // Fixed: each thread draws its own noise, so the core count changed the result
+        // (16 on a Mac, 4 on CI).
+        threads: 4,
         noise_correlation: std::env::var("CORR")
             .ok()
             .and_then(|c| c.parse().ok())
@@ -318,14 +321,14 @@ fn s_curve_at_vehicle_yaml_lags() {
 }
 
 #[test]
-fn very_slow_actuators_corner_only_lag_aware_holds_the_path() {
+fn very_slow_actuators_corner_lag_aware_holds_the_path() {
+    // The lag-free one gets round a single corner too (0.04 m mean at 1-8 threads; it only
+    // lost the path at 16): the S-curve below is where it fails. Here, aware is the closer.
     let (aware, free) = compare("corner r 4, very slow", very_slow_car(), &corner(4.0), 2.0);
     assert!(aware.reached, "{aware:?}");
+    assert!(aware.mean_cross < 0.05, "{aware:?}");
     assert!(aware.max_cross < 0.2, "{aware:?}");
-    assert!(
-        aware.mean_cross < 0.2 * free.mean_cross,
-        "{aware:?} vs {free:?}"
-    );
+    assert!(aware.mean_cross < free.mean_cross, "{aware:?} vs {free:?}");
 }
 
 #[test]

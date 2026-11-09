@@ -122,6 +122,6 @@ cargo run --release -p mppi-lag --example timing                         # ms a 
 | `lag.rs`, `ego.rs`, `ideal.rs` | each stage of the model: lags, rate, deadbands, dead times, offset, never reversing |
 | `critics.rs` | each critic on hand-made samples |
 | `optimizer.rs`, `smoothing.rs` | the limits, the filter, a straight path, a turn, the same seed the same plan |
-| `tests/closed_loop.rs` | a pretend car (ego + the lag model at 100 Hz): the model predicts it; circle and S-curve at vehicle.yaml's lags; a corner and an S on very slow actuators, where only the lag-aware one keeps the path |
+| `tests/closed_loop.rs` | a pretend car (ego + the lag model at 100 Hz): the model predicts it; circle and S-curve at vehicle.yaml's lags; a corner and an S on very slow actuators: the lag-aware one closer on the corner, the only one to keep the S |
 
 `colcon test --packages-select aav_mppi_lag` runs the same; `pixi run test` everything.
