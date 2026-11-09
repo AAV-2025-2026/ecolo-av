@@ -752,6 +752,13 @@ where that goes wrong.</p>
 <td>a three-point turn: forward, back about 9 m, forward; no cone touched</td>
 <td>🔧 in Gazebo, 16 of 16 legs with the lattice (30 Oct)</td>
 </tr>
+<tr>
+<td>4.27</td>
+<td><strong>The diffusion planner's trial</strong> (0.3; <a href="car-day.html#a12-the-diffusion-planners-trial">car day A12</a>): refused without <code>diffusion_trial:=true</code> and above 0.5 m/s; on stands, then a goal ahead, round a cone, and the U-turn</td>
+<td><code>car.launch.py diffusion_trial:=true</code>: ego and Nav2 at 0.5 m/s at most; the guard and the lattice behind it; every lock as always</td>
+<td>the refusals happen (D.1-D.2); never over 0.5 m/s; no cone touched; the share from the model written down</td>
+<td>🔧 the refusals ✅ in <code>test_navigation_launch.py</code>; not run on the car</td>
+</tr>
 </tbody>
 </table></div>
 <p>Nav2's map stays <code>empty.yaml</code>: the sensors see obstacles live. A map made from the lidar

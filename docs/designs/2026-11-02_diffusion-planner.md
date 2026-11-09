@@ -2,10 +2,10 @@
 
 * **Author:** Ben (the ask), written up 2 Nov 2026
 * **Date:** 2026-11-02
-* **Status:** Built as a trial in 0.2 (Ben, 2 Nov: "diffusion in 0.2"), off by default,
-  sim and bench only: `planner:=diffusion`, package `aav_diffusion_planner`. Steps 1-3
-  done and scored in Gazebo; step 4 (the Orin) and 5 (better than the teacher) open.
-  What changed from this design, and why: [As built](#as-built-2-nov). TODO 78
+* **Status:** 0.3 (Ben, 7 Nov: "We want diffusion"): allowed **on the car as a trial**,
+  `car.launch.py diffusion_trial:=true`, 0.5 m/s at most, the guard and every lock as
+  always; not yet run on the car. Steps 1-3 done in 0.2; step 4 (the Orin) made ready
+  without the Orin: [As built, 0.3](#as-built-03-7-8-nov). Off by default. TODO 78, 83, 133
 
 Ben, 1 Nov: "Diffusion planners: This sounds interesting. Is this using a model to make
 this happen. Can we do it", then "lets keep them around like the diffusion path finding.
@@ -371,6 +371,124 @@ the default (the lattice) untouched.
 - **Late plans.** In Gazebo the model and guard took 130 ms on average, against a 150 ms
   stop: 18 of 135 plans were late (the lattice's). 5 Euler steps: 44 ms a plan, but 60 %
   of plans with a passing sample against 75 %.
+
+## As built, 0.3 (7-8 Nov)
+
+Ben, 7 Nov: "We want diffusion." The work: more plans from the model (73 % in Gazebo on
+3 Nov; the design's target 90 %), the U-turn, the Orin, and the car, gated.
+
+### Why the guard refused the model
+
+The 0.2 recipe trained again (44,644 teacher paths on 800 maps, 30 epochs) and scored on
+300 held-back plans, 16 samples each:
+
+| Check | Refusals (samples) | What it was |
+|---|---:|---|
+| G5 turns | **2,197** | the model's points wobble: a circle through points 1 m apart reads a tight turn |
+| G4 collisions | 1,152 | the outline over a lethal cell, mostly where the model cut a corner |
+| G6 heading | 725 | headings from the smoothed travel, turned sideways at the **reversing cusp** |
+| G8 length | 96 | longer than 1.5 × the lattice's |
+| G1, G2, G3, G7 | 0-3 | |
+
+The U-turn's cause: one moving average over the **whole** path, across the cusp. It
+rounds the cusp into a tight turn (G5) and, at the cusp, the travel's direction swings
+round, so the headings there point sideways (G6).
+
+### What changed (the guard's checks did not)
+
+| Change | Where | Why |
+|---|---|---|
+| **Each gear's run smoothed on its own**, from the model's own gear channel; the cusp stays where it is | `window.smooth(gears=)`, `gear_runs()` | the U-turn's G5 and G6 |
+| A sample that fails **only** G5 or G6 is smoothed wider (9 points) and **checked again in full** | `guard.choose(again=)`, `window.smoothed()` | most G5 refusals were wobble, not the route. Nothing is waived: G4 failures are never tried again |
+| **More U-turns** in the data: 400 more maps, 60 % of their pairs a goal 4-25 m behind or beside, facing back, reversing allowed (21,420 paths) | `diffusion data --uturn 0.6 --first 800` | the U-turn was the weakest leg |
+| **More replans** per path (3 suffixes, not 2) and 40 epochs: 196,124 examples | `diffusion train --suffixes 3` | the car replans from along its path once a second |
+| The sampler **encodes the map once**, not 16 times | `training/model.py` `Sampler` | the same paths (within 2e-7), 2.4 times faster: fewer late plans |
+| The guard's `densify` and `lookup` vectorised | `guard.py`, `window.py` | 35 → 19 ms a plan (16 samples) |
+| Each plan's inputs recorded in the sim, **replayed offline** through any model | `diffusion_record:=`, `pixi run diffusion replay` | the same plans, before and after, without the simulator's load |
+
+### Offline: 300 held-back plans (before → after)
+
+| | 0.2 recipe (before) | 0.3 (after) |
+|---|---:|---:|
+| Samples that pass every check | 38 % | **63 %** |
+| Plans with a passing sample | 77 % | **87 %** |
+| Refused by G5 turns | 2,197 | **850** |
+| Refused by G4 collisions | 1,152 | 1,053 |
+| Refused by G6 heading | 725 | **451** |
+| Refused by G8 length | 96 | 111 |
+| A passing path's length against the teacher's | 1.00 | 0.99 |
+
+The smoothing alone (the 0.2 model, the new smoothing), on 444 plans recorded in Gazebo
+on 7 Nov (a run stalled by the Mac's load, so many plans repeat): plans with a passing
+sample **86 → 94 %**, the U-turn's **68 → 86 %**, G5 refusals 1,907 → 1,237.
+
+### In the simulator: the lot tour, reversing on, MPPI (8 Nov)
+
+Our own simulator (`next-0.3`'s default), Ben's Mac, one simulator at a time
+(`lockf /tmp/aav-sim.lock`), before and after taken in turns; load 7-15. Runs:
+`log/controller-compare/agent106-*` (not in git).
+
+| | Lattice (the default) | Before (0.2 recipe) | **After (0.3)** |
+|---|---:|---:|---:|
+| Legs finished | 12 of 12 | 12 of 12 | **12 of 12** (and 4 of 4 after the merge) |
+| Tour time, each run (s) | 182, 185, 180 | 180, 175, 180 | **171, 175, 175** (175) |
+| **Plans from the model** | - | 307 of 397 (**77 %**): 80, 73, 79 % | 343 of 389 (**88 %**): 84, 89, 92 % (92 %) |
+| The U-turn ("turn back"), from the model | - | 47 of 117 (**40 %**) | 81 of 112 (**72 %**) (80 %) |
+| The lattice's: refused (no sample passed) | - | 67 (17 %) | **25 (6 %)** |
+| The lattice's: late (over 150 ms) | - | 14 (3.5 %) | 13 (3.3 %) |
+| The lattice's: no model answer | - | 9 | 8 |
+| Samples that passed | - | 57 % | **86 %** |
+| Refused by G5 / G6 / G4 / G8 (samples) | - | 2,120 / 761 / 556 / 46 | **300 / 208 / 254 / 251** |
+| Model and guard, mean | - | 108 ms | 104 ms |
+| Tightest planned turn (full lock 2.86 m) | 3.27 m | 3.06 m | 3.06 m |
+
+**The same plans, replayed** (`pixi run diffusion replay`, the 405 plans the "before"
+runs recorded, through each model): plans with a passing sample **82 → 91 %**; the
+U-turn's **43 → 71 %**; G5 2,204 → 435, G6 828 → 250, G4 637 → 388, **G8 75 → 401**.
+
+- **88 % of plans from the model** over three runs (84, 89, 92 %), 92 % in a fourth
+  after the merge: the 90 % target is reached on a quiet machine, not yet on average.
+  What's left: 6 % refused, 3 % late, 2 % no answer.
+- **The U-turn: 40 → 72 %** from the model, and its leg 44-51 s against the lattice's 51-56 s.
+- **Faster than the default**: 171-175 s a tour against the lattice's 180-185 s, every leg,
+  never a plan tighter than full lock.
+- **G8 (length) rose** (46 → 251 samples): the U-turn data taught longer swings; the
+  guard refuses them, and the next sample usually passes. Worth a look before more data.
+
+
+### The Orin, made ready without it
+
+| Part | What | Where |
+|---|---|---|
+| Engines | TensorRT (FP16, its engine cached in `models/diffusion/engines/`), then CUDA, then the CPU; the worker falls down the list, never fails a plan for it | `engines.py`, `worker.py`; `diffusion_provider:=` |
+| FP16 | `pixi run diffusion export --fp16`: `planner_fp16.onnx` (8.7 MB, against 16 MB), FP16 inside, float32 in and out; the time embedding kept in float32. The same paths within 8e-4 of a half-side (under 2 cm) | `training/model.py` `HalfSampler` |
+| Its Python | `diffusion_python:=` (the worker's), so the node can use JetPack's ONNX Runtime with the GPU | `navigation.launch.py`, `car.launch.py` |
+| Timing | `pixi run measure diffusion` (or `python3 .../training/measure.py --provider TensorrtExecutionProvider` with any Python that has ONNX Runtime): crop, model, guard, total, each against its budget, OK or OVER | `training/measure.py`; [car day A12](../car-day.md#a12-the-diffusion-planners-trial) |
+
+**The budget** (`engines.BUDGET`), one plan, 16 samples, 10 steps:
+
+| Part | Budget | Ben's Mac, CPU (8 Nov, load 17): mean / 95th, ms |
+|---|---:|---:|
+| Crop | 2 ms | 0.7 / 1.1 |
+| Model | 50 ms | 82.6 / 125.9 |
+| Guard | 10 ms | 11.6 / 21.2 |
+| Total | **100 ms** (95th percentile) | 94.9 / 141.1 |
+| Hard stop | **150 ms**: then the lattice's path | |
+
+### The car, gated
+
+| Rule | How | Tested by |
+|---|---|---|
+| `planner:=diffusion` refused on the car **without** `diffusion_trial:=true` | `vehicle.check_planner(real, trial)` | `test_vehicle.py`, `test_navigation_launch.py` |
+| The switch is for diffusion only | the same | the same |
+| **0.5 m/s at most** for ego, Nav2 and the geofence; empty gives 0.5; above it refused | `vehicle.diffusion_trial_speed`, `car.launch.py` | the same, and `test_car_launch.py` (below ego's own 1.0) |
+| The guard on, the lattice its fallback | the node, unchanged | `test_guard.py` |
+| The locks unchanged | nothing touched below the planner | |
+
+Why 0.5 m/s: walking pace; the car's own reverse limit, so forwards and backwards alike;
+at ego's 2 m/s² it stops in 6 cm, plus 15 cm for a 0.3 s stale command. The procedure:
+[car day A12](../car-day.md#a12-the-diffusion-planners-trial), test 4.27: the Orin's
+timing, then stands, then the ground, with the e-stop person. **Not run.**
 
 ## Related
 

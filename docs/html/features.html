@@ -547,9 +547,9 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 </tr>
 <tr>
 <td><a href="trials.html#diffusion-2-nov-a-model-draws-the-lattice-guards">Diffusion planner</a> (<code>planner:=diffusion</code>, <code>aav_diffusion_planner</code>; <code>pixi run diffusion data</code>, <code>train</code>)</td>
-<td>Ben, 1-2 Nov: "Is this using a model to make this happen. Can we do it", then "I want that in" (in 0.2). A small flow-matching model, trained on the lattice's and Hybrid-A*'s paths, draws 16 routes; a guard (G1-G8: collisions, turns, heading, reversing, length) checks them, and the lattice's route is the fallback when none passes or the model is late (simplex). Off by default; the car refuses it. Gazebo, 2 Nov: every leg, 63 % of routes from the model</td>
+<td>Ben, 1-2 Nov: "Is this using a model to make this happen. Can we do it", then "I want that in" (in 0.2). A small flow-matching model, trained on the lattice's and Hybrid-A*'s paths, draws 16 routes; a guard (G1-G8: collisions, turns, heading, reversing, length) checks them, and the lattice's route is the fallback when none passes or the model is late (simplex). Off by default. Ben, 7 Nov: "We want diffusion": on the car in 0.3 only as a trial, <code>diffusion_trial:=true</code>, at 0.5 m/s at most (refused without the switch or faster), the guard and every lock as always; each gear's run smoothed on its own (the U-turn); TensorRT, FP16 and <code>measure diffusion</code> for the Orin. Gazebo, 2 Nov: every leg, 63 % of routes from the model</td>
 <td>Ben</td>
-<td>2026-11-02</td>
+<td>2026-11-07</td>
 <td>sim</td>
 </tr>
 <tr>

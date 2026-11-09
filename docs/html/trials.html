@@ -7,7 +7,7 @@
 <!-- Generated from docs/trials.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Trials: new path followers and localizers beside the main ones</h1>
-<div class="meta">73 min read · 18 sections</div></header>
+<div class="meta">79 min read · 19 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -112,7 +112,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#what-is-on-trial">What is on trial</a><a href="#where-a-tracker-sits">Where a tracker sits</a><a href="#fair-rules">Fair rules</a><a href="#run-it">Run it</a><a href="#results">Results</a><a href="#ndt-into-the-global-ekf-30-oct">NDT into the global EKF (30 Oct)</a><a href="#kiss-icp-into-the-local-ekf-1-nov">KISS-ICP into the local EKF (1 Nov)</a><a href="#scoring-a-localizer-fairly">Scoring a localizer fairly</a><a href="#scoring-an-odometry-fairly-kiss-icp-ekf_local">Scoring an odometry fairly (KISS-ICP, ekf_local)</a><a href="#before-a-winner-goes-on-the-car">Before a winner goes on the car</a><a href="#results-29-october">Results, 29 October</a><a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results, 29 October (afternoon): LQR rebuilt, and mpc_full</a><a href="#lag-aware-mpc-7-nov-mpc_lag">Lag-aware MPC, 7 Nov (mpc_lag)</a><a href="#planners-29-oct-hybrid-lattice-and-smac2d">Planners, 29 Oct: hybrid, lattice and smac2d</a><a href="#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32">Planners, 30 Oct: reversing on, hybrid, lattice and lattice32</a><a href="#diffusion-2-nov-a-model-draws-the-lattice-guards">Diffusion, 2 Nov: a model draws, the lattice guards</a><a href="#voxels-30-oct-the-lidar-as-cubes">Voxels, 30 Oct: the lidar as cubes</a><a href="#3-nov-everything-for-02">3 Nov: everything, for 0.2</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#what-is-on-trial">What is on trial</a><a href="#where-a-tracker-sits">Where a tracker sits</a><a href="#fair-rules">Fair rules</a><a href="#run-it">Run it</a><a href="#results">Results</a><a href="#ndt-into-the-global-ekf-30-oct">NDT into the global EKF (30 Oct)</a><a href="#kiss-icp-into-the-local-ekf-1-nov">KISS-ICP into the local EKF (1 Nov)</a><a href="#scoring-a-localizer-fairly">Scoring a localizer fairly</a><a href="#scoring-an-odometry-fairly-kiss-icp-ekf_local">Scoring an odometry fairly (KISS-ICP, ekf_local)</a><a href="#before-a-winner-goes-on-the-car">Before a winner goes on the car</a><a href="#results-29-october">Results, 29 October</a><a href="#results-29-october-afternoon-lqr-rebuilt-and-mpc_full">Results, 29 October (afternoon): LQR rebuilt, and mpc_full</a><a href="#lag-aware-mpc-7-nov-mpc_lag">Lag-aware MPC, 7 Nov (mpc_lag)</a><a href="#planners-29-oct-hybrid-lattice-and-smac2d">Planners, 29 Oct: hybrid, lattice and smac2d</a><a href="#planners-30-oct-reversing-on-hybrid-lattice-and-lattice32">Planners, 30 Oct: reversing on, hybrid, lattice and lattice32</a><a href="#diffusion-2-nov-a-model-draws-the-lattice-guards">Diffusion, 2 Nov: a model draws, the lattice guards</a><a href="#diffusion-7-8-nov-the-u-turn-the-orin-the-car">Diffusion, 7-8 Nov: the U-turn, the Orin, the car</a><a href="#voxels-30-oct-the-lidar-as-cubes">Voxels, 30 Oct: the lidar as cubes</a><a href="#3-nov-everything-for-02">3 Nov: everything, for 0.2</a></nav>
 <div class="lead"><p>Ben, 29 Oct: "We want to make other nodes or plugins that we can test and then replace
 the main ones if they work." Each trial runs <strong>beside</strong> today's default, chosen at launch,
 and is <strong>scored on the same routes</strong>. It becomes the default only once it wins.</p>
@@ -134,6 +134,7 @@ and is <strong>scored on the same routes</strong>. It becomes the default only o
 <li><strong>KISS-ICP</strong> (<code>aav_kiss_icp</code>, stock, MIT): lidar odometry, scored against <code>ekf_local</code>, never in an EKF yet. <code>kiss_icp:=true</code>. 30 Oct, one run: <strong>0.04 m per 100 m</strong> over the lot tour, against ekf_local's 0.33; about 1 ms a scan; once the ground was cut out. <a href="#30-oct-kiss-icp-beside-ekf_local-one-run-mppi-the-lot-tour">Results</a>. Design: <code>docs/designs/2026-10-30_kiss-icp.md</code>.</li>
 <li><strong>KISS-ICP into the local EKF</strong> (<code>kiss_ekf:=true</code>), 1 Nov: its twist beside the wheels and IMU. Gazebo, 5 runs: <strong>no clear win yet</strong> (ekf_local 0.30-1.27 m per 100 m with it, 0.44-1.91 without; the spread is the Mac's load). Its covariance is now measured. <a href="#kiss-icp-into-the-local-ekf-1-nov">Results</a>.</li>
 <li><strong>The diffusion planner</strong> (<code>planner:=diffusion</code>, <code>aav_diffusion_planner</code>), 2 Nov: a model draws 16 paths, a guard checks them, the lattice's path if none passes or it's late. Gazebo, 2 runs: <strong>every leg</strong>, 178 and 182 s a tour (the lattice 186 and 188 s); <strong>63 % of plans from the model</strong>, 37 % the lattice's (17 % late, 20 % no sample passed). <a href="#diffusion-2-nov-a-model-draws-the-lattice-guards">Results</a>.</li>
+<li><strong>Diffusion for 0.3</strong>, 7-8 Nov: the guard refused the model mostly for turns (G5) and, at the U-turn's cusp, headings (G6). Each gear smoothed on its own, more U-turn data, the map encoded once: offline <strong>77 → 87 %</strong> of plans with a passing sample, G5 refusals <strong>2,197 → 850</strong>. In the simulator, 3 runs each: <strong>77 → 88 %</strong> of plans from the model (92 % in a fourth), the U-turn <strong>40 → 72 %</strong>, every leg, 171-175 s a tour against the lattice's 180-185 s. Allowed on the car as a gated trial (0.5 m/s). <a href="#diffusion-7-8-nov-the-u-turn-the-orin-the-car">Results</a>.</li>
 <li><strong>3 Nov, everything for 0.2</strong> (Gazebo, 3 runs each): every switch drives a leg; diffusion every leg, <strong>73 %</strong> of plans from the model; NDT into the EKF <strong>17 → 1.8 cm</strong>, every leg; voxels slower, and once drove through the post. <strong>No default changed.</strong> <a href="#3-nov-everything-for-02">Results</a>.</li>
 <li><strong>7 Nov, the lag-aware MPC</strong> (<code>tracker:=mpc_lag</code>): plans steering and speed through the car's own lags (the shared car model); tells ego to keep its lead off. Pretend car: no speed overshoot (others 14 %), and with the lags doubled the U-turn at 2 m/s off by <strong>0.17 m</strong> (MPC 0.36, LQR 0.27). <strong>Our simulator, 3 runs: 6 of 12 legs</strong> (MPPI 8, RPP 9, the Rust <code>mppi_lag</code> 11): best on the legs it drives, but it never made the U-turn by the building: it doesn't read the costmap. <a href="#lag-aware-mpc-7-nov-mpc_lag">Results</a>.</li>
 <li>The design: <code>docs/designs/2026-10-29_trials.md</code>.</li>
@@ -220,7 +221,7 @@ and is <strong>scored on the same routes</strong>. It becomes the default only o
 <td><code>voxels:=true</code></td>
 </tr>
 <tr>
-<td>A diffusion model draws the path, a guard checks it, the lattice behind it (<code>aav_diffusion_planner</code>)</td>
+<td>A diffusion model draws the path, a guard checks it, the lattice behind it (<code>aav_diffusion_planner</code>; on the car only with <code>diffusion_trial:=true</code>, 0.5 m/s)</td>
 <td>the lattice</td>
 <td><code>planner:=diffusion</code> (after <code>pixi install --locked -e learn</code>, <code>pixi run diffusion data</code>, <code>pixi run diffusion train</code>)</td>
 </tr>
@@ -2122,6 +2123,246 @@ headings from the travel), 0.9 %.</p>
   how fast MPPI drove them.</li>
 </ul>
 </section>
+<section class="card"><h2 id="diffusion-7-8-nov-the-u-turn-the-orin-the-car">Diffusion, 7-8 Nov: the U-turn, the Orin, the car</h2>
+<p>Ben, 7 Nov: "We want diffusion." What changed and why: the design's
+<a href="../designs/2026-11-02_diffusion-planner.md#as-built-03-7-8-nov">As built, 0.3</a>. The guard's
+checks did not change.</p>
+<pre class="highlight"><code class="language-bash">pixi run diffusion data --first 800 --maps 400 --uturn 0.6 --out models/diffusion/data_uturn
+pixi run diffusion train --data models/diffusion/data models/diffusion/data_uturn --suffixes 3 --epochs 40
+pixi run measure controllers --planners diffusion --reversing --tours lot \
+    --diffusion-model &lt;.onnx&gt; --diffusion-smoothing &lt;gear|average&gt; --diffusion-record &lt;folder&gt;
+pixi run diffusion replay &lt;folder&gt; --model &lt;.onnx&gt;</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Before (the 0.2 recipe)</th>
+<th>After (0.3)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Data</td>
+<td>44,644 teacher paths, 800 maps</td>
+<td>the same + 21,420 on 400 maps, 60 % U-turns</td>
+</tr>
+<tr>
+<td>Training</td>
+<td>30 epochs, 94,347 examples, 25 min (MPS)</td>
+<td>40 epochs, 196,124 examples, about 65 min (MPS, the Mac shared)</td>
+</tr>
+<tr>
+<td>Smoothing</td>
+<td>one average over the whole path</td>
+<td>each gear's run on its own; a wider second try for G5/G6 only</td>
+</tr>
+<tr>
+<td>Sampler</td>
+<td>the map encoded 16 times</td>
+<td>once</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="offline-300-held-back-plans-16-samples-each">Offline: 300 held-back plans, 16 samples each</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">Before</th>
+<th style="text-align: right;">After</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Samples that pass</td>
+<td style="text-align: right;">38 %</td>
+<td style="text-align: right;"><strong>63 %</strong></td>
+</tr>
+<tr>
+<td>Plans with a passing sample</td>
+<td style="text-align: right;">77 %</td>
+<td style="text-align: right;"><strong>87 %</strong></td>
+</tr>
+<tr>
+<td>G5 turns</td>
+<td style="text-align: right;">2,197</td>
+<td style="text-align: right;"><strong>850</strong></td>
+</tr>
+<tr>
+<td>G4 collisions</td>
+<td style="text-align: right;">1,152</td>
+<td style="text-align: right;">1,053</td>
+</tr>
+<tr>
+<td>G6 heading</td>
+<td style="text-align: right;">725</td>
+<td style="text-align: right;"><strong>451</strong></td>
+</tr>
+<tr>
+<td>G8 length</td>
+<td style="text-align: right;">96</td>
+<td style="text-align: right;">111</td>
+</tr>
+<tr>
+<td>G1, G2, G3, G7</td>
+<td style="text-align: right;">0-3</td>
+<td style="text-align: right;">0-2</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="in-the-simulator-the-lot-tour-reversing-on-mppi-8-nov">In the simulator: the lot tour, reversing on, MPPI (8 Nov)</h3>
+<p>Our own simulator (<code>next-0.3</code>'s default), Ben's Mac, one simulator at a time
+(<code>lockf /tmp/aav-sim.lock</code>), before and after taken in turns; load 7-15. Runs:
+<code>log/controller-compare/agent106-*</code> (not in git).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">Lattice (the default)</th>
+<th style="text-align: right;">Before (0.2 recipe)</th>
+<th style="text-align: right;"><strong>After (0.3)</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Legs finished</td>
+<td style="text-align: right;">12 of 12</td>
+<td style="text-align: right;">12 of 12</td>
+<td style="text-align: right;"><strong>12 of 12</strong> (and 4 of 4 after the merge)</td>
+</tr>
+<tr>
+<td>Tour time, each run (s)</td>
+<td style="text-align: right;">182, 185, 180</td>
+<td style="text-align: right;">180, 175, 180</td>
+<td style="text-align: right;"><strong>171, 175, 175</strong> (175)</td>
+</tr>
+<tr>
+<td><strong>Plans from the model</strong></td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">307 of 397 (<strong>77 %</strong>): 80, 73, 79 %</td>
+<td style="text-align: right;">343 of 389 (<strong>88 %</strong>): 84, 89, 92 % (92 %)</td>
+</tr>
+<tr>
+<td>The U-turn ("turn back"), from the model</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">47 of 117 (<strong>40 %</strong>)</td>
+<td style="text-align: right;">81 of 112 (<strong>72 %</strong>) (80 %)</td>
+</tr>
+<tr>
+<td>The lattice's: refused (no sample passed)</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">67 (17 %)</td>
+<td style="text-align: right;"><strong>25 (6 %)</strong></td>
+</tr>
+<tr>
+<td>The lattice's: late (over 150 ms)</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">14 (3.5 %)</td>
+<td style="text-align: right;">13 (3.3 %)</td>
+</tr>
+<tr>
+<td>The lattice's: no model answer</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">9</td>
+<td style="text-align: right;">8</td>
+</tr>
+<tr>
+<td>Samples that passed</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">57 %</td>
+<td style="text-align: right;"><strong>86 %</strong></td>
+</tr>
+<tr>
+<td>Refused by G5 / G6 / G4 / G8 (samples)</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">2,120 / 761 / 556 / 46</td>
+<td style="text-align: right;"><strong>300 / 208 / 254 / 251</strong></td>
+</tr>
+<tr>
+<td>Model and guard, mean</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;">108 ms</td>
+<td style="text-align: right;">104 ms</td>
+</tr>
+<tr>
+<td>Tightest planned turn (full lock 2.86 m)</td>
+<td style="text-align: right;">3.27 m</td>
+<td style="text-align: right;">3.06 m</td>
+<td style="text-align: right;">3.06 m</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The same plans, replayed</strong> (<code>pixi run diffusion replay</code>, the 405 plans the "before"
+runs recorded, through each model): plans with a passing sample <strong>82 → 91 %</strong>; the
+U-turn's <strong>43 → 71 %</strong>; G5 2,204 → 435, G6 828 → 250, G4 637 → 388, <strong>G8 75 → 401</strong>.</p>
+<h3 id="what-it-shows_5">What it shows</h3>
+<ul>
+<li><strong>88 % of plans from the model</strong> over three runs (84, 89, 92 %), 92 % in a fourth
+  after the merge: the 90 % target is reached on a quiet machine, not yet on average.
+  What's left: 6 % refused, 3 % late, 2 % no answer.</li>
+<li><strong>The U-turn: 40 → 72 %</strong> from the model, and its leg 44-51 s against the lattice's 51-56 s.</li>
+<li><strong>Faster than the default</strong>: 171-175 s a tour against the lattice's 180-185 s, every leg,
+  never a plan tighter than full lock.</li>
+<li><strong>G8 (length) rose</strong> (46 → 251 samples): the U-turn data taught longer swings; the
+  guard refuses them, and the next sample usually passes. Worth a look before more data.</li>
+</ul>
+<h3 id="the-time-a-plan-pixi-run-measure-diffusion">The time a plan (<code>pixi run measure diffusion</code>)</h3>
+<p>Ben's Mac (M4 Max), 8 Nov, the CPU, others' simulators and builds running (load 17),
+30 made-up plans on a lot with boxes, the 0.3 model:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Part</th>
+<th style="text-align: right;">Mean</th>
+<th style="text-align: right;">95th</th>
+<th style="text-align: right;">Worst</th>
+<th style="text-align: right;">Budget (the Orin)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Crop</td>
+<td style="text-align: right;">0.7</td>
+<td style="text-align: right;">1.1</td>
+<td style="text-align: right;">1.1</td>
+<td style="text-align: right;">2</td>
+</tr>
+<tr>
+<td>Model (16 samples, 10 steps)</td>
+<td style="text-align: right;">82.6</td>
+<td style="text-align: right;">125.9</td>
+<td style="text-align: right;">129.7</td>
+<td style="text-align: right;">50</td>
+</tr>
+<tr>
+<td>Guard</td>
+<td style="text-align: right;">11.6</td>
+<td style="text-align: right;">21.2</td>
+<td style="text-align: right;">22.4</td>
+<td style="text-align: right;">10</td>
+</tr>
+<tr>
+<td>Total</td>
+<td style="text-align: right;">94.9</td>
+<td style="text-align: right;">141.1</td>
+<td style="text-align: right;">142.8</td>
+<td style="text-align: right;">100 (stop 150)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The FP16 file on the CPU: the same (84.9 ms the model): FP16 pays only on a GPU. Core ML
+loads the 0.3 export but can't run it: the worker drops to the CPU. <strong>The Orin: not
+measured</strong> (car day A12 runs this script there, CPU then TensorRT).</p>
+<h3 id="the-guard-and-the-time">The guard and the time</h3>
+<ul>
+<li><strong>The guard's refusals fell where the fault was</strong>: G5 to 39 %, G6 to 62 % of before;
+  G4 (collisions) barely moved: the model still cuts some corners, and the guard still
+  refuses them.</li>
+<li><strong>No check was loosened</strong>: every path that reaches MPPI passed G1-G8 as on 2 Nov.</li>
+<li><strong>Time</strong> is the other half of the fallback: inside the 150 ms stop on a loaded Mac, but
+  over the Orin's 100 ms budget on a CPU. The Orin needs its GPU (TensorRT).</li>
+</ul>
+</section>
 <section class="card"><h2 id="voxels-30-oct-the-lidar-as-cubes">Voxels, 30 Oct: the lidar as cubes</h2>
 <p><code>voxels:=true</code> (<code>aav_voxels</code>, <a href="../designs/2026-10-30_voxels.md">design</a>): Nav2's costmap
 and stop zone read <strong>0.25 m cubes</strong> over the fitted road instead of the flat scan.
@@ -2241,7 +2482,7 @@ most), <strong>1,067-1,378</strong> on the lot tour (walls, the building, parked
 </tbody>
 </table></div>
 <p>Runs: <code>/tmp/voxbench/runs/</code> on Ben's Mac (not in git).</p>
-<h3 id="what-it-shows_5">What it shows</h3>
+<h3 id="what-it-shows_6">What it shows</h3>
 <ul>
 <li><strong>Cubes stop the car as well as the scan</strong>: 0.44 m from the post against 0.36 m.</li>
 <li><strong>They cost more</strong>, 6 ms a cloud against well under 1 ms, but that is 6 % of the
