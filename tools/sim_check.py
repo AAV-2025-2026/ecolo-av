@@ -2236,7 +2236,10 @@ def check_stop_point(probe):
 # --loaded-stop: a stop with people aboard, the adaptive brake off and on (docs/stopping.md).
 LOADED_SPEED = 2.0       # m/s: no spine here, so ego's sim cap (sim_speed:=2), not 1 m/s
 LOADED_PAYLOAD = 150.0   # kg aboard: two adults. The brakes give 181 / 331 = 55 % of empty
-LOADED_CASES = ((0.0, False), (LOADED_PAYLOAD, False), (0.0, True), (LOADED_PAYLOAD, True))
+# (kg aboard, adaptive brake on): the last is the next stop, with what the first one learnt.
+LOADED_CASES = ((0.0, False), (LOADED_PAYLOAD, False), (0.0, True), (LOADED_PAYLOAD, True),
+                (LOADED_PAYLOAD, True))
+LOADED_HOLD = 8.0        # s at the speed first: the loaded car is slower to get there
 LOADED_LOG = '/tmp/aav-sim-loaded-stop.csv'
 
 
@@ -2268,15 +2271,17 @@ def check_loaded_stop(probe):
         result('loaded stop', False, waiting)
         return
     with open(LOADED_LOG, 'w') as out:
-        out.write('payload,adaptive,kind,t,v\n')
-    for payload, adaptive in LOADED_CASES:
-        name = (f'loaded stop {payload:g} kg, adaptive brake {"on" if adaptive else "off"}')
+        out.write('case,payload,adaptive,kind,t,v\n')
+    for i, (payload, adaptive) in enumerate(LOADED_CASES):
+        again = (payload, adaptive) in LOADED_CASES[:i]
+        name = (f'loaded stop {payload:g} kg, adaptive brake {"on" if adaptive else "off"}'
+                + (', the next stop' if again else ''))
         if not set_ghost(probe, client, payload=payload, adaptive_brake=adaptive):
             result(name, False, 'gazebo_adapter refused payload or adaptive_brake')
             continue
         probe.spin_for(30.0, lambda: abs(probe.speed()) < STILL)
         begin = probe.now()
-        handle = probe.send_drive(LOADED_SPEED, hold=3.0)
+        handle = probe.send_drive(LOADED_SPEED, hold=LOADED_HOLD)
         if handle is None:
             result(name, False, 'the scripted drive was refused')
             continue
@@ -2287,9 +2292,9 @@ def check_loaded_stop(probe):
         commands = [(t, v) for t, v in probe.actuator_cmds if t >= begin]
         track = [stop_points.Sample(*row) for row in probe.track if row[0] >= begin]
         with open(LOADED_LOG, 'a') as out:
-            out.writelines(f'{payload:g},{adaptive},command,{t:.3f},{v:.4f}\n'
+            out.writelines(f'{i},{payload:g},{adaptive},command,{t:.3f},{v:.4f}\n'
                            for t, v in commands)
-            out.writelines(f'{payload:g},{adaptive},truth,{s.t:.3f},{s.v:.4f}\n'
+            out.writelines(f'{i},{payload:g},{adaptive},truth,{s.t:.3f},{s.v:.4f}\n'
                            for s in track)
         t0 = stop_points.slowing_start(commands, LOADED_SPEED)
         origin = stop_points.at(track, t0) if t0 is not None else None

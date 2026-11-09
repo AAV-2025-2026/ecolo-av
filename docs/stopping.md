@@ -229,6 +229,17 @@ model's. Pass: within 0.25 m.
 It learnt 0.55, the right share. The next stop brakes harder from the start, so it stops
 a little short.
 
-### In the simulator
+### In the simulator (8 Nov)
 
-Not run yet: `pixi run sim-check --loaded-stop-only`.
+`pixi run sim-check --loaded-stop-only`, our simulator, the empty world. Each against
+the empty car model fed the same commands.
+
+| Aboard | Adaptive brake | From | Model | Truth | Off by | |
+|---|---|---|---|---|---|---|
+| 0 kg | off | 1.77 m/s | 3.00 m | 3.05 m | +0.04 m | ✅ |
+| 150 kg | off | 2.05 m/s | 3.20 m | 4.08 m | **+0.87 m** | ✅ (must miss) |
+| 0 kg | on | 1.77 m/s | 3.00 m | 3.05 m | +0.05 m | ✅ |
+| 150 kg | on | 2.05 m/s | 3.22 m | 3.43 m | +0.21 m | ✅ |
+| 150 kg | on, the next stop | 2.05 m/s | 3.22 m | 3.27 m | +0.05 m | ✅ |
+
+The first loaded stop learns while it brakes; the next one starts knowing.

@@ -7,7 +7,7 @@
 <!-- Generated from docs/stopping.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>How the car stops</h1>
-<div class="meta">11 min read · 4 sections</div></header>
+<div class="meta">12 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -691,8 +691,70 @@ model's. Pass: within 0.25 m.</p>
 </table></div>
 <p>It learnt 0.55, the right share. The next stop brakes harder from the start, so it stops
 a little short.</p>
-<h3 id="in-the-simulator">In the simulator</h3>
-<p>Not run yet: <code>pixi run sim-check --loaded-stop-only</code>.</p></section>
+<h3 id="in-the-simulator-8-nov">In the simulator (8 Nov)</h3>
+<p><code>pixi run sim-check --loaded-stop-only</code>, our simulator, the empty world. Each against
+the empty car model fed the same commands.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Aboard</th>
+<th>Adaptive brake</th>
+<th>From</th>
+<th>Model</th>
+<th>Truth</th>
+<th>Off by</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0 kg</td>
+<td>off</td>
+<td>1.77 m/s</td>
+<td>3.00 m</td>
+<td>3.05 m</td>
+<td>+0.04 m</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>150 kg</td>
+<td>off</td>
+<td>2.05 m/s</td>
+<td>3.20 m</td>
+<td>4.08 m</td>
+<td><strong>+0.87 m</strong></td>
+<td>✅ (must miss)</td>
+</tr>
+<tr>
+<td>0 kg</td>
+<td>on</td>
+<td>1.77 m/s</td>
+<td>3.00 m</td>
+<td>3.05 m</td>
+<td>+0.05 m</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>150 kg</td>
+<td>on</td>
+<td>2.05 m/s</td>
+<td>3.22 m</td>
+<td>3.43 m</td>
+<td>+0.21 m</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>150 kg</td>
+<td>on, the next stop</td>
+<td>2.05 m/s</td>
+<td>3.22 m</td>
+<td>3.27 m</td>
+<td>+0.05 m</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table></div>
+<p>The first loaded stop learns while it brakes; the next one starts knowing.</p></section>
 <nav class="prevnext"><a class="prev" href="own-planner.html"><small>Previous</small>← Our own planner</a>
 <a class="next" href="a-to-b.html"><small>Next</small>A to B →</a></nav>
 </main>
