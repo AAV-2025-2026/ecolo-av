@@ -726,7 +726,7 @@ COLUMNS = [
     ('end_error_m', 'End: off the goal (m)', '{:.2f}'),
     ('end_heading_deg', 'End: heading off (deg)', '{:.0f}'),
     ('steering_rms', 'Steering work (rad/s RMS)', '{:.3f}'),
-    ('steer_clipped', "Steering commands ego had to clip (its rate or full lock)", '{:.1%}'),
+    ('steer_clipped', 'Steering commands ego had to clip (its rate or full lock)', '{:.1%}'),
     ('sway_mps2', 'Sway: the sideways swing a passenger feels (m/s^2 RMS)', '{:.3f}'),
     ('sway_flips_per_100m', 'Sway: left-right changes per 100 m', '{:.1f}'),
     ('stops', 'Stops', '{:d}'),

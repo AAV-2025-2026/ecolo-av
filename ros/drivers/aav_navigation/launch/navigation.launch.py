@@ -8,7 +8,8 @@ Nav2 as one more driver: goals in, /drivers/nav/cmd_vel (TwistStamped) out to tw
       [diffusion_model:=] [diffusion_provider:=CPUExecutionProvider] [diffusion_record:=]
       [diffusion_python:=] [diffusion_smoothing:=gear]
       [plan_around:=true] [behaviour:=false]
-      [tracker:=none] [costmap:=nav2] [navigator:=nav2] [smoother:=nav2] [live_swap:=false] [amcl:=false]
+      [tracker:=none] [costmap:=nav2] [navigator:=nav2] [smoother:=nav2] [live_swap:=false]
+      [amcl:=false]
       [amcl_x:=0.0] [amcl_y:=0.0] [amcl_yaw:=0.0] [amcl_map:=]
       [use_sim_time:=false]
       [autostart:=true]
@@ -671,7 +672,8 @@ def generate_launch_description():
                               description="nav2 (the default: Nav2's velocity_smoother) or "
                                           "own: aav_smoother's car_smoother in its place, "
                                           'the turn rate from where the wheels can be (sim; '
-                                          'car.launch.py always passes nav2: docs/own-smoother.md)'),
+                                          'car.launch.py always passes nav2: '
+                                          'docs/own-smoother.md)'),
         DeclareLaunchArgument('tracker', default_value=vehicle.DEFAULT_TRACKER,
                               description="a trial path follower in controller_server's "
                                           'place (aav_track; mppi_lag: aav_mppi_lag): ' +
