@@ -21,7 +21,7 @@ and is **scored on the same routes**. It becomes the default only once it wins.
 > - **KISS-ICP into the local EKF** (`kiss_ekf:=true`), 1 Nov: its twist beside the wheels and IMU. Gazebo, 5 runs: **no clear win yet** (ekf_local 0.30-1.27 m per 100 m with it, 0.44-1.91 without; the spread is the Mac's load). Its covariance is now measured. [Results](#kiss-icp-into-the-local-ekf-1-nov).
 > - **The diffusion planner** (`planner:=diffusion`, `aav_diffusion_planner`), 2 Nov: a model draws 16 paths, a guard checks them, the lattice's path if none passes or it's late. Gazebo, 2 runs: **every leg**, 178 and 182 s a tour (the lattice 186 and 188 s); **63 % of plans from the model**, 37 % the lattice's (17 % late, 20 % no sample passed). [Results](#diffusion-2-nov-a-model-draws-the-lattice-guards).
 > - **3 Nov, everything for 0.2** (Gazebo, 3 runs each): every switch drives a leg; diffusion every leg, **73 %** of plans from the model; NDT into the EKF **17 → 1.8 cm**, every leg; voxels slower, and once drove through the post. **No default changed.** [Results](#3-nov-everything-for-02).
-> - **7 Nov, the lag-aware MPC** (`tracker:=mpc_lag`): plans steering and speed through the car's own lags; tells ego to keep its lead off. Pretend car: no speed overshoot (others 14 %), and with the lags doubled the U-turn at 2 m/s off by **0.17 m** (MPC 0.36, LQR 0.27). [Results](#lag-aware-mpc-7-nov-mpc_lag).
+> - **7 Nov, the lag-aware MPC** (`tracker:=mpc_lag`): plans steering and speed through the car's own lags (the shared car model); tells ego to keep its lead off. Pretend car: no speed overshoot (others 14 %), and with the lags doubled the U-turn at 2 m/s off by **0.17 m** (MPC 0.36, LQR 0.27). **Our simulator, 3 runs: 6 of 12 legs** (MPPI 8, RPP 9, the Rust `mppi_lag` 11): best on the legs it drives, but it never made the U-turn by the building: it doesn't read the costmap. [Results](#lag-aware-mpc-7-nov-mpc_lag).
 > - The design: `docs/designs/2026-10-29_trials.md`.
 
 ## What is on trial
@@ -596,18 +596,83 @@ What it shows:
 
 | Where | Mean | Worst |
 |---|---:|---:|
-| Ben's Mac, quiet | 7 ms | 16 ms |
-| Ben's Mac, load 30 (other simulators) | 11-17 ms | 60-170 ms |
+| Pretend car, Ben's Mac quiet | 7 ms | 16 ms |
+| Our simulator, the lot tour (8 Nov, load ~12) | **5 ms** | 14-19 ms (60 once); 0-1 ticks missed a leg |
+| Gazebo, Mac at load 30-50 (7 Nov) | 14-20 ms | 64-230 ms; up to 516 ticks missed a leg |
+| Pretend car, Mac at load 39 | 34 ms | 250 ms |
 | The Orin (estimate: 2-3 times slower in Python) | 15-20 ms | 40-50 ms |
+
+It does about 4 times the old MPC's work a tick, so a busy computer hurts it more.
 
 The tick is 50 ms. In Python it fits on average, but its worst ticks on the Orin
 would be close to a whole tick. **It should move to Rust** before it drives the car
 (CLAUDE.md: Rust where it pays off), with the shared car model's Rust twin: the same
 QP there is well under 1 ms.
 
-### Results: Gazebo
+### Results: our simulator (8 Nov, the lot tour, 3 runs each)
 
-Running (7 Nov): the lot tour against MPPI, RPP and MPC, with the lags as told and doubled.
+Our Rust simulator (the default since 8 Nov) runs the shared car model, so the car
+answers exactly as `mpc_lag` predicts. `log/own-nominal/`, not in git.
+
+| | MPPI (Nav2) | RPP (Nav2) | `mppi_lag` (Rust) | **`mpc_lag`** |
+|---|---:|---:|---:|---:|
+| Legs reached | 8/12 | 9/12 | **11/12** | 6/12 |
+| Off the path, mean (m) | 0.13 | **0.12** | 0.16 | 0.14 |
+| Off the path, worst (m) | **0.60** | 0.66 | 1.63 | 0.66 |
+| Sway (m/s², lower is calmer) | **0.038** | 0.086 | 0.054 | 0.097 |
+| Left turn, time (s, mean of 3) | 27 | 28 | 34 | **25** |
+| Left turn, worst off the path (m) | 0.40 | 0.44 | 0.64 | **0.33** |
+
+Leg by leg, `mpc_lag`:
+
+| Leg | Runs reached | Why not |
+|---|---|---|
+| a left turn | 3 of 3 | |
+| round the building | 3 of 3 | |
+| turn back (the U-turn in the 14 m lane) | **0 of 3** | it held the path (0.47 m worst, as MPPI's 0.49), but the path ran by the building: collision_monitor stopped the car, and the planner then refused to start ("Start occupied") |
+| home | 0 of 3 | never started: the leg before had stranded the car |
+
+What it shows:
+
+- **Where it drives, it drives well:** the quickest and closest on the left turn, 5 ms
+  a tick, no speed overshoot.
+- **The U-turn is everyone's weak spot here** (MPPI 1 of 3, RPP 1 of 3, `mppi_lag` 2 of
+  3), but `mpc_lag` lost all three. Our trackers follow the path and never read the
+  costmap; MPPI keeps off obstacles, and RPP slows near them. `mpc_lag` needs the same
+  before it can win the lot tour.
+
+### Results: Gazebo, a loaded Mac (7 Nov, one run each)
+
+Every follower lost legs to the sensor watchdog: at load 30-50 (other agents' builds
+and simulators) the IMU, odometry and GPS went stale and stopped Nav2. These measure
+the Mac more than the followers; kept for the record.
+
+| Lags | MPPI | RPP | MPC | `mpc_lag` |
+|---|---:|---:|---:|---:|
+| as told: legs reached | 1/4 | 0/4 | 2/4 | 2/4 |
+| as told: off the path, worst (m) | 0.50 | 1.65 | 2.16 | 1.88 |
+| doubled (`lag_scale:=2`): legs reached | 0/4 | 2/4 | 3/4 | 2/4 |
+| doubled: off the path, worst (m) | 3.39 | 1.66 | 0.50 | 0.48 |
+
+### Results: Gazebo, a quiet Mac (8 Nov, one run each)
+
+`simulator:=gazebo` (the doubled lags need Gazebo's adapter). `log/gz-nominal-c/`,
+`log/gz-doubled-c/`, `log/gz-doubled-d/` (not in git).
+
+| Lags | | MPPI (Nav2) | RPP (Nav2) | `mppi_lag` | **`mpc_lag`** |
+|---|---|---:|---:|---:|---:|
+| as told | legs reached | 2/4 | 2/4 | (never came up) | **4/4** |
+| as told | off the path, worst (m) | 0.61 | 0.87 | - | **0.60** |
+| doubled | legs reached | **3/4** | **3/4** | 2/4 | 2/4 |
+| doubled | off the path, worst (m) | 1.17 | 0.76 | **0.58** | 0.60 |
+
+- With the lags as told, `mpc_lag` was the only follower to drive the whole tour, the
+  U-turn included.
+- With them doubled it lost the U-turn (collision_monitor stopped it by the building)
+  and then home; it stayed on the path (0.60 m worst).
+- One run each: a hint, not a verdict. In our simulator the same U-turn beat every
+  aav_track tracker (`mpc`, `pure_pursuit` and `mpc_lag` all 2 of 3 legs, 8 Nov): they
+  follow the planner's path and don't read the costmap.
 
 ### Not done yet
 

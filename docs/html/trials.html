@@ -7,7 +7,7 @@
 <!-- Generated from docs/trials.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Trials: new path followers and localizers beside the main ones</h1>
-<div class="meta">69 min read · 18 sections</div></header>
+<div class="meta">73 min read · 18 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -134,7 +134,7 @@ and is <strong>scored on the same routes</strong>. It becomes the default only o
 <li><strong>KISS-ICP into the local EKF</strong> (<code>kiss_ekf:=true</code>), 1 Nov: its twist beside the wheels and IMU. Gazebo, 5 runs: <strong>no clear win yet</strong> (ekf_local 0.30-1.27 m per 100 m with it, 0.44-1.91 without; the spread is the Mac's load). Its covariance is now measured. <a href="#kiss-icp-into-the-local-ekf-1-nov">Results</a>.</li>
 <li><strong>The diffusion planner</strong> (<code>planner:=diffusion</code>, <code>aav_diffusion_planner</code>), 2 Nov: a model draws 16 paths, a guard checks them, the lattice's path if none passes or it's late. Gazebo, 2 runs: <strong>every leg</strong>, 178 and 182 s a tour (the lattice 186 and 188 s); <strong>63 % of plans from the model</strong>, 37 % the lattice's (17 % late, 20 % no sample passed). <a href="#diffusion-2-nov-a-model-draws-the-lattice-guards">Results</a>.</li>
 <li><strong>3 Nov, everything for 0.2</strong> (Gazebo, 3 runs each): every switch drives a leg; diffusion every leg, <strong>73 %</strong> of plans from the model; NDT into the EKF <strong>17 → 1.8 cm</strong>, every leg; voxels slower, and once drove through the post. <strong>No default changed.</strong> <a href="#3-nov-everything-for-02">Results</a>.</li>
-<li><strong>7 Nov, the lag-aware MPC</strong> (<code>tracker:=mpc_lag</code>): plans steering and speed through the car's own lags; tells ego to keep its lead off. Pretend car: no speed overshoot (others 14 %), and with the lags doubled the U-turn at 2 m/s off by <strong>0.17 m</strong> (MPC 0.36, LQR 0.27). <a href="#lag-aware-mpc-7-nov-mpc_lag">Results</a>.</li>
+<li><strong>7 Nov, the lag-aware MPC</strong> (<code>tracker:=mpc_lag</code>): plans steering and speed through the car's own lags (the shared car model); tells ego to keep its lead off. Pretend car: no speed overshoot (others 14 %), and with the lags doubled the U-turn at 2 m/s off by <strong>0.17 m</strong> (MPC 0.36, LQR 0.27). <strong>Our simulator, 3 runs: 6 of 12 legs</strong> (MPPI 8, RPP 9, the Rust <code>mppi_lag</code> 11): best on the legs it drives, but it never made the U-turn by the building: it doesn't read the costmap. <a href="#lag-aware-mpc-7-nov-mpc_lag">Results</a>.</li>
 <li>The design: <code>docs/designs/2026-10-29_trials.md</code>.</li>
 </ul>
 </blockquote></div>
@@ -1276,7 +1276,7 @@ steering  ──&gt; dead time ──&gt; motor (0.8 rad/s) ──&gt; linkage (
 <tbody>
 <tr>
 <td>the spine's speed loop (<code>default</code> or <code>smooth</code>)</td>
-<td>spine-core's gains (as aav_gazebo's <code>SpeedLoop</code>)</td>
+<td>spine-core's gains (<code>car_model</code>'s <code>SpeedLoop</code>)</td>
 </tr>
 <tr>
 <td>throttle and brake lags, drag, full brake</td>
@@ -1311,9 +1311,9 @@ set speed's rise and fall (the smoother's 1.0 and 2.0 m/s²), 0 to cruise. <stro
 speed under the bend's and the goal's limit.</p>
 <h3 id="it-tells-ego-the-lag_aware-contract">It tells ego (the <code>lag_aware</code> contract)</h3>
 <p><code>/drivers/nav/lag_aware</code> (<code>std_msgs/Bool</code>, reliable, transient local, depth 1): <strong>true</strong>
-while <code>mpc_lag</code> drives, <strong>false</strong> for every other tracker and when the node stops. MPPI
-and RPP publish nothing: ego keeps its lead on. The exact form is the ego branch's; to
-be checked when the two merge.</p>
+while <code>mpc_lag</code> is the tracker, <strong>false</strong> for every other tracker and when the node stops.
+Nav2's MPPI and RPP publish nothing: ego keeps its lead on (<code>lag_lead: auto</code>). Ego's
+contract (merged 7 Nov); the Rust MPPI (<code>mppi_lag</code>) says it on the same topic.</p>
 <h3 id="results-the-pretend-car-ego-then-gazebos-actuator-model">Results: the pretend car (ego, then Gazebo's actuator model)</h3>
 <p>Worst off the path (m). "x2": the car's lags twice what the trackers were told.</p>
 <div class="table-wrap"><table>
@@ -1424,14 +1424,24 @@ be checked when the two merge.</p>
 </thead>
 <tbody>
 <tr>
-<td>Ben's Mac, quiet</td>
+<td>Pretend car, Ben's Mac quiet</td>
 <td style="text-align: right;">7 ms</td>
 <td style="text-align: right;">16 ms</td>
 </tr>
 <tr>
-<td>Ben's Mac, load 30 (other simulators)</td>
-<td style="text-align: right;">11-17 ms</td>
-<td style="text-align: right;">60-170 ms</td>
+<td>Our simulator, the lot tour (8 Nov, load ~12)</td>
+<td style="text-align: right;"><strong>5 ms</strong></td>
+<td style="text-align: right;">14-19 ms (60 once); 0-1 ticks missed a leg</td>
+</tr>
+<tr>
+<td>Gazebo, Mac at load 30-50 (7 Nov)</td>
+<td style="text-align: right;">14-20 ms</td>
+<td style="text-align: right;">64-230 ms; up to 516 ticks missed a leg</td>
+</tr>
+<tr>
+<td>Pretend car, Mac at load 39</td>
+<td style="text-align: right;">34 ms</td>
+<td style="text-align: right;">250 ms</td>
 </tr>
 <tr>
 <td>The Orin (estimate: 2-3 times slower in Python)</td>
@@ -1440,12 +1450,213 @@ be checked when the two merge.</p>
 </tr>
 </tbody>
 </table></div>
+<p>It does about 4 times the old MPC's work a tick, so a busy computer hurts it more.</p>
 <p>The tick is 50 ms. In Python it fits on average, but its worst ticks on the Orin
 would be close to a whole tick. <strong>It should move to Rust</strong> before it drives the car
 (CLAUDE.md: Rust where it pays off), with the shared car model's Rust twin: the same
 QP there is well under 1 ms.</p>
-<h3 id="results-gazebo">Results: Gazebo</h3>
-<p>Running (7 Nov): the lot tour against MPPI, RPP and MPC, with the lags as told and doubled.</p>
+<h3 id="results-our-simulator-8-nov-the-lot-tour-3-runs-each">Results: our simulator (8 Nov, the lot tour, 3 runs each)</h3>
+<p>Our Rust simulator (the default since 8 Nov) runs the shared car model, so the car
+answers exactly as <code>mpc_lag</code> predicts. <code>log/own-nominal/</code>, not in git.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th style="text-align: right;">MPPI (Nav2)</th>
+<th style="text-align: right;">RPP (Nav2)</th>
+<th style="text-align: right;"><code>mppi_lag</code> (Rust)</th>
+<th style="text-align: right;"><strong><code>mpc_lag</code></strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Legs reached</td>
+<td style="text-align: right;">8/12</td>
+<td style="text-align: right;">9/12</td>
+<td style="text-align: right;"><strong>11/12</strong></td>
+<td style="text-align: right;">6/12</td>
+</tr>
+<tr>
+<td>Off the path, mean (m)</td>
+<td style="text-align: right;">0.13</td>
+<td style="text-align: right;"><strong>0.12</strong></td>
+<td style="text-align: right;">0.16</td>
+<td style="text-align: right;">0.14</td>
+</tr>
+<tr>
+<td>Off the path, worst (m)</td>
+<td style="text-align: right;"><strong>0.60</strong></td>
+<td style="text-align: right;">0.66</td>
+<td style="text-align: right;">1.63</td>
+<td style="text-align: right;">0.66</td>
+</tr>
+<tr>
+<td>Sway (m/s², lower is calmer)</td>
+<td style="text-align: right;"><strong>0.038</strong></td>
+<td style="text-align: right;">0.086</td>
+<td style="text-align: right;">0.054</td>
+<td style="text-align: right;">0.097</td>
+</tr>
+<tr>
+<td>Left turn, time (s, mean of 3)</td>
+<td style="text-align: right;">27</td>
+<td style="text-align: right;">28</td>
+<td style="text-align: right;">34</td>
+<td style="text-align: right;"><strong>25</strong></td>
+</tr>
+<tr>
+<td>Left turn, worst off the path (m)</td>
+<td style="text-align: right;">0.40</td>
+<td style="text-align: right;">0.44</td>
+<td style="text-align: right;">0.64</td>
+<td style="text-align: right;"><strong>0.33</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Leg by leg, <code>mpc_lag</code>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Leg</th>
+<th>Runs reached</th>
+<th>Why not</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>a left turn</td>
+<td>3 of 3</td>
+<td></td>
+</tr>
+<tr>
+<td>round the building</td>
+<td>3 of 3</td>
+<td></td>
+</tr>
+<tr>
+<td>turn back (the U-turn in the 14 m lane)</td>
+<td><strong>0 of 3</strong></td>
+<td>it held the path (0.47 m worst, as MPPI's 0.49), but the path ran by the building: collision_monitor stopped the car, and the planner then refused to start ("Start occupied")</td>
+</tr>
+<tr>
+<td>home</td>
+<td>0 of 3</td>
+<td>never started: the leg before had stranded the car</td>
+</tr>
+</tbody>
+</table></div>
+<p>What it shows:</p>
+<ul>
+<li><strong>Where it drives, it drives well:</strong> the quickest and closest on the left turn, 5 ms
+  a tick, no speed overshoot.</li>
+<li><strong>The U-turn is everyone's weak spot here</strong> (MPPI 1 of 3, RPP 1 of 3, <code>mppi_lag</code> 2 of
+  3), but <code>mpc_lag</code> lost all three. Our trackers follow the path and never read the
+  costmap; MPPI keeps off obstacles, and RPP slows near them. <code>mpc_lag</code> needs the same
+  before it can win the lot tour.</li>
+</ul>
+<h3 id="results-gazebo-a-loaded-mac-7-nov-one-run-each">Results: Gazebo, a loaded Mac (7 Nov, one run each)</h3>
+<p>Every follower lost legs to the sensor watchdog: at load 30-50 (other agents' builds
+and simulators) the IMU, odometry and GPS went stale and stopped Nav2. These measure
+the Mac more than the followers; kept for the record.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Lags</th>
+<th style="text-align: right;">MPPI</th>
+<th style="text-align: right;">RPP</th>
+<th style="text-align: right;">MPC</th>
+<th style="text-align: right;"><code>mpc_lag</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>as told: legs reached</td>
+<td style="text-align: right;">1/4</td>
+<td style="text-align: right;">0/4</td>
+<td style="text-align: right;">2/4</td>
+<td style="text-align: right;">2/4</td>
+</tr>
+<tr>
+<td>as told: off the path, worst (m)</td>
+<td style="text-align: right;">0.50</td>
+<td style="text-align: right;">1.65</td>
+<td style="text-align: right;">2.16</td>
+<td style="text-align: right;">1.88</td>
+</tr>
+<tr>
+<td>doubled (<code>lag_scale:=2</code>): legs reached</td>
+<td style="text-align: right;">0/4</td>
+<td style="text-align: right;">2/4</td>
+<td style="text-align: right;">3/4</td>
+<td style="text-align: right;">2/4</td>
+</tr>
+<tr>
+<td>doubled: off the path, worst (m)</td>
+<td style="text-align: right;">3.39</td>
+<td style="text-align: right;">1.66</td>
+<td style="text-align: right;">0.50</td>
+<td style="text-align: right;">0.48</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="results-gazebo-a-quiet-mac-8-nov-one-run-each">Results: Gazebo, a quiet Mac (8 Nov, one run each)</h3>
+<p><code>simulator:=gazebo</code> (the doubled lags need Gazebo's adapter). <code>log/gz-nominal-c/</code>,
+<code>log/gz-doubled-c/</code>, <code>log/gz-doubled-d/</code> (not in git).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Lags</th>
+<th></th>
+<th style="text-align: right;">MPPI (Nav2)</th>
+<th style="text-align: right;">RPP (Nav2)</th>
+<th style="text-align: right;"><code>mppi_lag</code></th>
+<th style="text-align: right;"><strong><code>mpc_lag</code></strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>as told</td>
+<td>legs reached</td>
+<td style="text-align: right;">2/4</td>
+<td style="text-align: right;">2/4</td>
+<td style="text-align: right;">(never came up)</td>
+<td style="text-align: right;"><strong>4/4</strong></td>
+</tr>
+<tr>
+<td>as told</td>
+<td>off the path, worst (m)</td>
+<td style="text-align: right;">0.61</td>
+<td style="text-align: right;">0.87</td>
+<td style="text-align: right;">-</td>
+<td style="text-align: right;"><strong>0.60</strong></td>
+</tr>
+<tr>
+<td>doubled</td>
+<td>legs reached</td>
+<td style="text-align: right;"><strong>3/4</strong></td>
+<td style="text-align: right;"><strong>3/4</strong></td>
+<td style="text-align: right;">2/4</td>
+<td style="text-align: right;">2/4</td>
+</tr>
+<tr>
+<td>doubled</td>
+<td>off the path, worst (m)</td>
+<td style="text-align: right;">1.17</td>
+<td style="text-align: right;">0.76</td>
+<td style="text-align: right;"><strong>0.58</strong></td>
+<td style="text-align: right;">0.60</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li>With the lags as told, <code>mpc_lag</code> was the only follower to drive the whole tour, the
+  U-turn included.</li>
+<li>With them doubled it lost the U-turn (collision_monitor stopped it by the building)
+  and then home; it stayed on the path (0.60 m worst).</li>
+<li>One run each: a hint, not a verdict. In our simulator the same U-turn beat every
+  aav_track tracker (<code>mpc</code>, <code>pure_pursuit</code> and <code>mpc_lag</code> all 2 of 3 legs, 8 Nov): they
+  follow the planner's path and don't read the costmap.</li>
+</ul>
 <h3 id="not-done-yet">Not done yet</h3>
 <ul>
 <li>The LQI speed loop (<code>speed_loop:=lqi</code>) isn't modelled; <code>mpc_lag</code> doesn't follow
@@ -1453,8 +1664,8 @@ QP there is well under 1 ms.</p>
 <li>Today's car runs the ESP32's open speed loop, not the spine's PI: not modelled.</li>
 <li>Dead times act on the set speed, not after the speed loop (an approximation; they are 0
   until measured).</li>
-<li><code>lag_model.py</code> is a stand-in for the shared car model (<code>aav_description</code>
-  <code>car_model.py</code>), the same spec; swap at the merge.</li>
+<li>The plan runs <code>lag_model.py</code>, the shared car model's maths on arrays (for speed);
+  a test keeps it equal to <code>car_model.step</code> to 1e-9. The estimate runs <code>car_model</code> itself.</li>
 </ul>
 </section>
 <section class="card"><h2 id="planners-29-oct-hybrid-lattice-and-smac2d">Planners, 29 Oct: hybrid, lattice and smac2d</h2>
