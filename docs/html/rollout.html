@@ -7,7 +7,7 @@
 <!-- Generated from docs/rollout.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Rolling out on the car</h1>
-<div class="meta">5 min read · 7 sections</div></header>
+<div class="meta">8 min read · 9 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -113,7 +113,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-names">The names</a><a href="#what-runs-where">What runs where</a><a href="#the-order">The order</a><a href="#the-esp32-a-usb-cable-from-a-laptop-with-the-repo">The ESP32 (a USB cable, from a laptop with the repo)</a><a href="#a-pi-with-ubuntu-motor_pi-localization-dash">A Pi with Ubuntu (motor_pi, localization, dash)</a><a href="#a-pi-with-pi-os-the-camera-pis-they-stay-on-pi-os">A Pi with Pi OS (the camera Pis: they stay on Pi OS)</a><a href="#the-orin">The Orin</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-names">The names</a><a href="#what-runs-where">What runs where</a><a href="#the-order">The order</a><a href="#what-03-changes-on-the-car">What 0.3 changes on the car</a><a href="#the-esp32-a-usb-cable-from-a-laptop-with-the-repo">The ESP32 (a USB cable, from a laptop with the repo)</a><a href="#a-pi-with-ubuntu-motor_pi-localization-dash">A Pi with Ubuntu (motor_pi, localization, dash)</a><a href="#a-pi-with-pi-os-the-camera-pis-they-stay-on-pi-os">A Pi with Pi OS (the camera Pis: they stay on Pi OS)</a><a href="#the-orin">The Orin</a><a href="#upgrading-later-a-newer-version-on-every-computer">Upgrading later: a newer version on every computer</a></nav>
 <div class="lead"><p>How our code goes onto the car: the names, the order, and each computer's steps.
 The full steps, with sign-offs: <a href="car-day.html">Car day</a>, <a href="car-setup.html">Car setup</a> and
 <a href="esp32-bench.html">The ESP32 on the bench</a>. <strong>Back up first, every time.</strong></p></div>
@@ -304,6 +304,57 @@ name in <code>/etc/hosts</code>, reboot. Then update the Keychain entry's name a
 <code>~/aav-jazzy/aav.sh ros2 launch aav_bringup car.launch.py machine:=motor_pi_alone max_speed:=0.3</code>.
 Its output mux sends the heartbeat the ESP32 needs. Never run the Orin's stack at the same time.</p>
 </section>
+<section class="card"><h2 id="what-03-changes-on-the-car">What 0.3 changes on the car</h2>
+<p>The kit now holds 0.3: everything from the simulator work too. <strong>On the car, the defaults
+stay as they were.</strong> The new pieces are off, or run only in the simulator.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Piece</th>
+<th>On the car</th>
+<th>How to tell</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ESP32 firmware</td>
+<td>Same behaviour (one line changed, for the car model)</td>
+<td><code>CONFIG</code> line at boot</td>
+</tr>
+<tr>
+<td>Motor Pi setup</td>
+<td>No change</td>
+<td><code>car_setup.sh motor_pi check</code></td>
+</tr>
+<tr>
+<td>Ego (Orin)</td>
+<td><strong>New:</strong> the lag lead, the 2 s trace ahead, the stop point</td>
+<td><code>/ego/trace</code>, <code>/ego/stop_point</code></td>
+</tr>
+<tr>
+<td>Nav2</td>
+<td>Still the default: costmap, planner, navigator, smoother</td>
+<td></td>
+</tr>
+<tr>
+<td>Our costmap, planner, navigator, smoother, MPPI with lag, MPC with lag</td>
+<td>Simulator switches only</td>
+<td><a href="switches.html">Switches</a></td>
+</tr>
+<tr>
+<td>Diffusion planner</td>
+<td><strong>Locked off.</strong> <code>diffusion_trial:=true</code> turns it on, capped at 0.5 m/s</td>
+<td><a href="car-day.html#a12-the-diffusion-planners-trial">A12</a></td>
+</tr>
+<tr>
+<td>Adaptive brake</td>
+<td>Refused with the ESP32 (the firmware brakes). Needs A7's brake limits first</td>
+<td><a href="stopping.html">Stopping</a></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Test ego on stands first</strong> (A9b), before the car drives on the ground with the Orin.</p>
+</section>
 <section class="card"><h2 id="the-esp32-a-usb-cable-from-a-laptop-with-the-repo">The ESP32 (a USB cable, from a laptop with the repo)</h2>
 <pre class="highlight"><code class="language-sh">pixi run esp tools                       # once per laptop
 vendor/cargo-tools/bin/espflash read-flash 0 0x400000 backup-esp32.bin
@@ -339,7 +390,69 @@ bash car_setup.sh camera_pi services --apply</code></pre>
 bash car_setup.sh orin                   # a dry run
 bash car_setup.sh orin --apply</code></pre>
 <p>Later (Day B): the reflash to JetPack 7.2, then <code>car_setup.sh orin</code> again. Not yet run on
-the real Orin.</p></section>
+the real Orin.</p>
+</section>
+<section class="card"><h2 id="upgrading-later-a-newer-version-on-every-computer">Upgrading later: a newer version on every computer</h2>
+<p>The same steps for every new version. Each computer keeps its old version until the new
+one passes its check.</p>
+<p><strong>At home, on a Mac with the repo:</strong></p>
+<pre class="highlight"><code class="language-sh">git pull                                  # the new main
+pixi run test                             # all green first
+pixi run car-day-build                    # the ESP32 firmware, into car-day/esp32/
+pixi run car-kit                          # the install kit, into car-kit/
+pixi run car-day-check                    # everything OK?</code></pre>
+<p>Copy <code>car-kit/</code> and <code>car-day/esp32/</code> to the USB stick.</p>
+<p><strong>On the car:</strong></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Computer</th>
+<th>Back up</th>
+<th>Upgrade</th>
+<th>Check</th>
+<th>The way back</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ESP32</td>
+<td><code>espflash read-flash 0 0x400000 backup-esp32.bin</code></td>
+<td><code>pixi run esp walk</code> (flashes the new <code>.elf</code>)</td>
+<td>the first check, then A8's checks on stands</td>
+<td><code>espflash write-bin 0 backup-esp32.bin</code></td>
+</tr>
+<tr>
+<td>Pi on Ubuntu (<code>motor_pi</code>, <code>localization</code>, <code>dash</code>)</td>
+<td>an SD card image</td>
+<td><code>bash ~/car-kit/car_setup.sh &lt;role&gt; install check --apply</code></td>
+<td><code>car_setup.sh &lt;role&gt; check</code></td>
+<td>the SD image, or the old kit's <code>install</code> again</td>
+</tr>
+<tr>
+<td>Pi on Pi OS (cameras)</td>
+<td>an SD card image</td>
+<td><code>bash car_setup.sh camera_pi upgrade services --apply</code></td>
+<td>the video stream opens</td>
+<td>the SD image</td>
+</tr>
+<tr>
+<td>Orin</td>
+<td>NVIDIA's full image (B3)</td>
+<td><code>bash ~/car-kit/car_setup.sh orin install check --apply</code></td>
+<td><code>~/aav-jazzy/aav.sh car orin</code>, then stands (A9b)</td>
+<td>the image</td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Copy the kit first</strong> on each Pi and the Orin: <code>scp -r car-kit &lt;user&gt;@&lt;address&gt;:~/</code>
+  (the logins are in the Keychain: <code>aav-*</code>).</li>
+<li><code>install</code> run again with a newer kit updates the code. It rebuilds the environment only if
+  it changed. Everything lives in <code>~/aav-jazzy</code>, so nothing else on the computer changes.</li>
+<li><strong>One computer at a time</strong>, in the order above: ESP32 and Motor Pi, then the Orin, then
+  the rest.</li>
+<li>After the Orin, restart its service (<code>sudo systemctl restart aav-car</code>) or reboot.</li>
+</ul></section>
 <nav class="prevnext"><a class="prev" href="car-setup.html"><small>Previous</small>← Car setup</a>
 <a class="next" href="tests.html"><small>Next</small>Every test →</a></nav>
 </main>

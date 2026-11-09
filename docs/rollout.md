@@ -57,6 +57,23 @@ Monday: **the ESP32 and the Motor Pi first.** One step at a time; each has a way
 `~/aav-jazzy/aav.sh ros2 launch aav_bringup car.launch.py machine:=motor_pi_alone max_speed:=0.3`.
 Its output mux sends the heartbeat the ESP32 needs. Never run the Orin's stack at the same time.
 
+## What 0.3 changes on the car
+
+The kit now holds 0.3: everything from the simulator work too. **On the car, the defaults
+stay as they were.** The new pieces are off, or run only in the simulator.
+
+| Piece | On the car | How to tell |
+|---|---|---|
+| ESP32 firmware | Same behaviour (one line changed, for the car model) | `CONFIG` line at boot |
+| Motor Pi setup | No change | `car_setup.sh motor_pi check` |
+| Ego (Orin) | **New:** the lag lead, the 2 s trace ahead, the stop point | `/ego/trace`, `/ego/stop_point` |
+| Nav2 | Still the default: costmap, planner, navigator, smoother | |
+| Our costmap, planner, navigator, smoother, MPPI with lag, MPC with lag | Simulator switches only | [Switches](switches.md) |
+| Diffusion planner | **Locked off.** `diffusion_trial:=true` turns it on, capped at 0.5 m/s | [A12](car-day.md#a12-the-diffusion-planners-trial) |
+| Adaptive brake | Refused with the ESP32 (the firmware brakes). Needs A7's brake limits first | [Stopping](stopping.md) |
+
+**Test ego on stands first** (A9b), before the car drives on the ground with the Orin.
+
 ## The ESP32 (a USB cable, from a laptop with the repo)
 
 ```sh
@@ -105,3 +122,37 @@ bash car_setup.sh orin --apply
 
 Later (Day B): the reflash to JetPack 7.2, then `car_setup.sh orin` again. Not yet run on
 the real Orin.
+
+## Upgrading later: a newer version on every computer
+
+The same steps for every new version. Each computer keeps its old version until the new
+one passes its check.
+
+**At home, on a Mac with the repo:**
+
+```sh
+git pull                                  # the new main
+pixi run test                             # all green first
+pixi run car-day-build                    # the ESP32 firmware, into car-day/esp32/
+pixi run car-kit                          # the install kit, into car-kit/
+pixi run car-day-check                    # everything OK?
+```
+
+Copy `car-kit/` and `car-day/esp32/` to the USB stick.
+
+**On the car:**
+
+| Computer | Back up | Upgrade | Check | The way back |
+|---|---|---|---|---|
+| ESP32 | `espflash read-flash 0 0x400000 backup-esp32.bin` | `pixi run esp walk` (flashes the new `.elf`) | the first check, then A8's checks on stands | `espflash write-bin 0 backup-esp32.bin` |
+| Pi on Ubuntu (`motor_pi`, `localization`, `dash`) | an SD card image | `bash ~/car-kit/car_setup.sh <role> install check --apply` | `car_setup.sh <role> check` | the SD image, or the old kit's `install` again |
+| Pi on Pi OS (cameras) | an SD card image | `bash car_setup.sh camera_pi upgrade services --apply` | the video stream opens | the SD image |
+| Orin | NVIDIA's full image (B3) | `bash ~/car-kit/car_setup.sh orin install check --apply` | `~/aav-jazzy/aav.sh car orin`, then stands (A9b) | the image |
+
+- **Copy the kit first** on each Pi and the Orin: `scp -r car-kit <user>@<address>:~/`
+  (the logins are in the Keychain: `aav-*`).
+- `install` run again with a newer kit updates the code. It rebuilds the environment only if
+  it changed. Everything lives in `~/aav-jazzy`, so nothing else on the computer changes.
+- **One computer at a time**, in the order above: ESP32 and Motor Pi, then the Orin, then
+  the rest.
+- After the Orin, restart its service (`sudo systemctl restart aav-car`) or reboot.
