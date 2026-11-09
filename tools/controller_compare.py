@@ -161,7 +161,9 @@ TOURS = {
     # TODO 140: directions on the campus, P4 to the Fieldhouse, as GPS waypoints (route:
     # from, to, by the campus graph). The leg's goal is the last waypoint, put on the map
     # by /fromLL when the run starts (None until then).
+    # The fence: a 600 m circle, as docs/routes.md runs it (200 m stops it half way).
     'fieldhouse': {'obstacle': False, 'world': worlds.CAMPUS, 'route': ('P4', 'Fieldhouse'),
+                   'launch': ['geofence_radius:=600'],
                    'legs': [('P4 to the Fieldhouse', None, None, None)]},
 }
 # --stacks: every navigation piece Nav2's, or every one ours (forward only: mppi_lag).
@@ -821,7 +823,7 @@ def session(tour, follower, args, out_dir, body, used, run=1):
                f'reversing:={str(args.reversing).lower()}']
     if planner:
         command += planner_launch(planner)
-    command += extra
+    command += extra + plan.get('launch', []) + (args.launch or [])
     if args.amcl:
         command.append('amcl:=true')
     if args.ndt_ekf:
@@ -1014,6 +1016,11 @@ def report(results, args, started):
         for name, x, y, heading in tour_legs(tour, args):
             legs = [(c, row, notes, drawn.get('run', 1))
                     for t, n, c, row, notes, drawn in results if t == tour and n == name]
+            if x is None:
+                # A route's goal: where its last waypoint fell on the map, in a run.
+                ends = [d['goal'] for t, n, _, _, _, d in results
+                        if t == tour and n == name and d.get('goal')]
+                x, y, heading = (*ends[0], 0.0) if ends else (math.nan, math.nan, math.nan)
             lines += [f'## {tour}: {name} (to {x:g}, {y:g}, facing {heading:g} deg)', '']
             if args.runs == 1:
                 rows = [(c, row) for c, row, _, _ in legs if row is not None]
@@ -1118,6 +1125,9 @@ def main():
     parser.add_argument('--stacks', nargs='+', choices=list(STACKS), default=None,
                         help="every navigation piece Nav2's (nav2) or ours (own: "
                              'navigator, planner, costmap, mppi_lag); forward only')
+    parser.add_argument('--launch', nargs='+', default=None, metavar='NAME:=VALUE',
+                        help='more sim.launch.py arguments for every run, such as '
+                             'lidar:=false (to find what a failure needs)')
     parser.add_argument('--runs', type=int, default=1,
                         help='drive each follower this many times (default 1; 3 for a real '
                              'comparison: the mean and spread)')
@@ -1181,15 +1191,16 @@ def main():
         for follower in followers(args):
             for run in range(1, args.runs + 1):
                 results += session(tour, follower, args, out_dir, body, used, run)
+    # The numbers first: a report that fails must not lose them.
+    with open(os.path.join(out_dir, 'results.json'), 'w') as f:
+        json.dump([{'tour': t, 'leg': n, 'controller': c, 'row': row, 'notes': notes, **drawn}
+                   for t, n, c, row, notes, drawn in results], f, indent=1, default=str)
     text = report(results, args, started)
     with open(os.path.join(out_dir, 'results.md'), 'w') as f:
         f.write(text)
     for tour in args.tours:
         with open(os.path.join(out_dir, f'{tour}.svg'), 'w') as f:
             f.write(picture(results, tour, args))
-    with open(os.path.join(out_dir, 'results.json'), 'w') as f:
-        json.dump([{'tour': t, 'leg': n, 'controller': c, 'row': row, 'notes': notes, **drawn}
-                   for t, n, c, row, notes, drawn in results], f, indent=1, default=str)
     print('\n' + text + f'\nSaved in {out_dir}', flush=True)
     return 0 if all(row and row['reached'] for _, _, _, row, _, _ in results) else 1
 
