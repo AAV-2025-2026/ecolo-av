@@ -3,7 +3,8 @@ Gazebo Harmonic as the car: world, the car from the URDF, the bridge and the ada
 
   ros2 launch aav_gazebo gazebo.launch.py [world:=empty|test_lot|road|campus] [gui:=true]
       [follow:=true] [obstacle:=false] [start_x:=0.0] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true]
-      [radar:=true] [actuator_model:=true] [faults:=false] [spine:=false] [arm:=true]
+      [radar:=true] [actuator_model:=true] [payload:=0] [adaptive_brake:=false]
+      [faults:=false] [spine:=false] [arm:=true]
       [esp32:=false] [esp32_loop:=pi] [chase_camera:=true]
       [bridge:=rust|python] [simulator:=gazebo|own]
 
@@ -313,6 +314,9 @@ def launch_setup(context):
                           'wheel_radius': float(v['wheel_diameter']) / 2.0,
                           'actuator_model': flag(context, 'actuator_model'),
                           'speed_loop': LaunchConfiguration('speed_loop').perform(context),
+                          'payload': float(LaunchConfiguration('payload').perform(context)),
+                          'adaptive_brake': flag(context, 'adaptive_brake'),
+                          'lag_scale': float(LaunchConfiguration('lag_scale').perform(context)),
                           'spine': spine, 'esp32': esp32}, sim_time]),
         # Each sensor in a process of its own, as on the car: none waits behind another.
         Node(package='aav_gazebo', executable='gazebo_imu', name='gazebo_imu',
@@ -408,6 +412,17 @@ def generate_launch_description():
                               description="the speed loop's profile: default (today's gains)"
                                           ', smooth (TODO 27) or lqi (TODO 3); in '
                                           'the actuator model, or spine_sim with spine:=true'),
+        DeclareLaunchArgument('payload', default_value='0',
+                              description='kg aboard the modelled car (people, cargo): it '
+                                          'speeds up and brakes less. Live: gazebo_adapter '
+                                          'payload'),
+        DeclareLaunchArgument('adaptive_brake', default_value='false',
+                              description='true: the adaptive brake after the actuator '
+                                          "model's speed loop (docs/stopping.md); not with "
+                                          'spine or esp32'),
+        DeclareLaunchArgument('lag_scale', default_value='1.0',
+                              description="the actuator model's throttle, brake and steering "
+                                          'lags times this (a robustness test)'),
         DeclareLaunchArgument('faults', default_value='false',
                               description='true: the front left picture goes through '
                                           'gazebo_adapter, so fault.camera can freeze it'),

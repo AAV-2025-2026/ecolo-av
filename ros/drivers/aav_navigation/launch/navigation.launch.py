@@ -8,8 +8,8 @@ Nav2 as one more driver: goals in, /drivers/nav/cmd_vel (TwistStamped) out to tw
       [diffusion_model:=] [diffusion_provider:=CPUExecutionProvider] [diffusion_record:=]
       [diffusion_python:=] [diffusion_smoothing:=gear]
       [plan_around:=true] [behaviour:=false]
-      [tracker:=none] [costmap:=nav2] [live_swap:=false] [amcl:=false] [amcl_x:=0.0] [amcl_y:=0.0]
-      [amcl_yaw:=0.0] [amcl_map:=]
+      [tracker:=none] [costmap:=nav2] [navigator:=nav2] [live_swap:=false] [amcl:=false]
+      [amcl_x:=0.0] [amcl_y:=0.0] [amcl_yaw:=0.0] [amcl_map:=]
       [use_sim_time:=false]
       [autostart:=true]
 
@@ -62,12 +62,13 @@ Trials (docs/trials.md), each beside the default and scored by pixi run measure 
                           own (aav_planner): our own planner, Nav2's State Lattice ported to
                           Rust (the same primitives file and penalties). Its planner node
                           serves /drivers/nav/planner/compute_path_to_pose and publishes
-                          /plan; bt_navigator's compute_path_to_pose is remapped to it.
-                          planner_server keeps the lattice beside it (navigate_through_poses
-                          still uses it), its /plan renamed /drivers/nav/planner/nav2_plan.
+                          /plan, and .../compute_path_through_poses; bt_navigator's two
+                          planner calls are remapped to it. planner_server keeps the lattice
+                          beside it, its /plan renamed /drivers/nav/planner/nav2_plan.
                           It plans on the global costmap costmap:= picks. car.launch.py
                           refuses it (docs/own-planner.md)
-  tracker:=pure_pursuit|stanley|lqr|mpc|mpc_full  aav_track's track node follows the path instead
+  tracker:=pure_pursuit|stanley|lqr|mpc|mpc_full|mpc_lag
+                          aav_track's track node follows the path instead
                           (tracker:=mppi_lag: aav_mppi_lag's mppi_lag node, Nav2's MPPI
                           with the actuators' lag; docs/mppi-lag.md)
                           of controller_server: it serves follow_path (bt_navigator's
@@ -81,6 +82,13 @@ Trials (docs/trials.md), each beside the default and scored by pixi run measure 
                           /drivers/nav/costmap/local and /global (and *_raw). Nav2's own
                           costmaps keep running; with tracker:=mppi_lag, mppi_lag reads our
                           local one instead of Nav2's (docs/own-costmap.md)
+  navigator:=own          aav_navigator's navigator (Rust, a trial): our own navigator in
+                          place of bt_navigator and waypoint_follower. It serves the same four
+                          actions under /drivers/nav/navigator/ and /goal_pose, and calls
+                          whichever planner, follower and costmap clears run. With
+                          planner:=own costmap:=own tracker:=mppi_lag (all ours) no Nav2
+                          server runs for navigation: only map_server, the velocity smoother
+                          and collision_monitor (docs/own-navigator.md)
   live_swap:=true         the tracker can change while it runs (`ros2 param set /track
                           tracker lqr`); sim.launch.py sets it, the car never does
   amcl:=true              stock nav2_amcl on the map and /sensors/lidar/scan (so only with
@@ -298,6 +306,15 @@ def nodes(context):
     # costmap:=own: aav_costmap beside Nav2's costmaps; own_local: the follower reads ours.
     costmap = vehicle.check_costmap(LaunchConfiguration('costmap').perform(context))
     own_local = costmap == 'own' and tracker == 'mppi_lag'
+    # navigator:=own: aav_navigator in place of bt_navigator and waypoint_follower. Each
+    # Nav2 server it no longer needs stays off: planner_server when our planner plans on
+    # our global costmap, controller_server (and its local costmap) when mppi_lag reads
+    # ours, behavior_server when nothing backs up (forward only) or its costmap is gone.
+    navigator = vehicle.check_navigator(LaunchConfiguration('navigator').perform(context))
+    own_navigator = navigator == 'own'
+    nav2_planner = not (own_navigator and own_planner and costmap == 'own')
+    nav2_controller = not (own_navigator and own_local)
+    nav2_behaviors = not own_navigator or (reversing and nav2_controller)
     servers = [
         ('nav2_map_server', 'map_server', []),
         ('nav2_planner', 'planner_server', [
@@ -320,11 +337,18 @@ def nodes(context):
         ('nav2_bt_navigator', 'bt_navigator',
          ([('local_costmap/clear_entirely_local_costmap',
             '/drivers/nav/costmap/clear_entirely_local')] if own_local else []) +
-         ([('compute_path_to_pose', vehicle.OWN_PLANNER_ACTION)] if own_planner else [])),
+         ([('compute_path_to_pose', vehicle.OWN_PLANNER_ACTION),
+           ('compute_path_through_poses', vehicle.OWN_PLANNER_THROUGH_ACTION)]
+          if own_planner else [])),
         ('nav2_waypoint_follower', 'waypoint_follower', []),
         ('nav2_velocity_smoother', 'velocity_smoother',
          [('cmd_vel', 'cmd_vel_nav'), ('cmd_vel_smoothed', smoothed)]),
     ]
+    dropped = ({'bt_navigator', 'waypoint_follower'} if own_navigator else set()) | (
+        set() if nav2_planner else {'planner_server'}) | (
+        set() if nav2_controller else {'controller_server'}) | (
+        set() if nav2_behaviors else {'behavior_server'})
+    servers = [s for s in servers if s[1] not in dropped]
     if collision_monitor:
         # Its marker topic is private (~/collision_points_marker): move it next to the
         # rest of what it publishes, under /safety/collision_monitor/.
@@ -357,7 +381,11 @@ def nodes(context):
             output='screen', respawn=True, respawn_delay=1.0,
             parameters=[vehicle.behaviour_params(nav2, cfg, ego,
                                                  float(speed) if speed else None, controller),
-                        {'obstacles': lidar and not voxels, 'use_sim_time': use_sim_time}]))
+                        {'obstacles': lidar and not voxels, 'use_sim_time': use_sim_time,
+                         # Every navigator action: a goal running on any of them.
+                         'goal_status_topics': [
+                             vehicle.navigator_action(navigator, a) + '/_action/status'
+                             for a in vehicle.NAVIGATOR_ACTIONS]}]))
     if collision_monitor:
         # Holds collision_monitor's stops (aav_safety stop_hold, twist_mux's stop_zone
         # lock): Jazzy's monitor flickers between stop and go at its zone's edge. Not a
@@ -408,6 +436,34 @@ def nodes(context):
                          'costmap_updates_topic': updates,
                          'costmap_latched': str(latched).lower(),
                          'use_sim_time': use_sim_time}]))
+    if own_navigator:
+        # aav_navigator (Rust): the trees' logic and waypoint_follower's, calling whichever
+        # planner, follower and costmaps run. Not a lifecycle node.
+        clear_local = ((['/drivers/nav/costmap/clear_entirely_local'] if costmap == 'own'
+                        else []) +
+                       (['/local_costmap/clear_entirely_local_costmap'] if nav2_controller
+                        else []))
+        clear_global = ((['/drivers/nav/costmap/clear_entirely_global'] if costmap == 'own'
+                         else []) +
+                        (['/global_costmap/clear_entirely_global_costmap'] if nav2_planner
+                         else []))
+        navsat = (FindPackageShare('aav_localization').perform(context) +
+                  '/config/navsat.yaml')
+        actions.append(Node(
+            package='aav_navigator', executable='navigator', name='navigator',
+            output='screen',
+            parameters=[{
+                'settings': json.dumps(vehicle.navigator_params(v, reversing)),
+                'planner_action': (vehicle.OWN_PLANNER_ACTION if own_planner
+                                   else '/compute_path_to_pose'),
+                'planner_through_action': (vehicle.OWN_PLANNER_THROUGH_ACTION if own_planner
+                                           else '/compute_path_through_poses'),
+                'follow_action': '/follow_path',
+                'clear_local': ','.join(clear_local),
+                'clear_global': ','.join(clear_global),
+                'backup_action': '/backup' if reversing and nav2_behaviors else '',
+                'navsat_file': navsat,
+                'use_sim_time': use_sim_time}]))
     if tracker != 'none':
         # Not a lifecycle node: it serves follow_path from the start. Nav2's own numbers
         # (the speed, the checks), so every follower is held to the same.
@@ -585,6 +641,11 @@ def generate_launch_description():
                                           "costmaps beside Nav2's, on /drivers/nav/costmap/"
                                           '*; tracker:=mppi_lag then reads its local one. '
                                           'docs/own-costmap.md'),
+        DeclareLaunchArgument('navigator', default_value=vehicle.DEFAULT_NAVIGATOR,
+                              description='nav2 (the default: bt_navigator and '
+                                          'waypoint_follower) or own: aav_navigator, our own, '
+                                          'on /drivers/nav/navigator/*; car.launch.py refuses '
+                                          'it (docs/own-navigator.md)'),
         DeclareLaunchArgument('tracker', default_value=vehicle.DEFAULT_TRACKER,
                               description="a trial path follower in controller_server's "
                                           'place (aav_track; mppi_lag: aav_mppi_lag): ' +

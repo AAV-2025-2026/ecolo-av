@@ -1,0 +1,26 @@
+[package]
+name = "navigator-node"
+description = "navigator: the ROS 2 node around the navigator crate, in bt_navigator's and waypoint_follower's place"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "navigator"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+# SIGINT, plus SIGTERM and SIGHUP: rclrs 0.8 has no signal handling of its own yet.
+ctrlc = { version = "3", features = ["termination"] }
+# The one-shot channel from the goal's task to the state machine.
+futures = "0.3"
+# The datum: lat/lon to the map exactly as navsat_transform does (the map window's).
+map-core = { path = "../../../../hud/aav_hud/crates/map-core" }
+navigator = { path = "../navigator" }
+rclrs = "0.8"
+# The message types: compiled from the Rust code that ships with Jazzy (AMENT_PREFIX_PATH).
+ros-env = "0.3"
+# The launch file hands the settings over as one JSON parameter.
+serde_json = "1"

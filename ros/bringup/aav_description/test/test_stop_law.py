@@ -96,3 +96,16 @@ def test_the_stop_point_from_the_car_model():
     assert late > one
     with pytest.raises(ValueError):
         stop_point(cfg, 0.0, 1.0)
+
+
+def test_following_recorded_commands_gives_the_ramps_stop_point():
+    # A set speed falling at 1 m/s^2 from 1.5 m/s, as a run records it at 50 Hz.
+    commands = [(10.0 + 0.02 * i, max(0.0, 1.5 - 0.02 * (i + 1))) for i in range(100)]
+    ramp, _ = stop_point(ActuatorConfig(), 1.5, 1.0, dt=0.02)
+    followed, _ = stop_law.stop_following(ActuatorConfig(), 1.5, commands, dt=0.02)
+    assert followed == pytest.approx(ramp, abs=0.01)
+    # A loaded car, told the same, stops further.
+    heavy, _ = stop_law.stop_following(ActuatorConfig(payload=150.0), 1.5, commands, dt=0.02)
+    assert heavy > followed + 0.1
+    with pytest.raises(ValueError):
+        stop_law.stop_following(ActuatorConfig(), 1.5, [])

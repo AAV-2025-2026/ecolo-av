@@ -46,7 +46,8 @@ no command timeout). `esp32_loop:=pi|open` is the bridge's `speed_loop.mode`.
 
 Arguments: `world` (empty, test_lot, road), `gui`, `follow`, `obstacle`, `start_y` (m),
 `start_yaw` (rad), `lidar`, `radar`, `actuator_model`, `speed_loop`, `faults`, `spine`,
-`arm`, `bridge` (rust or python), `esp32`, `esp32_loop` (pi or open).
+`arm`, `bridge` (rust or python), `esp32`, `esp32_loop` (pi or open), `payload` (kg
+aboard), `adaptive_brake`.
 
 ### Nodes
 
@@ -64,7 +65,7 @@ Arguments: `world` (empty, test_lot, road), `gui`, `follow`, `obstacle`, `start_
 
 | Node | Parameters |
 |---|---|
-| `gazebo_adapter` | `actuator_model` (true), `speed_loop` (default, smooth or lqi), `spine` (false), `esp32` (false), `rate_hz` (50), `cmd_timeout` (0.2 s), `wheelbase`, `wheel_radius` (m, from `vehicle.yaml` via the launch file), `rendered`, `radar`, `lidar`, `speed_variance`, `fault.odom` |
+| `gazebo_adapter` | `actuator_model` (true), `speed_loop` (default, smooth or lqi), `payload` (0 kg aboard, live), `adaptive_brake` (false, live; not with spine or esp32: `docs/stopping.md`), `spine` (false), `esp32` (false), `rate_hz` (50), `cmd_timeout` (0.2 s), `wheelbase`, `wheel_radius` (m, from `vehicle.yaml` via the launch file), `rendered`, `radar`, `lidar`, `speed_variance`, `fault.odom` |
 | `gazebo_imu` | `gyro_stddev` (0.02 rad/s), `accel_stddev` (0.2 m/s²), `imu_x` (m), `gyro_bias` (rad/s), `fault.imu` |
 | `gazebo_gps` | `gps_stddev` (0.5 m), `gps_speed_stddev` (0.05 m/s), `antenna_x`, `antenna_y` (m), `every` (1), `fault.gps` |
 | `gazebo_radar` | `radar_range` (8.4 m), `fault.radar` |

@@ -5,6 +5,11 @@
 //!                                         the car (or the goal's start, use_start) to the
 //!                                         goal, in map. navigation.launch.py planner:=own
 //!                                         points bt_navigator's compute_path_to_pose here
+//!             drivers/nav/planner/compute_path_through_poses
+//!                                         nav2_msgs/action/ComputePathThroughPoses: one path
+//!                                         through each goal in turn (a plan a leg, joined, as
+//!                                         planner_server does); bt_navigator's and our
+//!                                         navigator's (aav_navigator) are pointed here
 //! Subscribes  costmap_topic               nav2_msgs/Costmap: the global costmap the plan is
 //!                                         made on: Nav2's /global_costmap/costmap_raw
 //!                                         (latched, with costmap_updates_topic's
@@ -38,7 +43,10 @@ use rclrs::*;
 use ros_env::builtin_interfaces::msg::{Duration as DurationMsg, Time};
 use ros_env::diagnostic_msgs::msg::{DiagnosticStatus, KeyValue};
 use ros_env::geometry_msgs::msg::{Pose as PoseMsg, PoseStamped, Quaternion};
-use ros_env::nav2_msgs::action::{ComputePathToPose, ComputePathToPose_Result as Answer};
+use ros_env::nav2_msgs::action::{
+    ComputePathThroughPoses, ComputePathThroughPoses_Result as ThroughAnswer, ComputePathToPose,
+    ComputePathToPose_Result as Answer,
+};
 use ros_env::nav2_msgs::msg::{Costmap as CostmapMsg, CostmapUpdate};
 use ros_env::nav_msgs::msg::Path;
 use ros_env::std_msgs::msg::Header;
@@ -46,6 +54,7 @@ use ros_env::tf2_msgs::msg::TFMessage;
 use serde_json::Value;
 
 const ACTION: &str = "/drivers/nav/planner/compute_path_to_pose";
+const THROUGH_ACTION: &str = "/drivers/nav/planner/compute_path_through_poses";
 const PLAN_TOPIC: &str = "/plan";
 const STATUS_TOPIC: &str = "/drivers/nav/planner/status";
 
@@ -79,6 +88,7 @@ fn main() -> Result<()> {
     }
     let spec: Value = serde_json::from_str(&settings_json).context("settings: JSON")?;
     let planner = Arc::new(build(&spec)?);
+    let planner_through = Arc::clone(&planner);
     log_info!(
         node.logger(),
         "State Lattice (ours): {} headings, {} m cells, turning radius {} m, reversing {}; \
@@ -141,10 +151,16 @@ fn main() -> Result<()> {
                 let asked = goal.goal().clone();
                 // The newest costmap and the car's pose, from the worker.
                 let inputs = worker
-                    .run(move |s: &mut Core| s.inputs(&asked))
+                    .run(move |s: &mut Core| {
+                        s.inputs(
+                            std::slice::from_ref(&asked.goal),
+                            asked.use_start,
+                            &asked.start,
+                        )
+                    })
                     .await
                     .unwrap_or_else(|_| Err((Answer::UNKNOWN, "the node is stopping".into())));
-                let (grid, start, goal_pose, stamp) = match inputs {
+                let (grid, start, goal_poses, stamp) = match inputs {
                     Ok(i) => i,
                     Err((code, why)) => {
                         let _ = worker.run(move |s: &mut Core| s.failed(code, &why)).await;
@@ -155,7 +171,7 @@ fn main() -> Result<()> {
                 let stop_thread = Arc::clone(&stop);
                 let (done, finished) = oneshot::channel();
                 std::thread::spawn(move || {
-                    let r = planner.plan(&grid, &start, &goal_pose, &|| {
+                    let r = planner.plan(&grid, &start, &goal_poses[0], &|| {
                         stop_thread.load(Ordering::Relaxed)
                     });
                     let _ = done.send(r);
@@ -181,6 +197,82 @@ fn main() -> Result<()> {
                         stop.store(true, Ordering::Relaxed);
                         goal.begin_cancelling()
                             .cancelled_with(answer_error(Answer::NONE, "cancelled"))
+                    }
+                }
+            }
+        },
+    )?;
+
+    let goals = worker.clone();
+    let _through = node.create_action_server::<ComputePathThroughPoses, _>(
+        THROUGH_ACTION,
+        move |requested: RequestedGoal<ComputePathThroughPoses>| {
+            let worker = goals.clone();
+            let planner = Arc::clone(&planner_through);
+            async move {
+                let goal = requested.accept().execute();
+                let asked = goal.goal().clone();
+                if asked.goals.is_empty() {
+                    return goal.aborted_with(through_error(
+                        ThroughAnswer::NO_VIAPOINTS_GIVEN,
+                        "no goals given",
+                    ));
+                }
+                let inputs = worker
+                    .run(move |s: &mut Core| s.inputs(&asked.goals, asked.use_start, &asked.start))
+                    .await
+                    .unwrap_or_else(|_| Err((Answer::UNKNOWN, "the node is stopping".into())));
+                let (grid, start, goal_poses, stamp) = match inputs {
+                    Ok(i) => i,
+                    Err((code, why)) => {
+                        let _ = worker.run(move |s: &mut Core| s.failed(code, &why)).await;
+                        return goal.aborted_with(through_error(code + 100, "see the status"));
+                    }
+                };
+                let stop = Arc::new(AtomicBool::new(false));
+                let stop_thread = Arc::clone(&stop);
+                let (done, finished) = oneshot::channel();
+                std::thread::spawn(move || {
+                    let r = planner.plan_through(&grid, &start, &goal_poses, &|| {
+                        stop_thread.load(Ordering::Relaxed)
+                    });
+                    let _ = done.send(r);
+                });
+                match goal.until_cancel_requested(finished).await {
+                    Ok(Ok(Ok(plan))) => {
+                        let reply = worker
+                            .run(move |s: &mut Core| s.succeeded(&plan, stamp))
+                            .await;
+                        match reply {
+                            Ok(a) => goal.succeeded_with(ThroughAnswer {
+                                path: a.path,
+                                planning_time: a.planning_time,
+                                error_code: ThroughAnswer::NONE,
+                                error_msg: String::new(),
+                            }),
+                            Err(_) => {
+                                goal.aborted_with(through_error(ThroughAnswer::UNKNOWN, "stopping"))
+                            }
+                        }
+                    }
+                    Ok(Ok(Err((leg, e)))) => {
+                        // Nav2's through-poses codes are its to-pose ones plus 100.
+                        let code = error_code(e);
+                        let text = format!("leg {}: {e}", leg + 1);
+                        let reply = text.clone();
+                        let _ = worker.run(move |s: &mut Core| s.failed(code, &text)).await;
+                        let through = if code == Answer::NONE {
+                            code
+                        } else {
+                            code + 100
+                        };
+                        goal.aborted_with(through_error(through, &reply))
+                    }
+                    Ok(Err(_)) => goal.aborted_with(through_error(ThroughAnswer::UNKNOWN, "lost")),
+                    Err(_) => {
+                        stop.store(true, Ordering::Relaxed);
+                        goal.begin_cancelling()
+                            .cancelled_with(through_error(ThroughAnswer::NONE, "cancelled"))
                     }
                 }
             }
@@ -295,6 +387,14 @@ fn error_code(e: PlanError) -> u16 {
     }
 }
 
+fn through_error(code: u16, why: &str) -> ThroughAnswer {
+    ThroughAnswer {
+        error_code: code,
+        error_msg: why.into(),
+        ..Default::default()
+    }
+}
+
 fn answer_error(code: u16, why: &str) -> Answer {
     Answer {
         error_code: code,
@@ -342,7 +442,7 @@ fn compose(a: &Pose, b: &Pose) -> Pose {
     )
 }
 
-type Inputs = (Arc<Grid>, Pose, Pose, Time);
+type Inputs = (Arc<Grid>, Pose, Vec<Pose>, Time);
 
 impl Core {
     fn on_costmap(&mut self, msg: &CostmapMsg) {
@@ -403,10 +503,12 @@ impl Core {
         }
     }
 
-    /// What a goal needs: the costmap, the start, the goal, and the time now.
+    /// What a goal needs: the costmap, the start, the goals, and the time now.
     fn inputs(
         &self,
-        asked: &ros_env::nav2_msgs::action::ComputePathToPose_Goal,
+        goals: &[PoseStamped],
+        use_start: bool,
+        start: &PoseStamped,
     ) -> Result<Inputs, (u16, String)> {
         let grid = self
             .grid
@@ -416,20 +518,20 @@ impl Core {
             let f = f.trim_start_matches('/');
             f.is_empty() || f == self.frames.map
         };
-        if !frame_ok(&asked.goal.header.frame_id) {
+        if let Some(wrong) = goals.iter().find(|g| !frame_ok(&g.header.frame_id)) {
             return Err((
                 Answer::TF_ERROR,
                 format!(
-                    "the goal is in {}, not {}",
-                    asked.goal.header.frame_id, self.frames.map
+                    "a goal is in {}, not {}",
+                    wrong.header.frame_id, self.frames.map
                 ),
             ));
         }
-        let start = if asked.use_start {
-            if !frame_ok(&asked.start.header.frame_id) {
+        let start = if use_start {
+            if !frame_ok(&start.header.frame_id) {
                 return Err((Answer::TF_ERROR, "the start is not in the map frame".into()));
             }
-            pose_of(&asked.start.pose)
+            pose_of(&start.pose)
         } else {
             match (&self.map_odom, &self.odom_base) {
                 (Some(a), Some(b)) => compose(a, b),
@@ -442,7 +544,8 @@ impl Core {
             }
         };
         let stamp = self.clock.now().to_ros_msg().unwrap_or_default();
-        Ok((grid, start, pose_of(&asked.goal.pose), stamp))
+        let goals = goals.iter().map(|g| pose_of(&g.pose)).collect();
+        Ok((grid, start, goals, stamp))
     }
 
     fn succeeded(&mut self, plan: &Plan, stamp: Time) -> Answer {

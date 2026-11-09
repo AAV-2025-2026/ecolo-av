@@ -7,7 +7,7 @@
 <!-- Generated from docs/stopping.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>How the car stops</h1>
-<div class="meta">8 min read · 3 sections</div></header>
+<div class="meta">12 min read · 4 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -61,6 +61,7 @@
 <a href="mppi-lag.html">MPPI with lag</a>
 <a href="own-costmap.html">Our own costmap</a>
 <a href="own-planner.html">Our own planner</a>
+<a href="own-navigator.html">Our own navigator</a>
 <a class="here" href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
@@ -111,7 +112,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#1-the-stopping-law">1. The stopping law</a><a href="#2-the-behaviour-planner">2. The behaviour planner</a><a href="#3-where-the-car-really-stops">3. Where the car really stops</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#1-the-stopping-law">1. The stopping law</a><a href="#2-the-behaviour-planner">2. The behaviour planner</a><a href="#3-where-the-car-really-stops">3. Where the car really stops</a><a href="#4-a-heavier-car-the-adaptive-brake">4. A heavier car: the adaptive brake</a></nav>
 <div class="lead"><p>One stopping law for every planned stop, a behaviour planner that uses it to slow Nav2,
 and a check of where the car really stops. Ben, 7 Nov: "we can use that to say if we have
 turned enough or slowing down enough". The designs:
@@ -513,8 +514,249 @@ later, with a tape measure for the truth.</p>
 </tbody>
 </table></div>
 <p>The stopping law plans far more (0.95, 1.42 and 1.93 m): it plans a gentle stop at
-1 m/s², not a full brake.</p></section>
-<nav class="prevnext"><a class="prev" href="own-planner.html"><small>Previous</small>← Our own planner</a>
+1 m/s², not a full brake.</p>
+</section>
+<section class="card"><h2 id="4-a-heavier-car-the-adaptive-brake">4. A heavier car: the adaptive brake</h2>
+<p>Ben, 8 Nov: "if we brake without a person vs with a person ... we are going to need to
+dynamically realize that we aren't braking as fast as we expect and start applying more
+force. We don't want to overwhelm the brakes though."</p>
+<p>The same brake stops a heavier car more slowly (a = F / m). With 150 kg aboard, the
+181 kg car brakes at 55 % of its empty strength.</p>
+<h3 id="where-it-sits">Where it sits</h3>
+<pre class="highlight"><code class="language-text"> ego ─▶ speed loop ─▶ brake asked ─▶ adaptive brake ─▶ brake sent ─▶ brake actuator
+                                         ▲
+                                   wheel speed
+
+ e-stop, stale command, silent spine ─▶ full brake   (the locks: never through it)</code></pre>
+<p>Below ego and every safety lock: it only adds to what the speed loop asks.</p>
+<h3 id="what-it-does-each-tick">What it does, each tick</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>measures the slowing from the wheel speed</td>
+</tr>
+<tr>
+<td>2</td>
+<td>works out the slowing the <strong>empty</strong> car model expects for the brake sent</td>
+</tr>
+<tr>
+<td>3</td>
+<td>learns the <strong>effectiveness</strong>: measured ÷ expected (1 empty, 0.55 with 150 kg)</td>
+</tr>
+<tr>
+<td>4</td>
+<td>brakes harder by 1 ÷ effectiveness (at most 3 times)</td>
+</tr>
+<tr>
+<td>5</td>
+<td>the extra rises at most 2 (full brake) a second</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>never above the safe max</strong></td>
+</tr>
+<tr>
+<td>7</td>
+<td>near the safe max for longer than <strong>max hold time</strong>: the extra comes off</td>
+</tr>
+</tbody>
+</table></div>
+<p>It keeps what it learnt from stop to stop: a person aboard stays aboard.</p>
+<h3 id="the-brakes-limits-vehicleyaml-brake">The brake's limits (<code>vehicle.yaml</code>, <code>brake:</code>)</h3>
+<p>Like the steering's ends. <strong>Placeholders</strong> until car day A7, rows 6-8
+(<a href="car-day.html#a7-the-brake-on-stands">car day</a>).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Key</th>
+<th>Placeholder</th>
+<th>Means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>released</code></td>
+<td>400</td>
+<td>the brake actuator's target with the brake let go</td>
+</tr>
+<tr>
+<td><code>touch</code></td>
+<td>800</td>
+<td>where the pads start to grip</td>
+</tr>
+<tr>
+<td><code>full</code></td>
+<td>3500</td>
+<td>full brake</td>
+</tr>
+<tr>
+<td><code>safe_max</code></td>
+<td>3200</td>
+<td>the most the brake may ever be pushed</td>
+</tr>
+<tr>
+<td><code>max_hold_time</code></td>
+<td>5 s</td>
+<td>how long near <code>safe_max</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>released</code> and <code>full</code> must match the firmware's (<code>calibration.rs</code>); a test checks.</p>
+<h3 id="try-it">Try it</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Command</th>
+<th>What</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pixi run sim payload:=150</code></td>
+<td>a heavier car, the adaptive brake off</td>
+</tr>
+<tr>
+<td><code>pixi run sim payload:=150 adaptive_brake:=true</code></td>
+<td>the same, with it on</td>
+</tr>
+<tr>
+<td><code>ros2 param set /gazebo_adapter payload 90</code></td>
+<td>change the load while it runs</td>
+</tr>
+<tr>
+<td><code>pixi run sim-check --loaded-stop-only</code></td>
+<td>the check below</td>
+</tr>
+</tbody>
+</table></div>
+<p>Not with <code>spine:=true</code> or <code>esp32:=true</code>: there the firmware decides the brake.</p>
+<h3 id="the-check-loaded-stop">The check: <code>--loaded-stop</code></h3>
+<p>A stop from 2 m/s at 1 m/s², four times. The prediction is always the <strong>empty</strong> car
+model's. Pass: within 0.25 m.</p>
+<h3 id="numbers-8-nov-the-car-model-alone">Numbers (8 Nov): the car model alone</h3>
+<p><code>test_adaptive_brake.py</code>, from 2 m/s; the empty model says 3.35 m.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Aboard</th>
+<th>Adaptive brake</th>
+<th>Stopped in</th>
+<th>Off by</th>
+<th>Most brake</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0 kg</td>
+<td>off</td>
+<td>3.35 m</td>
+<td>0.00 m</td>
+<td>0.30</td>
+</tr>
+<tr>
+<td>150 kg</td>
+<td>off</td>
+<td>3.93 m</td>
+<td><strong>+0.58 m</strong></td>
+<td>0.42</td>
+</tr>
+<tr>
+<td>0 kg</td>
+<td>on</td>
+<td>3.35 m</td>
+<td>0.00 m</td>
+<td>0.30</td>
+</tr>
+<tr>
+<td>150 kg</td>
+<td>on</td>
+<td>3.40 m</td>
+<td>+0.04 m</td>
+<td>0.59</td>
+</tr>
+<tr>
+<td>150 kg</td>
+<td>on, the next stop</td>
+<td>3.23 m</td>
+<td>−0.12 m</td>
+<td>0.55</td>
+</tr>
+</tbody>
+</table></div>
+<p>It learnt 0.55, the right share. The next stop brakes harder from the start, so it stops
+a little short.</p>
+<h3 id="in-the-simulator-8-nov">In the simulator (8 Nov)</h3>
+<p><code>pixi run sim-check --loaded-stop-only</code>, our simulator, the empty world. Each against
+the empty car model fed the same commands.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Aboard</th>
+<th>Adaptive brake</th>
+<th>From</th>
+<th>Model</th>
+<th>Truth</th>
+<th>Off by</th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0 kg</td>
+<td>off</td>
+<td>1.77 m/s</td>
+<td>3.00 m</td>
+<td>3.05 m</td>
+<td>+0.04 m</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>150 kg</td>
+<td>off</td>
+<td>2.05 m/s</td>
+<td>3.20 m</td>
+<td>4.08 m</td>
+<td><strong>+0.87 m</strong></td>
+<td>✅ (must miss)</td>
+</tr>
+<tr>
+<td>0 kg</td>
+<td>on</td>
+<td>1.77 m/s</td>
+<td>3.00 m</td>
+<td>3.05 m</td>
+<td>+0.05 m</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>150 kg</td>
+<td>on</td>
+<td>2.05 m/s</td>
+<td>3.22 m</td>
+<td>3.43 m</td>
+<td>+0.21 m</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>150 kg</td>
+<td>on, the next stop</td>
+<td>2.05 m/s</td>
+<td>3.22 m</td>
+<td>3.27 m</td>
+<td>+0.05 m</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table></div>
+<p>The first loaded stop learns while it brakes; the next one starts knowing.</p></section>
+<nav class="prevnext"><a class="prev" href="own-navigator.html"><small>Previous</small>← Our own navigator</a>
 <a class="next" href="a-to-b.html"><small>Next</small>A to B →</a></nav>
 </main>
 <footer>Source: <code>docs/stopping.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>

@@ -6,6 +6,7 @@ Each tracker must converge, reach the end, never ask beyond full lock or the ste
 rate, and (MPC) plan each tick well inside the 50 ms a 20 Hz tick allows.
 """
 
+from dataclasses import replace
 import math
 import statistics
 
@@ -13,9 +14,10 @@ from aav_track.path import Path
 from aav_track.trackers import Limits, make, State
 from aav_track.trackers.lqr import LQR
 import pytest
+import sim_car
 from sim_car import arc, follow, LIMITS, MODEL, straight, tracker, uturn, widest
 
-TRACKERS = ['pure_pursuit', 'stanley', 'lqr', 'mpc', 'mpc_full']
+TRACKERS = ['pure_pursuit', 'stanley', 'lqr', 'mpc', 'mpc_full', 'mpc_lag']
 
 
 def check_limits(run, period=0.05):
@@ -48,7 +50,8 @@ def test_a_step_offset_converges(name, speed):
 
 # The worst off-path in the bend, m. Stanley's has no feed-forward for the bend: the front
 # axle sits on the path, so base_link cuts the corner (L^2 / 2R, about 0.15 m on an 8 m bend).
-BEND = {'pure_pursuit': 0.25, 'stanley': 0.25, 'lqr': 0.1, 'mpc': 0.05, 'mpc_full': 0.1}
+BEND = {'pure_pursuit': 0.25, 'stanley': 0.25, 'lqr': 0.1, 'mpc': 0.05, 'mpc_full': 0.1,
+        'mpc_lag': 0.05}
 
 
 @pytest.mark.parametrize('name', TRACKERS)
@@ -98,7 +101,7 @@ def test_lqr_previews_a_bend_ahead():
 # in a 14 m lane, at 1 m/s. At the planner's radius (full lock x 1.25: 3.6 m) and at full
 # lock itself (2.88 m), where nothing is left to correct with: the worst off the path, m.
 UTURN = {'pure_pursuit': (0.2, 0.35), 'stanley': (0.5, 0.6), 'lqr': (0.1, 0.35),
-         'mpc': (0.1, 0.4), 'mpc_full': (0.15, 0.25)}
+         'mpc': (0.1, 0.4), 'mpc_full': (0.15, 0.25), 'mpc_lag': (0.1, 0.4)}
 FULL_LOCK = LIMITS.wheelbase / math.tan(LIMITS.max_steer)
 
 
@@ -211,3 +214,75 @@ def test_seen_late_it_still_settles(name):
     assert run.reached and max(run.cross(beyond=20.0)) < 0.05
     run = follow(tracker(name), uturn(1.25 * FULL_LOCK), (0.0, 0.0, 0.0), delay=0.2)
     assert run.reached and widest(run) < 5.0
+
+
+# --- mpc_lag: the car's lags in its plan --------------------------------------------------
+
+def test_mpc_lag_says_it_is_lag_aware_and_no_other_does():
+    # The node tells ego on /drivers/nav/lag_aware: ego's lead stays off only for mpc_lag.
+    assert tracker('mpc_lag').lag_aware
+    assert not any(tracker(n).lag_aware for n in TRACKERS if n != 'mpc_lag')
+
+
+def test_mpc_lag_holds_its_speed_without_the_loops_overshoot():
+    # The spine's PI overshoots a step of set speed by about 14 % (TODO 27); the shared
+    # policy's trackers ride it. mpc_lag predicts it, and eases the set speed in.
+    lag = follow(tracker('mpc_lag'), straight(), (0.0, 0.0, 0.0), cruise=1.0)
+    pp = follow(tracker('pure_pursuit'), straight(), (0.0, 0.0, 0.0), cruise=1.0)
+    assert lag.reached and max(r[4] for r in lag.rows) < 1.03
+    assert max(r[4] for r in pp.rows) > 1.1
+    check_speed(lag, 1.0, throttle=1.0, brake=2.0)
+
+
+def test_mpc_lag_on_the_u_turn_at_2_m_s():
+    # At 2 m/s the steering swings lock to lock as fast as it can. With vehicle.yaml's lags
+    # it is about as close as mpc (0.10 against 0.09 m, 7 Nov); with the car's lags twice
+    # what it was told, it holds the path better than mpc and lqr.
+    def worst(name, scale):
+        run = follow(tracker(name), uturn(), (0, 0, 0), cruise=2.0, lag_scale=scale)
+        assert run.reached and widest(run) < 5.5
+        check_limits(run)
+        return max(run.cross())
+
+    assert worst('mpc_lag', 1.0) < 0.12
+    doubled = {n: worst(n, 2.0) for n in ('mpc', 'lqr', 'mpc_lag')}
+    assert doubled['mpc_lag'] < min(doubled['mpc'], doubled['lqr'])
+    assert doubled['mpc_lag'] < 0.25
+
+
+def test_mpc_lag_stops_on_the_goal():
+    run = follow(tracker('mpc_lag'), straight(12.0), (0.0, 0.0, 0.0), cruise=3.0)
+    assert run.reached
+    for row, v in zip(run.rows, run.asked):
+        assert v <= math.sqrt(2 * 1.5 * max(12.0 - row[1], 0.0)) + 0.15
+    check_speed(run, 3.0, throttle=1.0, brake=2.0)
+
+
+def test_mpc_lag_keeps_the_commands_inside_a_dead_time():
+    # 0.1 s of steering dead time and the 0.1 s chain: four ticks of commands in its state.
+    car = replace(sim_car.CAR, steer_dead_time=0.1, throttle_dead_time=0.05)
+    trk = make('mpc_lag', LIMITS, car)
+    assert (trk.d_steer, trk.d_speed) == (4, 3)
+    trk.reset(Path(straight()))
+    for _ in range(3):
+        trk.step(State(0.0, 0.0, 0.0, 0.0), 0.05)
+    assert len(trk.steer_queue) == 4 and len(trk.speed_queue) == 3
+
+
+def test_mpc_lag_plans_inside_a_tick():
+    # Loose, for a busy laptop: 50 ms is the whole 20 Hz tick.
+    run = follow(tracker('mpc_lag'), uturn(), (0.0, 0.0, 0.0), cruise=2.0)
+    mean = statistics.mean(run.step_ms)
+    print(f'\nmpc_lag step: {mean:.2f} ms mean, {max(run.step_ms):.1f} ms worst')
+    assert mean < 25.0
+
+
+def test_mpc_lag_refuses_bad_numbers():
+    with pytest.raises(ValueError, match='lags'):
+        make('mpc_lag', LIMITS)
+    with pytest.raises(ValueError):
+        tracker('mpc_lag', horizon=1)
+    with pytest.raises(ValueError):
+        tracker('mpc_lag', latency=-0.1)
+    with pytest.raises(ValueError, match='lqi'):
+        tracker('mpc_lag', speed_loop='lqi')

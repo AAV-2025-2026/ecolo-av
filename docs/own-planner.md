@@ -36,9 +36,9 @@ planner_server (Nav2's lattice) keeps running beside it: /compute_path_to_pose
 | `/drivers/nav/planner/status` | DiagnosticStatus | each plan's times, length, cusps, or why none |
 | `/drivers/nav/planner/nav2_plan` | nav_msgs/Path | Nav2's lattice's own `/plan`, moved aside |
 
-**How the swap works.** `navigation.launch.py` remaps one name in `bt_navigator`:
-`compute_path_to_pose` → ours. The costmap step did the same with the clear service.
-`navigate_through_poses` still plans with Nav2's lattice (not ported yet).
+**How the swap works.** `navigation.launch.py` remaps two names in `bt_navigator`:
+`compute_path_to_pose` and `compute_path_through_poses` → ours. The costmap step did the
+same with the clear service. Our navigator ([page](own-navigator.md)) calls both too.
 
 ## What it does
 
@@ -140,6 +140,8 @@ Same spot, same map, leg by leg: the lengths agree within 2 m (once 2.2 m: 44.2 
 
 - **Hybrid-A*** (the forward-only default on the car): not ported. `planner:=own` with
   `reversing:=false` plans Dubins moves on the lattice instead.
-- **`navigate_through_poses`** still uses Nav2's planner (`ComputePathThroughPoses`).
-- **The navigator step** (next) must call ours for both, and clear our global costmap.
+- **`ComputePathThroughPoses`**: done 8 Nov (`/drivers/nav/planner/compute_path_through_poses`,
+  a plan a leg, joined, as Nav2's planner_server does).
+- **The navigator step**: done 8 Nov ([our own navigator](own-navigator.md)): it calls
+  ours for both, and clears our global costmap.
 - **On the car:** untested; the car refuses `planner:=own`.

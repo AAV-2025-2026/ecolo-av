@@ -29,6 +29,9 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
                                             against ours while the car stands still)
     pixi run sim-check --tracker mppi_lag  (every run with that path follower, tracker:=;
                                             with --costmap own it reads our costmap)
+    pixi run sim-check --navigator own     (every run with our own navigator, navigator:=own,
+                                            aav_navigator; with --planner own --costmap own
+                                            --tracker mppi_lag, no Nav2 server navigates)
     pixi run sim-check --legs-only --lidar-obstacle --plan-around
                                            (only the extra runs named, not the road
                                             world's first run: the costmap's scoring)
@@ -74,7 +77,13 @@ Sim check: start Gazebo's road world headless, then test the car's whole graph i
                                             The empty world, one more run;
                                             --stop-point-only skips the road world's run.
                                             docs/stopping.md)
-    pixi run sim-check --behaviour         (the behaviour trial, behaviour:=true: an
+    pixi run sim-check --loaded-stop       (a stop from 2 m/s, empty and with 150 kg
+                                            aboard, the adaptive brake off and on: each
+                                            against the empty car model's stop, within
+                                            0.25 m with the adaptive brake. The empty
+                                            world, one more run; --loaded-stop-only skips
+                                            the road world's run. docs/stopping.md)
+    pixi run sim-check --behaviour        (the behaviour trial, behaviour:=true: an
                                             obstacle in the lane and a Nav2 goal, each
                                             slowed by the speed cap, and with -e ml
                                             --perception the stop sign too; one more run.
@@ -212,6 +221,7 @@ from aav_gazebo.faults import NODES as FAULT_NODES  # noqa: E402
 from aav_interfaces.action import DriveToPoint, ScriptedDrive  # noqa: E402
 from aav_interfaces.msg import ActuatorState, SpineOutputs, VehicleStatus  # noqa: E402
 from aav_lane_geometry.msg import LaneGeometry  # noqa: E402
+from ackermann_msgs.msg import AckermannDriveStamped  # noqa: E402
 import costmap_diff  # noqa: E402
 from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus  # noqa: E402
 from geometry_msgs.msg import PoseStamped, TwistStamped  # noqa: E402
@@ -476,6 +486,11 @@ class Probe(Node):
         self.create_subscription(TwistStamped, '/control/cmd_vel',
                                  lambda m: self.commands.append(
                                      (seconds(m.header.stamp), m.twist.linear.x)), 10)
+        # (stamp, speed) of what the backend got from ego, for --loaded-stop
+        self.actuator_cmds = []
+        self.create_subscription(AckermannDriveStamped, '/control/sim/actuator_cmd',
+                                 lambda m: self.actuator_cmds.append(
+                                     (seconds(m.header.stamp), m.drive.speed)), 10)
         # (stamp, x, y) of ego's stop point, base_link at its stamp, and /tf for it
         self.stop_points = []
         self.create_subscription(PoseStamped, '/ego/stop_point',
@@ -498,7 +513,9 @@ class Probe(Node):
         self.drive_to_point = ActionClient(self, DriveToPoint, '/drive_to_point')
         self.estop = self.create_publisher(Bool, '/safety/estop', 10)
         self.to_ll = self.create_client(ToLL, '/toLL')
-        self.nav = ActionClient(self, NavigateToPose, '/navigate_to_pose')
+        # Nav2's navigator, or ours (--navigator own: navigation.launch.py navigator:=own).
+        self.nav = ActionClient(self, NavigateToPose,
+                                vehicle.navigator_action(NAVIGATOR, 'navigate_to_pose'))
         self.stop, self.stop_picture, self.picture, self.stop_sign = False, None, None, None
         self.create_subscription(Bool, '/perception/stop_sign', self.on_stop, 10)
         self.create_subscription(Image, '/perception/detections/image',
@@ -2095,6 +2112,10 @@ WATCHDOG_TOPICS = ('/safety/sensor_watchdog/lock', '/safety/sensor_watchdog/stat
 
 EVERY_RUN = []   # launch arguments every session adds: --speed-loop's, --simulator's
 SIMULATOR = None      # --simulator gazebo or own; else sim.launch.py's default (main)
+NAVIGATOR = 'nav2'    # --navigator own: aav_navigator in bt_navigator's place
+# All ours (--navigator own --planner own --costmap own --tracker mppi_lag): Nav2's
+# costmaps don't run at all, so they aren't missing from the graph.
+ALL_OURS = False
 COSTMAP = 'nav2'      # --costmap own: aav_costmap beside Nav2's (sim.launch.py costmap:=)
 LOCAL_COSTMAP = {'nav2': '/local_costmap/costmap', 'own': '/drivers/nav/costmap/local'}
 SIMULATOR_NAMES = {'gazebo': 'Gazebo', 'own': 'our simulator'}
@@ -2221,6 +2242,89 @@ def check_stop_point(probe):
            f'{stop_points.TOLERANCE:g} m (the global EKF, by /tf at the stamp of the stop point)')
 
 
+# --loaded-stop: a stop with people aboard, the adaptive brake off and on (docs/stopping.md).
+LOADED_SPEED = 2.0       # m/s: no spine here, so ego's sim cap (sim_speed:=2), not 1 m/s
+LOADED_PAYLOAD = 150.0   # kg aboard: two adults. The brakes give 181 / 331 = 55 % of empty
+# (kg aboard, adaptive brake on): the last is the next stop, with what the first one learnt.
+LOADED_CASES = ((0.0, False), (LOADED_PAYLOAD, False), (0.0, True), (LOADED_PAYLOAD, True),
+                (LOADED_PAYLOAD, True))
+LOADED_HOLD = 8.0        # s at the speed first: the loaded car is slower to get there
+LOADED_LOG = '/tmp/aav-sim-loaded-stop.csv'
+
+
+def check_loaded_stop(probe):
+    """
+    Stop from LOADED_SPEED, empty and loaded, the adaptive brake off and on.
+
+    Each stop is scored against the empty car model. gazebo_adapter's payload and
+    adaptive_brake are set live for each case. The stop is the scripted drive's own
+    slowing (1 m/s^2), through the adapter's speed loop, the adaptive brake (when on) and
+    the modelled actuators. The prediction is
+    stop_law.stop_following: the empty car model fed the commands the adapter got from
+    t0, the moment they start to fall. Pass: within stop_points.TOLERANCE (0.25 m),
+    except loaded with the adaptive brake off, which must overshoot by more (else the
+    load didn't show, and the other cases prove nothing).
+    """
+    from aav_description.car_model import ActuatorConfig
+    from aav_description.stop_law import stop_following
+    client = AsyncParameterClient(probe, '/gazebo_adapter')
+    if not client.wait_for_services(timeout_sec=20.0):
+        result('loaded stop', False, 'no gazebo_adapter parameters')
+        return
+    if not probe.drive.wait_for_server(timeout_sec=20.0):
+        result('loaded stop', False, 'no scripted driver')
+        return
+    empty = ActuatorConfig.from_vehicle(vehicle.load())
+    waiting = programs_held(probe)
+    if waiting:
+        result('loaded stop', False, waiting)
+        return
+    with open(LOADED_LOG, 'w') as out:
+        out.write('case,payload,adaptive,kind,t,v\n')
+    for i, (payload, adaptive) in enumerate(LOADED_CASES):
+        again = (payload, adaptive) in LOADED_CASES[:i]
+        name = (f'loaded stop {payload:g} kg, adaptive brake {"on" if adaptive else "off"}'
+                + (', the next stop' if again else ''))
+        if not set_ghost(probe, client, payload=payload, adaptive_brake=adaptive):
+            result(name, False, 'gazebo_adapter refused payload or adaptive_brake')
+            continue
+        probe.spin_for(30.0, lambda: abs(probe.speed()) < STILL)
+        begin = probe.now()
+        handle = probe.send_drive(LOADED_SPEED, hold=LOADED_HOLD)
+        if handle is None:
+            result(name, False, 'the scripted drive was refused')
+            continue
+        done = handle.get_result_async()
+        probe.spin_for(90.0, done.done)
+        probe.spin_for(10.0, lambda: probe.now() - begin > 1.0 and abs(probe.speed()) < STILL)
+        probe.spin_for(1.0)                 # stood still long enough to count
+        commands = [(t, v) for t, v in probe.actuator_cmds if t >= begin]
+        track = [stop_points.Sample(*row) for row in probe.track if row[0] >= begin]
+        with open(LOADED_LOG, 'a') as out:
+            out.writelines(f'{i},{payload:g},{adaptive},command,{t:.3f},{v:.4f}\n'
+                           for t, v in commands)
+            out.writelines(f'{i},{payload:g},{adaptive},truth,{s.t:.3f},{s.v:.4f}\n'
+                           for s in track)
+        t0 = stop_points.slowing_start(commands, LOADED_SPEED)
+        origin = stop_points.at(track, t0) if t0 is not None else None
+        end = stop_points.stopped(track, t0, STILL) if t0 is not None else None
+        if origin is None or end is None:
+            result(name, False, 'the commands never slowed' if t0 is None
+                   else 'never stood still')
+            continue
+        predicted, _ = stop_following(empty, origin.v, [c for c in commands if c[0] >= t0])
+        truth = stop_points.along(origin, end)
+        error = truth - predicted
+        words = (f'from {origin.v:.2f} m/s: the empty car model {predicted:.2f} m, truth '
+                 f'{truth:.2f} m ({error:+.2f}, tolerance {stop_points.TOLERANCE:g})')
+        if payload > 0.0 and not adaptive:
+            result(name, error > stop_points.TOLERANCE,
+                   words + ': the load must show here, past the tolerance')
+        else:
+            result(name, abs(error) <= stop_points.TOLERANCE, words)
+    set_ghost(probe, client, payload=0.0, adaptive_brake=False)
+
+
 def behaviour_seen(probe, since):
     """Return the behaviour states seen since `since`, in order, each once: 'STATE(reason)'."""
     seen = []
@@ -2311,6 +2415,8 @@ def session(launch_args, checks, log_path, label='', ignore=(), radar=True, spin
         ignore = tuple(ignore) + ('/sensors/lidar/scan',)
     if KISS_EKF and 'lidar:=false' not in launch_args:
         launch_args = list(launch_args) + ['kiss_ekf:=true']
+    if ALL_OURS:
+        ignore = tuple(ignore) + ('/global_costmap/costmap', '/local_costmap/costmap')
     ignore = (tuple(ignore) + (LIDAR_TOPICS if 'lidar:=false' in launch_args else ())
               + (WATCHDOG_TOPICS if 'watchdog:=false' in launch_args else ()))
     env = dict(os.environ)
@@ -2448,8 +2554,11 @@ def main():
         SIMULATOR = DEFAULT_SIMULATOR
     # Always said: the checks place models and read logs the way this simulator wants.
     EVERY_RUN.append(f'simulator:={SIMULATOR}')
-    global COSTMAP
-    for flag_name, choices in (('--costmap', vehicle.COSTMAPS), ('--tracker', vehicle.TRACKERS)):
+    global COSTMAP, NAVIGATOR, ALL_OURS
+    chosen = {}
+    for flag_name, choices in (('--costmap', vehicle.COSTMAPS), ('--tracker', vehicle.TRACKERS),
+                               ('--navigator', vehicle.NAVIGATORS),
+                               ('--planner', vehicle.PLANNERS)):
         if flag_name in args:
             at = args.index(flag_name)
             if at + 1 >= len(args) or args[at + 1] not in choices:
@@ -2460,10 +2569,15 @@ def main():
                 EVERY_RUN.append('reversing:=false')     # the trial trackers: forward only
             if flag_name == '--costmap':
                 COSTMAP = args[at + 1]
+            if flag_name == '--navigator':
+                NAVIGATOR = args[at + 1]
+            chosen[flag_name[2:]] = args[at + 1]
+    ALL_OURS = vehicle.all_ours(chosen.get('navigator'), chosen.get('planner'),
+                                chosen.get('costmap'), chosen.get('tracker'))
     log = os.environ.get('AAV_SIM_LOG', '/tmp/aav-sim-check.log')
     logs = [log]
     if not {'--drive-to-point-only', '--speed-steps-only', '--spine-points-only',
-            '--stop-point-only', '--behaviour-only', '--lane-only',
+            '--stop-point-only', '--loaded-stop-only', '--behaviour-only', '--lane-only',
             '--legs-only'} & set(args):
         # With --obstacle the planner is blind to the box, so the stop zone must stop the car.
         session([f'perception:={str(perception).lower()}', f'lidar:={str(lidar).lower()}']
@@ -2550,6 +2664,15 @@ def main():
         session(['spine:=true', 'nav:=false', 'lidar:=false', 'radar:=false',
                  f'sim_speed:={max(STOP_SPEEDS):g}'],
                 [check_stop_point], logs[-1], 'stop point', ignore=NAV_TOPICS, spine=True,
+                world='empty')
+    if '--loaded-stop' in args or '--loaded-stop-only' in args:
+        # Its own run: the empty world, nothing else driving, no spine (the adaptive brake
+        # sits after gazebo_adapter's own speed loop), ego's cap at the drive's speed.
+        stem, ext = os.path.splitext(log)
+        logs.append(f'{stem}-loaded-stop{ext}')
+        session(['nav:=false', 'lidar:=false', 'radar:=false',
+                 f'sim_speed:={LOADED_SPEED:g}'],
+                [check_loaded_stop], logs[-1], 'loaded stop', ignore=NAV_TOPICS,
                 world='empty')
     if '--behaviour' in args or '--behaviour-only' in args:
         # Its own run: the trial on, the planner blind to the box (the cap must slow, the

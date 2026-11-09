@@ -68,7 +68,7 @@ fn check(name: &str, step: usize, got: &CarState, want: &[Value], tolerance: f64
 fn every_case_matches_the_python_model() {
     let doc = vectors();
     let cases = doc["cases"].as_array().expect("cases");
-    assert!(cases.len() >= 9);
+    assert!(cases.len() >= 11);
     for case in cases {
         let name = case["name"].as_str().expect("a name");
         let cfg = config(&case["config"]);

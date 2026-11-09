@@ -12,7 +12,8 @@ Subscribes  /perception/stop_sign/distance  geometry_msgs/PointStamped: a sign, 
             /localization/odom/global  nav_msgs/Odometry: where the car is on /plan
             /sensors/lidar/scan      sensor_msgs/LaserScan (base_link, best effort): the lane
             /navigate_to_pose/_action/status  action_msgs/GoalStatusArray: a goal running,
-                                     or aborted
+                                     or aborted (goal_status_topics: each navigator
+                                     action's, Nav2's or ours, navigator:=)
             /tf, /tf_static          the sign's camera in odom
 Publishes   /drivers/nav/speed_limit   nav2_msgs/SpeedLimit, 20 Hz: absolute m/s, 0.0 = no
                                      limit (controller_server's speed_limit_topic with
@@ -68,7 +69,10 @@ class BehaviourNode(Node):
             ('vehicle_yaml', ''), ('speed_loop', 'default'),
             ('stop_distance_m', 4.7), ('front', 2.0), ('half_width', 0.6),
             ('stop_gap', 1.0), ('near_depth', 2.5), ('plan_timeout', 25.0),
-            ('rate_hz', 20.0), ('state_rate_hz', 5.0), ('obstacles', True))}
+            ('rate_hz', 20.0), ('state_rate_hz', 5.0), ('obstacles', True),
+            # Each navigator action's status (navigation.launch.py: Nav2's or ours,
+            # navigator:=): a goal running on any of them.
+            ('goal_status_topics', ['/navigate_to_pose/_action/status']))}
         self.p = p
         if p['vehicle_yaml']:
             car = ActuatorConfig.from_vehicle_yaml(p['vehicle_yaml'])
@@ -111,8 +115,10 @@ class BehaviourNode(Node):
         self.create_subscription(PointStamped, '/perception/stop_sign/distance', self.on_sign,
                                  10)
         self.goal_active, self.aborted, self.seen_aborted = False, False, set()
-        self.create_subscription(GoalStatusArray, '/navigate_to_pose/_action/status',
-                                 self.on_status, 10)
+        self.running = {}       # topic -> a goal running there
+        for topic in p['goal_status_topics']:
+            self.create_subscription(GoalStatusArray, topic,
+                                     lambda msg, t=topic: self.on_status(msg, t), 10)
 
         self.limit = self.create_publisher(SpeedLimit, '/drivers/nav/speed_limit', 10)
         self.state = self.create_publisher(DiagnosticStatus, '/drivers/nav/behaviour/state', 10)
@@ -155,8 +161,9 @@ class BehaviourNode(Node):
         self.sign = (point.x, point.y, msg.header.frame_id)
         self.sign_time = self.now()
 
-    def on_status(self, msg: GoalStatusArray):
-        self.goal_active = any(s.status in RUNNING for s in msg.status_list)
+    def on_status(self, msg: GoalStatusArray, topic='/navigate_to_pose/_action/status'):
+        self.running[topic] = any(s.status in RUNNING for s in msg.status_list)
+        self.goal_active = any(self.running.values())
         for s in msg.status_list:
             key = bytes(s.goal_info.goal_id.uuid)
             if s.status == GoalStatus.STATUS_ABORTED and key not in self.seen_aborted:

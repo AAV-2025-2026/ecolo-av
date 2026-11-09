@@ -147,3 +147,99 @@ later, with a tape measure for the truth.
 
 The stopping law plans far more (0.95, 1.42 and 1.93 m): it plans a gentle stop at
 1 m/s², not a full brake.
+
+## 4. A heavier car: the adaptive brake
+
+Ben, 8 Nov: "if we brake without a person vs with a person ... we are going to need to
+dynamically realize that we aren't braking as fast as we expect and start applying more
+force. We don't want to overwhelm the brakes though."
+
+The same brake stops a heavier car more slowly (a = F / m). With 150 kg aboard, the
+181 kg car brakes at 55 % of its empty strength.
+
+### Where it sits
+
+```text
+ ego ─▶ speed loop ─▶ brake asked ─▶ adaptive brake ─▶ brake sent ─▶ brake actuator
+                                         ▲
+                                   wheel speed
+
+ e-stop, stale command, silent spine ─▶ full brake   (the locks: never through it)
+```
+
+Below ego and every safety lock: it only adds to what the speed loop asks.
+
+### What it does, each tick
+
+| Step | What |
+|---|---|
+| 1 | measures the slowing from the wheel speed |
+| 2 | works out the slowing the **empty** car model expects for the brake sent |
+| 3 | learns the **effectiveness**: measured ÷ expected (1 empty, 0.55 with 150 kg) |
+| 4 | brakes harder by 1 ÷ effectiveness (at most 3 times) |
+| 5 | the extra rises at most 2 (full brake) a second |
+| 6 | **never above the safe max** |
+| 7 | near the safe max for longer than **max hold time**: the extra comes off |
+
+It keeps what it learnt from stop to stop: a person aboard stays aboard.
+
+### The brake's limits (`vehicle.yaml`, `brake:`)
+
+Like the steering's ends. **Placeholders** until car day A7, rows 6-8
+([car day](car-day.md#a7-the-brake-on-stands)).
+
+| Key | Placeholder | Means |
+|---|---|---|
+| `released` | 400 | the brake actuator's target with the brake let go |
+| `touch` | 800 | where the pads start to grip |
+| `full` | 3500 | full brake |
+| `safe_max` | 3200 | the most the brake may ever be pushed |
+| `max_hold_time` | 5 s | how long near `safe_max` |
+
+`released` and `full` must match the firmware's (`calibration.rs`); a test checks.
+
+### Try it
+
+| Command | What |
+|---|---|
+| `pixi run sim payload:=150` | a heavier car, the adaptive brake off |
+| `pixi run sim payload:=150 adaptive_brake:=true` | the same, with it on |
+| `ros2 param set /gazebo_adapter payload 90` | change the load while it runs |
+| `pixi run sim-check --loaded-stop-only` | the check below |
+
+Not with `spine:=true` or `esp32:=true`: there the firmware decides the brake.
+
+### The check: `--loaded-stop`
+
+A stop from 2 m/s at 1 m/s², four times. The prediction is always the **empty** car
+model's. Pass: within 0.25 m.
+
+### Numbers (8 Nov): the car model alone
+
+`test_adaptive_brake.py`, from 2 m/s; the empty model says 3.35 m.
+
+| Aboard | Adaptive brake | Stopped in | Off by | Most brake |
+|---|---|---|---|---|
+| 0 kg | off | 3.35 m | 0.00 m | 0.30 |
+| 150 kg | off | 3.93 m | **+0.58 m** | 0.42 |
+| 0 kg | on | 3.35 m | 0.00 m | 0.30 |
+| 150 kg | on | 3.40 m | +0.04 m | 0.59 |
+| 150 kg | on, the next stop | 3.23 m | −0.12 m | 0.55 |
+
+It learnt 0.55, the right share. The next stop brakes harder from the start, so it stops
+a little short.
+
+### In the simulator (8 Nov)
+
+`pixi run sim-check --loaded-stop-only`, our simulator, the empty world. Each against
+the empty car model fed the same commands.
+
+| Aboard | Adaptive brake | From | Model | Truth | Off by | |
+|---|---|---|---|---|---|---|
+| 0 kg | off | 1.77 m/s | 3.00 m | 3.05 m | +0.04 m | ✅ |
+| 150 kg | off | 2.05 m/s | 3.20 m | 4.08 m | **+0.87 m** | ✅ (must miss) |
+| 0 kg | on | 1.77 m/s | 3.00 m | 3.05 m | +0.05 m | ✅ |
+| 150 kg | on | 2.05 m/s | 3.22 m | 3.43 m | +0.21 m | ✅ |
+| 150 kg | on, the next stop | 2.05 m/s | 3.22 m | 3.27 m | +0.05 m | ✅ |
+
+The first loaded stop learns while it brakes; the next one starts knowing.

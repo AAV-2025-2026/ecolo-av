@@ -7,7 +7,9 @@
 //! 1. Dead time: each input waits `floor(dead_time / dt + 0.5)` steps in a delay line.
 //! 2. Throttle and brake follow their inputs with first-order lags, stepped exactly.
 //! 3. Speed: full throttle gives `max_accel`; the brake and drag take speed off, never
-//!    past 0.
+//!    past 0. The throttle's push and the brake's both scale by
+//!    [`ActuatorConfig::share`], `mass / (mass + payload)`: a loaded car speeds up and
+//!    stops slower.
 //! 4. Steering: a deadband, the motor's rate limit, the linkage's lag, the offset, the
 //!    limit.
 //! 5. The kinematic bicycle about the rear axle (`base_link`).
@@ -68,6 +70,10 @@ pub struct ActuatorConfig {
     pub steer_dead_time: f64,
     /// m, rear axle to front axle (`vehicle: wheelbase`).
     pub wheelbase: f64,
+    /// kg, the empty car (`vehicle: mass`).
+    pub mass: f64,
+    /// kg aboard: people, cargo. Not in `vehicle.yaml`: a run's own.
+    pub payload: f64,
 }
 
 impl Default for ActuatorConfig {
@@ -88,6 +94,8 @@ impl Default for ActuatorConfig {
             brake_dead_time: 0.0,
             steer_dead_time: 0.0,
             wheelbase: 1.561,
+            mass: 181.0,
+            payload: 0.0,
         }
     }
 }
@@ -130,6 +138,8 @@ struct VehicleFile {
 struct VehicleSection {
     wheelbase: f64,
     max_steering_angle: f64,
+    #[serde(default)]
+    mass: Option<f64>,
 }
 
 impl ActuatorConfig {
@@ -143,11 +153,19 @@ impl ActuatorConfig {
     /// Read it from the text of a `vehicle.yaml`.
     pub fn from_vehicle_yaml_str(text: &str) -> Result<Self, ConfigError> {
         let file: VehicleFile = serde_yaml_ng::from_str(text).map_err(ConfigError::Yaml)?;
+        let base = file.actuators.unwrap_or_default();
         Ok(ActuatorConfig {
             max_steering: file.vehicle.max_steering_angle,
             wheelbase: file.vehicle.wheelbase,
-            ..file.actuators.unwrap_or_default()
+            mass: file.vehicle.mass.unwrap_or(base.mass),
+            ..base
         })
+    }
+
+    /// `mass / (mass + payload)`: the share of the empty car's push and braking left
+    /// with a load aboard (a = F / m). 1 with no payload.
+    pub fn share(&self) -> f64 {
+        self.mass / (self.mass + self.payload)
     }
 }
 
@@ -338,9 +356,10 @@ impl ActuatorConfig {
         } else {
             0.0
         };
-        let push = pushing * c.max_accel * if signed < 0.0 { -1.0 } else { 1.0 };
+        let share = c.share();
+        let push = pushing * c.max_accel * share * if signed < 0.0 { -1.0 } else { 1.0 };
         let v = state.v + push * dt;
-        let resist = (next.brake_level * c.max_brake + c.drag * v.abs()) * dt;
+        let resist = (next.brake_level * c.max_brake * share + c.drag * v.abs()) * dt;
         next.v = if v > 0.0 {
             (v - resist).max(0.0)
         } else {
@@ -465,6 +484,28 @@ mod tests {
         assert_eq!(cfg.max_steering, 0.5);
         assert_eq!(cfg.throttle_dead_time, 0.0);
         assert_eq!(cfg.max_brake, 3.0);
+        assert_eq!(cfg.mass, 181.0);
+        assert_eq!(cfg.payload, 0.0);
+    }
+
+    #[test]
+    fn a_loaded_car_stops_further() {
+        let stop = |payload: f64| {
+            let cfg = ActuatorConfig {
+                payload,
+                ..ActuatorConfig::default()
+            };
+            let mut s = CarState {
+                v: 2.0,
+                ..CarState::default()
+            };
+            while s.v > 0.0 {
+                s = cfg.step(&s, Command::pedals(0.0, 1.0, 0.0), 0.01, None).unwrap();
+            }
+            s.x
+        };
+        let (empty, loaded) = (stop(0.0), stop(90.0));
+        assert!(loaded > empty * 1.3, "empty {empty} m, loaded {loaded} m");
     }
 
     #[test]

@@ -22,6 +22,8 @@ try:
     from rclpy.action import ActionClient
     from rclpy.parameter import Parameter
     from rclpy.executors import SingleThreadedExecutor
+    from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
+    from std_msgs.msg import Bool
     HAVE_ROS = True
 except ImportError:      # tools/test.sh, outside pixi's ROS
     HAVE_ROS = False
@@ -165,3 +167,23 @@ def test_a_live_swap_mid_path_carries_on(ros):
     assert car.v > 0.4
     cancel = handle.cancel_goal_async()
     assert run(cancel.done, 5.0)
+
+
+@pytest.mark.parametrize('ros', [True], indirect=True)
+def test_it_tells_ego_when_the_tracker_knows_the_lags(ros):
+    # /drivers/nav/lag_aware, latched: false for pure pursuit; true once mpc_lag drives (a
+    # late subscriber still hears it), so ego's lead stays off; false again after.
+    node, car, client, run = ros
+    heard = []
+    latched = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL,
+                         reliability=ReliabilityPolicy.RELIABLE)
+    car.node.create_subscription(Bool, '/drivers/nav/lag_aware',
+                                 lambda m: heard.append(m.data), latched)
+    assert run(lambda: heard, 5.0) and heard[-1] is False
+    assert node.set_parameters([Parameter('tracker', value='mpc_lag')])[0].successful
+    assert run(lambda: heard[-1] is True, 5.0)
+    handle = send(client, run, goal(8.0))
+    result = handle.get_result_async()
+    assert run(result.done, 40.0) and result.result().status == 4     # SUCCEEDED
+    assert node.set_parameters([Parameter('tracker', value='stanley')])[0].successful
+    assert run(lambda: heard[-1] is False, 5.0)

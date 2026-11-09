@@ -1,5 +1,5 @@
 """
-A pretend car for the trackers' tests: ego's model, then Gazebo's actuator model, a flat plane.
+A pretend car for the trackers' tests: ego's model, then the shared car model, a flat plane.
 
 The same chain as aav_drive_to_point's fake_car.py (ego -> gazebo_adapter's actuator model
 -> the car), driven the way the node drives it: a tracker and the speed policy at 20 Hz,
@@ -7,25 +7,30 @@ ego and the car at 100 Hz in between. No ROS, no Gazebo.
 """
 
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 import math
 import time
 from typing import List, Tuple
 
+from aav_description.car_model import ActuatorConfig, Actuators
 from aav_ego.ackermann import EgoModel, Limits as EgoLimits
 from aav_ego.vehicle_model import VehicleModel
-from aav_gazebo.actuator_model import ActuatorConfig, Actuators
 from aav_track.checks import GoalCheck
+from aav_track.lag_model import CarParams
 from aav_track.path import Path
 from aav_track.speed import SpeedPolicy
-from aav_track.trackers import Limits, make, MODEL_TRACKERS, State
+from aav_track.trackers import LAG_TRACKERS, Limits, make, MODEL_TRACKERS, State
 
 LIMITS = Limits(wheelbase=1.57, max_steer=0.5, max_steer_rate=0.6)
 MODEL = VehicleModel()
 
 
+CAR = CarParams()
+
+
 def tracker(name, **params):
-    return make(name, LIMITS, MODEL if name in MODEL_TRACKERS else None, **params)
+    model = MODEL if name in MODEL_TRACKERS else CAR if name in LAG_TRACKERS else None
+    return make(name, LIMITS, model, **params)
 
 
 @dataclass
@@ -46,21 +51,26 @@ class Run:
 
 
 def follow(trk, poses, start, cruise=1.0, period=0.05, max_time=120.0, physics=0.01,
-           delay=0.0):
+           delay=0.0, lag_scale=1.0):
     """
     Drive the pretend car along `poses` (x, y, yaw) with `trk`, from `start` (x, y, yaw).
 
     delay: s by which the tracker's view of the car is late (the EKF, DDS, a busy computer).
+    lag_scale: the car's throttle, brake and steering lags this many times vehicle.yaml's
+    (the trackers keep vehicle.yaml's): how robust each is to lags it doesn't know.
     """
     path = Path(poses)
     trk.reset(path)
     if getattr(trk, 'plans_speed', False):
-        trk.cruise = cruise           # mpc_full: the same cruise as the policy's
+        trk.cruise = cruise           # mpc_full, mpc_lag: the same cruise as the policy's
     policy = SpeedPolicy(cruise=cruise, accel=1.0, max_brake=3.0)
     goal = GoalCheck(xy=1.0, yaw=0.75)
     ego = EgoModel(EgoLimits(max_speed=5.0, wheelbase=LIMITS.wheelbase,
                              max_steering_angle=LIMITS.max_steer, max_steering_rate=0.6))
-    car = Actuators(ActuatorConfig())
+    c = ActuatorConfig()
+    car = Actuators(replace(c, throttle_lag=lag_scale * c.throttle_lag,
+                            brake_lag=lag_scale * c.brake_lag,
+                            steer_lag=lag_scale * c.steer_lag))
     x, y, yaw = start
     speed = asked = steer = 0.0
     t, run, hint = 0.0, Run(), 0

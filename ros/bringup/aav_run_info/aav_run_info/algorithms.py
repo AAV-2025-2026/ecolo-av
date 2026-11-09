@@ -21,7 +21,7 @@ CONTROLLERS = {
     'mppi': 'MPPI (Nav2 controller_server)',
     'rpp': 'Regulated Pure Pursuit (Nav2 controller_server)',
 }
-TRACKERS = ('none', 'pure_pursuit', 'stanley', 'lqr', 'mpc', 'mpc_full', 'mppi_lag')
+TRACKERS = ('none', 'pure_pursuit', 'stanley', 'lqr', 'mpc', 'mpc_full', 'mpc_lag', 'mppi_lag')
 # How a trial localizer is used: not at all, scored beside the EKFs, or fused into one.
 USES = ('off', 'scored', 'fused')
 

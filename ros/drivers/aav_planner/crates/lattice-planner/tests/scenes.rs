@@ -117,3 +117,46 @@ fn off_the_map_and_cancelled() {
         PlanError::Cancelled
     );
 }
+
+#[test]
+fn through_poses_joins_the_legs_and_says_which_leg_failed() {
+    // Open ground (the straight scene): start, a pose half way, then the scene's goal.
+    let scene = scenes::all().remove(0);
+    let planner = scenes::planner(false);
+    let middle = Pose::new(
+        (scene.start.x + scene.goal.x) / 2.0,
+        (scene.start.y + scene.goal.y) / 2.0,
+        scene.goal.yaw,
+    );
+    let plan = planner
+        .plan_through(&scene.grid, &scene.start, &[middle, scene.goal], &|| false)
+        .unwrap();
+    let last = *plan.poses.last().unwrap();
+    assert!((last.x - scene.goal.x).hypot(last.y - scene.goal.y) < 0.6);
+    // It passes the middle pose.
+    let nearest = plan
+        .poses
+        .iter()
+        .map(|p| (p.x - middle.x).hypot(p.y - middle.y))
+        .fold(f64::INFINITY, f64::min);
+    assert!(nearest < 0.6, "{nearest:.2} m from the middle pose");
+    // No repeated pose where the legs join.
+    assert!(plan
+        .poses
+        .windows(2)
+        .all(|w| (w[0].x - w[1].x).hypot(w[0].y - w[1].y) > 1e-6));
+    // Off the map on the second leg: leg 1.
+    let off = Pose::new(-5.0, 0.0, 0.0);
+    assert_eq!(
+        planner
+            .plan_through(&scene.grid, &scene.start, &[middle, off], &|| false)
+            .unwrap_err(),
+        (1, PlanError::GoalOutsideMap)
+    );
+    assert_eq!(
+        planner
+            .plan_through(&scene.grid, &scene.start, &[], &|| false)
+            .unwrap_err(),
+        (0, PlanError::NoValidPath)
+    );
+}
