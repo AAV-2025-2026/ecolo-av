@@ -7,7 +7,7 @@
 <!-- Generated from docs/switches.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Switches: what you can swap in the simulated car</h1>
-<div class="meta">10 min read · 6 sections</div></header>
+<div class="meta">11 min read · 6 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -359,6 +359,10 @@ and doesn't model <code>lqi</code> yet).</p>
 <tr>
 <td><code>planner:=own</code></td>
 <td>our own planner (Rust: Nav2's lattice ported) answers the behaviour trees, Nav2's lattice beside it; with <code>costmap:=own</code> it plans on our global costmap. 8 Nov: the test lot 12 of 12 as Nav2's, about 20 % slower on the campus's long legs (<a href="own-planner.html">page</a>)</td>
+</tr>
+<tr>
+<td><code>navigator:=own</code></td>
+<td>our own navigator (Rust) in place of Nav2's bt_navigator and waypoint_follower; with <code>planner:=own costmap:=own tracker:=mppi_lag reversing:=false</code> no Nav2 server navigates (all ours). 8 Nov: test lot 7 of 12 legs (Nav2 8), campus 4 of 6 (Nav2 2) (<a href="own-navigator.html">page</a>)</td>
 </tr>
 </tbody>
 </table></div>

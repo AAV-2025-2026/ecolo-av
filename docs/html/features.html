@@ -7,7 +7,7 @@
 <!-- Generated from docs/features.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Features: what the car&#x27;s software does, and why</h1>
-<div class="meta">60 min read · 14 sections</div></header>
+<div class="meta">61 min read · 14 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -533,7 +533,7 @@ Add a row in the same commit as the feature (<code>CLAUDE.md</code>).
 </tr>
 <tr>
 <td><a href="own-navigator.html">Our own navigator</a> (<code>aav_navigator</code>, <code>navigator:=own</code>; all ours: <code>navigator:=own planner:=own costmap:=own tracker:=mppi_lag</code>)</td>
-<td>Ben, 8 Nov: move off Nav2 one piece at a time; the navigator is the last piece. What bt_navigator, our behaviour trees and waypoint_follower do (plan, follow, replan, keep the path on the final approach, recover, give up; through-poses; GPS waypoints by the datum) as a Rust state machine, serving Nav2's four actions under our own names. GPS waypoints are passed as one through-poses goal, not stop-and-face at each (TODO 140's bends). All ours runs no Nav2 server for navigation. Nav2 stays the default</td>
+<td>Ben, 8 Nov: move off Nav2 one piece at a time; the navigator is the last piece. What bt_navigator, our behaviour trees and waypoint_follower do (plan, follow, replan, keep the path on the final approach, recover, give up; through-poses; GPS waypoints by the datum) as a Rust state machine, serving Nav2's four actions under our own names. GPS waypoints are passed as one through-poses goal, not stop-and-face at each (TODO 140's bends). All ours runs no Nav2 server for navigation. 8 Nov, forward only: test lot 7 of 12 legs (Nav2 8), campus 4 of 6 (Nav2 2), P4 to the Fieldhouse 1 of 2 (Nav2 0). Nav2 stays the default</td>
 <td>Ben</td>
 <td>2026-11-08</td>
 <td>sim</td>

@@ -12,7 +12,8 @@ order: the costmap ([done](own-costmap.md)), the planner ([done](own-planner.md)
 >   has a `navigator` switch.
 > - **All ours:** `navigator:=own planner:=own costmap:=own tracker:=mppi_lag`. Then no
 >   Nav2 server navigates.
-> - **Scores:** below.
+> - **Scores:** test lot 7 of 12 legs (Nav2 8); the box 3 of 3 (Nav2 3); campus 4 of 6
+>   (Nav2 2); P4 to the Fieldhouse 1 of 2 (Nav2 0). Not the default yet.
 
 ## How it fits
 
@@ -75,11 +76,81 @@ smoother, and collision_monitor (the command line in front of the safety locks).
 | The graph and a goal | `pixi run sim-check --navigator own --planner own --costmap own --tracker mppi_lag` |
 | Test the maths | `cd ros/drivers/aav_navigator && cargo test -p navigator` |
 
-## Scores
+## Scores (8 Nov, our simulator)
 
-Not run yet.
+All ours (`navigator:=own planner:=own costmap:=own tracker:=mppi_lag`) against all Nav2
+(`bt_navigator`, the lattice, Nav2's costmaps, MPPI). Both forward only: `mppi_lag`
+can't reverse. `pixi run measure controllers --stacks nav2 own`.
+
+### The test lot, 1 m/s, 3 runs
+
+| Leg | All Nav2 | All ours |
+|---|---|---|
+| a left turn | 3 / 3 (26-55 s) | 3 / 3 (24 s) |
+| round the building | 3 / 3 (46-47 s) | 2 / 3 (44-45 s) |
+| turn back (a U-turn in a 14 m lane) | **0 / 3** | **1 / 3** |
+| home | 2 / 3 (87-88 s) | 1 / 3 (85 s) |
+| **legs reached** | **8 / 12** | **7 / 12** |
+| off the path, mean | 0.12 m | 0.17 m |
+| sway | 0.038 m/s² | 0.050 m/s² |
+| the follower's CPU | 17-18 % | 33-39 % |
+
+- **Forward only, the U-turn is the hard leg for both.** A car that ends it against a
+  wall can't start the next leg ("start occupied"): Nav2 lost "home" that way once, ours
+  twice (once already on "round the building").
+
+### The box in the lane, 3 runs
+
+| | All Nav2 | All ours |
+|---|---|---|
+| past the box | 3 / 3, 36-37 s | 3 / 3, 34 s |
+
+### sim-check, all ours
+
+`pixi run sim-check --navigator own --planner own --costmap own --tracker mppi_lag
+--obstacle --plan-around`: **all 13 checks pass** (the graph against the contract, the
+Nav2 goal past the box after the stop zone, the drive round the box).
+
+### The campus, 2.5 m/s, 2 runs
+
+| Leg | All Nav2 | All ours |
+|---|---|---|
+| out of the lot (47 m) | **2 / 2** (28-29 s) | **0 / 2**: past the goal, then round a block (251-266 m) |
+| along the road (254 m) | 0 / 2: "Start occupied" | 2 / 2 (223-250 s) |
+| round the bend (246 m) | 0 / 2: "Start occupied" | 2 / 2 (135-137 s) |
+| **P4 to the Fieldhouse** (453 m, 18 GPS waypoints) | **0 / 2**: stuck at the lot exit after 45 m, 16 waypoints missed | **1 / 2** (263 s, 590 m driven); once stuck at the same exit |
+
+- **Out of the lot:** `mppi_lag` misses the goal at 2.5 m/s. It does the same under
+  Nav2's navigator (274 m, one run): the follower, not the navigator.
+- **Ours gets past "Start occupied"** by clearing the global costmap and planning again.
+
+### Why "along the road" failed (TODO 144's MPPI give-up)
+
+| What | Seen |
+|---|---|
+| Where | the end of "out of the lot", **inside the lot's exit** (about 73, -38) |
+| The static map there | clear: nothing within 2.4 m of the car |
+| The global costmap there | **lidar marks** within 1.5 m of the car: only at the two lot exits (59, -44 and 72, -38), in 7 of 6,199 samples |
+| Nav2's planner | "Start occupied" |
+| Nav2's MPPI (with reversing) | "Optimizer fail": every future starts in collision |
+
+The car stops on its goal in a narrow exit, with the kerbs the lidar marked touching its
+padded outline. Every future and every plan starts "in collision", and Nav2 gives up at
+once (it doesn't count "start occupied" as fixable). Ours clears the costmap and plans
+again. A goal a few metres past the exit would avoid it.
+
+### The verdict
+
+- **Not the sim default yet.** On the lot it is as good as Nav2 (7 against 8 of 12,
+  inside the noise of the U-turn), on the box the same, on the campus better (4 against 2
+  of 6; the route 1 against 0 of 2).
+- **But:** `mppi_lag` overshoots the campus's first goal at 2.5 m/s, and uses twice
+  Nav2's MPPI's CPU. Fix the follower's goal approach first, then run again.
 
 ## What's missing
+
+- **The goal at speed:** `mppi_lag` passes the campus's first goal at 2.5 m/s.
+- **Reversing:** all ours is forward only (`mppi_lag`), so a car against a wall stays.
 
 - **On the car:** untested; `car.launch.py` always passes `navigator:=nav2`.
 - **No `IsPathValid`** on the final approach: the navigator reads no costmap.
