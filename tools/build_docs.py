@@ -100,6 +100,8 @@ PAGES = [
     ('own-planner.md', 'Our own planner', "Nav2's State Lattice planner in Rust, beside Nav2's"),
     ('own-navigator.md', 'Our own navigator',
      "Nav2's navigator in Rust: goals, replanning, recoveries, waypoints; all ours vs all Nav2"),
+    ('own-smoother.md', 'Our own velocity smoother',
+     "Nav2's velocity smoother for a car: the steering's rate and full lock"),
     ('stopping.md', 'How the car stops',
      'One stopping law, the behaviour planner, and where the car really stops'),
     ('a-to-b.md', 'A to B', 'Drive from A to B and stop: three ways, and the point driver'),

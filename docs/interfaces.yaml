@@ -92,7 +92,7 @@ topics:
     type: geometry_msgs/msg/TwistStamped
     pub: [velocity_smoother, collision_monitor]
     sub: [twist_mux, language_drive, ego]
-    note: Priority 20. Nav2. From collision_monitor where the radar or the lidar runs (navigation.launch.py radar:=true or lidar:=true - the bench, the car with its radar part, Gazebo's road and test_lot worlds), else straight from velocity_smoother.
+    note: Priority 20. Nav2. From collision_monitor where the radar or the lidar runs (navigation.launch.py radar:=true or lidar:=true - the bench, the car with its radar part, Gazebo's road and test_lot worlds), else straight from velocity_smoother. With smoother:=own (sim only, docs/own-smoother.md) velocity_smoother is aav_smoother's car_smoother under Nav2's node name - the same parameters and topics, the turn rate from the steering's rate and full lock.
   /control/cmd_vel_smoothed:
     type: geometry_msgs/msg/TwistStamped
     pub: [velocity_smoother]
