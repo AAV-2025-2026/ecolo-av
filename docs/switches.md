@@ -98,6 +98,7 @@ and doesn't model `lqi` yet).
 | `voxels:=true` | Nav2 sees the lidar as 0.25 m cubes, not a flat scan (a trial: [Trials](trials.md#voxels-30-oct-the-lidar-as-cubes)) |
 | `costmap:=own` | our own costmaps (Rust) beside Nav2's; `tracker:=mppi_lag` then reads ours. 8 Nov: the same grid as Nav2's, half the CPU; with its clear service, the obstacle legs 3 of 3 as Nav2's ([page](own-costmap.md)) |
 | `planner:=own` | our own planner (Rust: Nav2's lattice ported) answers the behaviour trees, Nav2's lattice beside it; with `costmap:=own` it plans on our global costmap. 8 Nov: the test lot 12 of 12 as Nav2's, about 20 % slower on the campus's long legs ([page](own-planner.md)) |
+| `navigator:=own` | our own navigator (Rust) in place of Nav2's bt_navigator and waypoint_follower; with `planner:=own costmap:=own tracker:=mppi_lag reversing:=false` no Nav2 server navigates (all ours) ([page](own-navigator.md)) |
 
 **Tried, 29 Oct 23:05:** the menu's pick (demo --debug, `mpc`, NDT, LQI) in Gazebo on Ben's
 Mac: the track node ran MPC, NDT tracked (2 ms a match), AMCL stayed off, the speed loop

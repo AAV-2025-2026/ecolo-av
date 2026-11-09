@@ -39,5 +39,6 @@ rewritten as one plain state machine in Rust's own style (enums, no plugins, no 
 | Waypoints run as one through-poses goal by default (`pass_through`) | TODO 140: each waypoint a stop-and-face goal left the car half-turned at a sharp bend |
 | The final approach also on a through-poses goal's last leg | the same circling near the goal (TODO 17) |
 | A new goal on any action replaces the running one | Nav2 refuses a goal on a second navigator while one runs; one navigator is simpler for the screens and tools |
+| "Start occupied" (205, 305) counts as a failure a recovery can fix | campus, 8 Nov: lidar marks beside a lot exit made the car's own spot occupied, and Nav2 gave the goal up at once; clearing the global costmap forgets the stale marks |
 | No `IsPathValid` on the final approach | the navigator reads no costmap; the follower's own checks and collision_monitor still stop the car |
 | Spin, DriveOnHeading, `GoalUpdated` within a recovery | not used by our trees, or covered by "a new goal replaces" |

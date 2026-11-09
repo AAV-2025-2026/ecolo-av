@@ -152,9 +152,13 @@ impl Failure {
         }
     }
 
-    /// WouldAPlannerRecoveryHelp: unknown, no valid path, timeout (to-pose and through).
+    /// WouldAPlannerRecoveryHelp: unknown, no valid path, timeout (to-pose and through);
+    /// and ours: the start occupied (205, 305). On the campus the lidar's marks beside a
+    /// lot exit made the car's own spot "occupied" (8 Nov); clearing the global costmap
+    /// forgets them, and the lidar marks again only what it still sees.
     pub fn planner_recovery_helps(&self) -> bool {
-        matches!(self, Self::Plan { code, .. } if matches!(code, 200 | 207 | 208 | 300 | 307 | 308))
+        matches!(self, Self::Plan { code, .. }
+            if matches!(code, 200 | 205 | 207 | 208 | 300 | 305 | 307 | 308))
     }
 
     /// WouldAControllerRecoveryHelp: unknown, patience exceeded, no progress, no valid

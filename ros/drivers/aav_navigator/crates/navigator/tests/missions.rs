@@ -288,6 +288,22 @@ fn waypoints_pass_through_by_default_or_stop_at_each() {
 }
 
 #[test]
+fn a_start_marked_occupied_clears_the_global_costmap_first() {
+    let mut nav = Navigator::new(Settings::default());
+    nav.start(1, Mission::ToPose(GOAL), 0.0);
+    let (t, _) = plan_token(&nav.tick(0.0, None));
+    let out = nav.planned(t, Err((205, "start occupied".into())), 0.0);
+    assert!(matches!(
+        out[..],
+        [Command::Clear {
+            local: false,
+            global: true,
+            ..
+        }]
+    ));
+}
+
+#[test]
 fn empty_goals_are_refused() {
     let mut nav = Navigator::new(Settings::default());
     let out = nav.start(4, Mission::ThroughPoses(vec![]), 0.0);
