@@ -7,7 +7,7 @@
 <!-- Generated from docs/car-day.md by tools/build_docs.py. Edit the markdown, not this file. -->
 <header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
 <h1>Car day: the runbook</h1>
-<div class="meta">69 min read · 31 sections</div></header>
+<div class="meta">76 min read · 32 sections</div></header>
 <nav class="menu"><a href="index.html">Start here</a>
 <a href="overview.html">Overview</a>
 <a href="release-notes.html">Release notes</a>
@@ -29,10 +29,11 @@
 <a href="car-evening.html">Tonight: drive as is</a>
 <a class="here" href="car-day.html">Car day</a>
 <a href="car-setup.html">Car setup</a>
+<a href="rollout.html">Rolling out on the car</a>
 <a href="tests.html">Every test</a>
 <a href="know-the-car.html">Know the car</a>
-<a href="measure-the-car.html">Measure the car</a>
 <span class="sep">Learn:</span>
+<a href="measure-the-car.html">Measure the car</a>
 <a href="decisions.html">Decisions</a>
 <a href="infrastructure.html">Infrastructure</a>
 <a href="learn-car.html">The car, box by box</a>
@@ -47,8 +48,8 @@
 <a href="learn-control.html">Learn: control</a>
 <a href="controllers.html">Controllers</a>
 <a href="campus.html">The campus</a>
-<a href="maps-and-position.html">Maps and position</a>
 <span class="sep">Reference:</span>
+<a href="maps-and-position.html">Maps and position</a>
 <a href="learn-nav2.html">Learn: Nav2</a>
 <a href="learn-can.html">Learn: CAN</a>
 <a href="status.html">Status</a>
@@ -57,6 +58,12 @@
 <a href="path-followers.html">Path followers</a>
 <a href="switches.html">Switches</a>
 <a href="trials.html">Trials</a>
+<a href="mppi-lag.html">MPPI with lag</a>
+<a href="own-costmap.html">Our own costmap</a>
+<a href="own-planner.html">Our own planner</a>
+<a href="own-navigator.html">Our own navigator</a>
+<a href="own-smoother.html">Our own velocity smoother</a>
+<a href="stopping.html">How the car stops</a>
 <a href="a-to-b.html">A to B</a>
 <a href="routes.html">Street routes</a>
 <a href="perception.html">Perception</a>
@@ -74,12 +81,15 @@
 <a href="simulation.html">Simulation</a>
 <a href="sim-and-car.html">Sim and the car</a>
 <a href="full-simulation.html">Full simulation</a>
+<a href="own-simulator.html">Our own simulator</a>
+<a href="own-simulator-cameras.html">Our simulator&#x27;s cameras</a>
 <a href="carla.html">CARLA</a>
 <a href="bench.html">Bench mode</a>
 <a href="actuator-tests.html">Actuator tests</a>
 <a href="hardware-debug.html">Hardware debug</a>
 <a href="learn-state-space.html">Learn: state space</a>
 <a href="vehicle-model.html">The car as a linear model</a>
+<a href="car-model.html">One car model</a>
 <a href="ghost-obstacles.html">Ghost obstacles</a>
 <a href="geofence.html">The geofence</a>
 <a href="sources-and-targets.html">Sources and targets</a>
@@ -103,7 +113,7 @@
 <a href="car_measurements.html">Car numbers</a>
 <a href="hud.html">HUD</a></nav>
 <main>
-<nav class="toc"><span>On this page:</span><a href="#the-people">The people</a><a href="#logins">Logins</a><a href="#the-machines">The machines</a><a href="#the-order">The order</a><a href="#ready-for-car-day-the-02-checklist">Ready for car day (the 0.2 checklist)</a><a href="#what-to-bring">What to bring</a><a href="#session-0-before-leaving-at-home">A0 · Session 0: before leaving (at home)</a><a href="#day-a-nothing-destroyed">Day A: nothing destroyed</a><a href="#session-1-safety-first">A1 · Session 1: safety first</a><a href="#a2-back-up-every-machine">A2 · Back up every machine</a><a href="#session-2-measure-and-weigh">A3 · Session 2: measure and weigh</a><a href="#session-3-questions-for-the-hardware-lead">A4 · Session 3: questions for the hardware lead</a><a href="#session-4-the-orin-and-the-motor-pi">A5 · Session 4: our stack, on the Orin and the Motor Pi</a><a href="#a6-the-steering-actuators-ends-way-a">A6 · The steering actuator&#x27;s ends, Way A</a><a href="#a7-the-brake-on-stands">A7 · The brake, on stands</a><a href="#a7b-the-motor-pis-uart-ready">A7b · The Motor Pi&#x27;s UART, ready</a><a href="#session-6-the-esp32">A8 · Session 6: the Rust ESP32, on stands</a><a href="#session-9-the-first-drive-on-stands">A9 · Session 9: the keyboard, on stands</a><a href="#a9b-the-joystick-on-stands">A9b · The joystick, on stands</a><a href="#a10-the-ground-at-walking-pace">A10 · The ground, at walking pace</a><a href="#any-time-on-day-a-after-a5">Any time on Day A, after A5</a><a href="#session-5-the-camera-pi">Session 5: the camera Pi</a><a href="#session-7-can-read-only">Session 7: CAN, read-only</a><a href="#session-8-foxglove-from-a-laptop">Session 8: Foxglove from a laptop</a><a href="#session-10-what-to-record">Session 10: what to record</a><a href="#day-b-upgrades-and-the-reflash">Day B: upgrades and the reflash</a><a href="#b3-the-orin-its-image-then-the-reflash">B3 · The Orin: its image, then the reflash</a><a href="#b4-the-lab-desktop-stays-frozen">B4 · The lab desktop stays frozen</a><a href="#session-11-the-labs-ubuntu-desktop">Session 11: the lab&#x27;s Ubuntu desktop</a><a href="#before-you-leave-the-car">Before you leave the car</a><a href="#afterwards-at-home">Afterwards, at home</a></nav>
+<nav class="toc"><span>On this page:</span><a href="#the-people">The people</a><a href="#logins">Logins</a><a href="#the-machines">The machines</a><a href="#the-order">The order</a><a href="#ready-for-car-day-the-02-checklist">Ready for car day (the 0.2 checklist)</a><a href="#what-to-bring">What to bring</a><a href="#session-0-before-leaving-at-home">A0 · Session 0: before leaving (at home)</a><a href="#day-a-nothing-destroyed">Day A: nothing destroyed</a><a href="#session-1-safety-first">A1 · Session 1: safety first</a><a href="#a2-back-up-every-machine">A2 · Back up every machine</a><a href="#session-2-measure-and-weigh">A3 · Session 2: measure and weigh</a><a href="#session-3-questions-for-the-hardware-lead">A4 · Session 3: questions for the hardware lead</a><a href="#session-4-the-orin-and-the-motor-pi">A5 · Session 4: our stack, on the Orin and the Motor Pi</a><a href="#a6-the-steering-actuators-ends-way-a">A6 · The steering actuator&#x27;s ends, Way A</a><a href="#a7-the-brake-on-stands">A7 · The brake, on stands</a><a href="#a7b-the-motor-pis-uart-ready">A7b · The Motor Pi&#x27;s UART, ready</a><a href="#session-6-the-esp32">A8 · Session 6: the Rust ESP32, on stands</a><a href="#session-9-the-first-drive-on-stands">A9 · Session 9: the keyboard, on stands</a><a href="#a9b-the-joystick-on-stands">A9b · The joystick, on stands</a><a href="#a10-the-ground-at-walking-pace">A10 · The ground, at walking pace</a><a href="#a12-the-diffusion-planners-trial">A12 · The diffusion planner&#x27;s trial (0.3)</a><a href="#any-time-on-day-a-after-a5">Any time on Day A, after A5</a><a href="#session-5-the-camera-pi">Session 5: the camera Pi</a><a href="#session-7-can-read-only">Session 7: CAN, read-only</a><a href="#session-8-foxglove-from-a-laptop">Session 8: Foxglove from a laptop</a><a href="#session-10-what-to-record">Session 10: what to record</a><a href="#day-b-upgrades-and-the-reflash">Day B: upgrades and the reflash</a><a href="#b3-the-orin-its-image-then-the-reflash">B3 · The Orin: its image, then the reflash</a><a href="#b4-the-lab-desktop-stays-frozen">B4 · The lab desktop stays frozen</a><a href="#session-11-the-labs-ubuntu-desktop">Session 11: the lab&#x27;s Ubuntu desktop</a><a href="#before-you-leave-the-car">Before you leave the car</a><a href="#afterwards-at-home">Afterwards, at home</a></nav>
 <div class="lead"><p>Written 24 October 2026, for the team; split into two days on 1 November (Ben: "Split
 it"). This page <strong>owns the order</strong>: <a href="car-setup.html">Car setup</a> only says how to set up
 one computer.</p>
@@ -421,6 +431,13 @@ repo yet: fill them in from the vault.</p>
 <td><a href="know-the-car.html">Know the car</a></td>
 <td>all five</td>
 <td>A10</td>
+</tr>
+<tr>
+<td>A12 ✍</td>
+<td><strong>The diffusion planner's trial</strong> (0.3), its own day; not run yet</td>
+<td><a href="#a12-the-diffusion-planners-trial">A12</a></td>
+<td>safety driver, e-stop person, laptop person, approver</td>
+<td>A11; 4.23-4.26 with the lattice</td>
 </tr>
 <tr>
 <td>any</td>
@@ -1408,9 +1425,28 @@ ground move</strong>, with whatever firmware is on the ESP32 now. Wheels off the
 <td>the file</td>
 <td></td>
 </tr>
+<tr>
+<td>6</td>
+<td>The brake's limits, with the hardware lead: in Pololu's Jrk program (on its USB), the brake actuator's target and feedback at <strong>released</strong>, at the <strong>touch point</strong> (where the pads start to grip: turn the wheel by hand while it moves slowly) and at <strong>full</strong></td>
+<td>released <strong><em>_</em>_ touch </strong><strong><em>_ full </em></strong>___ (the firmware uses 400 and 3500, never measured)</td>
+<td></td>
+</tr>
+<tr>
+<td>7</td>
+<td>The most the brake may ever be pushed (the hardware lead's choice): a target, a pressure or the actuator's current limit; and can it <strong>hold full brake for minutes</strong> without overheating (the ESP32 holds full at boot)</td>
+<td>max safe <strong><em>_</em>_ ; current limit </strong><strong><em>_ A ; hold OK? </em></strong>___</td>
+<td></td>
+</tr>
+<tr>
+<td>8</td>
+<td>Does the brake actuator report its position (analog feedback)?</td>
+<td>yes / no</td>
+<td></td>
+</tr>
 </tbody>
 </table></div>
-<p><strong>Stop point:</strong> 1-2 pass; 3-4 written down. The brake's strength is measured on the
+<p><strong>Stop point:</strong> 1-2 pass; 3-8 written down. Rows 6-8 are what the brake needs, like the
+steering's ends: the safe range a stronger stop may use when the car is loaded. The brake's strength is measured on the
 ground later (tests 4.3, <a href="know-the-car.html">Know the car</a>).</p>
 </section>
 <section class="card"><h2 id="a7b-the-motor-pis-uart-ready">A7b · The Motor Pi's UART, ready</h2>
@@ -2194,6 +2230,248 @@ the deadman but <strong>no timeout anywhere</strong>: we don't use it.</p>
 </tbody>
 </table></div>
 <p>Then the car tests and the map: <a href="know-the-car.html">Know the car</a> (A11), bagged with the lidar.</p>
+</section>
+<section class="card"><h2 id="a12-the-diffusion-planners-trial">A12 · The diffusion planner's trial (0.3)</h2>
+<p>Ben, 7 Nov: "We want diffusion." Allowed on the car in 0.3 as a <strong>trial</strong>: low speed,
+behind the guard and the locks. <strong>Not run yet.</strong> Its own day, after A11 and after
+the lattice has driven the same goals on the ground (<a href="tests.html#4f-reversing-and-the-u-turn">4f</a>).</p>
+<p><strong>Who:</strong> the safety driver, the e-stop person, the laptop person, the approver.
+<strong>How long:</strong> 90 min. 🔒 A10 passed; 4.23-4.26 passed with the lattice.</p>
+<h3 id="what-holds-it">What holds it</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>What</th>
+<th>Changed for the trial?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The switch</td>
+<td><code>diffusion_trial:=true</code>; without it <code>planner:=diffusion</code> is <strong>refused</strong> on the car</td>
+<td>new</td>
+</tr>
+<tr>
+<td>The speed</td>
+<td><strong>0.5 m/s at most</strong> for ego, Nav2 and the geofence; <code>max_speed:=</code> above 0.5 is <strong>refused</strong></td>
+<td>new</td>
+</tr>
+<tr>
+<td>The guard</td>
+<td>G1-G8 on every path the model draws; the lattice's path if none passes, or after 150 ms</td>
+<td>no</td>
+</tr>
+<tr>
+<td>Below it</td>
+<td>MPPI, collision_monitor (front and back), twist_mux's locks, ego, the geofence, the watchdog, the spine</td>
+<td><strong>no</strong></td>
+</tr>
+<tr>
+<td>A person</td>
+<td>the joystick or keyboard outranks Nav2; the Kar-Tech stop</td>
+<td>no</td>
+</tr>
+</tbody>
+</table></div>
+<p>Why 0.5 m/s: walking pace; the car's own reverse limit, so forwards and backwards alike;
+at ego's 2 m/s² it stops in 6 cm, plus 15 cm for a 0.3 s stale command. Half of ego's
+own 1.0 m/s cap, never above it.</p>
+<h3 id="before-the-orins-timing-no-driving">Before: the Orin's timing (no driving)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do (on the Orin)</th>
+<th>You should see</th>
+<th>If not</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Copy <code>models/diffusion/planner.onnx</code> (and <code>planner_fp16.onnx</code>) from the laptop into <code>~/aav-jazzy/aav/models/diffusion/</code></td>
+<td>the files there</td>
+<td><code>pixi run diffusion train</code> on the laptop first</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Make the model's Python (below): NVIDIA's ONNX Runtime, which sees JetPack's TensorRT</td>
+<td><code>~/ort-venv/bin/python -c "import onnxruntime as o; print(o.get_available_providers())"</code> lists <code>TensorrtExecutionProvider</code></td>
+<td>no internet, or it fails: no trial today (the car kit has no ONNX Runtime)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>The CPU: <code>cd ~/aav-jazzy/aav &amp;&amp; ~/ort-venv/bin/python ros/drivers/aav_diffusion_planner/training/measure.py</code></td>
+<td>a table: crop, model, guard, total against 2, 50, 10, 100 ms</td>
+<td>write the table down</td>
+</tr>
+<tr>
+<td>4</td>
+<td>The GPU: the same with <code>--provider TensorrtExecutionProvider</code></td>
+<td>the first start builds TensorRT's engine (minutes) into <code>models/diffusion/engines/</code>, where the node finds it; then the table, <code>ran on TensorrtExecutionProvider</code></td>
+<td><code>ran on CPUExecutionProvider</code>: no GPU in that ONNX Runtime; try <code>--provider CUDAExecutionProvider</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Pick: the total's 95th percentile under 100 ms, and the worst under 150</td>
+<td>write down the engine; the Python is <code>~/ort-venv/bin/python</code></td>
+<td>over 150 on every engine: <strong>no trial</strong>; every plan would be the lattice's anyway</td>
+</tr>
+</tbody>
+</table></div>
+<p>The model's Python, once (needs internet; the index is NVIDIA's Jetson AI Lab, as for
+<a href="#4d-rf-detrs-tensorrt-engine">4d</a>):</p>
+<pre class="highlight"><code class="language-bash">python3 -m venv --system-site-packages ~/ort-venv
+~/ort-venv/bin/pip install numpy onnxruntime-gpu --index-url https://pypi.jetson-ai-lab.io/jp6/cu126</code></pre>
+<p>(JetPack 7.2 after the reflash: that index's <code>jp7</code> folder, if NVIDIA has one; check first.)</p>
+<h3 id="on-stands">On stands</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>☐</th>
+<th>Before</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>☐</td>
+<td>all four wheels off the ground; the e-stop person ready</td>
+</tr>
+<tr>
+<td>☐</td>
+<td>the Orin's timing above done; the engine written down</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Where</th>
+<th>Run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>the Orin</td>
+<td><code>~/aav-jazzy/aav.sh ros2 launch aav_bringup car.launch.py machine:=orin diffusion_trial:=true stands:=true diffusion_provider:=&lt;engine&gt; diffusion_python:=$HOME/ort-venv/bin/python</code></td>
+</tr>
+<tr>
+<td>the laptop</td>
+<td><code>pixi run hud</code>; <code>ros2 topic echo /drivers/nav/diffusion/status</code></td>
+</tr>
+</tbody>
+</table></div>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Test</th>
+<th>Expect</th>
+<th>If not</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D.1</td>
+<td>The same command <strong>without</strong> <code>diffusion_trial:=true</code> but with <code>planner:=diffusion</code></td>
+<td>refused at once: "a trial: on the car only with diffusion_trial:=true"</td>
+<td>it starts: <strong>stop</strong>, no trial</td>
+</tr>
+<tr>
+<td>D.2</td>
+<td>With <code>max_speed:=0.8</code></td>
+<td>refused: "at most 0.5 m/s"</td>
+<td>it starts: <strong>stop</strong>, no trial</td>
+</tr>
+<tr>
+<td>D.3</td>
+<td>The launch log</td>
+<td>within a minute: <code>diffusion_planner: 16 samples, budget 150 ms, ... worker up</code></td>
+<td><code>the lattice plans alone</code>: every plan the lattice's (the trial proves nothing): fix the model or Python</td>
+</tr>
+<tr>
+<td>D.4</td>
+<td>A goal 10 m ahead in RViz</td>
+<td>the wheels turn forward, never over 0.5 m/s (the HUD)</td>
+<td>faster: <strong>e-stop</strong></td>
+</tr>
+<tr>
+<td>D.5</td>
+<td><code>status</code> while it plans</td>
+<td><code>source: model</code> or <code>lattice</code>, and why; <code>model_and_guard_ms</code> under 150</td>
+<td>every plan <code>late</code>: the engine is too slow</td>
+</tr>
+<tr>
+<td>D.6</td>
+<td>The HUD's e-stop, then the joystick's trigger</td>
+<td>brakes at once; the person drives</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="on-the-ground">On the ground</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>☐</th>
+<th>Before</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>☐</td>
+<td>the stands passed (D.1-D.6)</td>
+</tr>
+<tr>
+<td>☐</td>
+<td>an empty lot, cones for a 14 m lane; the safety driver in the seat; the e-stop person beside it, the Kar-Tech stop in hand; a person on the joystick</td>
+</tr>
+<tr>
+<td>☐</td>
+<td>recording: <code>tools/record.sh --lidar diffusion</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>✍ Signed (approver): ________ at __:__</code></p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Test</th>
+<th>Expect</th>
+<th>If not</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>D.7</td>
+<td>A goal 15 m straight ahead</td>
+<td>it drives there at walking pace; <code>status</code> says how many plans came from the model</td>
+<td>swerves or stops short: Kar-Tech stop, write down <code>status</code></td>
+</tr>
+<tr>
+<td>D.8</td>
+<td>A goal round one cone</td>
+<td>it drives round it, no cone touched</td>
+<td></td>
+</tr>
+<tr>
+<td>D.9</td>
+<td>The U-turn: a goal behind the car in the cone lane (4.26)</td>
+<td>forward, back, forward; never over 0.5 m/s; no cone touched</td>
+<td></td>
+</tr>
+<tr>
+<td>D.10</td>
+<td>The same goals with the lattice (no <code>diffusion_trial</code>)</td>
+<td>the times, to compare</td>
+<td></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Stop point:</strong> D.1-D.3 pass on stands, or no trial. Any cone touched: stop, and the
+record goes to the team before another run.</p>
 </section>
 <section class="card"><h2 id="any-time-on-day-a-after-a5">Any time on Day A, after A5</h2>
 <p>These three need our stack (A5) and nothing else. One person each, beside the main line.</p>

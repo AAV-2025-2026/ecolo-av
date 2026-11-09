@@ -48,9 +48,8 @@ class Grid:
         row = np.floor((np.asarray(y) - self.origin_y) / self.resolution).astype(np.int64)
         rows, cols = self.data.shape
         inside = (row >= 0) & (row < rows) & (col >= 0) & (col < cols)
-        out = np.full(np.shape(col), UNKNOWN, dtype=np.int16)
-        out[inside] = self.data[row[inside], col[inside]]
-        return out
+        cells = self.data.ravel()[np.where(inside, row * cols + col, 0)]
+        return np.where(inside, cells, UNKNOWN).astype(np.int16)
 
 
 @dataclass(frozen=True)
@@ -198,31 +197,114 @@ def yaw_of(qz, qw):
 
 
 SMOOTH = 5              # points in the moving average (smooth())
+# The wider average for a sample whose only faults were its turns or headings
+# (guard.choose's again). 7 Nov, held-back maps: plans with a passing sample 79 % -> 85 %.
+SMOOTH_AGAIN = 9
+MIN_GEAR_POINTS = 3     # a run of one gear shorter than this is the model's noise (smooth())
 
 
-def smooth(path, width=SMOOTH):
+def gear_runs(gears, min_points=MIN_GEAR_POINTS):
+    """
+    Return [(first, last, gear)]: a path's runs of one gear, by point, sharing their cusps.
+
+    gears: (N,) +1/-1, the model's own. A run shorter than min_points joins the run before
+    it (the first, the run after): one point's flicker is not a cusp. Each run's last
+    point is the next run's first: the cusp, where the car stops and changes gear.
+    """
+    g = np.where(np.asarray(gears) < 0.0, -1.0, 1.0)
+    n = len(g)
+    runs, a = [], 0
+    for i in range(1, n + 1):
+        if i == n or g[i] != g[a]:
+            runs.append([a, i - 1, g[a]])
+            a = i
+    while len(runs) > 1:
+        short = [k for k, (a, b, _) in enumerate(runs) if b - a + 1 < min_points]
+        if not short:
+            break
+        k = short[0]
+        if k == 0:
+            runs[1][0] = runs[0][0]
+        else:
+            runs[k - 1][1] = runs[k][1]
+        del runs[k]
+        merged = [runs[0]]
+        for r in runs[1:]:
+            if r[2] == merged[-1][2]:
+                merged[-1][1] = r[1]
+            else:
+                merged.append(r)
+        runs = merged
+    # Runs share their cusp: the last point of one is the first of the next.
+    out = []
+    for k, (a, b, gear) in enumerate(runs):
+        out.append((a if k == 0 else a - 1, b, gear))
+    return out
+
+
+def _average(xy, width):
+    """Return xy (M, 2) by a moving average, its two ends kept where they were."""
+    out = xy.copy()
+    if width > 1 and len(xy) > width:
+        kernel = np.ones(width) / width
+        for c in (0, 1):
+            out[:, c] = np.convolve(np.pad(xy[:, c], width // 2, mode='edge'), kernel,
+                                    mode='valid')
+        out[0], out[-1] = xy[0], xy[-1]
+    return out
+
+
+def smooth(path, width=SMOOTH, gears=None):
     """
     Return a drawn path (N, 3) smoothed.
 
     x and y by a moving average, its ends kept; each heading from the direction of travel
-    (backwards where the model's heading says the car reverses). The ends keep the
-    model's headings (pinned to start and goal).
+    (backwards where the car reverses). The ends keep the model's headings (pinned to
+    start and goal).
+
+    gears None: one average over the whole path, and the direction from the model's
+    headings (2 Nov). gears (N,) +1/-1, the model's own gear channel: each run of one gear
+    on its own, its cusps kept in place, so the average never rounds a cusp into a tight
+    turn, nor turns its headings sideways (7 Nov: the U-turn's G5 and G6 refusals).
 
     The model's points wobble a little; their headings disagree with their travel. Without
     this, 0.9 % of samples passed the guard on the held-back maps; with it, 36 % (2 Nov).
     """
     path = np.asarray(path, dtype=np.float64)
-    out = path.copy()
-    if width > 1 and len(path) > width:
-        kernel = np.ones(width) / width
-        for c in (0, 1):
-            out[:, c] = np.convolve(np.pad(path[:, c], width // 2, mode='edge'), kernel,
-                                    mode='valid')
-        out[0, :2], out[-1, :2] = path[0, :2], path[-1, :2]
-    d = np.gradient(out[:, :2], axis=0)
-    travel = np.arctan2(d[:, 1], d[:, 0])
-    forward = np.cos(travel - path[:, 2]) >= 0.0
-    yaw = np.where(forward, travel, travel + math.pi)
+    if gears is None:
+        out = path.copy()
+        out[:, :2] = _average(path[:, :2], width)
+        d = np.gradient(out[:, :2], axis=0)
+        travel = np.arctan2(d[:, 1], d[:, 0])
+        forward = np.cos(travel - path[:, 2]) >= 0.0
+        yaw = np.where(forward, travel, travel + math.pi)
+    else:
+        out = path.copy()
+        yaw = np.zeros(len(path))
+        for a, b, gear in gear_runs(gears):
+            run = _average(path[a:b + 1, :2], width)
+            out[a:b + 1, :2] = run
+            if len(run) < 2:
+                yaw[a:b + 1] = path[a:b + 1, 2]
+                continue
+            d = np.gradient(run, axis=0)
+            travel = np.arctan2(d[:, 1], d[:, 0])
+            here = travel if gear > 0 else travel + math.pi
+            # The cusp belongs to both runs: it keeps the heading it ends the first with.
+            yaw[a + (1 if a > 0 else 0):b + 1] = here[(1 if a > 0 else 0):]
     yaw[0], yaw[-1] = path[0, 2], path[-1, 2]
     out[:, 2] = np.arctan2(np.sin(yaw), np.cos(yaw))
     return out
+
+
+def smoothed(paths, gears, by_gear=True):
+    """
+    Return (the samples smoothed, and a function giving sample i smoothed wider).
+
+    paths (K, N, 3), gears (K, N): decode_paths()'s. by_gear False: 2 Nov's smoothing (one
+    average over each path) and no second try. The second is guard.choose's `again`.
+    """
+    if not by_gear:
+        return [smooth(p) for p in paths], None
+    first = [smooth(p, gears=g) for p, g in zip(paths, gears)]
+    return first, (lambda i: smooth(paths[i], width=SMOOTH_AGAIN, gears=gears[i]))

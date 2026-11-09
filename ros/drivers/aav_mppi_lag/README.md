@@ -1,0 +1,127 @@
+# aav_mppi_lag
+
+Nav2's MPPI path follower, ported to Rust, with the **actuators' lag in its model**.
+A trial beside Nav2's own MPPI (`docs/trials.md`, `docs/mppi-lag.md`). Nav2 still plans
+the path; this node follows it.
+
+```
+bt_navigator --FollowPath--> mppi_lag --cmd_vel_nav--> velocity_smoother
+   -> collision_monitor -> /drivers/nav/cmd_vel (twist_mux 20) -> ego
+controller_server keeps running; its own action is renamed follow_path_unused
+```
+
+## Overview
+
+| Part | What it is |
+|---|---|
+| `crates/mppi-lag` | the maths, no ROS: the car model, MPPI, Nav2's critics, the checks |
+| `crates/mppi-node` | the ROS node, binary `mppi_lag` (rclrs): messages in and out only |
+| `config/mppi_lag.yaml` | its own settings: the model, the steering noise, its correlation |
+
+What it adds to Nav2's MPPI:
+
+| | Nav2's MPPI | `mppi_lag` |
+|---|---|---|
+| Model of the car | speed and turn rate obey at once (within ax, az limits) | ego's ramps, the spine's speed loop, throttle and brake lag, steering motor rate, linkage lag, deadbands, dead times |
+| State it starts from | pose and speed | pose, speed, ego's output, the actuators' levels, the commands still in their dead time |
+| Noise | white, on (v, w) | on (v, steering), correlated step to step (AR(1), 0.8) |
+| Language | C++ plugin | Rust |
+
+```sh
+pixi run sim world:=test_lot reversing:=false tracker:=mppi_lag
+pixi run measure controllers --trackers mppi_lag --controllers mppi --tours lot
+```
+
+## Interface
+
+**`mppi_lag`** (`crates/mppi-node/src/main.rs`), started by `aav_navigation`'s
+`navigation.launch.py tracker:=mppi_lag`
+
+| Item | What |
+|---|---|
+| Action server | `/follow_path` (`nav2_msgs/action/FollowPath`): the newest path replaces the last without a stop |
+| Subscribes | `/localization/odom/local` (Odometry); `/tf` (map -> odom, once per path); `/vehicle/steering`, `/vehicle/throttle`, `/vehicle/brake` (ActuatorState, measured, while fresh); `/local_costmap/costmap_raw` (nav2_msgs/Costmap) |
+| Publishes | `/cmd_vel_nav` (TwistStamped); `/drivers/nav/track/status` (DiagnosticStatus, aav_track's keys and more); `/drivers/nav/local_plan` (Path, odom: MPPI's chosen future, the screens' faint line); `/drivers/nav/lag_aware` (Bool, latched) |
+
+Results: succeeded; aborted with `FAILED_TO_MAKE_PROGRESS`, `NO_VALID_CONTROL`,
+`INVALID_PATH`, `TF_ERROR`, `UNKNOWN` (no odometry); canceled.
+
+### `lag_aware`
+
+Ego's contract (0.3): `std_msgs/Bool` on `/drivers/<slot>/lag_aware`, reliable, transient
+local, depth 1. This node drives through Nav2's slot, so `/drivers/nav/lag_aware`:
+
+| When | Says |
+|---|---|
+| start, exit | `false` |
+| a path starts, `model: lag` | `true` |
+| the path ends (succeeded, aborted, cancelled) | `false` |
+| `model: ideal` | always `false` |
+
+Ego's lead turns off while it is `true`, so the lag isn't cancelled twice. Every
+`TwistStamped` is stamped with now.
+
+### Parameters
+
+From `navigation.launch.py` (`vehicle.mppi_lag_params`; nothing copied):
+
+| Name | From |
+|---|---|
+| `time_steps`, `model_dt`, `batch_size`, `iteration_count`, `temperature`, `gamma`, `vx_std`, `vx_max`, `critics`, `<Critic>.*` | nav2.yaml's `MPPI` block (`vx_max`: `max_speed:=` if given) |
+| `prune_distance` | MPPI's, stretched to fit 2.8 s at `vx_max` (as `nav2_tuned`) |
+| `rate_hz`, `odom_topic`, goal and progress checks | controller_server's |
+| `footprint`, `footprint_padding`, `inflation_radius`, `cost_scaling_factor` | vehicle.yaml's body; the local costmap's |
+| `wheelbase`, `max_steering_angle`, `actuators.*` | vehicle.yaml (dead times 0 while unset) |
+| `ego.*` | ego.yaml's ramps |
+
+From `config/mppi_lag.yaml`: `model` (lag or ideal), `steer_std`, `noise_correlation`,
+`threads`, `seed`, `use_costmap`, the topics and timeouts. All read once at start.
+
+### Crate `mppi-lag`
+
+| Module | Holds |
+|---|---|
+| `model.rs` | `CarModel`: the trait any car model plugs in through (the shared car model at merge) |
+| `lag.rs` | `LagModel`: the 0.3 spec |
+| `shared.rs` (feature `shared`) | `SharedModel`: the shared `car-model` crate behind `CarModel`, with spine-core's own speed loop (any profile) |
+| `ego.rs` | `Driven`: ego's ramps in front of any model |
+| `ideal.rs` | `IdealModel`: no lag, as Nav2's MPPI |
+| `optimizer.rs` | MPPI: sample, roll out (threads), score, softmax, Savitzky-Golay, shift |
+| `critics.rs` | Nav2's eight critics in nav2.yaml |
+| `path.rs`, `costmap.rs`, `smoothing.rs`, `rng.rs` | the path window, the costmap and outline, the filter, random numbers |
+| `follower.rs` | one path: Nav2's goal and progress checks, the state estimate, MPPI |
+
+## Invariants
+
+- Forward only: `navigation.launch.py` refuses a tracker with `reversing:=true`.
+- Never both followers: with it, controller_server's action is `follow_path_unused`.
+- Nothing in the safety path changes: the smoother, collision_monitor, twist_mux's slot,
+  the locks and e-stops all sit after `cmd_vel_nav`.
+- The maths has no ROS; the node has no maths.
+- `model_dt` must equal `1 / rate_hz` (the plan shifts one step a tick, as Nav2's).
+- Rust API Guidelines; `cargo fmt` and `cargo clippy` clean; no dependencies in the crate
+  by default. The feature `shared` adds the shared `car-model` crate (ours) as
+  `SharedModel` behind `CarModel` (`shared.rs`: it drives as `LagModel` does, to 1 cm);
+  the node still runs `LagModel`.
+
+## Side Effects
+
+- Publishes `/cmd_vel_nav` and its status only while a path runs. No files, no hardware.
+- Uses one thread per core for the rollouts (`threads`).
+
+## Verification
+
+```sh
+cd ros/drivers/aav_mppi_lag && cargo test --release -p mppi-lag          # tools/test.sh runs it
+cargo test --release -p mppi-lag --test closed_loop explore -- --ignored --nocapture
+cargo run --release -p mppi-lag --example timing                         # ms a tick
+```
+
+| Test | Covers |
+|---|---|
+| `lag.rs`, `ego.rs`, `ideal.rs` | each stage of the model: lags, rate, deadbands, dead times, offset, never reversing |
+| `critics.rs` | each critic on hand-made samples |
+| `optimizer.rs`, `smoothing.rs` | the limits, the filter, a straight path, a turn, the same seed the same plan |
+| `tests/closed_loop.rs` | a pretend car (ego + the lag model at 100 Hz): the model predicts it; circle and S-curve at vehicle.yaml's lags; a corner and an S on very slow actuators: the lag-aware one closer on the corner, the only one to keep the S |
+
+`colcon test --packages-select aav_mppi_lag` runs the same; `pixi run test` everything.

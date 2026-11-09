@@ -76,7 +76,7 @@ def test_the_speed_loop_study_follows_the_measured_numbers():
 
 # What ego leaves out of vehicle.yaml's actuators: (aav_description vehicle.ego_params takes
 # only the two strengths, for its braking and grip limits). Here until vehicle.py keeps its
-# own list, as vehicle_model.NOT_LINEAR and actuator_model.IGNORED do.
+# own list, as vehicle_model.NOT_LINEAR and car_model.IGNORED do.
 EGO_PARAMS_IGNORES = {'throttle_deadband', 'throttle_lag', 'throttle_dead_time', 'brake_lag',
                       'brake_dead_time', 'drag', 'steer_rate', 'steer_lag', 'steer_dead_time',
                       'steer_offset', 'steer_deadband', 'open_loop_decel', 'pi_loop_decel'}
@@ -113,8 +113,9 @@ def test_every_actuator_key_is_used_or_ignored_by_each_reader():
         'vehicle_model.py (YAML_KEYS, NOT_LINEAR)': (
             {k.split('.')[1] for k in tool.vm.YAML_KEYS if k.startswith('actuators.')},
             {k.split('.')[1] for k in tool.vm.NOT_LINEAR}),
-        'actuator_model.py (ActuatorConfig, IGNORED)': (
-            {f for f in vars(tool.am.ActuatorConfig()) if f != 'max_steering'},
+        'car_model.py (ActuatorConfig, IGNORED)': (
+            {f for f in vars(tool.am.ActuatorConfig())
+             if f not in ('max_steering', 'wheelbase', 'mass', 'payload')},
             set(tool.am.IGNORED)),
         'vehicle.ego_params (EGO_PARAMS_IGNORES)': (ego_params_uses(keys), EGO_PARAMS_IGNORES),
     }

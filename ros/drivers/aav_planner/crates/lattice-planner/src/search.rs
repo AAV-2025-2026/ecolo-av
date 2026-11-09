@@ -1,0 +1,512 @@
+//! The search: Nav2's `AStarAlgorithm<NodeLattice>` with its `AnalyticExpansion`.
+//!
+//! A* over (cell, heading). From each node, every move in the primitives file (and, when
+//! reversing is allowed, the same moves driven backwards); each move is checked for the
+//! car's outline along the way. Every so often it tries to finish with one Reeds-Shepp
+//! (or Dubins) curve straight to the goal.
+
+use std::collections::{BinaryHeap, HashMap};
+use std::time::Instant;
+
+use costmap::Grid;
+
+use crate::collision::{Checker, Fit};
+use crate::curves::{shortest, CurveKind};
+use crate::heuristic::{DistanceTable, Obstacles};
+use crate::lattice::{Lattice, Primitive};
+use crate::{PlanError, Pose, Settings};
+
+/// One node: a cell and heading the search reached.
+#[derive(Debug, Clone)]
+struct Node {
+    /// cells (continuous), where the move that reached it best ended.
+    x: f64,
+    y: f64,
+    heading: usize,
+    /// The cost so far.
+    g: f64,
+    parent: Option<usize>,
+    /// The move from the parent: (heading group, index in it, driven backwards).
+    by: Option<(usize, usize, bool)>,
+    visited: bool,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct Open {
+    f: f64,
+    node: usize,
+}
+impl PartialEq for Open {
+    fn eq(&self, o: &Self) -> bool {
+        self.f == o.f
+    }
+}
+impl Eq for Open {}
+impl PartialOrd for Open {
+    fn partial_cmp(&self, o: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(o))
+    }
+}
+impl Ord for Open {
+    fn cmp(&self, o: &Self) -> std::cmp::Ordering {
+        o.f.total_cmp(&self.f)
+    }
+}
+
+/// What the search found: the poses in cells (yaw in radians), start first.
+#[derive(Debug, Clone)]
+pub struct Found {
+    pub poses: Vec<Pose>,
+    pub iterations: usize,
+}
+
+/// The things a search needs that don't change between plans.
+pub struct Search<'a> {
+    pub lattice: &'a Lattice,
+    pub settings: &'a Settings,
+    pub checker: &'a Checker,
+    pub distances: &'a DistanceTable,
+    pub kind: CurveKind,
+}
+
+/// Fast hashing for node keys (they are already well spread).
+#[derive(Default)]
+struct KeyHasher(u64);
+impl std::hash::Hasher for KeyHasher {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+    fn write(&mut self, _: &[u8]) {
+        unreachable!("only u64 keys")
+    }
+    fn write_u64(&mut self, k: u64) {
+        self.0 = k.wrapping_mul(0x9E37_79B9_7F4A_7C15);
+    }
+}
+type Keys = HashMap<u64, usize, std::hash::BuildHasherDefault<KeyHasher>>;
+
+struct State<'g> {
+    grid: &'g Grid,
+    nodes: Vec<Node>,
+    keys: Keys,
+    obstacles: Obstacles,
+    goal: (f64, f64, usize),
+    best: (f32, usize),
+}
+
+impl State<'_> {
+    fn key(&self, x: f64, y: f64, heading: usize, headings: usize) -> Option<u64> {
+        if x < 0.0 || y < 0.0 || x >= self.grid.width as f64 || y >= self.grid.height as f64 {
+            return None;
+        }
+        let cell = (y as u64) * self.grid.width as u64 + x as u64;
+        Some(cell * headings as u64 + heading as u64)
+    }
+
+    fn node(&mut self, key: u64, x: f64, y: f64, heading: usize) -> usize {
+        if let Some(&i) = self.keys.get(&key) {
+            return i;
+        }
+        self.nodes.push(Node {
+            x,
+            y,
+            heading,
+            g: f64::INFINITY,
+            parent: None,
+            by: None,
+            visited: false,
+        });
+        self.keys.insert(key, self.nodes.len() - 1);
+        self.nodes.len() - 1
+    }
+}
+
+impl Search<'_> {
+    /// Search from `start` to `goal`, both in cells with lattice headings.
+    pub fn run(
+        &self,
+        grid: &Grid,
+        start: (f64, f64, usize),
+        goal: (f64, f64, usize),
+        cancelled: &dyn Fn() -> bool,
+    ) -> Result<Found, PlanError> {
+        let started = Instant::now();
+        let s = self.settings;
+        let n = self.lattice.headings.len();
+        let tolerance = (s.tolerance / grid.resolution) as f32;
+        let mut st = State {
+            grid,
+            nodes: Vec::with_capacity(100_000),
+            keys: Keys::default(),
+            obstacles: Obstacles::new(
+                grid,
+                (start.0 as usize, start.1 as usize),
+                (goal.0 as usize, goal.1 as usize),
+                s.cost_penalty,
+            ),
+            goal,
+            best: (f32::MAX, 0),
+        };
+        let goal_key = st
+            .key(goal.0, goal.1, goal.2, n)
+            .ok_or(PlanError::GoalOutsideMap)?;
+        let start_key = st
+            .key(start.0, start.1, start.2, n)
+            .ok_or(PlanError::StartOutsideMap)?;
+        if tolerance < 0.001
+            && self
+                .checker
+                .fit(grid, goal.0, goal.1, self.lattice.headings[goal.2])
+                == Fit::Blocked
+        {
+            return Err(PlanError::GoalOccupied);
+        }
+        let first = st.node(start_key, start.0, start.1, start.2);
+        st.nodes[first].g = 0.0;
+        let mut open = BinaryHeap::new();
+        open.push(Open {
+            f: 0.0,
+            node: first,
+        });
+
+        let mut iterations = 0;
+        let mut approach = 0;
+        let mut analytic_wait = 0_i64;
+        let mut closest = i64::MAX;
+        while iterations < s.max_iterations {
+            let Some(Open { node: id, .. }) = open.pop() else {
+                break;
+            };
+            if iterations % s.terminal_checking_interval == 0 {
+                if cancelled() {
+                    return Err(PlanError::Cancelled);
+                }
+                if started.elapsed().as_secs_f64() >= s.max_planning_time {
+                    return Err(PlanError::Timeout);
+                }
+            }
+            if st.nodes[id].visited {
+                continue;
+            }
+            iterations += 1;
+            st.nodes[id].visited = true;
+
+            if let Some(poses) = self.try_analytic(&mut st, id, &mut analytic_wait, &mut closest) {
+                return Ok(Found { poses, iterations });
+            }
+            let here_key = st.key(st.nodes[id].x, st.nodes[id].y, st.nodes[id].heading, n);
+            if here_key == Some(goal_key) {
+                return Ok(Found {
+                    poses: self.backtrace(&st, id),
+                    iterations,
+                });
+            }
+            if st.best.0 < tolerance {
+                approach += 1;
+                if approach >= s.max_on_approach_iterations {
+                    return Ok(Found {
+                        poses: self.backtrace(&st, st.best.1),
+                        iterations,
+                    });
+                }
+            }
+            self.expand(&mut st, id, &mut open);
+        }
+        if st.best.0 < tolerance {
+            return Ok(Found {
+                poses: self.backtrace(&st, st.best.1),
+                iterations,
+            });
+        }
+        if iterations == 1 {
+            // Not one move from the start fitted.
+            Err(PlanError::StartOccupied)
+        } else if iterations >= s.max_iterations {
+            Err(PlanError::Timeout)
+        } else {
+            Err(PlanError::NoValidPath)
+        }
+    }
+
+    /// The estimate from a node to the goal (Nav2's `getHeuristicCost`): the larger of
+    /// round-the-obstacles and the car's curve, from the node's whole cell.
+    fn heuristic(&self, st: &mut State, id: usize) -> f32 {
+        let node = &st.nodes[id];
+        let (cx, cy, h) = (node.x as usize, node.y as usize, node.heading);
+        let obstacles = st.obstacles.get(st.grid, cx, cy);
+        let curve = self.distances.get((cx, cy, h), st.goal, obstacles);
+        let estimate = obstacles.max(curve);
+        if estimate < st.best.0 {
+            st.best = (estimate, id);
+        }
+        estimate
+    }
+
+    fn moves(&self, heading: usize) -> impl Iterator<Item = (usize, usize, bool)> + '_ {
+        let forward = (0..self.lattice.moves[heading].len()).map(move |i| (heading, i, false));
+        let back_heading = self.lattice.opposite(heading);
+        let back = (0..self.lattice.moves[back_heading].len())
+            .map(move |i| (back_heading, i, true))
+            .filter(|_| self.settings.allow_reverse);
+        forward.chain(back)
+    }
+
+    fn primitive(&self, (group, index, _): (usize, usize, bool)) -> &Primitive {
+        &self.lattice.moves[group][index]
+    }
+
+    /// The highest cost along a move from (x, y), or None if the car doesn't fit on it
+    /// (Nav2 checks the end, then a pose about every cell's diagonal along it).
+    fn sweep(&self, grid: &Grid, x: f64, y: f64, by: (usize, usize, bool)) -> Option<u8> {
+        let prim = self.primitive(by);
+        let res = self.lattice.resolution;
+        let (ex, ey) = prim.end();
+        let end_heading = if by.2 {
+            self.lattice.opposite(prim.end_heading)
+        } else {
+            prim.end_heading
+        };
+        let Fit::Free(mut worst) = self.checker.fit(
+            grid,
+            x + ex / res,
+            y + ey / res,
+            self.lattice.headings[end_heading],
+        ) else {
+            return None;
+        };
+        let spacing = 2.0 * res * res;
+        let mut last = (1e9, 1e9);
+        for &(px, py, yaw) in &prim.poses {
+            if (px - last.0).powi(2) + (py - last.1).powi(2) <= spacing {
+                continue;
+            }
+            last = (px, py);
+            let yaw = if by.2 {
+                yaw + std::f64::consts::PI
+            } else {
+                yaw
+            };
+            match self.checker.fit(grid, x + px / res, y + py / res, yaw) {
+                Fit::Free(c) => worst = worst.max(c),
+                Fit::Blocked => return None,
+            }
+        }
+        Some(worst)
+    }
+
+    /// Nav2's `NodeLattice::getTraversalCost`.
+    fn travel(
+        &self,
+        from: Option<(usize, usize, bool)>,
+        by: (usize, usize, bool),
+        cost: u8,
+    ) -> f64 {
+        let s = self.settings;
+        let prim = self.primitive(by);
+        let length = prim.length / self.lattice.resolution;
+        let Some(from) = from else {
+            return length;
+        };
+        if prim.length < 1e-4 {
+            return s.rotation_penalty * (1.0 + s.cost_penalty * f64::from(cost) / 252.0);
+        }
+        let raw =
+            length * ((1.0 - s.retrospective_penalty) + s.cost_penalty * f64::from(cost) / 252.0);
+        let mut travel = if prim.arc_length < 0.001 {
+            raw
+        } else if self.primitive(from).left_turn == prim.left_turn {
+            raw * s.non_straight_penalty
+        } else {
+            raw * (s.non_straight_penalty + s.change_penalty)
+        };
+        if by.2 {
+            travel *= s.reverse_penalty;
+        }
+        travel
+    }
+
+    fn expand(&self, st: &mut State, id: usize, open: &mut BinaryHeap<Open>) {
+        let n = self.lattice.headings.len();
+        let res = self.lattice.resolution;
+        let (x, y, heading, g, from) = {
+            let node = &st.nodes[id];
+            (node.x, node.y, node.heading, node.g, node.by)
+        };
+        for by in self.moves(heading).collect::<Vec<_>>() {
+            let prim = self.primitive(by);
+            let (ex, ey) = prim.end();
+            let (nx, ny) = (x + ex / res, y + ey / res);
+            let nh = if by.2 {
+                self.lattice.opposite(prim.end_heading)
+            } else {
+                prim.end_heading
+            };
+            let Some(key) = st.key(nx, ny, nh, n) else {
+                continue;
+            };
+            let next = st.node(key, nx, ny, nh);
+            if st.nodes[next].visited {
+                continue;
+            }
+            let Some(cost) = self.sweep(st.grid, x, y, by) else {
+                continue;
+            };
+            let new_g = g + self.travel(from, by, cost);
+            if new_g < st.nodes[next].g {
+                let node = &mut st.nodes[next];
+                node.g = new_g;
+                node.parent = Some(id);
+                node.by = Some(by);
+                node.x = nx;
+                node.y = ny;
+                let f = new_g + f64::from(self.heuristic(st, next));
+                open.push(Open { f, node: next });
+            }
+        }
+    }
+
+    /// The poses from the start to node `id` (cells), each move's poses in turn.
+    fn backtrace(&self, st: &State, id: usize) -> Vec<Pose> {
+        let res = self.lattice.resolution;
+        let mut out = Vec::new();
+        let mut at = Some(id);
+        while let Some(i) = at {
+            let node = &st.nodes[i];
+            match node.by {
+                Some(by) => {
+                    let prim = self.primitive(by);
+                    let (ex, ey) = prim.end();
+                    let (sx, sy) = (node.x - ex / res, node.y - ey / res);
+                    for &(px, py, yaw) in prim.poses.iter().rev() {
+                        let yaw = if by.2 {
+                            yaw + std::f64::consts::PI
+                        } else {
+                            yaw
+                        };
+                        out.push(Pose::new(
+                            sx + px / res,
+                            sy + py / res,
+                            crate::curves::wrap(yaw),
+                        ));
+                    }
+                }
+                None => out.push(Pose::new(
+                    node.x,
+                    node.y,
+                    crate::curves::wrap(self.lattice.headings[node.heading]),
+                )),
+            }
+            at = node.parent;
+        }
+        out.reverse();
+        out
+    }
+
+    /// Now and then, try one curve from this node (or an ancestor) to the goal (Nav2's
+    /// `tryAnalyticExpansion`): the whole path if it is clear.
+    fn try_analytic(
+        &self,
+        st: &mut State,
+        id: usize,
+        wait: &mut i64,
+        closest: &mut i64,
+    ) -> Option<Vec<Pose>> {
+        let s = self.settings;
+        let estimate = self.heuristic(st, id);
+        *closest = (*closest).min(estimate as i64);
+        let desired = ((*closest as f64 / s.analytic_expansion_ratio) as i64)
+            .max(s.analytic_expansion_ratio.ceil() as i64);
+        *wait = (*wait).min(desired);
+        if *wait > 0 {
+            *wait -= 1;
+            return None;
+        }
+        *wait = desired;
+        let radius = self.lattice.turning_radius / self.lattice.resolution;
+        let mut anchor = id;
+        let mut curve = self.analytic(st, anchor, radius)?;
+        // Start the curve further back if it still works: fewer lattice wiggles.
+        for _ in 0..8 {
+            let mut back = Some(anchor);
+            for _ in 0..5 {
+                back = back.and_then(|b| st.nodes[b].parent);
+            }
+            let Some(earlier) = back else { break };
+            match self.analytic(st, earlier, radius) {
+                Some(c) => {
+                    curve = c;
+                    anchor = earlier;
+                }
+                None => break,
+            }
+        }
+        // Then wider turns, up to four times the radius, if they cost less.
+        let score = |c: &Vec<(Pose, u8)>| -> f64 {
+            if c.len() < 2 {
+                return f64::MAX;
+            }
+            let step = (c[1].0.x - c[0].0.x).hypot(c[1].0.y - c[0].0.y);
+            c.iter()
+                .map(|(_, cost)| step * (1.0 + s.cost_penalty * f64::from(*cost) / 252.0))
+                .sum()
+        };
+        let mut best = score(&curve);
+        let mut r = radius;
+        while r < 4.0 * radius {
+            r += 0.5;
+            if let Some(c) = self.analytic(st, anchor, r) {
+                let sc = score(&c);
+                if sc <= best {
+                    best = sc;
+                    curve = c;
+                }
+            }
+        }
+        let mut poses = self.backtrace(st, anchor);
+        poses.extend(curve.into_iter().map(|(p, _)| p));
+        Some(poses)
+    }
+
+    /// The curve from a node to the goal, sampled about every cell's diagonal, with each
+    /// sample's cost; None if it is too long, too short or blocked (Nav2's `getAnalyticPath`).
+    fn analytic(&self, st: &State, id: usize, radius: f64) -> Option<Vec<(Pose, u8)>> {
+        let s = self.settings;
+        let node = &st.nodes[id];
+        let from = Pose::new(node.x, node.y, self.lattice.headings[node.heading]);
+        let to = Pose::new(st.goal.0, st.goal.1, self.lattice.headings[st.goal.2]);
+        let curve = shortest(self.kind, &from, &to, radius);
+        let d = curve.length();
+        let max_length = s.analytic_expansion_max_length / st.grid.resolution;
+        if d > max_length || d < std::f64::consts::SQRT_2 {
+            return None;
+        }
+        let steps = (d / std::f64::consts::SQRT_2).floor() as usize;
+        let mut out = Vec::with_capacity(steps);
+        for i in 1..=steps {
+            let p = curve.sample(&from, i as f64 / steps as f64);
+            match self.checker.fit(st.grid, p.x, p.y, p.yaw) {
+                Fit::Free(c) => out.push((p, c)),
+                Fit::Blocked => return None,
+            }
+        }
+        // Refuse a curve that leaves expensive ground and then goes back into it.
+        let max_cost = s.analytic_expansion_max_cost;
+        if out.iter().any(|(_, c)| f64::from(*c) > max_cost) {
+            let mut left_it = false;
+            let mut back_in = false;
+            for (_, c) in out.iter().rev() {
+                if f64::from(*c) <= max_cost {
+                    left_it = true;
+                } else if left_it {
+                    back_in = true;
+                    break;
+                }
+            }
+            let short = d < std::f64::consts::TAU * radius;
+            if back_in && !(short && s.analytic_expansion_max_cost_override) {
+                return None;
+            }
+        }
+        Some(out)
+    }
+}

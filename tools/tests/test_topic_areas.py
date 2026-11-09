@@ -12,7 +12,7 @@ AREAS = ('sensors', 'vehicle', 'can', 'localization', 'perception', 'drivers', '
 # ROS's own global names, which every tool expects, and Nav2's, which stay for now.
 GLOBALS = {'/tf', '/tf_static', '/clock', '/robot_description', '/joint_states',
            '/diagnostics', '/rosout', '/parameter_events', '/map', '/global_costmap/costmap',
-           '/goal_pose', '/plan',
+           '/goal_pose', '/plan', '/local_costmap/costmap',
            '/cmd_vel_nav'}
 
 

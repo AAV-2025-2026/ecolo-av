@@ -3,6 +3,90 @@
 The current work list, newest first. Tick items off as they land; each tick = a commit.
 Ben's messages, word for word: `docs/history/messages-*.md`.
 
+## A heavier car: the adaptive brake (8 Nov)
+
+Ben, 8 Nov: "if we brake without a person vs with a person ... we are going to need to dynamically realize that we aren't braking as fast as we expect and start applying more force. We don't want to overwhelm the brakes though, so we might want to know what the max values are like the steering system." The page: [a heavier car](docs/stopping.md#4-a-heavier-car-the-adaptive-brake).
+
+| # | Task | Status |
+|---|---|---|
+| 145 | **The adaptive brake** (`aav_description` `adaptive_brake.py`; `adaptive_brake:=true` in the sim): measured against the empty car model's slowing, more brake for a car that stops too slowly; never above `brake: safe_max`, a rise rate, `max_hold_time` near it; the car model's `payload`; `sim-check --loaded-stop` | ✅ 8 Nov built and tested without ROS: from 2 m/s with 150 kg aboard the car model stops 0.58 m past the empty plan, +0.04 m with the adaptive brake (the page). ✅ 8 Nov `sim-check --loaded-stop-only`, our simulator, 5 of 5: 150 kg without it +0.87 m past the empty model; with it +0.21 m, the next stop +0.05 m; empty +0.04 / +0.05 m either way. ⬜ car day A7 rows 6-8: the brake's real limits into `vehicle.yaml` `brake:`. ⬜ on the car: in `legacy_uart_bridge`'s `pi` loop (Python, the same module), then spine-core in Rust (a twin with shared vectors); the wheel speed's noise first (8 spokes a turn) |
+
+## Off Nav2, one piece at a time (8 Nov)
+
+Ben, 8 Nov: our own versions beside Nav2, each until it wins; Nav2 stays the default and on the car. The order: the costmap, a Rust path planner, the navigator.
+
+| # | Task | Status |
+|---|---|---|
+| 143 | **Our own costmap** ([page](docs/own-costmap.md), `aav_costmap`, `costmap:=own`): Nav2's layers in Rust (the map, the scan's marks with ray clearing, inflation round the car), local (odom, rolling) and global (the map), on `/drivers/nav/costmap/*`; `mppi_lag` reads ours | ✅ 8 Nov built, 30 tests without ROS; in our simulator 100 % of 40,000 cells the same as Nav2's (stopped at the post, 2 of 2); 4-5 % of a core for both, Nav2's local one 7-9 %. mppi_lag on ours, 3 runs each: plan around 3 of 3 (2.1-2.5 m clear; Nav2's 3 of 3, 2.4 m); lidar obstacle: stopped 0.20, 0.21 m (Nav2's 0.17-0.71), but once steered past the post and once never reached the goal after it went (Nav2's 3 of 3). ✅ 8 Nov: the trees' recovery clears ours too (`clear_entirely_local`, bt_navigator remapped): lidar obstacle again 3 of 3 to the goal (stops 0.64, 0.15, 0.18 m; 100 % of cells the same).; ⬜ radar and camera clouds in the sim; ⬜ the planner on `/drivers/nav/costmap/global_raw` (next piece) |
+| 144 | **Our own planner** ([page](docs/own-planner.md), `aav_planner`, `planner:=own`): Nav2's State Lattice in Rust (the primitives file, nav2.yaml's penalties, the Reeds-Shepp finish, the smoother, the car's outline on the global costmap: Nav2's or ours); serves ComputePathToPose, bt_navigator remapped to it, Nav2's lattice beside it | ✅ 8 Nov built; 6 tests without ROS (the curves end on the goal; straight, U-turns, a parking-lot exit, a narrow gap, no path), all under 1.1 ms. Our simulator, 3 runs each with reversing: test lot **12 of 12** as Nav2's lattice (tours 182-189 s against 186-187), the same paths within 2.2 m, 3-37 ms a plan. Campus at 2.5 m/s: 4 of 9 against 3 of 9, both lost to MPPI's "Optimizer fail" at the start of the long leg; ours 168-195 ms there against 138-151 ms. ⬜ faster (cache each node's check where safe); ⬜ Hybrid-A* (forward only); ⬜ ComputePathThroughPoses; ⬜ TODO 140's P4 to Fieldhouse once MPPI gets past that leg; ⬜ the navigator step (next piece) |
+| 145 | **Our own navigator** ([page](docs/own-navigator.md), `aav_navigator`, `navigator:=own`): bt_navigator's trees and waypoint_follower in Rust (plan, follow, replan, final approach, recoveries, through-poses, GPS waypoints by the datum), Nav2's actions under `/drivers/nav/navigator/`; goal senders switch by `navigator`; our planner also serves ComputePathThroughPoses; all ours = no Nav2 server navigates | ✅ 8 Nov built; 11 tests without ROS. Our simulator, all ours vs all Nav2, forward only: test lot 7 of 12 legs against 8 (3 runs; the U-turn 1 of 3 against 0); the box 3 of 3 both; sim-check all ours, 13 of 13 pass; campus at 2.5 m/s 4 of 6 against 2 (2 runs); P4 to the Fieldhouse 1 of 2 against 0. Why Nav2 gave up "along the road": lidar marks beside the lot exit where leg 1 ends make the car's own spot occupied ("Start occupied", MPPI "Optimizer fail"); ours clears and replans. ⬜ `mppi_lag` overshoots the campus's first goal at 2.5 m/s (under Nav2's navigator too); ⬜ its CPU (2x Nav2's MPPI); ⬜ not the sim default until those |
+| 146 | **Our own velocity smoother** ([page](docs/own-smoother.md), `aav_smoother`, `smoother:=own`): Nav2's velocity_smoother's speed limits, timeout, deadband and feedback, with the turn rate from the steering actuator's rate and full lock (vehicle.yaml through the car model), under Nav2's node name; `measure controllers --smoothers`, and the new row "steering commands ego had to clip" | ✅ 8 Nov built; 16 tests without ROS. Our simulator, all ours, test lot, 3 runs each: 10 of 12 legs both; ego clipped 0-0.1 % against 9-15 %; off the path 0.12 m against 0.15 m (worst 0.65 against 0.92); tour 701 s against 890 s. ⬜ campus at 2.5 m/s; ⬜ `tracker:=mppi_lag` under Nav2's navigator; ⬜ lateral-acceleration cap (ego has it); ⬜ not the default until those |
+
+## 0.3: diffusion on the car, as a trial (7-8 Nov)
+
+Ben, 7 Nov: "We want diffusion." His choice: on the car in 0.3, a trial, low speed, behind the guard and the locks.
+
+| # | Task | Status |
+|---|---|---|
+| 133 | **Diffusion for 0.3** ([design, As built 0.3](docs/designs/2026-11-02_diffusion-planner.md#as-built-03-7-8-nov), [trials](docs/trials.md#diffusion-7-8-nov-the-u-turn-the-orin-the-car)): why the guard refused (G5 turns, G6 at the U-turn's cusp); each gear smoothed on its own, a wider second try for G5/G6 only, U-turn data, the map encoded once; record and replay plans offline; TensorRT/CUDA/CPU with fallbacks, FP16 export, `pixi run measure diffusion`; the car gate `diffusion_trial:=true`, 0.5 m/s ([car day A12](docs/car-day.md#a12-the-diffusion-planners-trial), test 4.27) | ✅ 8 Nov, branch `worktree-agent-a0cbc7e904c345e4d`: offline 77 → 87 % of plans with a passing sample, G5 2,197 → 850. Simulator, 3 runs each: 77 → **88 %** of plans from the model (84, 89, 92 %; 92 % after the merge), the U-turn 40 → 72 %, 12 of 12 legs, 171-175 s against the lattice's 180-185 s. ⬜ the Orin's timing (TensorRT), the car trial (A12) |
+
+## 0.3: directions on the campus (7 Nov)
+
+Ben, 7 Nov: Tesla-like "higher level navigation for directions"; for 0.3, on the campus. The page: [On the campus](docs/routes.md#on-the-campus).
+
+| # | Task | Status |
+|---|---|---|
+| 140 | **Directions on the campus**: a place's name (or lat/lon, or a map point) to a route on the campus's own road graph (`campus_graph.py`, from the `.osm` Gazebo's world comes from), cut into Nav2 GPS waypoints; `street_router router:=campus`, `/drivers/nav/route/place`; `pixi run campus-route`; 19 named places in the site file (`campus_site.yaml`, TODO 100's first piece) | ✅ 7 Nov built and tested without ROS; in Gazebo the route goes to Nav2. ❌ 8 Nov Gazebo, P4 to Fieldhouse (453 m): **did not arrive**; 310 m driven, stuck half-turned at a sharp bend (each bend is a stop-and-face goal). ⬜ bend waypoints before the corner, or `navigate_through_poses`; then the run again. ⬜ real drop-off points (`stop:`) measured on the day; a screen to pick a place (the screens' agent); ✅ 8 Nov our navigator (TODO 145) passes the waypoints as one through-poses goal: P4 to the Fieldhouse reached 1 of 2 (263 s; Nav2's waypoint_follower 0 of 2, stuck at the lot exit) |
+
+## 0.3: ego knows the car (7 Nov)
+
+Ben, 7 Nov: "we really want the ego to have a mathematical model for steering, braking and acceleration ... have the algorithms know about lag". The page: [one car model](docs/car-model.md).
+
+| # | Task | Status |
+|---|---|---|
+| 127 | **One car model**, Python (`aav_description` `car_model.py`) and Rust (`car-model`), shared vectors; dead times; the bicycle; `step`, `predict` | ✅ 7 Nov. Gazebo unchanged |
+| 128 | **ego's lag lead** (`lag_lead: auto`, sim only), off under a lag-aware driver (`/drivers/<slot>/lag_aware`) | ✅ 7 Nov, sim. ⬜ `on` for the car after tests 3.10-3.12, 4.1-4.5 |
+| 129 | **ego's trace** (`/ego/trace`, 2 s, `base_link`) | ✅ 7 Nov; the HUD and the developer window draw it (136). ⬜ drivers match it to their plan |
+| 136 | **The squiggly line** ([page](docs/hud.md#the-squiggly-line-ahead)): ego's trace (bold, green / amber / red by the gap to the plan), the plan (faint), the stop bar from `/ego/stop_point` (the car model, full brake now), the room to the goal or an obstacle; on the HUD (AHEAD) and the developer window (key T), pretend data too | ✅ 7 Nov built. ⬜ stop lines (no topic yet); the line drawn on the camera picture (Q22); the car's real numbers (tests 3.10-3.12, 4.1-4.5) |
+| 130 | The lag-aware drivers publish `/drivers/nav/lag_aware`: `aav_track`'s MPC, the Rust MPPI | ✅ 7 Nov: both (rows 131, 132) |
+
+## 0.3: how the car stops, and the behaviour planner (7 Nov)
+
+Ben, 7 Nov: "We need navigation planning and lane following and we need an obstacle avoidance planner to avoid tricky situations ... we can use that to say if we have turned enough or slowing down enough". His picks for 0.3: the behaviour planner and a stop-point check. The page: [how the car stops](docs/stopping.md).
+
+| # | Task | Status |
+|---|---|---|
+| 137 | **The behaviour planner** (`aav_behaviour`, `behaviour:=true`, a trial): DRIVE, APPROACH, STOPPED, WAIT, GO, ASK; a speed cap on Nav2 (`/drivers/nav/speed_limit`) from **one stopping law** (`aav_description` `stop_law.py`, TODO 110) for a stop sign, an obstacle in the lane, the fence and the goal; `/drivers/nav/behaviour/state` for the screens; the watcher's `/perception/stop_sign/distance` | ✅ 7 Nov built, every transition tested; the sim runs: see the page. ⬜ the `patient` progress checker, ASK's reply, the trackers reading the cap, the car (stage gates) |
+| 138 | **The stop-point check** (`pixi run sim-check --stop-point`): drives at 1, 2, 3 m/s, slows at 1 m/s², and scores where the car stopped (truth and localization) against the car model's `stop_point`; `tools/stop_points.py` can score a car bag later, with a tape for truth | ✅ 7 Nov, numbers on the page. ⬜ on the car, after tests 4.1-4.5, with the real numbers |
+| 139 | **Wiring**: the shared `car-model` crate behind `sim-core`'s and `mppi-lag`'s `CarModel` traits (feature `shared`) | ✅ 7 Nov, tested against their own copies. ⬜ the nodes switched over, after a quiet-machine sim-check |
+
+## 0.3: Gazebo merged into Rust (7 Nov)
+
+Ben, 7 Nov: "Does the bevy tool still use gazebo in the background. I would love to merge in everything from gazebo so its standalone in rust." His picks: everything in 0.3, all sensors.
+
+| # | Task | Status |
+|---|---|---|
+| 134 | **Our own simulator's core** ([page](docs/own-simulator.md), `aav_simulator`, `sim simulator:=own`): Gazebo's worlds (test lot, road, campus), the car (a `CarModel` trait, the car-model crate's rules), the roof lidar and the radar stand-in by ray casting, IMU, GPS, wheels, truth, `/clock`, TF through `/joint_states`; the car stops at what it hits; spawn and delete services; `sim-check --simulator own` | ✅ 7 Nov built; on a loaded Mac: drop-in pass (no cameras), a Nav2 goal reached, `sim-check` pass but the box run's last leg (a late TF), `--lidar-obstacle` pass. ⬜ the cameras plug in (another branch); `car-model` behind the trait; a quiet-machine run beside Gazebo's spread; then ours the default |
+
+## Saturday 7 November: release 0.3, our own simulator
+
+Ben, 7 Nov: replace Gazebo with our own Rust simulator, every sensor. The core (world, car, lidar, IMU, GPS, wheels, clock, TF) and the cameras are built side by side.
+
+| # | Task | Status |
+|---|---|---|
+| 135 | **The simulator's cameras** ([page](docs/own-simulator-cameras.md), `aav_sim_cameras`): Bevy offscreen, Gazebo's four camera topics, `CameraRenderer` for the core. Left: feed it the core's world and truth; read Gazebo's SDF worlds; a no-GPU path for CI; compare with Gazebo's pictures; the detector on its pictures | ✅ built, test world only. ⬜ merge with the core |
+| 141 | **The cameras joined to our simulator** ([page](docs/own-simulator-cameras.md)): the core's worlds (test lot, road, campus: boxes, cylinders, planes, OBJ meshes, their pictures, the sky and sun) drawn by `sim_cameras`; `simulator:=own` starts them, so perception, lane and faults run on ours. Also the ground under each wheel (slopes tilt the car, a 0.3 m kerb stops it) | ✅ 8 Nov: `sim-check --simulator own --lane` all pass; drop-in: every camera at 10 Hz. Head to head on a quiet Mac (`sim-check` x 3, `--obstacle`, `--lidar-obstacle`, `--speed-steps`, `--lane-only`): ours passes all, Gazebo the same but one start-up. **The default since 8 Nov:** `--perception`, `--faults`, `--drive-to-point-only` 3 of 3 each on ours; placed models drawn in the pictures. Left: the one stop-sign miss (1 of 8, cause unknown); computers with no GPU use `simulator:=gazebo` |
+| 142 | **Lane following for 0.3** ([page](docs/perception.md#in-the-simulators-8-nov)): `measure lane` scores a long drive by the truth (road world, campus roads); the campus's painted roads get edge lines | ✅ 8 Nov on ours: Library Road 171 m at 1.4 m/s, error mean 4 cm, 95 % 13-15 cm, lane lost in 0-1 % of pictures. Gazebo on the campus: lane lost in 68 % (not diagnosed). Left: unpainted service roads; real pictures |
+
+## Saturday 7 November: 0.3, the algorithms know about lag (MPPI)
+
+Ben, 7 Nov: "have the algorithms know about lag". MPPI out of Nav2 into our own Rust driver, its model with the actuators' lag; Nav2 keeps planning.
+
+| # | Task | Status |
+|---|---|---|
+| 131 | **MPPI that knows the lag** (`aav_mppi_lag`, `tracker:=mppi_lag`, [page](docs/mppi-lag.md)): Nav2's MPPI and its eight critics in Rust, on a lag model behind a `CarModel` trait (the shared car model's rules); `/drivers/nav/lag_aware` true while it drives, for ego's lead | ✅ 7 Nov built, tested without ROS. ⬜ Gazebo against Nav2's MPPI on a quiet computer (7 Nov's runs: the odometry stalled under load and it gave up; the page). ⬜ at merge: the shared `car-model` crate behind `CarModel` (its rules matched already). ⬜ the car's real lags (tests 3.10-3.12, 4.1-4.5), then the same runs again; the Orin's tick time (estimated, not measured) |
+| 132 | **The lag-aware MPC** (`tracker:=mpc_lag`, [results](docs/trials.md#lag-aware-mpc-7-nov-mpc_lag)): steering and set speed planned through the spine's speed loop, throttle, brake, the steering motor's rate and linkage, dead times and the commands already sent; one QP a tick, on the shared car model (`car_model`: its numbers, speed loops and estimate; `lag_model.step` is its maths on arrays, held to it within 1e-9). Says `/drivers/nav/lag_aware` (latched) so ego's lead stays off. `lag_scale:=2` (Gazebo) for the robustness test | 🟡 built and scored. Pretend car: no speed overshoot; lags x2, the 2 m/s U-turn 0.17 m off (MPC 0.36). Our simulator, lot tour, 3 runs: **6 of 12 legs** (MPPI 8, RPP 9, `mppi_lag` 11): the quickest and closest on the legs it drives, 5 ms a tick, but 0 of 3 on the U-turn by the building (collision_monitor stops it on the planner's path; no aav_track tracker reads the costmap: mpc and pure pursuit fail it too). Gazebo, 1 run: lags as told **4 of 4** (MPPI 2, RPP 2); doubled 2 of 4 (MPPI 3, RPP 3). Left: keep off obstacles (costmap cost in the QP, or slow near them, as RPP); move to Rust before the car (worst tick near 50 ms on the Orin, estimated); model the LQI and the ESP32's open loop |
+
 ## Saturday 7 November: the hardware debug plan
 
 Ben, 7 Nov: the Rust replaces the C++, WiFi pages too, with JSON instead of streaming text; graphs of steering, brake and throttle in `hw_panel`; debug one part of the car at a time.
@@ -28,12 +112,12 @@ Ben, 4 Nov: "think about the areas of this car and what is the weakest ... ideas
 | 107 | **One developer window** ([design](docs/designs/2026-11-05_one-window.md)) (Ben, 5 Nov: "a single screen just for the developers and a list of algo so you can swap"): `demo` opens Gazebo headless and **one** Rust window: 3D, the Nav2 map you click on, NDT and ICP, the algorithm list with SWAP. RViz off unless `--rviz`. The street map and the HUD stay in the car. Not Gazebo's renderer compiled into Rust | ⬜ 0.3; the design corrected after the EGM review. Proposed: raylib, with Gazebo's real picture as a panel; Bevy only on a written test (D1, Ben's). Replaces TODO 73's merge into the cockpit |
 | 108 | **Shadow mode** (research thread 3, step 1): while a person drives, Nav2 and the other automatic drivers keep publishing under a SHADOW lock (twist_mux 60), the bag records what each would have done, `shadow_score.py` scores the disagreement | ⬜ **not picked**: proposed, in stages ([design](docs/designs/2026-11-05_shadow-mode.md)): recording and a score on real bags first; a live lock only if that shows a need (S1, Ben's) |
 | 109 | **The EGM review of the 4-5 Nov designs** ([report](docs/designs/2026-11-05_egm-review.md)): none passed; all eight corrected after it, and all but `one-car` are now far too long for "short pages" | ✅ 5 Nov, uncommitted. ⬜ cut them down: the stopping design takes Part 3 of `knows-itself` and the requirements in `behaviour-and-speed`; `one-window` can split off SWAP |
-| 110 | **How the car stops** ([design](docs/designs/2026-11-05_how-the-car-stops.md)): Ben's first hybrid, one stopping law from `approach.py`, `dynamics.py`, `speed.py` and `geofence.py` | ⬜ next |
+| 110 | **How the car stops** ([design](docs/designs/2026-11-05_how-the-car-stops.md)): Ben's first hybrid, one stopping law from `approach.py`, `dynamics.py`, `speed.py` and `geofence.py` | ✅ 7 Nov `stop_law.py` (row 137), with the speed loop's lag in ρ; the trackers use it, the point driver with `stop_law:=hybrid`. ⬜ the point driver in Gazebo, 10 runs against `approach`; the CBF filter |
 | 111 | **The radar driver can die on a short frame**, in today's default mode too: `unpack` returns `None`, the generator raises, and the publisher reuses the dead generator (`TI.py:117, 125`; `pc_publisher.py:110, 143`). Read, not run | ⬜ |
 | 112 | **`vehicle.yaml` has three duplicate keys** under `vehicle:` (`centre_of_mass`, `tyre_grip`, `encoder_counts_per_rev`). The values match today, so harmless until someone edits only one: delete the copies | ⬜ |
 | 113 | **The stop-sign watcher lets rear-camera boxes trip the lock** (`stop_sign_watcher.py:34`). Reviewer's word, not checked | ⬜ |
 | 114 | **The developer window in Bevy** ([design](docs/designs/2026-11-05_own-simulator.md)) (Ben, 5 Nov): his layout, in `ros/hud/aav_dev_window` | 🔧 live on Gazebo, with goals through its gates (5 Nov). Next: a slower laptop, cancel a goal, the algorithm list, SWAP |
-| 115 | **Our own simulator in Rust and Bevy** ([design](docs/designs/2026-11-05_own-simulator.md)) (Ben, 5 Nov: "we want to replace gazebo"): every sensor Gazebo gives, beside Gazebo until it wins on the same routes | ⬜ EGM review first |
+| 115 | **Our own simulator in Rust and Bevy** ([design](docs/designs/2026-11-05_own-simulator.md)) (Ben, 5 Nov: "we want to replace gazebo"): every sensor Gazebo gives, beside Gazebo until it wins on the same routes | ▶ 7 Nov: the core is built (row 134); the cameras on their own branch |
 | 116 | **Does the car stop if Ben's MacBook drops off?** The LLM on the Mac sends Nav2 goals; a goal may carry on with the Mac gone. Check, then a heartbeat if so Screen heartbeats now exist for tests (`watch_screens:=`, `docs/simulation.md`), refused on the real car; what the car does about a lost Mac is still to decide | ⬜ before the LLM drives the real car |
 | 117 | **One RViz** (Ben, 5 Nov: "two nav screens"): `demo_all.sh` says `rviz:=false` | ✅ edited 5 Nov; not launched yet |
 | 118 | **Everything is a drop-in** (Ben, 5 Nov: "just swap out and test"): one conformance check against `docs/interfaces.yaml` for any sensor source or algorithm, and find what still depends on Gazebo by name | ✅ 5 Nov: `pixi run drop-in`, the contract's `drop_in` rules, `/vehicle/sim/` and `/control/sim/`, target `sim`. Against real sensors: not yet |
@@ -75,7 +159,7 @@ Ben, 2 Nov: "I would like the hud changes in, same with for the map. Something n
 | 80 | **The Initial D HUD in** (`hud-initial-d`) | ✅ 2 Nov: merged into `drive-plan` |
 | 81 | **Initial D red and black on every screen**: HUD, map window, debug screen, hardware panel (Ben: in place of Catppuccin) | ✅ 2 Nov, `theme-initial-d`: the default on all four; its own map, grid and 3D colours, sharp corners; contrast tests for every mark, the e-stop 5.2 : 1. Screenshots in `docs/hud.md`. Seen with demo data only. ⬜ tests F.7, F.8 on the car's monitors, day and night |
 | 82 | **The joystick on the Motor Pi alone** (TODO 74a): the joystick-alive check, so a dead pad stops the car | ✅ 2 Nov, `joy-alive`: `joy_alive` between `joy_node` and `teleop_twist_joy`; SILENT (0.5 s), FROZEN (2 s, deadman held, stick bit-identical), latched until the deadman is released; `/drivers/joy/alive`. bench-check 11 of 11. ⬜ car day: the real pad (A9b 6, 6b, 7; tests 3.J1-3.J3), tune `frozen_after`; (b) the throttle cap, (d) the button and axis numbers |
-| 83 | **The diffusion planner in 0.2** (TODO 78; Ben, 2 Nov: "Put it in 0.2"), a trial beside the lattice, off by default, with the guard | ✅ 2 Nov, `diffusion-build`: `planner:=diffusion` (the car refuses it); 45,092 teacher paths, 3.9 M weights, ONNX, 75 ms on the CPU; guard G1-G8. Gazebo lot tour, 2 runs: 8 of 8 legs, 178-182 s (lattice 186-188 s), **63 % of plans from the model** (design: 90 %), the U-turn weakest. ⬜ next: more model plans (the U-turn, G5/G6), 3 runs each, the Orin (TensorRT) |
+| 83 | **The diffusion planner in 0.2** (TODO 78; Ben, 2 Nov: "Put it in 0.2"), a trial beside the lattice, off by default, with the guard | ✅ 2 Nov, `diffusion-build`: `planner:=diffusion` (the car refuses it); 45,092 teacher paths, 3.9 M weights, ONNX, 75 ms on the CPU; guard G1-G8. Gazebo lot tour, 2 runs: 8 of 8 legs, 178-182 s (lattice 186-188 s), **63 % of plans from the model** (design: 90 %), the U-turn weakest. 0.3 (TODO 133, 8 Nov): the U-turn and G5/G6 fixed offline, the Orin ready to measure, the car gated. ⬜ the Orin, the car |
 | 84 | **The list of tests**: `docs/tests.md` gets the new parts' tests (theme, joystick-alive, diffusion) | ✅ 2 Nov: 1.16-1.17 the screens, 1.18-1.19 diffusion, 3.J1-3.J3 the joystick, F.7-F.8 the monitors |
 
 ## Sunday 1 November, night: toward 0.2
@@ -118,7 +202,7 @@ Ben, 1 Nov: "I do like the 23 ideas? lets keep them around like the diffusion pa
 | | Day B: **the Pis to Ubuntu 24.04** (the Motor Pi after the Rust ESP32; LOCALIZATION after its machine file) | after a restore is proven |
 | | Day B: **the Orin's reflash** to JetPack 7.2 (once 7.2 is confirmed for AGX Orin), the lab desktop after it | after the Orin's full image |
 | 75 | A machine file for the localization Pi (where are the IMU and GPS?) | before its upgrade |
-| 78 | **The diffusion planner**: in 0.2 as a trial (TODO 83); for 0.3, more plans from the model (63 % → 90 %), the U-turn, the Orin (TensorRT) | 0.3 |
+| 78 | **The diffusion planner**: in 0.2 as a trial (TODO 83); for 0.3, more plans from the model (63 % → 90 %), the U-turn, the Orin (TensorRT) | 0.3: TODO 133 (8 Nov) |
 | 78 | **The talking model**: a vision-language model that explains, never drives | design first |
 | | **The Initial D HUD**: the arcade gauge in Carleton red and black | ✅ in 0.2, on every screen (TODO 80, 81) |
 | | **The little robot** (a tribute to WALL-E): the map's car, eyes peeking on the panel and the debug screen | ✅ 2 Nov; ⬜ the HUD's eyes, after the Initial D HUD |

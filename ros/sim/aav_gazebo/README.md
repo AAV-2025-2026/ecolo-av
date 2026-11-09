@@ -46,7 +46,8 @@ no command timeout). `esp32_loop:=pi|open` is the bridge's `speed_loop.mode`.
 
 Arguments: `world` (empty, test_lot, road), `gui`, `follow`, `obstacle`, `start_y` (m),
 `start_yaw` (rad), `lidar`, `radar`, `actuator_model`, `speed_loop`, `faults`, `spine`,
-`arm`, `bridge` (rust or python), `esp32`, `esp32_loop` (pi or open).
+`arm`, `bridge` (rust or python), `esp32`, `esp32_loop` (pi or open), `payload` (kg
+aboard), `adaptive_brake`.
 
 ### Nodes
 
@@ -64,7 +65,7 @@ Arguments: `world` (empty, test_lot, road), `gui`, `follow`, `obstacle`, `start_
 
 | Node | Parameters |
 |---|---|
-| `gazebo_adapter` | `actuator_model` (true), `speed_loop` (default, smooth or lqi), `spine` (false), `esp32` (false), `rate_hz` (50), `cmd_timeout` (0.2 s), `wheelbase`, `wheel_radius` (m, from `vehicle.yaml` via the launch file), `rendered`, `radar`, `lidar`, `speed_variance`, `fault.odom` |
+| `gazebo_adapter` | `actuator_model` (true), `speed_loop` (default, smooth or lqi), `payload` (0 kg aboard, live), `adaptive_brake` (false, live; not with spine or esp32: `docs/stopping.md`), `spine` (false), `esp32` (false), `rate_hz` (50), `cmd_timeout` (0.2 s), `wheelbase`, `wheel_radius` (m, from `vehicle.yaml` via the launch file), `rendered`, `radar`, `lidar`, `speed_variance`, `fault.odom` |
 | `gazebo_imu` | `gyro_stddev` (0.02 rad/s), `accel_stddev` (0.2 m/s²), `imu_x` (m), `gyro_bias` (rad/s), `fault.imu` |
 | `gazebo_gps` | `gps_stddev` (0.5 m), `gps_speed_stddev` (0.05 m/s), `antenna_x`, `antenna_y` (m), `every` (1), `fault.gps` |
 | `gazebo_radar` | `radar_range` (8.4 m), `fault.radar` |
@@ -77,7 +78,7 @@ Arguments: `world` (empty, test_lot, road), `gui`, `follow`, `obstacle`, `start_
 
 | Module | Holds | ROS? |
 |---|---|---|
-| `actuator_model.py` | `SpeedLoop` (spine-core's gains), `Actuators`, `Ideal`, `ActuatorConfig`, `speed_loop_profile` | no |
+| `actuator_model.py` | re-exports `aav_description.car_model` (moved there 7 Nov: one car model for ego and the sims): `SpeedLoop` (spine-core's gains), `Actuators`, `Ideal`, `ActuatorConfig`, `speed_loop_profile` | no |
 | `esp32_firmware.py` | `Esp32Firmware`: the 2025-26 C++ ESP32's frame handling, throttle ramp and brake | no |
 | `faults.py` | the fault modes, `Fault` | no |
 | `imu.py` | the car's own acceleration, which Gazebo's IMU misses | no |
@@ -122,4 +123,4 @@ pixi run build && colcon test --packages-select aav_gazebo && colcon test-result
 ```
 
 `pixi run test` runs everything. The whole loop: `pixi run sim-check` (on a machine
-with no GPU: `tools/software_gl.sh pixi run sim-check`).
+with no GPU: `tools/software_gl.sh pixi run sim-check --simulator gazebo`).

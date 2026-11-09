@@ -24,7 +24,12 @@ Parameters  model ('' = <repo>/models/diffusion/planner.onnx), learn_python ('' 
             <repo>/.pixi/envs/learn/bin/python), provider (ONNX Runtime's:
             CPUExecutionProvider, CoreMLExecutionProvider...), samples (16), budget_ms
             (150), reversing, footprint (Nav2's string), min_radius (m), goal_xy,
-            goal_yaw, max_cusps, max_reverse, length_ratio, lattice_wait (s)
+            goal_yaw, max_cusps, max_reverse, length_ratio, lattice_wait (s), smoothing
+            (gear: each gear's run smoothed on its own, the cusps kept, and a sample
+            whose only faults are its turns or headings smoothed wider and checked again
+            in full; average: one average over the whole path, as on 2 Nov), record
+            ('' = off; a folder: each plan's costmap, start, goal and lattice path saved
+            there, plan_NNNN.npz, to replay offline: training/replay.py)
 """
 
 from collections import Counter
@@ -57,6 +62,7 @@ MODEL = os.path.join('models', 'diffusion', 'planner.onnx')
 LEARN_PYTHON = os.path.join('.pixi', 'envs', 'learn', 'bin', 'python')
 KEEP_ENV = ('HOME', 'PATH', 'LANG', 'TMPDIR')
 NO_VALID_PATH = ComputePathToPose.Result.NO_VALID_PATH
+LOAD_SECONDS = {'TensorrtExecutionProvider': 900.0}     # else 60 s for the first answer
 TF_ERROR = ComputePathToPose.Result.TF_ERROR
 
 
@@ -138,6 +144,12 @@ class DiffusionPlanner(Node):
             max_reverse=float(p('max_reverse', 15.0).value),
             length_ratio=float(p('length_ratio', 1.5).value))
         self.rng = np.random.default_rng(int(p('seed', 0).value))
+        self.smoothing = p('smoothing', 'gear').value
+        if self.smoothing not in ('gear', 'average'):
+            raise ValueError(f'smoothing {self.smoothing!r}: gear or average')
+        self.record = p('record', '').value
+        if self.record:
+            os.makedirs(self.record, exist_ok=True)
 
         self.grid = None
         self.plans = Counter()      # source -> plans, since the start
@@ -156,13 +168,12 @@ class DiffusionPlanner(Node):
                                     callback_group=group)
         self.worker = None
         self.worker_lock = threading.Lock()
-        self.start_worker()
+        # The action first, then the model in the background: bt_navigator gives up on a
+        # server it can't see within a second, and with our own simulator it came up while
+        # the model still loaded (8 Nov). Until the worker is up, every plan is the lattice's.
         ActionServer(self, ComputePathToPose, 'compute_path_to_pose', self.execute,
                      cancel_callback=lambda _: CancelResponse.ACCEPT, callback_group=group)
-        self.get_logger().info(
-            f'diffusion_planner: {self.samples} samples, budget {self.budget_ms:.0f} ms, '
-            f'reversing {self.limits.reversing}, model {self.model}, '
-            f'worker {"up" if self.worker else "none: every plan is the lattice"}')
+        threading.Thread(target=self.start_worker, daemon=True).start()
 
     def start_worker(self):
         why = ('no learn environment at ' + self.python if not os.path.isfile(self.python)
@@ -171,15 +182,21 @@ class DiffusionPlanner(Node):
             self.get_logger().error(f'{why}: the lattice plans alone (pixi install --locked '
                                     '-e learn; pixi run diffusion train)')
             return
-        self.worker = Worker(self.python, self.model, self.provider)
-        # The first call loads the model: not in a real plan's budget.
+        worker = Worker(self.python, self.model, self.provider)
+        # The first call loads the model: not in a real plan's budget. TensorRT builds its
+        # engine then, minutes on the Orin the first time (measure diffusion builds it first).
         noise = np.zeros((self.samples, window.POINTS, window.CHANNELS), np.float32)
-        paths, _, why = self.worker.sample(np.zeros((window.SIZE, window.SIZE)),
-                                           np.zeros(window.COND), noise, 60.0)
+        paths, _, why = worker.sample(np.zeros((window.SIZE, window.SIZE)),
+                                      np.zeros(window.COND), noise,
+                                      LOAD_SECONDS.get(self.provider, 60.0))
         if paths is None:
             self.get_logger().error(f'the model worker: {why}; the lattice plans alone')
-            self.worker.close()
-            self.worker = None
+            worker.close()
+            return
+        self.worker = worker
+        self.get_logger().info(
+            f'diffusion_planner: {self.samples} samples, budget {self.budget_ms:.0f} ms, '
+            f'reversing {self.limits.reversing}, model {self.model}, worker up')
 
     def on_costmap(self, msg):
         if abs(yaw_of(msg.info.origin)) > 1e-6:
@@ -229,10 +246,16 @@ class DiffusionPlanner(Node):
         return done, out
 
     def run_model(self, start, goal, t0):
-        """Return (the samples in the map (K, POINTS, 3) or None, the grid, model ms, why)."""
+        """
+        Return (samples, again, the grid, model ms, why).
+
+        samples: the model's paths in the map (K, POINTS, 3), smoothed, or None; again:
+        guard.choose's second try (window.smoothed), or None.
+        """
         grid = self.grid
         if self.worker is None or grid is None:
-            return None, grid, None, ('no model' if self.worker is None else 'no costmap yet')
+            return (None, None, grid, None,
+                    'no model' if self.worker is None else 'no costmap yet')
         win = window.window_for(start, goal)
         crop = window.crop(grid, win)
         cond = window.cond(win, start, goal, self.limits.reversing)
@@ -244,9 +267,10 @@ class DiffusionPlanner(Node):
                 self.get_logger().error('the model worker died: the lattice plans alone')
                 self.worker = None
         if out is None:
-            return None, grid, ms, why
-        paths, _ = window.decode_paths(win, out)
-        return [window.smooth(p) for p in paths], grid, ms, ''
+            return None, None, grid, ms, why
+        paths, gears = window.decode_paths(win, out)
+        first, again = window.smoothed(paths, gears, by_gear=self.smoothing == 'gear')
+        return first, again, grid, ms, ''
 
     def execute(self, handle):
         request = handle.request
@@ -261,7 +285,7 @@ class DiffusionPlanner(Node):
         goal = (request.goal.pose.position.x, request.goal.pose.position.y,
                 yaw_of(request.goal.pose))
         lattice_done, lattice = self.ask_lattice(request, start)
-        paths, grid, model_ms, why = self.run_model(start, goal, t0)
+        paths, again, grid, model_ms, why = self.run_model(start, goal, t0)
         lattice_done.wait(self.lattice_wait)
         lat = lattice.get('result')
         lattice_ok = lat is not None and lat.error_code == 0 and len(lat.path.poses) > 1
@@ -271,7 +295,7 @@ class DiffusionPlanner(Node):
         if paths is not None:
             best, facts, refusals, passed = guard.choose(
                 paths, grid, start, goal, self.limits, self.footprint,
-                guard.length(lattice_xy) if lattice_ok else None)
+                guard.length(lattice_xy) if lattice_ok else None, again)
             picked = best
         guard_ms = 1000.0 * (time.monotonic() - t0)
         source, reason = guard.decide(paths is not None, picked is not None, guard_ms,
@@ -301,7 +325,19 @@ class DiffusionPlanner(Node):
         result.planning_time = Duration(seconds=took).to_msg()
         self.publish_status(source, reason, model_ms, guard_ms, took, refusals, passed,
                             paths, facts if source == 'model' else None, lattice_xy, lat)
+        if self.record and grid is not None:
+            self.save(grid, start, goal, lattice_xy, source, refusals, passed)
         return result
+
+    def save(self, grid, start, goal, lattice_xy, source, refusals, passed):
+        """Keep this plan's inputs, to replay offline (training/replay.py)."""
+        n = sum(self.plans.values())
+        np.savez(os.path.join(self.record, f'plan_{n:04d}.npz'), costmap=grid.data,
+                 origin=np.array([grid.origin_x, grid.origin_y]), resolution=grid.resolution,
+                 start=np.array(start), goal=np.array(goal), reversing=self.limits.reversing,
+                 lattice=(lattice_xy if lattice_xy is not None else np.zeros((0, 3))),
+                 source=source, passed=passed,
+                 refused=np.array([refusals.get(c, 0) for c in guard.CHECKS]))
 
     def to_path(self, dense):
         path = Path()

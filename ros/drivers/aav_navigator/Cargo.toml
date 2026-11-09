@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+# navigator: our own navigator (what Nav2's bt_navigator, its behaviour trees and
+# waypoint_follower do for the car), a state machine with no ROS:
+#   cargo test -p navigator
+# navigator-node: the ROS node (rclrs), binary navigator. colcon builds it through
+# CMakeLists.txt.
+members = ["crates/navigator", "crates/navigator-node"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+# Nav2's bt_navigator, behaviour trees and waypoint_follower, whose logic navigator
+# follows, are Apache-2.0 (PROVENANCE.md).
+license = "Apache-2.0"
+publish = false

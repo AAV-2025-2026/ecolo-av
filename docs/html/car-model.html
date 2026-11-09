@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One car model · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/car-model.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>One car model</h1>
+<div class="meta">7 min read · 8 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="release-0.2.html">The 0.2 guide</a>
+<a href="whats-new.html">What&#x27;s new</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-evening.html">Tonight: drive as is</a>
+<a href="car-day.html">Car day</a>
+<a href="car-setup.html">Car setup</a>
+<a href="rollout.html">Rolling out on the car</a>
+<a href="tests.html">Every test</a>
+<a href="know-the-car.html">Know the car</a>
+<span class="sep">Learn:</span>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-speed.html">Learn: speed</a>
+<a href="learn-lidar.html">Learn: lidar</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
+<span class="sep">Reference:</span>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="path-followers.html">Path followers</a>
+<a href="switches.html">Switches</a>
+<a href="trials.html">Trials</a>
+<a href="mppi-lag.html">MPPI with lag</a>
+<a href="own-costmap.html">Our own costmap</a>
+<a href="own-planner.html">Our own planner</a>
+<a href="own-navigator.html">Our own navigator</a>
+<a href="own-smoother.html">Our own velocity smoother</a>
+<a href="stopping.html">How the car stops</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="own-simulator.html">Our own simulator</a>
+<a href="own-simulator-cameras.html">Our simulator&#x27;s cameras</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="hardware-debug.html">Hardware debug</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a class="here" href="car-model.html">One car model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="geofence.html">The geofence</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="esp32-safety.html">ESP32 safety rules</a>
+<a href="esp32-cpp-parity.html">ESP32 C++ parity</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#where-it-lives">Where it lives</a><a href="#the-picture">The picture</a><a href="#one-step-of-dt">One step of dt</a><a href="#the-api">The API</a><a href="#egos-lead">ego&#x27;s lead</a><a href="#lag-aware-drivers-the-contract">Lag-aware drivers: the contract</a><a href="#egos-trace">ego&#x27;s trace</a><a href="#checks">Checks</a></nav>
+<div class="lead"><p>How the car answers a command: one model, in Python and Rust, for ego, the simulators
+and the drivers. Ben, 7 Nov: "we really want the ego to have a mathematical model for
+steering, braking and acceleration ... have the algorithms know about lag".</p>
+<blockquote>
+<p><strong>Every number is a GUESS</strong> until car tests 3.10-3.12 and 4.1-4.5
+(<a href="actuator-tests.html">actuator tests</a>). The dead times are 0 until measured.</p>
+</blockquote></div>
+<section class="card"><h2 id="where-it-lives">Where it lives</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>What</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Python</td>
+<td><code>ros/bringup/aav_description/aav_description/car_model.py</code></td>
+</tr>
+<tr>
+<td>Rust twin</td>
+<td><code>ros/bringup/aav_description/car-model/</code> (crate <code>car-model</code>)</td>
+</tr>
+<tr>
+<td>Shared test vectors</td>
+<td><code>car-model/vectors.json</code>, written by <code>car-model/gen_vectors.py</code></td>
+</tr>
+<tr>
+<td>Numbers</td>
+<td><code>vehicle.yaml</code>: <code>actuators:</code>, <code>wheelbase</code>, <code>max_steering_angle</code></td>
+</tr>
+<tr>
+<td>Old import path</td>
+<td><code>aav_gazebo.actuator_model</code> still works: the same objects</td>
+</tr>
+</tbody>
+</table></div>
+<p>Why <code>aav_description</code>: it already holds <code>vehicle.yaml</code> and <code>vehicle.py</code>, and ego and
+Gazebo both depend on it. The model is part of "what the car is".</p>
+</section>
+<section class="card"><h2 id="the-picture">The picture</h2>
+<pre class="highlight"><code> command ──▶ dead time ──▶ lag ──▶ speed ──────────────┐
+ (pedals or                                            ├──▶ bicycle ──▶ x, y, yaw
+  a set speed)                                         │
+ steering ─▶ dead time ─▶ deadband ─▶ motor rate ─▶ linkage lag ─▶ + offset ─┘</code></pre>
+<p>A set speed goes through the spine's speed loop first (Python: the port; Rust:
+<code>spine-core</code>'s own).</p>
+</section>
+<section class="card"><h2 id="one-step-of-dt">One step of dt</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>#</th>
+<th>Part</th>
+<th>Maths</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Dead time</td>
+<td>each input waits <code>floor(dead_time / dt + 0.5)</code> steps</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Throttle, brake</td>
+<td><code>level' = (u - level) / lag</code>, stepped exactly: <code>level += (u - level)(1 - e^(-dt/lag))</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Speed</td>
+<td><code>v += max_accel · throttle · dt</code> (0 below the deadband), then brake and drag take <code>(max_brake · brake + drag · abs(v)) · dt</code> off, never past 0</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Steering</td>
+<td>setpoint moves only past <code>steer_deadband</code>; motor at most <code>steer_rate · dt</code>; linkage lags <code>steer_lag</code>; plus <code>steer_offset</code>; within <code>±max_steering</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Bicycle</td>
+<td><code>yaw += v tan(steer) / wheelbase · dt</code>; <code>x += v cos(yaw_mid) dt</code>, <code>y += v sin(yaw_mid) dt</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>v</code> and <code>steer</code> in step 5 are the step's new ones; <code>yaw_mid</code> is halfway between the old
+and new yaw.</p>
+</section>
+<section class="card"><h2 id="the-api">The API</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Python (<code>aav_description.car_model</code>)</th>
+<th>Rust (<code>car_model</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ActuatorConfig.from_vehicle_yaml(path)</code></td>
+<td><code>ActuatorConfig::from_vehicle_yaml(path)?</code></td>
+</tr>
+<tr>
+<td><code>Command(steer, throttle, brake, reverse)</code></td>
+<td><code>Command::pedals(throttle, brake, steer)</code></td>
+</tr>
+<tr>
+<td><code>Command(steer, speed=v)</code></td>
+<td><code>Command::speed(v, steer)</code></td>
+</tr>
+<tr>
+<td><code>step(cfg, state, command, dt, loop)</code></td>
+<td><code>cfg.step(&amp;state, command, dt, Some(&amp;mut loop))?</code></td>
+</tr>
+<tr>
+<td><code>predict(cfg, state, commands, dt, horizon, loop)</code></td>
+<td><code>cfg.predict(&amp;state, &amp;commands, dt, horizon, Some(&amp;loop))?</code></td>
+</tr>
+<tr>
+<td><code>CarState</code></td>
+<td><code>CarState</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>predict</code> gives a state every <code>dt</code> for <code>horizon</code> s, the first one <code>dt</code> ahead. The last
+command is held. The speed loop is copied, never advanced.</p>
+</section>
+<section class="card"><h2 id="egos-lead">ego's lead</h2>
+<p>The actuators answer late. ego can ask a little ahead, so the car answers about when the
+driver wanted (<code>aav_ego</code> <code>lag_lead.py</code>).</p>
+<pre class="highlight"><code>driver's request ──▶ filter (lag_lead_filter) ──▶ + T × its rate ──▶ ego's limits ──▶ car</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Lead</th>
+<th>T</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>speeding up</td>
+<td><code>throttle_dead_time + throttle_lag</code></td>
+</tr>
+<tr>
+<td>slowing</td>
+<td><code>brake_dead_time + brake_lag</code></td>
+</tr>
+<tr>
+<td>steering</td>
+<td><code>steer_dead_time + steer_lag</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The car then answers as if its lag were <code>lag_lead_filter</code> (0.1 s), not T. A dead time
+can't be undone (it would need the future): it counts as more lag. The steering motor's
+rate limit isn't a lag: nothing undoes it.</p>
+<h3 id="when-it-runs">When it runs</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th><code>lag_lead</code></th>
+<th>Simulator (<code>use_sim_time</code>)</th>
+<th>Real car</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>auto</code> (default)</td>
+<td><strong>on</strong></td>
+<td>off</td>
+</tr>
+<tr>
+<td><code>on</code></td>
+<td>on</td>
+<td>on: only after tests 3.10-3.12 and 4.1-4.5</td>
+</tr>
+<tr>
+<td><code>off</code></td>
+<td>off</td>
+<td>off</td>
+</tr>
+</tbody>
+</table></div>
+<p>Never while a lag-aware driver drives, whatever the setting. Change it live:
+<code>ros2 param set /ego lag_lead off</code>.</p>
+<h3 id="still-a-safety-lock">Still a safety lock</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Rule</th>
+<th>How</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Every limit still applies</td>
+<td>the lead runs <strong>before</strong> <code>max_speed</code>, the steering limit and rate, the slews, the jerk, the body</td>
+</tr>
+<tr>
+<td>Small</td>
+<td>at most <code>lag_lead_max_speed</code> (0.3 m/s) and <code>lag_lead_max_steer</code> (0.1 rad)</td>
+</tr>
+<tr>
+<td>No change of direction</td>
+<td>forward stays forward, reverse stays reverse</td>
+</tr>
+<tr>
+<td>A slow-down is never softened</td>
+<td>while slowing, never above the request</td>
+</tr>
+<tr>
+<td>A stop is a stop</td>
+<td>no fresh command: no lead</td>
+</tr>
+</tbody>
+</table></div>
+<p>On the car model with today's guesses, the lead follows a speed ramp about 6% closer: the
+spine's speed loop is most of the lag, and the lead can't change that loop.</p>
+</section>
+<section class="card"><h2 id="lag-aware-drivers-the-contract">Lag-aware drivers: the contract</h2>
+<p>A driver that leads for the lag itself (an MPC or MPPI that uses this model) tells ego,
+so the lag isn't led for twice.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>The driver does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>publish <code>true</code> on <code>/drivers/&lt;slot&gt;/lag_aware</code> (<code>std_msgs/Bool</code>, latched: reliable, transient local, depth 1) when its lag-aware mode starts; <code>false</code> when it ends</td>
+</tr>
+<tr>
+<td>2</td>
+<td>stamp every <code>TwistStamped</code> with now</td>
+</tr>
+<tr>
+<td>3</td>
+<td>that's all: ego does the rest</td>
+</tr>
+</tbody>
+</table></div>
+<p>How ego knows who is driving: twist_mux only publishes <code>/diagnostics</code>, not the winner. But
+it passes the winner's message on <strong>unchanged</strong>. So ego keeps each lag-aware driver's last
+50 commands and looks for the one on <code>/control/cmd_vel</code> (same stamp and twist).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Slot</th>
+<th>Who will publish it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>nav</code></td>
+<td><code>aav_track</code>'s lag-aware trackers, the Rust MPPI (both drive through Nav2)</td>
+</tr>
+<tr>
+<td><code>scripted</code>, <code>point</code>, <code>ai</code></td>
+<td>nobody yet</td>
+</tr>
+</tbody>
+</table></div>
+<p>The slots ego watches are its <code>lag_aware_drivers</code> parameter.</p>
+</section>
+<section class="card"><h2 id="egos-trace">ego's trace</h2>
+<p>Where the car is going, like a tail but in front (Ben, 7 Nov). <code>/ego/trace</code>,
+<code>nav_msgs/Path</code>, 10 Hz (<code>aav_ego</code> <code>trace_ahead.py</code>).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Horizon</td>
+<td>2 s, a pose every 0.1 s (21 poses)</td>
+</tr>
+<tr>
+<td>Frame</td>
+<td><code>base_link</code>, at the header's stamp</td>
+</tr>
+<tr>
+<td>Starts from</td>
+<td>ego's twin of the car: the model, stepped with what ego sent, its speed the last <code>/vehicle/odom</code></td>
+</tr>
+<tr>
+<td>Runs</td>
+<td>a copy of ego (lead, ramps, limits) with the request held, into the car model</td>
+</tr>
+</tbody>
+</table></div>
+<p>Why <code>base_link</code>: ego needs no localization (stands, the turtle). A driver turns the trace
+into <code>odom</code> with TF at the stamp, then matches it against its plan.</p>
+</section>
+<section class="card"><h2 id="checks">Checks</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Checks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>aav_description/test/test_car_model.py</code></td>
+<td>dead times, the circle, braking, predict; the vectors are up to date</td>
+</tr>
+<tr>
+<td><code>car-model/tests/vectors.rs</code></td>
+<td>the Rust gives the Python's states (1e-9; 1e-3 with a speed loop, which is f32 in Rust)</td>
+</tr>
+<tr>
+<td><code>aav_gazebo/test/test_actuator_model.py</code></td>
+<td>Gazebo's car is unchanged</td>
+</tr>
+<tr>
+<td><code>aav_ego/test/test_lag_lead.py</code></td>
+<td>the lead: when it runs, its limits, ego's limits after it</td>
+</tr>
+<tr>
+<td><code>aav_ego/test/test_trace_ahead.py</code></td>
+<td>the trace and the twin</td>
+</tr>
+<tr>
+<td><code>aav_ego/test/test_ego_node.py</code></td>
+<td>the node: <code>/ego/trace</code>; the lead off for a lag-aware driver</td>
+</tr>
+</tbody>
+</table></div>
+<p>After changing either side:</p>
+<pre class="highlight"><code class="language-bash">python3 ros/bringup/aav_description/car-model/gen_vectors.py
+tools/test.sh</code></pre></section>
+<nav class="prevnext"><a class="prev" href="vehicle-model.html"><small>Previous</small>← The car as a linear model</a>
+<a class="next" href="ghost-obstacles.html"><small>Next</small>Ghost obstacles →</a></nav>
+</main>
+<footer>Source: <code>docs/car-model.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

@@ -8,6 +8,7 @@ bench) lets Nav2 plan, follow and back up in reverse, at vehicle.yaml's max_reve
 """
 
 import importlib.util
+import json
 import os
 
 from aav_description import vehicle
@@ -297,6 +298,9 @@ def test_diffusion_takes_compute_path_to_pose_with_the_lattice_behind_it():
     assert p['reversing'] is True
     assert p['min_radius'] == pytest.approx(0.95 * vehicle.min_turning_radius(v))
     assert p['goal_xy'] == 1.0 and p['goal_yaw'] == 0.75
+    # bt_navigator waits for the Python node's action (it loads a model too); others 1 s.
+    assert settings(planner='diffusion')['bt_navigator']['wait_for_service_timeout'] == 15000
+    assert settings()['bt_navigator']['wait_for_service_timeout'] == 1000
     assert p['model'] == '' and p['provider'] == 'CPUExecutionProvider'
     # The outline, padded as the global costmap pads it (0.05 m).
     front = yaml.safe_load(p['footprint'])[0]
@@ -367,13 +371,115 @@ def test_the_sim_passes_the_trials_on_and_checks_them():
 
 # planner:= (docs/controllers.md, Planners): each planner behind the one plugin name the
 # behaviour trees ask for. Lattice reads the map's file, so these tests give a real one.
+def test_own_planner_takes_the_trees_compute_path_to_pose():
+    assert 'planner' not in nav_nodes()
+    nodes = nav_nodes(planner='own', reversing='true')
+    # The trees ask ours; planner_server keeps its action, its /plan moves aside.
+    assert ('compute_path_to_pose', vehicle.OWN_PLANNER_ACTION) in remaps(
+        nodes['bt_navigator'])
+    assert ('plan', vehicle.OWN_PLANNER_NAV2_PLAN) in remaps(nodes['planner_server'])
+    p = given(nodes['planner'])
+    s = json.loads(p['settings'])
+    assert s['allow_reverse_expansion'] is True
+    assert s['lattice_filepath'].endswith('lattice_ackermann.json')
+    assert p['costmap_topic'] == '/global_costmap/costmap_raw'
+    assert p['costmap_latched'] == 'true'
+    # With our costmaps too, it plans on our global one.
+    p = given(nav_nodes(planner='own', costmap='own')['planner'])
+    assert p['costmap_topic'] == '/drivers/nav/costmap/global_raw'
+    assert p['costmap_updates_topic'] == ''
+
+
+def managed(nodes):
+    """Return the servers lifecycle_manager_navigation brings up."""
+    return given(nodes['lifecycle_manager_navigation'])['node_names']
+
+
+def test_own_navigator_takes_bt_navigators_place_beside_nav2s_servers():
+    nodes = nav_nodes()
+    assert 'navigator' not in nodes and 'bt_navigator' in nodes
+    nodes = nav_nodes(navigator='own')
+    assert 'bt_navigator' not in nodes and 'waypoint_follower' not in nodes
+    assert {'planner_server', 'controller_server'} <= set(nodes)
+    assert 'bt_navigator' not in managed(nodes)
+    p = given(nodes['navigator'])
+    assert p['planner_action'] == '/compute_path_to_pose'
+    assert p['follow_action'] == '/follow_path'
+    assert p['clear_local'] == '/local_costmap/clear_entirely_local_costmap'
+    assert p['navsat_file'].endswith('aav_localization/config/navsat.yaml')
+    s = json.loads(p['settings'])
+    assert (s['backup'], s['retries'], s['waypoints']) == (None, 6, 'pass_through')
+    # Reversing: BackUp through behavior_server, half the car's reverse speed.
+    p = given(nav_nodes(navigator='own', reversing='true')['navigator'])
+    assert p['backup_action'] == '/backup'
+    assert json.loads(p['settings'])['backup']['speed'] == pytest.approx(REVERSE / 2)
+
+
+def test_all_ours_runs_no_nav2_server_for_navigation():
+    nodes = nav_nodes(navigator='own', planner='own', costmap='own', tracker='mppi_lag')
+    for nav2 in ('planner_server', 'controller_server', 'behavior_server', 'bt_navigator',
+                 'waypoint_follower'):
+        assert nav2 not in nodes, nav2
+    # Left: the map, and the command line in front of the safety locks.
+    assert set(managed(nodes)) <= {'map_server', 'velocity_smoother', 'collision_monitor'}
+    p = given(nodes['navigator'])
+    assert p['planner_action'] == vehicle.OWN_PLANNER_ACTION
+    assert p['planner_through_action'] == vehicle.OWN_PLANNER_THROUGH_ACTION
+    assert p['clear_local'] == '/drivers/nav/costmap/clear_entirely_local'
+    assert p['clear_global'] == '/drivers/nav/costmap/clear_entirely_global'
+    assert p['backup_action'] == ''
+    # Nav2's trees, with our planner: both their planner calls come to ours.
+    remapped = remaps(nav_nodes(planner='own')['bt_navigator'])
+    assert ('compute_path_through_poses', vehicle.OWN_PLANNER_THROUGH_ACTION) in remapped
+
+
+def test_the_sim_passes_the_navigator_on_and_the_car_never_does():
+    assert sent_to_navigation(SIM)['navigator'] == 'nav2'
+    assert sent_to_navigation(SIM, navigator='own')['navigator'] == 'own'
+    with pytest.raises(ValueError, match='navigator:='):
+        sent_to_navigation(SIM, navigator='mine')
+    assert vehicle.navigator_action('own', 'follow_gps_waypoints') == (
+        '/drivers/nav/navigator/follow_gps_waypoints')
+    assert vehicle.navigator_action('nav2', 'navigate_to_pose') == '/navigate_to_pose'
+
+
+def test_own_smoother_takes_velocity_smoothers_place_under_its_name():
+    nodes = nav_nodes()
+    assert 'velocity_smoother' in managed(nodes)
+    nav2 = remaps(nodes['velocity_smoother'])
+    nodes = nav_nodes(smoother='own')
+    ours = nodes['velocity_smoother']
+    # Not a lifecycle node: the manager no longer waits for it.
+    assert 'velocity_smoother' not in managed(nodes)
+    assert ours._Node__package == 'aav_smoother'
+    assert ours._Node__node_executable == 'car_smoother'
+    # The same topics, and nav2.yaml's block (the file) with the car's numbers beside it.
+    assert remaps(ours) == nav2
+    p = given(ours)
+    cfg = vehicle.load()
+    assert p['vehicle_yaml'] == vehicle.config_path()
+    assert p['steering_rate'] <= float(cfg['actuators']['steer_rate'])
+    assert p['min_speed_for_steering'] > 0.0
+    assert any(isinstance(x, ParameterFile) for x in ours._Node__parameters)
+    with pytest.raises(ValueError, match='smoother:='):
+        nav_nodes(smoother='mine')
+
+
+def test_the_sim_passes_the_smoother_on_and_the_car_never_does():
+    assert sent_to_navigation(SIM)['smoother'] == 'nav2'
+    assert sent_to_navigation(SIM, smoother='own')['smoother'] == 'own'
+    assert sent_to_navigation(CAR, machine='all')['smoother'] == 'nav2'
+
+
 PLUGINS = {'hybrid': 'nav2_smac_planner::SmacPlannerHybrid',
            'lattice': 'nav2_smac_planner::SmacPlannerLattice',
            'smac2d': 'nav2_smac_planner::SmacPlanner2D',
            'navfn': 'nav2_navfn_planner::NavfnPlanner',
            'theta_star': 'nav2_theta_star_planner::ThetaStarPlanner',
            # The trial stands on the lattice: planner_server runs it, as the fallback.
-           'diffusion': 'nav2_smac_planner::SmacPlannerLattice'}
+           'diffusion': 'nav2_smac_planner::SmacPlannerLattice',
+           # Ours (aav_planner) answers the trees; planner_server runs the lattice beside it.
+           'own': 'nav2_smac_planner::SmacPlannerLattice'}
 
 
 def planner_settings(**args):
@@ -436,8 +542,39 @@ def test_the_sim_passes_any_planner_and_the_car_only_car_shaped_ones():
                               planner='lattice')['planner'] == 'lattice'
     assert sent_to_navigation(CAR, machine='all', planner='lattice')['planner'] == 'lattice'
     for planner in set(vehicle.PLANNERS) - set(vehicle.CAR_PLANNERS):
-        with pytest.raises(ValueError, match='turning radius'):
+        with pytest.raises(ValueError, match='turning radius|diffusion_trial'):
             sent_to_navigation(CAR, machine='all', planner=planner)
+
+
+def test_the_car_refuses_diffusion_without_the_trial_switch():
+    with pytest.raises(ValueError, match='diffusion_trial:=true'):
+        sent_to_navigation(CAR, machine='all', planner='diffusion')
+    with pytest.raises(ValueError, match='diffusion_trial:=true'):
+        sent_to_navigation(CAR, machine='all', planner='diffusion', diffusion_trial='false')
+    # The switch is for the diffusion planner only: no other planner rides on it.
+    for planner in set(vehicle.PLANNERS) - {'diffusion'}:
+        with pytest.raises(ValueError, match='planner:=diffusion only'):
+            sent_to_navigation(CAR, machine='all', planner=planner, diffusion_trial='true')
+
+
+def test_the_diffusion_trial_holds_the_car_to_its_speed():
+    for asked, held in (('', '0.5'), ('0.3', '0.3'), ('0.5', '0.5')):
+        context = context_for(CAR, machine='all', planner='diffusion',
+                              diffusion_trial='true', max_speed=asked)
+        CAR.launch_setup(context)
+        # Every included file (ego, the geofence, Nav2) reads this one cap.
+        assert context.launch_configurations['max_speed'] == held
+        sent = sent_to_navigation(CAR, machine='all', planner='diffusion',
+                                  diffusion_trial='true', max_speed=asked)
+        assert sent['planner'] == 'diffusion' and sent['max_speed'] == held
+    # The switch alone picks the diffusion planner.
+    assert sent_to_navigation(CAR, machine='all', diffusion_trial='true')['planner'] == (
+        'diffusion')
+    # Faster than the trial's cap, or nonsense: refused before anything starts.
+    for asked in ('0.6', '1.0', '0', '-0.3', 'fast'):
+        with pytest.raises(ValueError, match='max_speed'):
+            sent_to_navigation(CAR, machine='all', planner='diffusion',
+                               diffusion_trial='true', max_speed=asked)
 
 
 def test_the_scan_unless_voxels_is_asked_for():

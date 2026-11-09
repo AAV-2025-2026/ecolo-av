@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>aav_smoother</name>
+  <version>0.1.0</version>
+  <description>Our own velocity smoother in Rust (rclrs), for a car: Nav2's velocity_smoother's speed limits, timeout, deadband and feedback, with the turn rate from where the wheels can be (the steering actuator's rate, full lock). A trial in Nav2's velocity_smoother's place (navigation.launch.py smoother:=own): the same node name, parameters and topics.</description>
+  <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
+  <!-- Nav2's nav2_velocity_smoother's behaviour, Apache-2.0 (PROVENANCE.md). -->
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- rclrs links rcl; ros-env compiles the Rust message code these packages ship. -->
+  <depend>rcl</depend>
+  <depend>builtin_interfaces</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <!-- vehicle.yaml, the car's numbers. -->
+  <exec_depend>aav_description</exec_depend>
+
+  <test_depend>ament_cmake_test</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

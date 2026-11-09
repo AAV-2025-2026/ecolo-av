@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Our own planner · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/own-planner.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>Our own planner</h1>
+<div class="meta">8 min read · 6 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="release-0.2.html">The 0.2 guide</a>
+<a href="whats-new.html">What&#x27;s new</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-evening.html">Tonight: drive as is</a>
+<a href="car-day.html">Car day</a>
+<a href="car-setup.html">Car setup</a>
+<a href="rollout.html">Rolling out on the car</a>
+<a href="tests.html">Every test</a>
+<a href="know-the-car.html">Know the car</a>
+<span class="sep">Learn:</span>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-speed.html">Learn: speed</a>
+<a href="learn-lidar.html">Learn: lidar</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
+<span class="sep">Reference:</span>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="path-followers.html">Path followers</a>
+<a href="switches.html">Switches</a>
+<a href="trials.html">Trials</a>
+<a href="mppi-lag.html">MPPI with lag</a>
+<a href="own-costmap.html">Our own costmap</a>
+<a class="here" href="own-planner.html">Our own planner</a>
+<a href="own-navigator.html">Our own navigator</a>
+<a href="own-smoother.html">Our own velocity smoother</a>
+<a href="stopping.html">How the car stops</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="own-simulator.html">Our own simulator</a>
+<a href="own-simulator-cameras.html">Our simulator&#x27;s cameras</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="hardware-debug.html">Hardware debug</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="car-model.html">One car model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="geofence.html">The geofence</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="esp32-safety.html">ESP32 safety rules</a>
+<a href="esp32-cpp-parity.html">ESP32 C++ parity</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#how-it-fits">How it fits</a><a href="#what-it-does">What it does</a><a href="#try-it">Try it</a><a href="#hand-made-maps-no-ros">Hand-made maps (no ROS)</a><a href="#in-our-simulator-8-nov">In our simulator (8 Nov)</a><a href="#whats-missing">What&#x27;s missing</a></nav>
+<div class="lead"><p>Ben, 8 Nov: move off Nav2 <strong>one piece at a time</strong>, each beside Nav2 until it wins. The
+order: the costmap (<a href="own-costmap.html">done</a>), then <strong>the path planner</strong> (this page), then
+the navigator. Nav2 stays the default, and stays on the car.</p>
+<blockquote>
+<p><strong>The short version</strong></p>
+<ul>
+<li><strong>Switch:</strong> <code>planner:=own</code>. Package <code>aav_planner</code> (Rust).</li>
+<li>
+<p><strong>What it is:</strong> Nav2's State Lattice planner (our default) ported: the same
+  primitives file, the same penalties from <code>nav2.yaml</code>, the Reeds-Shepp finish, the
+  smoother. It checks the car's outline on the global costmap.</p>
+</li>
+<li>
+<p><strong>Drop-in:</strong> it answers Nav2's own <code>ComputePathToPose</code> action. The behaviour trees
+  call it instead of <code>planner_server</code>; nothing else changes.</p>
+</li>
+<li>
+<p><strong>Test lot, 3 runs each:</strong> <strong>12 of 12 legs</strong>, as Nav2's lattice; the same paths
+  (within a metre), the same planning time (3-5 ms a call).</p>
+</li>
+<li>
+<p><strong>Campus:</strong> both planners failed the same legs (MPPI gave up, not the planner);
+  ours took about <strong>20 % longer</strong> to plan the long legs (180 ms against 150 ms).</p>
+</li>
+<li>
+<p><strong>Not yet a winner:</strong> as good on the lot, a little slower on the campus.</p>
+</li>
+</ul>
+</blockquote></div>
+<section class="card"><h2 id="how-it-fits">How it fits</h2>
+<pre class="highlight"><code>global costmap ───────────┐   Nav2's /global_costmap/costmap_raw (costmap:=nav2)
+                          │   or ours, /drivers/nav/costmap/global_raw (costmap:=own)
+/tf (map → odom → car) ───┤
+                          ▼
+bt_navigator ──ComputePathToPose──▶ planner (ours) ──▶ /plan ──▶ the follower, screens
+                                           └──────────▶ /drivers/nav/planner/status
+planner_server (Nav2's lattice) keeps running beside it: /compute_path_to_pose</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Type</th>
+<th>For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/drivers/nav/planner/compute_path_to_pose</code></td>
+<td>action, Nav2's ComputePathToPose</td>
+<td>bt_navigator (remapped here)</td>
+</tr>
+<tr>
+<td><code>/plan</code></td>
+<td>nav_msgs/Path</td>
+<td>the follower's path, the screens</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/planner/status</code></td>
+<td>DiagnosticStatus</td>
+<td>each plan's times, length, cusps, or why none</td>
+</tr>
+<tr>
+<td><code>/drivers/nav/planner/nav2_plan</code></td>
+<td>nav_msgs/Path</td>
+<td>Nav2's lattice's own <code>/plan</code>, moved aside</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>How the swap works.</strong> <code>navigation.launch.py</code> remaps two names in <code>bt_navigator</code>:
+<code>compute_path_to_pose</code> and <code>compute_path_through_poses</code> → ours. The costmap step did the
+same with the clear service. Our navigator (<a href="own-navigator.html">page</a>) calls both too.</p>
+</section>
+<section class="card"><h2 id="what-it-does">What it does</h2>
+<pre class="highlight"><code>start ─▶ A* over the moves ─▶ now and then: one curve straight to the goal? ─▶ smooth ─▶ path
+          (primitives file)      (Reeds-Shepp; Dubins when forward only)</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Step</th>
+<th>What it does</th>
+<th>Nav2's</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>moves</td>
+<td>6 car-shaped moves from each of 16 headings (our file, <code>tools/lattice_primitives.py</code>); backwards too with <code>reversing:=true</code></td>
+<td><code>LatticeMotionTable</code></td>
+</tr>
+<tr>
+<td>does it fit?</td>
+<td>the car's padded outline at each pose along a move; most poses skip it (far from anything)</td>
+<td><code>GridCollisionChecker</code></td>
+</tr>
+<tr>
+<td>cost of a move</td>
+<td>length × (1 + 2 × cost), × 1.05 for a turn, + 0.05 to change turn, × 2 backwards</td>
+<td><code>getTraversalCost</code></td>
+</tr>
+<tr>
+<td>how far still?</td>
+<td>the larger of: round the obstacles (a grid search from the goal), and the car's shortest curve on open ground</td>
+<td>the two heuristics</td>
+</tr>
+<tr>
+<td>the finish</td>
+<td>a Reeds-Shepp curve to the goal when one is clear (within 3 m), wider turns if cheaper</td>
+<td><code>AnalyticExpansion</code></td>
+</tr>
+<tr>
+<td>smoothing</td>
+<td>pull each piece straighter, then re-join the true start and goal</td>
+<td><code>Smoother</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Small changes from Nav2</strong> (all in <code>ros/drivers/aav_planner/PROVENANCE.md</code>):</p>
+<ul>
+<li>a node's pose changes only when a move makes it cheaper (Nav2 can mix two moves);</li>
+<li>each move is checked for collisions on its own (Nav2 remembers the first move's
+  answer for every later one). Safer, but more checks: part of why ours is slower;</li>
+<li>the car's outline is checked where the path puts it (Nav2's is half a cell off).</li>
+</ul>
+</section>
+<section class="card"><h2 id="try-it">Try it</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>To</th>
+<th>Run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>See it</td>
+<td><code>pixi run sim planner:=own</code>, then send a goal</td>
+</tr>
+<tr>
+<td>Score it beside Nav2's</td>
+<td><code>pixi run measure controllers --planners lattice own --reversing --tours lot</code></td>
+</tr>
+<tr>
+<td>On our costmap too</td>
+<td>add <code>costmap:=own</code> (it then plans on <code>/drivers/nav/costmap/global_raw</code>)</td>
+</tr>
+<tr>
+<td>Test the maths</td>
+<td><code>cd ros/drivers/aav_planner &amp;&amp; cargo test -p lattice-planner</code></td>
+</tr>
+<tr>
+<td>Time the hand-made maps</td>
+<td><code>cargo run --release -p lattice-planner --example scenes</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="hand-made-maps-no-ros">Hand-made maps (no ROS)</h2>
+<p>Our car, our primitives file, <code>nav2.yaml</code>'s global costmap (0.25 m cells, 3 m of
+inflation). M4 Max, the best of 5.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Map</th>
+<th>Forward only</th>
+<th>Reversing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>straight, 25 m</td>
+<td>path, 25.0 m, &lt; 0.1 ms</td>
+<td>the same</td>
+</tr>
+<tr>
+<td>U-turn, open ground</td>
+<td>path, 20.9 m, 0.3 ms</td>
+<td>path, 13.2 m (3 cusps), 0.3 ms</td>
+</tr>
+<tr>
+<td>U-turn in an 8 m road</td>
+<td><strong>no path</strong> (too narrow forward)</td>
+<td>path, 13.3 m (a three-point turn), 1.1 ms</td>
+</tr>
+<tr>
+<td>parking-lot exit (nose in, wall ahead)</td>
+<td><strong>no path</strong></td>
+<td>path, 19.8 m, backs out first, 0.9 ms</td>
+</tr>
+<tr>
+<td>narrow gap (2.5 m in a wall)</td>
+<td>path, 24.0 m, 0.2 ms</td>
+<td>the same</td>
+</tr>
+<tr>
+<td>no path (1.0 m gap; the car is 1.1 m)</td>
+<td><strong>no path</strong></td>
+<td><strong>no path</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>The tests check every path: clear of walls, starts at the start, ends at the goal, no
+turn under 80 % of the turning radius, no reversing when forward only.</p>
+</section>
+<section class="card"><h2 id="in-our-simulator-8-nov">In our simulator (8 Nov)</h2>
+<p><code>measure controllers --planners lattice own --reversing</code>, MPPI follows, 3 runs each.
+Before each leg, both planners plan <strong>from the same spot on the same map</strong>.</p>
+<h3 id="the-test-lot-4-legs-a-tour">The test lot (4 legs a tour)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Nav2's lattice</th>
+<th>Ours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Legs reached</td>
+<td><strong>12 / 12</strong></td>
+<td><strong>12 / 12</strong></td>
+</tr>
+<tr>
+<td>Tour time, 3 runs</td>
+<td>187, 186, 187 s</td>
+<td>182, 181, 189 s</td>
+</tr>
+<tr>
+<td>Path length, all legs</td>
+<td>135-138 m</td>
+<td>136-138 m</td>
+</tr>
+<tr>
+<td>Changes of direction, all legs</td>
+<td>2, 2, 2</td>
+<td>3, 2, 4</td>
+</tr>
+<tr>
+<td>Tightest turn</td>
+<td>3.52-3.54 m</td>
+<td>3.52-3.57 m</td>
+</tr>
+<tr>
+<td>Turns tighter than the car can</td>
+<td>none</td>
+<td>none</td>
+</tr>
+<tr>
+<td>One plan, the whole call (wall)</td>
+<td>4-41 ms</td>
+<td>3-37 ms</td>
+</tr>
+</tbody>
+</table></div>
+<p>Same spot, same map, leg by leg: the lengths agree within 2 m (once 2.2 m: 44.2 against
+42.0 m), and the times within a few ms.</p>
+<h3 id="the-campus-3-legs-25-ms">The campus (3 legs, 2.5 m/s)</h3>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Nav2's lattice</th>
+<th>Ours</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Legs reached</td>
+<td>3 / 9</td>
+<td>4 / 9</td>
+</tr>
+<tr>
+<td>"Out of the lot" (47 m), same spot</td>
+<td>7-12 ms</td>
+<td>2 ms</td>
+</tr>
+<tr>
+<td>"Along the road" (254 m), same spot</td>
+<td>138-151 ms</td>
+<td><strong>168-195 ms</strong></td>
+</tr>
+<tr>
+<td>"Round the bend" (246 m, once), same spot</td>
+<td>780 ms</td>
+<td><strong>914 ms</strong></td>
+</tr>
+</tbody>
+</table></div>
+<ul>
+<li><strong>Both failed the same way:</strong> at the start of "along the road" MPPI said "Optimizer
+  fail to compute path" and Nav2 gave up (Nav2's planner 3 of 3, ours 2 of 3). The
+  follower, not the planner: both planned the same 254 m path. Then "round the bend"
+  started from wherever the car stopped, often too near the kerb to fit (both planners
+  said "start occupied").</li>
+<li><strong>Ours is about 20 % slower on long legs.</strong> Likely the per-move collision checks
+  (above). Both are far inside the 1 s replanning period and the 5 s limit.</li>
+<li>TODO 140's P4-to-Fieldhouse route was not run: these legs already fail before the
+  planner matters.</li>
+</ul>
+<h3 id="the-verdict">The verdict</h3>
+<ul>
+<li><strong>As good on the test lot:</strong> the same legs, paths and times as Nav2's lattice.</li>
+<li><strong>A little slower on the campus's long legs;</strong> nothing there decides between them yet.</li>
+<li>Nav2's lattice stays the default. Next: make ours faster (remember each node's check,
+  as Nav2 does, where it is safe), and Hybrid-A* for forward only.</li>
+</ul>
+</section>
+<section class="card"><h2 id="whats-missing">What's missing</h2>
+<ul>
+<li><strong>Hybrid-A</strong>* (the forward-only default on the car): not ported. <code>planner:=own</code> with
+  <code>reversing:=false</code> plans Dubins moves on the lattice instead.</li>
+<li><strong><code>ComputePathThroughPoses</code></strong>: done 8 Nov (<code>/drivers/nav/planner/compute_path_through_poses</code>,
+  a plan a leg, joined, as Nav2's planner_server does).</li>
+<li><strong>The navigator step</strong>: done 8 Nov (<a href="own-navigator.html">our own navigator</a>): it calls
+  ours for both, and clears our global costmap.</li>
+<li><strong>On the car:</strong> untested; the car refuses <code>planner:=own</code>.</li>
+</ul></section>
+<nav class="prevnext"><a class="prev" href="own-costmap.html"><small>Previous</small>← Our own costmap</a>
+<a class="next" href="own-navigator.html"><small>Next</small>Our own navigator →</a></nav>
+</main>
+<footer>Source: <code>docs/own-planner.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

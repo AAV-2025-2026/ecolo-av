@@ -115,3 +115,25 @@ def test_smooth_keeps_the_ends_and_takes_headings_from_travel():
     # Backing up east to west, facing east: the headings stay east.
     back = np.stack([xs[::-1], np.zeros(64), np.zeros(64)], axis=1)
     assert np.allclose(np.cos(window.smooth(back)[:, 2]), 1.0)
+
+
+def test_gear_runs_share_their_cusps_and_ignore_a_flicker():
+    gears = np.array([1, 1, 1, 1, -1, 1, 1, 1, -1, -1, -1, -1, -1])
+    # The lone -1 at 4 is a flicker; the cusp is where the long reverse run starts.
+    assert window.gear_runs(gears) == [(0, 7, 1.0), (7, 12, -1.0)]
+    assert window.gear_runs(np.ones(5)) == [(0, 4, 1.0)]
+
+
+def test_smoothing_by_gear_keeps_the_cusp_and_faces_the_way_the_car_does():
+    # Forward along x to 6 m, then backwards on a gentle curve: the car faces +x throughout.
+    fwd = np.stack([np.linspace(0, 6, 13), np.zeros(13), np.zeros(13)], axis=1)
+    s = np.linspace(0, 1, 13)[1:]
+    back = np.stack([6 - 5 * s, 0.6 * s ** 2, np.zeros(12)], axis=1)
+    path = np.concatenate([fwd, back])
+    path[1:-1, :2] += np.random.default_rng(1).normal(0, 0.03, (len(path) - 2, 2))
+    gears = np.concatenate([np.ones(13), -np.ones(12)])
+    out = window.smooth(path, gears=gears)
+    assert np.allclose(out[12, :2], path[12, :2])           # the cusp stays put
+    assert np.all(np.cos(out[:, 2]) > 0.9)                  # never turned sideways
+    # One average over the whole path rounds the cusp off and turns headings round.
+    assert not np.allclose(window.smooth(path)[12, :2], path[12, :2])

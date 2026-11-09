@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>aav_simulator</name>
+  <version>0.1.0</version>
+  <description>Our own simulator, in Rust (rclrs): a drop-in for gz sim and its ros_gz_bridges. It reads Gazebo's own world files, moves the car, casts the roof lidar's and the radar stand-in's rays, and publishes the IMU, GPS, wheels, truth and /clock on the topics the bridges use, so aav_gazebo's nodes and the whole stack run unchanged (sim.launch.py simulator:=own). No cameras yet: they plug in through sim-core's SensorPlugin.</description>
+  <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
+  <license>TODO</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- rclrs links rcl; ros-env compiles the Rust message code these packages ship. -->
+  <depend>rcl</depend>
+  <depend>builtin_interfaces</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>rosgraph_msgs</depend>
+  <depend>simulation_interfaces</depend>
+  <depend>visualization_msgs</depend>
+  <!-- aav_gazebo's worlds and models come in as paths (its gazebo.launch.py passes them),
+       so there's no dependency loop: aav_gazebo exec_depends on this package. -->
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

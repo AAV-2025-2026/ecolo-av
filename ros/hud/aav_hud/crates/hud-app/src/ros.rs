@@ -18,7 +18,9 @@
 //! - the heartbeat: reliable, depth 10, as the sensor watchdog subscribes;
 //! - the watchdog's and the output mux's one-line states: reliable, depth 1;
 //! - `/system/source`: reliable, transient local, depth 1, so the HUD gets each
-//!   announcer's one message even when it starts later.
+//!   announcer's one message even when it starts later;
+//! - the squiggly line (`/ego/trace`, `/ego/plan_ahead`, `/ego/stop_point`, `/ego/ahead`):
+//!   best effort, as the small messages; all base_link, so the HUD needs no TF.
 
 use std::{
     sync::{
@@ -32,6 +34,7 @@ use std::{
 
 use anyhow::{anyhow, Context as _, Result};
 use hud_core::{
+    ahead::{Point, StopMark, Summary},
     config::{HudConfig, Topic, NODE_NAME},
     estop::EstopButton,
     gps::{Fix, RawFix},
@@ -44,6 +47,9 @@ use hud_core::{
 };
 use rclrs::*;
 use ros_env::aav_interfaces::msg::{DataSource, VehicleStatus as VehicleStatusMsg};
+use ros_env::diagnostic_msgs::msg::DiagnosticStatus;
+use ros_env::geometry_msgs::msg::{PoseStamped, Quaternion};
+use ros_env::nav_msgs::msg::Path;
 use ros_env::sensor_msgs::msg::{BatteryState, Image, NavSatFix};
 use ros_env::std_msgs::msg::{Bool, String as StringMsg, UInt64};
 
@@ -244,6 +250,42 @@ fn spin(
         },
     )?;
 
+    let _trace = node.create_subscription(config.topic(Topic::Trace).sensor_data_qos(), {
+        let tx = tx.clone();
+        move |m: Path| send(&tx, Update::Trace(points(&m)))
+    })?;
+    let _plan_ahead =
+        node.create_subscription(config.topic(Topic::PlanAhead).sensor_data_qos(), {
+            let tx = tx.clone();
+            move |m: Path| send(&tx, Update::PlanAhead(points(&m)))
+        })?;
+    let _stop_point =
+        node.create_subscription(config.topic(Topic::StopPoint).sensor_data_qos(), {
+            let tx = tx.clone();
+            move |m: PoseStamped| {
+                let p = &m.pose.position;
+                let stop = StopMark {
+                    x: p.x,
+                    y: p.y,
+                    yaw: yaw_of(&m.pose.orientation),
+                };
+                send(&tx, Update::StopPoint(stop))
+            }
+        })?;
+    let _ahead = node.create_subscription(config.topic(Topic::Ahead).sensor_data_qos(), {
+        let tx = tx.clone();
+        move |m: DiagnosticStatus| {
+            let values = m
+                .values
+                .iter()
+                .map(|kv| (kv.key.as_str(), kv.value.as_str()));
+            send(
+                &tx,
+                Update::Ahead(Summary::from_status(m.level, &m.message, values)),
+            )
+        }
+    })?;
+
     let latched = QoSProfile::topics_default()
         .reliable()
         .transient_local()
@@ -402,6 +444,19 @@ impl Params {
         };
         Ok((params, config))
     }
+}
+
+/// A path's points (x, y), in its own frame: base_link for the squiggly line.
+fn points(m: &Path) -> Vec<Point> {
+    m.poses
+        .iter()
+        .map(|p| (p.pose.position.x, p.pose.position.y))
+        .collect()
+}
+
+/// A quaternion's yaw (rad).
+fn yaw_of(q: &Quaternion) -> f64 {
+    (2.0 * (q.w * q.z + q.x * q.y)).atan2(1.0 - 2.0 * (q.y * q.y + q.z * q.z))
 }
 
 #[cfg(test)]

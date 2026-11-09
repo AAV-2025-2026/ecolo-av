@@ -24,6 +24,7 @@ setup(
     entry_points={
         'console_scripts': [
             'ego = aav_ego.ego_node:main',
+            'look_ahead = aav_ego.look_ahead_node:main',
         ],
     },
 )

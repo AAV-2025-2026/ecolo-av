@@ -9,6 +9,9 @@ One leg is one Nav2 goal. It records, on Gazebo's clock:
   plans     [(t, [(x, y), ...])]    each path the planner sent (/plan), as it arrived
   steering  [(t, angle)]            ego's steering command (/ego/actuator_cmd), rad
   asked     [(t, v)]                the controller's speed command (/cmd_vel_nav), m/s
+  wanted    [(t, angle)]            optional: the steering angle ego was asked for,
+                                    atan(L w / v) of /control/cmd_vel (rad, unclamped;
+                                    none while |v| < STILL): what ego had to clip
   start, end                        s: the goal sent, and its result (or the time-out)
   goal      (x, y, yaw)             where it was sent, map frame, rad
   reached   bool                    Nav2 said it succeeded
@@ -600,6 +603,7 @@ def summary(leg):
         'end_error_m': math.nan,
         'end_heading_deg': math.nan,
         'steering_rms': rms_rate(leg['steering']),
+        'steer_clipped': clipped(leg['steering'], leg.get('wanted', [])),
         'sway_mps2': sway(truth)[0],
         'sway_flips_per_100m': sway(truth)[1],
         'stops': stops(truth),
@@ -667,6 +671,38 @@ def summary(leg):
     return row
 
 
+# rad: ego's angle this far from the one asked: ego clipped it. One 20 Hz smoother tick at
+# ego's 0.6 rad/s: ego (50 Hz) spreads a rate-limited step over its own ticks, a lag of
+# one tick, not a clip.
+CLIP_TOLERANCE = 0.03
+CLIP_REACTION = 0.03     # s: ego (50 Hz) acts on a new command within this
+
+
+def clipped(steering, wanted, tolerance=CLIP_TOLERANCE, reaction=CLIP_REACTION):
+    """
+    Return the share of ego's steering commands that ego had to clip, or NaN.
+
+    steering [(t, angle)] ego's; wanted [(t, angle)] what it was asked for (sorted by t).
+    A command counts where ego's angle is more than `tolerance` from both the newest ask
+    and the one `reaction` s before it (ego may not have read the newest yet): its rate or
+    its full lock held the wheels back. Only while an ask is under 0.5 s old.
+    """
+    if not steering or not wanted:
+        return math.nan
+    times = [t for t, _ in wanted]
+    counted = clipped_n = 0
+    for t, angle in steering:
+        i = bisect.bisect_right(times, t) - 1
+        if i < 0 or t - times[i] > 0.5:
+            continue
+        j = bisect.bisect_right(times, t - reaction) - 1
+        asks = [wanted[i][1]] + ([wanted[j][1]] if j >= 0 else [])
+        counted += 1
+        if all(abs(angle - a) > tolerance for a in asks):
+            clipped_n += 1
+    return clipped_n / counted if counted else math.nan
+
+
 def radius_cell(value):
     """Return a turn's radius for a table: 'straight' for a path with no turn."""
     return 'straight' if math.isinf(value) else f'{value:.2f}'
@@ -690,6 +726,7 @@ COLUMNS = [
     ('end_error_m', 'End: off the goal (m)', '{:.2f}'),
     ('end_heading_deg', 'End: heading off (deg)', '{:.0f}'),
     ('steering_rms', 'Steering work (rad/s RMS)', '{:.3f}'),
+    ('steer_clipped', 'Steering commands ego had to clip (its rate or full lock)', '{:.1%}'),
     ('sway_mps2', 'Sway: the sideways swing a passenger feels (m/s^2 RMS)', '{:.3f}'),
     ('sway_flips_per_100m', 'Sway: left-right changes per 100 m', '{:.1f}'),
     ('stops', 'Stops', '{:d}'),

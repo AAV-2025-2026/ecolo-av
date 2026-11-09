@@ -174,6 +174,36 @@ def test_motion_from_the_real_configs():
     assert motion_from(ego, car, 'uart', 10.0, 0.1, legacy=legacy)[1]
 
 
+def test_the_lock_counts_on_more_room_than_the_car_model_needs():
+    # The lock keeps its own law and never imports the car model or the stopping law
+    # (Simplex); only this test reads both. For every backend and speed up to ego's cap, the
+    # lock's worst case must be at least where the shared car model stops when the lock
+    # closes: ego slews the set speed to 0 at its max_deceleration, through the spine's
+    # speed loop and the brake's lag (stop_law.stop_point). The stopping law that plans the
+    # normal stops counts on more room than either (its rho has the speed loop's lag), so it
+    # slows the car before the lock closes.
+    import sys
+    sys.path.insert(0, os.path.join(ROS, 'bringup', 'aav_description'))
+    from aav_description.car_model import ActuatorConfig
+    from aav_description.stop_law import stop_point
+    ego = load('ego', 'aav_ego', 'config', 'ego.yaml')['ego']['ros__parameters']
+    car = load('bringup', 'aav_description', 'config', 'vehicle.yaml')
+    spine = load('can_bridge', 'aav_spine', 'config', 'spine.yaml')['spine_bridge'][
+        'ros__parameters']
+    legacy = load('can_bridge', 'aav_legacy', 'config', 'legacy.yaml')['legacy_uart_bridge'][
+        'ros__parameters']
+    cfg = ActuatorConfig.from_vehicle(car)
+    speeds = [0.1 * i for i in range(1, int(ego['max_speed'] / 0.1 + 0.5) + 1)]
+    model = {v: stop_point(cfg, v, ego['max_deceleration'], settle=4.0, dt=0.02)[0]
+             for v in speeds}
+    for backend in ('spine', 'uart', 'gazebo', 'gazebo_esp32'):
+        motion, _ = motion_from(ego, car, backend, 10.0, 0.1, spine=spine, legacy=legacy)
+        for v in speeds:
+            lock = stopping_distance(v, motion.reaction_time, motion.max_accel, motion.braking,
+                                     motion.max_speed)
+            assert lock >= model[v], (backend, v, lock, model[v])
+
+
 def test_along_an_arc():
     assert along_arc(0, 0, 0, 2, 0) == pytest.approx((2, 0, 0))
     # A quarter circle of radius 2, left.

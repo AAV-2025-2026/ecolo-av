@@ -1,0 +1,638 @@
+//! planner: our own path planner (Nav2's State Lattice, in Rust), beside planner_server.
+//!
+//! Action      drivers/nav/planner/compute_path_to_pose
+//!                                         nav2_msgs/action/ComputePathToPose: one path from
+//!                                         the car (or the goal's start, use_start) to the
+//!                                         goal, in map. navigation.launch.py planner:=own
+//!                                         points bt_navigator's compute_path_to_pose here
+//!             drivers/nav/planner/compute_path_through_poses
+//!                                         nav2_msgs/action/ComputePathThroughPoses: one path
+//!                                         through each goal in turn (a plan a leg, joined, as
+//!                                         planner_server does); bt_navigator's and our
+//!                                         navigator's (aav_navigator) are pointed here
+//! Subscribes  costmap_topic               nav2_msgs/Costmap: the global costmap the plan is
+//!                                         made on: Nav2's /global_costmap/costmap_raw
+//!                                         (latched, with costmap_updates_topic's
+//!                                         nav2_msgs/CostmapUpdate patches), or ours,
+//!                                         /drivers/nav/costmap/global_raw (costmap:=own)
+//!             /tf                         tf2_msgs/TFMessage: map -> odom -> base_link, the
+//!                                         car's pose in map (when use_start is false)
+//! Publishes   /plan                       nav_msgs/Path: each path found (planner_server's
+//!                                         own goes to /drivers/nav/planner/nav2_plan)
+//!             drivers/nav/planner/status  diagnostic_msgs/DiagnosticStatus, one a plan: the
+//!                                         times, iterations, length, cusps, error
+//! Serves      nothing else; calls nothing.
+//! Parameters  settings (JSON: aav_description's vehicle.planner_params, from the tuned
+//!             nav2.yaml's Lattice block, vehicle.yaml's outline and the global costmap's
+//!             inflation), costmap_topic, costmap_updates_topic (empty: none),
+//!             costmap_latched, map_frame, odom_frame, base_frame.
+//!
+//! The maths is the `lattice-planner` crate; this file only moves messages. Each goal is
+//! planned on its own thread, on the newest costmap.
+
+use std::any::Any;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
+
+use anyhow::{anyhow, bail, Context as _, Result};
+use costmap::{footprint, Grid, Inflation};
+use futures::channel::oneshot;
+use lattice_planner::{cusps, length, Lattice, Plan, PlanError, Planner, Pose, Settings};
+use rclrs::*;
+use ros_env::builtin_interfaces::msg::{Duration as DurationMsg, Time};
+use ros_env::diagnostic_msgs::msg::{DiagnosticStatus, KeyValue};
+use ros_env::geometry_msgs::msg::{Pose as PoseMsg, PoseStamped, Quaternion};
+use ros_env::nav2_msgs::action::{
+    ComputePathThroughPoses, ComputePathThroughPoses_Result as ThroughAnswer, ComputePathToPose,
+    ComputePathToPose_Result as Answer,
+};
+use ros_env::nav2_msgs::msg::{Costmap as CostmapMsg, CostmapUpdate};
+use ros_env::nav_msgs::msg::Path;
+use ros_env::std_msgs::msg::Header;
+use ros_env::tf2_msgs::msg::TFMessage;
+use serde_json::Value;
+
+const ACTION: &str = "/drivers/nav/planner/compute_path_to_pose";
+const THROUGH_ACTION: &str = "/drivers/nav/planner/compute_path_through_poses";
+const PLAN_TOPIC: &str = "/plan";
+const STATUS_TOPIC: &str = "/drivers/nav/planner/status";
+
+fn main() -> Result<()> {
+    let context = Context::default_from_env()?;
+    let mut executor = context.create_basic_executor();
+    let node = executor.create_node("planner")?;
+
+    let mut handles: Vec<Box<dyn Any>> = Vec::new();
+    let mut text_param = |name: &str, default: &str| -> Result<String> {
+        let p = node
+            .declare_parameter::<Arc<str>>(name)
+            .default(default.into())
+            .read_only()
+            .with_context(|| format!("parameter {name} (text)"))?;
+        let value = p.get().to_string();
+        handles.push(Box::new(p));
+        Ok(value)
+    };
+    let settings_json = text_param("settings", "")?;
+    let costmap_topic = text_param("costmap_topic", "/global_costmap/costmap_raw")?;
+    let updates_topic = text_param("costmap_updates_topic", "")?;
+    let latched = text_param("costmap_latched", "true")? == "true";
+    let frames = Frames {
+        map: text_param("map_frame", "map")?,
+        odom: text_param("odom_frame", "odom")?,
+        base: text_param("base_frame", "base_link")?,
+    };
+    if settings_json.trim().is_empty() {
+        bail!("the settings parameter is empty: navigation.launch.py planner:=own sets it");
+    }
+    let spec: Value = serde_json::from_str(&settings_json).context("settings: JSON")?;
+    let planner = Arc::new(build(&spec)?);
+    let planner_through = Arc::clone(&planner);
+    log_info!(
+        node.logger(),
+        "State Lattice (ours): {} headings, {} m cells, turning radius {} m, reversing {}; \
+         costmap {costmap_topic}",
+        planner.lattice().headings.len(),
+        planner.lattice().resolution,
+        planner.lattice().turning_radius,
+        planner.settings().allow_reverse
+    );
+
+    let core = Core {
+        frames,
+        grid: None,
+        map_odom: None,
+        odom_base: None,
+        plan_pub: node.create_publisher(PLAN_TOPIC)?,
+        status: node.create_publisher(STATUS_TOPIC)?,
+        clock: node.get_clock(),
+        logger: node.logger().clone(),
+        plans: 0,
+        failures: 0,
+    };
+    let worker = node.create_worker(core);
+    let full = if latched {
+        costmap_topic
+            .as_str()
+            .keep_last(1)
+            .reliable()
+            .transient_local()
+    } else {
+        costmap_topic.as_str().keep_last(1).reliable()
+    };
+    let mut keep: Vec<Box<dyn Any>> = vec![
+        Box::new(
+            worker.create_subscription(full, |s: &mut Core, msg: CostmapMsg| s.on_costmap(&msg))?,
+        ),
+        Box::new(worker.create_subscription("/tf", |s: &mut Core, msg: TFMessage| s.on_tf(&msg))?),
+    ];
+    if !updates_topic.is_empty() {
+        keep.push(Box::new(
+            worker.create_subscription(
+                updates_topic
+                    .as_str()
+                    .keep_last(10)
+                    .reliable()
+                    .transient_local(),
+                |s: &mut Core, msg: CostmapUpdate| s.on_update(&msg),
+            )?,
+        ));
+    }
+
+    let goals = worker.clone();
+    let _server = node.create_action_server::<ComputePathToPose, _>(
+        ACTION,
+        move |requested: RequestedGoal<ComputePathToPose>| {
+            let worker = goals.clone();
+            let planner = Arc::clone(&planner);
+            async move {
+                let goal = requested.accept().execute();
+                let asked = goal.goal().clone();
+                // The newest costmap and the car's pose, from the worker.
+                let inputs = worker
+                    .run(move |s: &mut Core| {
+                        s.inputs(
+                            std::slice::from_ref(&asked.goal),
+                            asked.use_start,
+                            &asked.start,
+                        )
+                    })
+                    .await
+                    .unwrap_or_else(|_| Err((Answer::UNKNOWN, "the node is stopping".into())));
+                let (grid, start, goal_poses, stamp) = match inputs {
+                    Ok(i) => i,
+                    Err((code, why)) => {
+                        let _ = worker.run(move |s: &mut Core| s.failed(code, &why)).await;
+                        return goal.aborted_with(answer_error(code, "see the status"));
+                    }
+                };
+                let stop = Arc::new(AtomicBool::new(false));
+                let stop_thread = Arc::clone(&stop);
+                let (done, finished) = oneshot::channel();
+                std::thread::spawn(move || {
+                    let r = planner.plan(&grid, &start, &goal_poses[0], &|| {
+                        stop_thread.load(Ordering::Relaxed)
+                    });
+                    let _ = done.send(r);
+                });
+                match goal.until_cancel_requested(finished).await {
+                    Ok(Ok(Ok(plan))) => {
+                        let reply = worker
+                            .run(move |s: &mut Core| s.succeeded(&plan, stamp))
+                            .await;
+                        match reply {
+                            Ok(a) => goal.succeeded_with(a),
+                            Err(_) => goal.aborted_with(answer_error(Answer::UNKNOWN, "stopping")),
+                        }
+                    }
+                    Ok(Ok(Err(e))) => {
+                        let code = error_code(e);
+                        let text = e.to_string();
+                        let _ = worker.run(move |s: &mut Core| s.failed(code, &text)).await;
+                        goal.aborted_with(answer_error(code, &e.to_string()))
+                    }
+                    Ok(Err(_)) => goal.aborted_with(answer_error(Answer::UNKNOWN, "lost")),
+                    Err(_) => {
+                        stop.store(true, Ordering::Relaxed);
+                        goal.begin_cancelling()
+                            .cancelled_with(answer_error(Answer::NONE, "cancelled"))
+                    }
+                }
+            }
+        },
+    )?;
+
+    let goals = worker.clone();
+    let _through = node.create_action_server::<ComputePathThroughPoses, _>(
+        THROUGH_ACTION,
+        move |requested: RequestedGoal<ComputePathThroughPoses>| {
+            let worker = goals.clone();
+            let planner = Arc::clone(&planner_through);
+            async move {
+                let goal = requested.accept().execute();
+                let asked = goal.goal().clone();
+                if asked.goals.is_empty() {
+                    return goal.aborted_with(through_error(
+                        ThroughAnswer::NO_VIAPOINTS_GIVEN,
+                        "no goals given",
+                    ));
+                }
+                let inputs = worker
+                    .run(move |s: &mut Core| s.inputs(&asked.goals, asked.use_start, &asked.start))
+                    .await
+                    .unwrap_or_else(|_| Err((Answer::UNKNOWN, "the node is stopping".into())));
+                let (grid, start, goal_poses, stamp) = match inputs {
+                    Ok(i) => i,
+                    Err((code, why)) => {
+                        let _ = worker.run(move |s: &mut Core| s.failed(code, &why)).await;
+                        return goal.aborted_with(through_error(code + 100, "see the status"));
+                    }
+                };
+                let stop = Arc::new(AtomicBool::new(false));
+                let stop_thread = Arc::clone(&stop);
+                let (done, finished) = oneshot::channel();
+                std::thread::spawn(move || {
+                    let r = planner.plan_through(&grid, &start, &goal_poses, &|| {
+                        stop_thread.load(Ordering::Relaxed)
+                    });
+                    let _ = done.send(r);
+                });
+                match goal.until_cancel_requested(finished).await {
+                    Ok(Ok(Ok(plan))) => {
+                        let reply = worker
+                            .run(move |s: &mut Core| s.succeeded(&plan, stamp))
+                            .await;
+                        match reply {
+                            Ok(a) => goal.succeeded_with(ThroughAnswer {
+                                path: a.path,
+                                planning_time: a.planning_time,
+                                error_code: ThroughAnswer::NONE,
+                                error_msg: String::new(),
+                            }),
+                            Err(_) => {
+                                goal.aborted_with(through_error(ThroughAnswer::UNKNOWN, "stopping"))
+                            }
+                        }
+                    }
+                    Ok(Ok(Err((leg, e)))) => {
+                        // Nav2's through-poses codes are its to-pose ones plus 100.
+                        let code = error_code(e);
+                        let text = format!("leg {}: {e}", leg + 1);
+                        let reply = text.clone();
+                        let _ = worker.run(move |s: &mut Core| s.failed(code, &text)).await;
+                        let through = if code == Answer::NONE {
+                            code
+                        } else {
+                            code + 100
+                        };
+                        goal.aborted_with(through_error(through, &reply))
+                    }
+                    Ok(Err(_)) => goal.aborted_with(through_error(ThroughAnswer::UNKNOWN, "lost")),
+                    Err(_) => {
+                        stop.store(true, Ordering::Relaxed);
+                        goal.begin_cancelling()
+                            .cancelled_with(through_error(ThroughAnswer::NONE, "cancelled"))
+                    }
+                }
+            }
+        },
+    )?;
+
+    let commands = Arc::clone(executor.commands());
+    ctrlc::set_handler(move || commands.halt_spinning())?;
+    executor.spin(SpinOptions::default()).first_error()?;
+    drop((keep, handles));
+    Ok(())
+}
+
+/// The planner from vehicle.planner_params' JSON.
+fn build(spec: &Value) -> Result<Planner> {
+    let number = |key: &str, default: f64| -> Result<f64> {
+        match &spec[key] {
+            Value::Null => Ok(default),
+            v => v
+                .as_f64()
+                .ok_or_else(|| anyhow!("{key}: a number is needed")),
+        }
+    };
+    let flag = |key: &str, default: bool| -> Result<bool> {
+        match &spec[key] {
+            Value::Null => Ok(default),
+            v => v.as_bool().ok_or_else(|| anyhow!("{key}: true or false")),
+        }
+    };
+    let d = Settings::default();
+    let settings = Settings {
+        allow_reverse: flag("allow_reverse_expansion", d.allow_reverse)?,
+        allow_unknown: flag("allow_unknown", d.allow_unknown)?,
+        tolerance: number("tolerance", d.tolerance)?,
+        max_iterations: number("max_iterations", d.max_iterations as f64)? as usize,
+        max_on_approach_iterations: number(
+            "max_on_approach_iterations",
+            d.max_on_approach_iterations as f64,
+        )? as usize,
+        max_planning_time: number("max_planning_time", d.max_planning_time)?,
+        terminal_checking_interval: number(
+            "terminal_checking_interval",
+            d.terminal_checking_interval as f64,
+        )?
+        .max(1.0) as usize,
+        reverse_penalty: number("reverse_penalty", d.reverse_penalty)?,
+        change_penalty: number("change_penalty", d.change_penalty)?,
+        non_straight_penalty: number("non_straight_penalty", d.non_straight_penalty)?,
+        cost_penalty: number("cost_penalty", d.cost_penalty)?,
+        retrospective_penalty: number("retrospective_penalty", d.retrospective_penalty)?,
+        rotation_penalty: number("rotation_penalty", d.rotation_penalty)?,
+        analytic_expansion_ratio: number("analytic_expansion_ratio", d.analytic_expansion_ratio)?,
+        analytic_expansion_max_length: number(
+            "analytic_expansion_max_length",
+            d.analytic_expansion_max_length,
+        )?,
+        analytic_expansion_max_cost: number(
+            "analytic_expansion_max_cost",
+            d.analytic_expansion_max_cost,
+        )?,
+        analytic_expansion_max_cost_override: flag(
+            "analytic_expansion_max_cost_override",
+            d.analytic_expansion_max_cost_override,
+        )?,
+        lookup_table_size: number("lookup_table_size", d.lookup_table_size)?,
+        smooth_path: flag("smooth_path", d.smooth_path)?,
+        smoother: d.smoother,
+    };
+    let file = spec["lattice_filepath"]
+        .as_str()
+        .ok_or_else(|| anyhow!("lattice_filepath: a path is needed"))?;
+    let text = std::fs::read_to_string(file).with_context(|| format!("reading {file}"))?;
+    let lattice = Lattice::parse(&text)?;
+    let corners: Vec<(f64, f64)> = spec["footprint"]
+        .as_array()
+        .ok_or_else(|| anyhow!("footprint: a list of [x, y] is needed"))?
+        .iter()
+        .map(|p| Some((p[0].as_f64()?, p[1].as_f64()?)))
+        .collect::<Option<_>>()
+        .ok_or_else(|| anyhow!("footprint: [x, y] numbers"))?;
+    let outline = footprint::padded(&corners, number("footprint_padding", 0.01)?);
+    let inflation = match &spec["inflation"] {
+        Value::Null => None,
+        i => Some(Inflation {
+            inflation_radius: i["radius"]
+                .as_f64()
+                .ok_or_else(|| anyhow!("inflation.radius"))?,
+            cost_scaling_factor: i["scaling"]
+                .as_f64()
+                .ok_or_else(|| anyhow!("inflation.scaling"))?,
+            inscribed_radius: footprint::radii(&outline).0,
+        }),
+    };
+    Ok(Planner::new(
+        lattice,
+        settings,
+        &outline,
+        inflation.as_ref(),
+    ))
+}
+
+fn error_code(e: PlanError) -> u16 {
+    match e {
+        PlanError::StartOutsideMap => Answer::START_OUTSIDE_MAP,
+        PlanError::GoalOutsideMap => Answer::GOAL_OUTSIDE_MAP,
+        PlanError::StartOccupied => Answer::START_OCCUPIED,
+        PlanError::GoalOccupied => Answer::GOAL_OCCUPIED,
+        PlanError::Timeout => Answer::TIMEOUT,
+        PlanError::NoValidPath => Answer::NO_VALID_PATH,
+        PlanError::Cancelled => Answer::NONE,
+        PlanError::WrongResolution => Answer::UNKNOWN,
+    }
+}
+
+fn through_error(code: u16, why: &str) -> ThroughAnswer {
+    ThroughAnswer {
+        error_code: code,
+        error_msg: why.into(),
+        ..Default::default()
+    }
+}
+
+fn answer_error(code: u16, why: &str) -> Answer {
+    Answer {
+        error_code: code,
+        error_msg: why.into(),
+        ..Default::default()
+    }
+}
+
+struct Frames {
+    map: String,
+    odom: String,
+    base: String,
+}
+
+/// The worker's payload.
+struct Core {
+    frames: Frames,
+    /// The newest costmap, shared with the planning threads.
+    grid: Option<Arc<Grid>>,
+    map_odom: Option<Pose>,
+    odom_base: Option<Pose>,
+    plan_pub: Publisher<Path>,
+    status: Publisher<DiagnosticStatus>,
+    clock: Clock,
+    logger: Logger,
+    plans: u64,
+    failures: u64,
+}
+
+fn yaw_of(q: &Quaternion) -> f64 {
+    (2.0 * (q.w * q.z + q.x * q.y)).atan2(1.0 - 2.0 * (q.y * q.y + q.z * q.z))
+}
+
+fn pose_of(p: &PoseMsg) -> Pose {
+    Pose::new(p.position.x, p.position.y, yaw_of(&p.orientation))
+}
+
+/// b placed in a's frame: a ∘ b.
+fn compose(a: &Pose, b: &Pose) -> Pose {
+    let (s, c) = a.yaw.sin_cos();
+    Pose::new(
+        a.x + c * b.x - s * b.y,
+        a.y + s * b.x + c * b.y,
+        lattice_planner::curves::wrap(a.yaw + b.yaw),
+    )
+}
+
+type Inputs = (Arc<Grid>, Pose, Vec<Pose>, Time);
+
+impl Core {
+    fn on_costmap(&mut self, msg: &CostmapMsg) {
+        let m = &msg.metadata;
+        if msg.header.frame_id.trim_start_matches('/') != self.frames.map {
+            log_warn!(
+                self.logger.throttle(Duration::from_secs(5)),
+                "the costmap is in {}, not {}: ignored",
+                msg.header.frame_id,
+                self.frames.map
+            );
+            return;
+        }
+        let (w, h) = (m.size_x as usize, m.size_y as usize);
+        if msg.data.len() != w * h {
+            return;
+        }
+        let mut grid = Grid::new(
+            (m.origin.position.x, m.origin.position.y),
+            f64::from(m.resolution),
+            w,
+            h,
+            0,
+        );
+        grid.data.clone_from(&msg.data);
+        self.grid = Some(Arc::new(grid));
+    }
+
+    /// Nav2's partial update: a rectangle of new costs.
+    fn on_update(&mut self, msg: &CostmapUpdate) {
+        let Some(grid) = self.grid.as_mut() else {
+            return;
+        };
+        let (x0, y0) = (msg.x as usize, msg.y as usize);
+        let (w, h) = (msg.size_x as usize, msg.size_y as usize);
+        if x0 + w > grid.width || y0 + h > grid.height || msg.data.len() != w * h {
+            return;
+        }
+        // Copy on write: a planning thread may still hold the old one.
+        let grid = Arc::make_mut(grid);
+        for row in 0..h {
+            let at = (y0 + row) * grid.width + x0;
+            grid.data[at..at + w].copy_from_slice(&msg.data[row * w..(row + 1) * w]);
+        }
+    }
+
+    fn on_tf(&mut self, msg: &TFMessage) {
+        for t in &msg.transforms {
+            let parent = t.header.frame_id.trim_start_matches('/');
+            let child = t.child_frame_id.trim_start_matches('/');
+            let r = &t.transform;
+            let pose = Pose::new(r.translation.x, r.translation.y, yaw_of(&r.rotation));
+            if parent == self.frames.map && child == self.frames.odom {
+                self.map_odom = Some(pose);
+            } else if parent == self.frames.odom && child == self.frames.base {
+                self.odom_base = Some(pose);
+            }
+        }
+    }
+
+    /// What a goal needs: the costmap, the start, the goals, and the time now.
+    fn inputs(
+        &self,
+        goals: &[PoseStamped],
+        use_start: bool,
+        start: &PoseStamped,
+    ) -> Result<Inputs, (u16, String)> {
+        let grid = self
+            .grid
+            .clone()
+            .ok_or((Answer::UNKNOWN, "no costmap yet".to_string()))?;
+        let frame_ok = |f: &str| {
+            let f = f.trim_start_matches('/');
+            f.is_empty() || f == self.frames.map
+        };
+        if let Some(wrong) = goals.iter().find(|g| !frame_ok(&g.header.frame_id)) {
+            return Err((
+                Answer::TF_ERROR,
+                format!(
+                    "a goal is in {}, not {}",
+                    wrong.header.frame_id, self.frames.map
+                ),
+            ));
+        }
+        let start = if use_start {
+            if !frame_ok(&start.header.frame_id) {
+                return Err((Answer::TF_ERROR, "the start is not in the map frame".into()));
+            }
+            pose_of(&start.pose)
+        } else {
+            match (&self.map_odom, &self.odom_base) {
+                (Some(a), Some(b)) => compose(a, b),
+                _ => {
+                    return Err((
+                        Answer::TF_ERROR,
+                        "no map -> odom -> base_link on /tf yet".into(),
+                    ))
+                }
+            }
+        };
+        let stamp = self.clock.now().to_ros_msg().unwrap_or_default();
+        let goals = goals.iter().map(|g| pose_of(&g.pose)).collect();
+        Ok((grid, start, goals, stamp))
+    }
+
+    fn succeeded(&mut self, plan: &Plan, stamp: Time) -> Answer {
+        self.plans += 1;
+        let header = Header {
+            stamp,
+            frame_id: self.frames.map.clone(),
+        };
+        let poses = plan
+            .poses
+            .iter()
+            .map(|p| PoseStamped {
+                header: header.clone(),
+                pose: PoseMsg {
+                    position: ros_env::geometry_msgs::msg::Point {
+                        x: p.x,
+                        y: p.y,
+                        z: 0.0,
+                    },
+                    orientation: Quaternion {
+                        x: 0.0,
+                        y: 0.0,
+                        z: (p.yaw / 2.0).sin(),
+                        w: (p.yaw / 2.0).cos(),
+                    },
+                },
+            })
+            .collect();
+        let path = Path { header, poses };
+        if let Err(e) = self.plan_pub.publish(&path) {
+            log_error!(&self.logger, "/plan: {e}");
+        }
+        let kv = |k: &str, v: String| KeyValue {
+            key: k.into(),
+            value: v,
+        };
+        let status = DiagnosticStatus {
+            level: DiagnosticStatus::OK,
+            name: "planner".into(),
+            message: "path".into(),
+            hardware_id: String::new(),
+            values: vec![
+                kv("search_ms", format!("{:.2}", plan.search_time * 1e3)),
+                kv("total_ms", format!("{:.2}", plan.total_time * 1e3)),
+                kv("iterations", plan.iterations.to_string()),
+                kv("length_m", format!("{:.2}", length(&plan.poses))),
+                kv("cusps", cusps(&plan.poses).to_string()),
+                kv("poses", plan.poses.len().to_string()),
+                kv("plans", self.plans.to_string()),
+                kv("failures", self.failures.to_string()),
+            ],
+        };
+        let _ = self.status.publish(&status);
+        let secs = plan.total_time;
+        Answer {
+            path,
+            planning_time: DurationMsg {
+                sec: secs.floor() as i32,
+                nanosec: ((secs - secs.floor()) * 1e9) as u32,
+            },
+            error_code: Answer::NONE,
+            error_msg: String::new(),
+        }
+    }
+
+    fn failed(&mut self, code: u16, why: &str) {
+        self.failures += 1;
+        log_warn!(
+            self.logger.throttle(Duration::from_secs(2)),
+            "no path ({code}): {why}"
+        );
+        let status = DiagnosticStatus {
+            level: DiagnosticStatus::ERROR,
+            name: "planner".into(),
+            message: why.into(),
+            hardware_id: String::new(),
+            values: vec![
+                KeyValue {
+                    key: "error_code".into(),
+                    value: code.to_string(),
+                },
+                KeyValue {
+                    key: "failures".into(),
+                    value: self.failures.to_string(),
+                },
+            ],
+        };
+        let _ = self.status.publish(&status);
+    }
+}

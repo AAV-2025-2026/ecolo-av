@@ -98,6 +98,12 @@ def test_a_wrong_hostname_is_a_stop_on_linux_unless_host_ok(home):
     assert re.search(r'OK\s+hostname', run(home, 'orin', 'check').stdout)
 
 
+def test_the_planned_names_pass_as_well_as_the_old_ones(home):
+    for role, name in (('orin', 'aav-orin'), ('motor_pi', 'aav-motor'),
+                       ('localization', 'aav-localization'), ('dash', 'aav-dash')):
+        assert re.search(r'OK\s+hostname', run(home, role, 'check', host=name).stdout), role
+
+
 def test_upgrade_refuses_the_localization_pi_until_its_machine_file_exists(home):
     machines = TOOLS.parent / 'ros' / 'bringup' / 'aav_bringup' / 'config' / 'machines'
     if (machines / 'localization.yaml').is_file():
@@ -177,7 +183,9 @@ def test_services_by_role(home):
     assert 'systemctl --user enable aav-car' in orin
     pi = run(home, 'motor_pi', 'services', '--machine', 'motor_pi_alone').stdout
     assert 'server 192.168.1.140' in pi and 'AAV_MACHINE=motor_pi_alone' in pi
-    for role in ('localization', 'dash', 'camera_pi', 'lab_desktop'):
+    loc = run(home, 'localization', 'services').stdout
+    assert 'AAV_MACHINE=localization' in loc and 'enable aav-car' in loc
+    for role in ('dash', 'camera_pi', 'lab_desktop'):
         assert 'enable aav-car' not in run(home, role, 'services').stdout
     assert 'enable mediamtx' in run(home, 'camera_pi', 'services').stdout
 

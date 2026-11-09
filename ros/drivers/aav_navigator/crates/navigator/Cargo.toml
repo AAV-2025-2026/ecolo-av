@@ -1,0 +1,9 @@
+[package]
+name = "navigator"
+description = "Our own navigator: plan, follow, replan, recover, waypoints; Nav2's behaviour trees as a state machine, no ROS"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]

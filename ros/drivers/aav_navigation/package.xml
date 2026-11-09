@@ -32,7 +32,10 @@
   <exec_depend>aav_ghost</exec_depend>
   <exec_depend>aav_safety</exec_depend>
   <exec_depend>aav_track</exec_depend>
+  <exec_depend>aav_mppi_lag</exec_depend>
+  <exec_depend>aav_smoother</exec_depend>
   <exec_depend>aav_diffusion_planner</exec_depend>
+  <exec_depend>aav_behaviour</exec_depend>
   <exec_depend>aav_ego</exec_depend>
   <exec_depend>nav2_amcl</exec_depend>
   <exec_depend>launch</exec_depend>

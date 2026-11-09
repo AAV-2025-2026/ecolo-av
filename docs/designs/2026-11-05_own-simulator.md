@@ -3,7 +3,9 @@
 * **Author:** Ben (the direction), written up 5 Nov 2026
 * **Date:** 2026-11-05
 * **Status:** the direction is Ben's. Everything marked "proposed" waits for an EGM review.
-  The window runs on pretend data and on live Gazebo. The simulator isn't built. TODO 114, 115.
+  The window runs on pretend data and on live Gazebo. **7 Nov: the core is built**
+  (`aav_simulator`, `simulator:=own`; [our own simulator](../own-simulator.md)): Gazebo's worlds,
+  the car, the lidar, radar, IMU, GPS and clock, without cameras. TODO 114, 115, 134.
 
 Ben, 5 Nov: "we want to replace gazebo with our own contorl too. We want to create all the
 sensor data and stuff like gazebo does but in rust and with bevy."

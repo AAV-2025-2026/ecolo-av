@@ -49,11 +49,17 @@ class MapEncoder(nn.Module):
 
 
 def time_embed(t, dim=64):
-    """Sine and cosine of t at dim / 2 frequencies."""
+    """
+    Sine and cosine of t at dim / 2 frequencies, worked out in float32 whatever t is.
+
+    In half precision 1000 t, up to 1000 rad, is only 0.5 rad exact: the FP16 export
+    (half_sampler) would lose the time. The result takes t's own type.
+    """
     half = dim // 2
-    freq = torch.exp(-math.log(1000.0) * torch.arange(half, device=t.device) / half)
-    a = t[:, None] * 1000.0 * freq[None, :]
-    return torch.cat([torch.sin(a), torch.cos(a)], dim=1)
+    freq = torch.exp(-math.log(1000.0) * torch.arange(half, device=t.device,
+                                                      dtype=torch.float32) / half)
+    a = t.float()[:, None] * 1000.0 * freq[None, :]
+    return torch.cat([torch.sin(a), torch.cos(a)], dim=1).to(t.dtype)
 
 
 class Block(nn.Module):
@@ -94,7 +100,8 @@ class Denoiser(nn.Module):
 
     def forward(self, x, c):
         b = x.shape[0]
-        where = torch.linspace(0.0, 1.0, POINTS, device=x.device).expand(b, 1, POINTS)
+        where = torch.linspace(0.0, 1.0, POINTS, device=x.device, dtype=x.dtype).expand(
+            b, 1, POINTS)
         h = self.inp(torch.cat([x.transpose(1, 2), where], dim=1))
         s0 = self.d0(h, c)                                   # 64
         s1 = self.d1(F.avg_pool1d(s0, 2), c)                 # 32
@@ -159,13 +166,27 @@ class Sampler(nn.Module):
 
     def forward(self, crop, cond, noise):
         k = noise.shape[0]
-        crop, cond = crop.expand(k, -1, -1, -1), cond.expand(k, -1)
-        ctx = self.model.context(crop, cond)
+        # The map and the goal once, then shared by the K samples: the map encoder ran K
+        # times on the same crop until 7 Nov (the same answer, K times the work).
+        ctx = self.model.context(crop, cond).expand(k, -1)
+        cond = cond.expand(k, -1)
         start, goal = ends(cond)
-        x = pin(noise, noise, torch.zeros(k, device=noise.device), start, goal)
+        x = pin(noise, noise, torch.zeros(k, device=noise.device, dtype=noise.dtype), start,
+                goal)
         dt = 1.0 / self.steps
         for i in range(self.steps):
-            t = torch.full((k,), i * dt, device=noise.device)
+            t = torch.full((k,), i * dt, device=noise.device, dtype=noise.dtype)
             x = x + dt * self.model.velocity(x, t, ctx)
             x = pin(x, noise, t + dt, start, goal)
         return x
+
+
+class HalfSampler(nn.Module):
+    """The Sampler in half precision (FP16) inside, float32 in and out: the GPU's export."""
+
+    def __init__(self, sampler):
+        super().__init__()
+        self.sampler = sampler.half()
+
+    def forward(self, crop, cond, noise):
+        return self.sampler(crop.half(), cond.half(), noise.half()).float()

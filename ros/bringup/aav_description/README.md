@@ -30,6 +30,7 @@ through the Python helper `aav_description.vehicle`.
 |---|---|
 | `vehicle` | wheelbase, track, wheel size (m), `max_steering_angle` (rad), `max_reverse_speed` (m/s), body outline, mass (kg), centre of mass, tyre grip, encoder counts, `speed_wheels` (which wheels `/vehicle/odom` measures: front today, TODO 49b) |
 | `actuators` | the actuator model for Gazebo: accel, brake, lags, steering rate. Also read by ego (`max_accel`, `max_brake`, via `ego_params`), `aav_drive_to_point`'s launch (`max_brake`) and `carla_adapter` (`max_accel`). **Every value is a guess** |
+| `brake` | the brake actuator's travel and limits, like the steering's ends: `released`, `touch`, `full`, `safe_max` (targets) and `max_hold_time` (s). **Placeholders** until car day A7 rows 6-8; `released` and `full` match the firmware's `calibration.rs` (`test_vehicle.py` checks). Read by the adaptive brake |
 | `sensors` | each sensor's mount (`xyz` m, `rpy` rad) from `base_link`: IMU, GPS, radar, three cameras, lidar |
 
 Many values are still `TODO measure` (docs/car_measurements.md).
@@ -50,19 +51,62 @@ Many values are still `TODO measure` (docs/car_measurements.md).
 | `nav2_rewrites(v, reversing)`, `nav2_tuned(...)` | Nav2's settings from the car |
 | `plan_turning_radius(v)`, `s_bend_length(radius, offset)`, `final_approach(v)` | the planner's radius; the room ahead an S-bend needs; how near the goal Nav2 keeps its path (TODO 17) |
 | `ego_params(cfg)`, `spine_params(v)` | ego's and `spine_bridge`'s parameters |
-| `check_planner(name, real)`, `lattice_problems(meta, v, resolution)` | a planner's name, checked (only `CAR_PLANNERS` with `real`); what's wrong with a lattice primitives file for this car and map |
+| `check_planner(name, real, trial)`, `lattice_problems(meta, v, resolution)` | a planner's name, checked (only `CAR_PLANNERS` with `real`; with `trial`, car.launch.py's `diffusion_trial:=true`, `TRIAL_CAR_PLANNERS` only); what's wrong with a lattice primitives file for this car and map |
+| `diffusion_trial_speed(max_speed)` | the diffusion car trial's top speed: empty gives `DIFFUSION_TRIAL_SPEED` (0.5 m/s); above it is refused |
 | `lattice_file_name(headings)` | the primitives file for 16 headings (the default) or 32 (`LATTICE_HEADINGS`, `lattice_headings:=`) |
 | `check_tracker(name, reversing)`, `track_params(nav2, cfg, ego, max_speed)` | a trial tracker's name, checked; `aav_track`'s parameters from nav2.yaml, vehicle.yaml and ego.yaml |
+| `mppi_lag_params(nav2, cfg, ego, max_speed)` | `aav_mppi_lag`'s: nav2.yaml's MPPI block and checks, the costmap's outline, vehicle.yaml's actuators (`MPPI_LAG_ACTUATORS`), ego's ramps |
 | `obstacle_heights(v)`, `centre_of_mass(...)` | the lidar's height band; centre of mass from the scales |
 
 Constants: `SELF_MARGIN`, `SENSOR_HALF_SIZE` (m), `STOP_ZONE_AHEAD`, `STOP_ZONE_BEHIND`, `STOP_ZONE_MARGIN` (m),
 `SEES_BEHIND`, `PLAN_TURN_MARGIN`, `GROUND_CLEARANCE`, `OVERHEAD_MARGIN` (m), and
 `CONTROLLERS = ('rpp', 'mppi')` with `DEFAULT_CONTROLLER = 'mppi'` (the default of
 `sim.launch.py`'s `controller`); `TRACKERS = ('none', 'pure_pursuit', 'stanley', 'lqr',
-'mpc', 'mpc_full')` with `DEFAULT_TRACKER = 'none'` (`tracker:=`, `docs/trials.md`), kept apart from
-`CONTROLLERS`; `PLANNERS = ('hybrid', 'lattice', 'smac2d', 'navfn', 'theta_star')` with
+'mpc', 'mpc_full', 'mpc_lag', 'mppi_lag')` with `DEFAULT_TRACKER = 'none'` (`tracker:=`, `docs/trials.md`), kept apart from
+`CONTROLLERS`; `PLANNERS = ('hybrid', 'lattice', 'smac2d', 'navfn', 'theta_star', 'diffusion', 'own')` with
 `DEFAULT_PLANNER = 'lattice'` and `FORWARD_ONLY_PLANNER = 'hybrid'` (`default_planner(reversing)` picks), `CAR_PLANNERS = ('hybrid', 'lattice')` (the ones that keep to
-the turning radius) and `PLANNER_BLOCKS` (each one's block in `nav2.yaml`).
+the turning radius), `TRIAL_CAR_PLANNERS = ('diffusion',)` with `DIFFUSION_TRIAL_SPEED = 0.5`
+(m/s: the car trial's cap, behind `diffusion_trial:=true`) and `PLANNER_BLOCKS` (each
+one's block in `nav2.yaml`).
+
+### `aav_description.car_model` (no ROS): one car model
+
+How the car answers a command, for ego (its lead and its trace), Gazebo's adapter and the
+drivers' tests (moved here from `aav_gazebo`'s `actuator_model.py`, 7 Nov; that module
+still re-exports every name). Its Rust twin is [`car-model/`](./car-model/README.md);
+`car-model/vectors.json` checks both. The page: `docs/vehicle-model.md`, "One car model".
+
+| Item | What |
+|---|---|
+| `ActuatorConfig` (`from_vehicle(cfg)`, `from_vehicle_yaml(path)`) | the `actuators:` numbers, the dead times (0 until measured), `max_steering`, `wheelbase`, `mass`, `payload` (kg aboard, 0; `share` = mass / (mass + payload) scales the throttle's push and the brake) |
+| `Command(steer, throttle, brake, reverse, speed=None)` | one step's command: pedals, or a set speed for a speed loop |
+| `CarState` | `x, y, yaw, v, steer, throttle_level, brake_level`, the steering motor's insides, the delay lines |
+| `step(cfg, state, command, dt, loop=None)` | the next `CarState`: dead times, lags, speed, steering, the bicycle |
+| `predict(cfg, state, commands, dt, horizon, loop=None)` | the trace: a state every `dt` for `horizon` s (the loop copied) |
+| `Actuators`, `SpeedLoop`, `speed_loop_profile`, `Ideal`, `LQI_MODEL` | Gazebo's stateful car, the spine's speed loop (ported), the old instant car |
+
+### `aav_description.stop_law` (no ROS): how the car stops
+
+One stopping law for every planned stop (`docs/stopping.md`), from this car model's numbers.
+
+| Item | What |
+|---|---|
+| `StopCurve(a, j, rho)` | `distance(v)` = S(v), `cap(d)` = the speed that stops in d m, `demand(v)`, `h(room, v, margin)`, `tau` |
+| `from_car_model(cfg, ego_max_deceleration, max_jerk, input_delay, loop)`, `from_numbers(max_brake, ...)` | the curve for this car: a from the brake and ego, ρ from the brake's lag and dead time and the speed loop's lag (`loop_lag`) |
+| `nav2_cap(left, curve, base, floor)` | a speed limit for Nav2: 0.0 (none) or between the floor (0.3 m/s) and `base` |
+| `stop_point(cfg, speed, ramp, loop)` | where the car model stops when its set speed falls at `ramp`: (metres, seconds) |
+| `stop_following(cfg, speed, commands, loop)` | the same for recorded set speeds `(t, v)` (`sim-check --loaded-stop`) |
+
+### `aav_description.adaptive_brake` (no ROS): a heavier car
+
+After the speed loop, before the brake: more brake when the car slows less than the empty
+car model says (`docs/stopping.md`, "A heavier car").
+
+| Item | What |
+|---|---|
+| `BrakeLimits` (`from_vehicle(cfg)`) | `vehicle.yaml`'s `brake:`; `fraction(target)`, `touch_fraction`, `safe_max_fraction` |
+| `AdaptiveBrakeConfig` | how fast it learns, the most it multiplies (3), the rise rate, what counts as high force |
+| `AdaptiveBrake(car, limits, tuning)` | `update(throttle, brake, speed, dt)` → `BrakeOut` (brake, gain, effectiveness, capped, spent); `reset()` |
 
 ### URDF (`urdf/`)
 
@@ -78,7 +122,9 @@ and one link per sensor in `vehicle.yaml`. `aav.gazebo.xacro` and
 - `max_steering_angle` is the virtual centre wheel (bicycle model), as ego and Nav2 use.
 - `firmware/spine`'s `spine-core` keeps copies of the steering limit and reverse speed.
   `test_vehicle.py` checks they match: change both together.
-- `vehicle.py` has no ROS imports, except `config_path()` (ament_index).
+- `vehicle.py` has no ROS imports, except `config_path()` (ament_index); `car_model.py` has none.
+- `car_model.py` and `car-model/` (Rust) give the same states: after changing either, run
+  `python3 car-model/gen_vectors.py`, then both test suites.
 
 ## Side Effects
 

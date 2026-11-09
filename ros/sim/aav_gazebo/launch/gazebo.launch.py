@@ -3,9 +3,10 @@ Gazebo Harmonic as the car: world, the car from the URDF, the bridge and the ada
 
   ros2 launch aav_gazebo gazebo.launch.py [world:=empty|test_lot|road|campus] [gui:=true]
       [follow:=true] [obstacle:=false] [start_x:=0.0] [start_y:=0.0] [start_yaw:=0.0] [lidar:=true]
-      [radar:=true] [actuator_model:=true] [faults:=false] [spine:=false] [arm:=true]
+      [radar:=true] [actuator_model:=true] [payload:=0] [adaptive_brake:=false]
+      [faults:=false] [spine:=false] [arm:=true]
       [esp32:=false] [esp32_loop:=pi] [chase_camera:=true]
-      [bridge:=rust|python]
+      [bridge:=rust|python] [simulator:=gazebo|own]
 
   /control/sim/actuator_cmd ──> gazebo_adapter ──> /gazebo/cmd_vel ──bridge──> Ackermann system
                        (the actuator model: vehicle.yaml's actuators:, unless
@@ -73,6 +74,17 @@ without it.
 obstacle:=true puts the bench's 1 m box in the car's lane, 15 m ahead. start_y and
 start_yaw put the car this far left of the world's origin, turned this far left of east
 (the EKFs still start at the origin, facing east, as on the bench).
+
+simulator:=own puts our own Rust simulator (aav_simulator, docs/own-simulator.md) in the
+place of gz sim and all its bridges: it reads the same world file and models, and publishes
+the bridges' topics (/clock, /gazebo/odom, /gazebo/imu, /gazebo/navsat, /joint_states,
+/vehicle/sim/truth, /sensors/lidar/points, /gazebo/radar/points) and takes /gazebo/cmd_vel,
+so gazebo_adapter and the sensor nodes above run unchanged. Its cameras are their own
+program (aav_sim_cameras, Bevy, offscreen): they draw the same world file where
+/vehicle/sim/truth puts the car, on the same camera topics (the chase camera too; with
+faults:=true the front left picture goes to gazebo_camera). No window. Ours is the default
+since 8 Nov; simulator:=gazebo starts Gazebo (on a computer with no GPU, the only one whose
+cameras draw: tools/software_gl.sh).
 
 Everything else (sensors filter, localization, Nav2, mux, ego) runs as on the car,
 with use_sim_time:=true. aav_bringup sim.launch.py starts the lot.
@@ -191,15 +203,65 @@ def chase_camera(share, sim_time):
     ]
 
 
+def model_paths(share):
+    """model://: aav_gazebo's models first, then wherever Gazebo would look."""
+    return [os.path.join(share, 'models')] + [
+        p for p in os.environ.get('GZ_SIM_RESOURCE_PATH', '').split(os.pathsep) if p]
+
+
+def own_cameras(share, world, chase, relay):
+    """Our simulator's cameras (aav_sim_cameras): the world file, drawn where the car is."""
+    cmd = worlds.sim_cameras_command(worlds.repo_root(__file__), world, model_paths(share),
+                                     chase=chase,
+                                     relay=faults.CAMERA_RELAYED if relay else '')
+    return ExecuteProcess(cmd=cmd, name='sim_cameras', output='screen')
+
+
+def own_simulator(context, share, world, car, lidar, radar):
+    """Our Rust simulator, in the place of gz sim, the car's spawn and every bridge."""
+    v = car['vehicle']
+    mounts = car['sensors']
+
+    def mount(link, part):
+        return [float(n) for n in mounts[link][part]]
+
+    models = model_paths(share)
+    start = {k: float(LaunchConfiguration(k).perform(context))
+             for k in ('start_x', 'start_y', 'start_yaw')}
+    x, y = worlds.OBSTACLE
+    return Node(package='aav_simulator', executable='simulator', name='simulator',
+                output='screen',
+                parameters=[{'world': world, 'models': ':'.join(models), **start,
+                             'wheelbase': float(v['wheelbase']), 'track': float(v['track']),
+                             'wheel_radius': float(v['wheel_diameter']) / 2.0,
+                             'max_steering': float(v['max_steering_angle']),
+                             'imu_xyz': mount('imu_link', 'xyz'),
+                             'imu_rpy': mount('imu_link', 'rpy'),
+                             'gps_xyz': mount('gps_link', 'xyz'),
+                             'lidar_xyz': mount('lidar_link', 'xyz'),
+                             'lidar_rpy': mount('lidar_link', 'rpy'),
+                             'radar_xyz': mount('radar_link', 'xyz'),
+                             'radar_rpy': mount('radar_link', 'rpy'),
+                             'lidar': lidar, 'radar': radar,
+                             'obstacle': flag(context, 'obstacle'),
+                             'obstacle_x': x, 'obstacle_y': y,
+                             'obstacle_model': os.path.join(share, 'models', 'obstacle',
+                                                            'model.sdf')}])
+
+
 def launch_setup(context):
     share = FindPackageShare('aav_gazebo').perform(context)
     world = worlds.world_file(share, LaunchConfiguration('world').perform(context))
+    simulator = worlds.check_simulator(LaunchConfiguration('simulator').perform(context))
+    own = simulator == 'own'
     sensors = worlds.has_sensors(world)
+    # Cameras where the world renders sensors: Gazebo's, or ours (aav_sim_cameras, Bevy).
+    cameras = worlds.has_cameras(world, simulator)
     # The lidar only where the world renders it: elsewhere it would publish nothing.
     lidar = sensors and flag(context, 'lidar')
-    chase = sensors and flag(context, 'chase_camera')
+    chase = cameras and flag(context, 'chase_camera')
     radar = sensors and flag(context, 'radar')
-    relay = sensors and flag(context, 'faults')
+    relay = cameras and flag(context, 'faults')
     spine = flag(context, 'spine')
     esp32 = flag(context, 'esp32')
     if spine and esp32:
@@ -222,11 +284,22 @@ def launch_setup(context):
     start = ['-x', LaunchConfiguration('start_x').perform(context),
              '-y', LaunchConfiguration('start_y').perform(context),
              '-Y', LaunchConfiguration('start_yaw').perform(context)]
-    actions = [
-        IncludeLaunchDescription(
-            os.path.join(FindPackageShare('ros_gz_sim').perform(context), 'launch',
-                         'gz_sim.launch.py'),
-            launch_arguments={'gz_args': gz_args, 'on_exit_shutdown': 'true'}.items()),
+    if own:
+        actions = [own_simulator(context, share, world, car, lidar, radar)]
+    else:
+        actions = [
+            IncludeLaunchDescription(
+                os.path.join(FindPackageShare('ros_gz_sim').perform(context), 'launch',
+                             'gz_sim.launch.py'),
+                launch_arguments={'gz_args': gz_args, 'on_exit_shutdown': 'true'}.items()),
+            Node(package='ros_gz_sim', executable='create', name='spawn_aav', output='screen',
+                 arguments=['-topic', 'robot_description', '-name', 'aav', '-z', '0.05',
+                            *start]),
+            Node(package='ros_gz_bridge', executable='parameter_bridge', name='gz_bridge',
+                 parameters=[{'config_file': os.path.join(share, 'config', 'bridge.yaml')},
+                             sim_time]),
+        ]
+    actions += [
         IncludeLaunchDescription(
             os.path.join(FindPackageShare('aav_description').perform(context), 'launch',
                          'description.launch.py'),
@@ -234,17 +307,16 @@ def launch_setup(context):
                               'joint_state_publisher': 'false',
                               'lidar': str(lidar).lower(),
                               'chase_camera': str(chase).lower()}.items()),
-        Node(package='ros_gz_sim', executable='create', name='spawn_aav', output='screen',
-             arguments=['-topic', 'robot_description', '-name', 'aav', '-z', '0.05', *start]),
-        Node(package='ros_gz_bridge', executable='parameter_bridge', name='gz_bridge',
-             parameters=[{'config_file': os.path.join(share, 'config', 'bridge.yaml')},
-                         sim_time]),
         Node(package='aav_gazebo', executable='gazebo_adapter', name='gazebo_adapter',
              parameters=[{'wheelbase': float(v['wheelbase']), 'rendered': sensors,
+                          'cameras': cameras,
                           'radar': radar, 'lidar': lidar,
                           'wheel_radius': float(v['wheel_diameter']) / 2.0,
                           'actuator_model': flag(context, 'actuator_model'),
                           'speed_loop': LaunchConfiguration('speed_loop').perform(context),
+                          'payload': float(LaunchConfiguration('payload').perform(context)),
+                          'adaptive_brake': flag(context, 'adaptive_brake'),
+                          'lag_scale': float(LaunchConfiguration('lag_scale').perform(context)),
                           'spine': spine, 'esp32': esp32}, sim_time]),
         # Each sensor in a process of its own, as on the car: none waits behind another.
         Node(package='aav_gazebo', executable='gazebo_imu', name='gazebo_imu',
@@ -264,12 +336,16 @@ def launch_setup(context):
         actions += spine_in_the_loop(context, v, sim_time)
     if esp32:
         actions += esp32_in_the_loop(context, car, sim_time)
-    if gui and MAC:
+    if gui and MAC and not own:
         actions.append(ExecuteProcess(cmd=['gz', 'sim', '-g'], name='gz_window',
                                       output='screen'))
-    if gui and flag(context, 'follow'):
+    if gui and flag(context, 'follow') and not own:
         actions.append(ExecuteProcess(cmd=[FOLLOW], shell=True, name='follow_car'))
-    if sensors:
+    if cameras and own:
+        # Ours: the pictures straight onto the camera topics (the radar's rays are the
+        # simulator's own), so no road bridge.
+        actions.append(own_cameras(share, world, chase, relay))
+    elif cameras:
         bridge = os.path.join(share, 'config', 'bridge_road.yaml')
         if relay:
             # The front left picture to gazebo_camera, which passes it on through its fault.
@@ -284,14 +360,15 @@ def launch_setup(context):
         actions.append(Node(
             package='ros_gz_bridge', executable='parameter_bridge', name='gz_road_bridge',
             parameters=[{'config_file': bridge}, sim_time]))
-    if lidar:
+    if lidar and not own:
         actions.append(Node(
             package='ros_gz_bridge', executable='parameter_bridge', name='gz_lidar_bridge',
             parameters=[{'config_file': os.path.join(share, 'config', 'bridge_lidar.yaml')},
                         sim_time]))
     if chase:
-        actions += chase_camera(share, sim_time)
-    if flag(context, 'obstacle'):
+        # Ours publishes the chase picture itself: only the JPEG for Lichtblick.
+        actions += chase_camera(share, sim_time)[1 if own else 0:]
+    if flag(context, 'obstacle') and not own:
         x, y = worlds.OBSTACLE
         actions.append(Node(
             package='ros_gz_sim', executable='create', name='spawn_obstacle', output='screen',
@@ -335,6 +412,17 @@ def generate_launch_description():
                               description="the speed loop's profile: default (today's gains)"
                                           ', smooth (TODO 27) or lqi (TODO 3); in '
                                           'the actuator model, or spine_sim with spine:=true'),
+        DeclareLaunchArgument('payload', default_value='0',
+                              description='kg aboard the modelled car (people, cargo): it '
+                                          'speeds up and brakes less. Live: gazebo_adapter '
+                                          'payload'),
+        DeclareLaunchArgument('adaptive_brake', default_value='false',
+                              description='true: the adaptive brake after the actuator '
+                                          "model's speed loop (docs/stopping.md); not with "
+                                          'spine or esp32'),
+        DeclareLaunchArgument('lag_scale', default_value='1.0',
+                              description="the actuator model's throttle, brake and steering "
+                                          'lags times this (a robustness test)'),
         DeclareLaunchArgument('faults', default_value='false',
                               description='true: the front left picture goes through '
                                           'gazebo_adapter, so fault.camera can freeze it'),
@@ -353,5 +441,10 @@ def generate_launch_description():
         DeclareLaunchArgument('bridge', default_value=bridges.DEFAULT,
                               description='with spine:=true: spine_bridge in rust '
                                           '(aav_spine_bridge) or python (aav_spine)'),
+        DeclareLaunchArgument('simulator', default_value=worlds.DEFAULT_SIMULATOR,
+                              description='own (the default): our Rust simulator '
+                                          '(aav_simulator) in the place of gz sim and its '
+                                          'bridges, its cameras by Bevy (aav_sim_cameras); '
+                                          'or gazebo'),
         OpaqueFunction(function=launch_setup),
     ])

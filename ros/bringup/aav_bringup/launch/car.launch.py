@@ -15,7 +15,15 @@ The real car. One launch file for every machine; a machine file picks the parts.
                            forward only, the lattice lost the U-turn. Only these two on
                            the car: smac2d, navfn and theta_star ignore the turning
                            radius, and are refused here, with no way round it
-                           (vehicle.check_planner real)
+                           (vehicle.check_planner real). diffusion (the model draws, the
+                           guard checks, the lattice behind it) only with diffusion_trial)
+      [diffusion_trial:=false]
+                          (true: the diffusion planner's car trial, planner:=diffusion
+                           only. ego, Nav2 and the geofence are held to max_speed, which
+                           must then be empty (0.5 m/s) or at most 0.5 m/s
+                           (vehicle.DIFFUSION_TRIAL_SPEED); every lock as always.
+                           diffusion_provider:=, diffusion_python:= pick the model's engine
+                           and Python on the Orin. docs/car-day.md, the diffusion trial)
       [lidar:=true]       (false: no lidar anywhere, whatever the machine file says)
       [voxels:=false]     (true: Nav2 reads the lidar as 0.25 m cubes, aav_voxels, a trial
                            not yet tried on the car: docs/designs/2026-10-30_voxels.md)
@@ -397,6 +405,15 @@ def launch_setup(context):
     machine = arg('machine')
     config = load_machine(machine)
     parts = config['parts']
+    # The diffusion planner's car trial: only with diffusion_trial:=true, and then the
+    # whole car is held to its speed before anything starts. The included files share
+    # this launch configuration: ego's cap, the geofence's and Nav2's top speed.
+    trial = flag('diffusion_trial')
+    if trial:
+        context.launch_configurations['planner'] = vehicle.check_planner(
+            arg('planner') or 'diffusion', real=True, trial=True)
+        context.launch_configurations['max_speed'] = (
+            f'{vehicle.diffusion_trial_speed(arg("max_speed")):g}')
     # Who drives the car (docs/can-plan.md): uart, today's wiring, leaves the CAN bus to
     # the sensors (spine_bridge role sensors); can, the KEFC spine (role spine).
     role = bridges.role_for(arg('actuators'))
@@ -549,8 +566,11 @@ def launch_setup(context):
         # for: the lattice if Nav2 may reverse, else Hybrid-A* (the lattice lost the
         # U-turn forward only).
         planner = vehicle.check_planner(arg('planner') or vehicle.default_planner(reversing),
-                                        real=True)
-        actions.append(include('aav_navigation', 'navigation.launch.py',
+                                        real=True, trial=trial)
+        trial_args = ({'max_speed': arg('max_speed'),
+                       'diffusion_provider': arg('diffusion_provider'),
+                       'diffusion_python': arg('diffusion_python')} if trial else {})
+        actions.append(include('aav_navigation', 'navigation.launch.py', **trial_args,
                                map=arg('map') or empty_map, radar=on('radar'), planner=planner,
                                lidar=on('lidar'), ghost=flag('ghost'),
                                voxels=bool(flag('voxels') and on('lidar')),
@@ -558,6 +578,12 @@ def launch_setup(context):
                                                   or rear_camera),
                                camera_obstacles=on('camera_obstacles'),
                                camera_guard=rear_camera,
+                               # Nav2's own navigator, costmaps and smoother, always: our
+                               # trials (navigator:=own, costmap:=own, smoother:=own) never
+                               # reach the car.
+                               navigator=vehicle.DEFAULT_NAVIGATOR,
+                               smoother=vehicle.DEFAULT_SMOOTHER,
+                               costmap=vehicle.DEFAULT_COSTMAP,
                                reversing=reversing))
         # What this run uses, in words, for the cockpit's Algorithms table (aav_run_info).
         # The car has no trial localizers and no trial trackers: Nav2's own follower.
@@ -605,6 +631,18 @@ def generate_launch_description():
         DeclareLaunchArgument('max_speed', default_value='',
                               description='m/s: cap ego below config/ego.yaml (a first drive on '
                                           'stands: max_speed:=0.3); empty keeps ego.yaml'),
+        DeclareLaunchArgument('diffusion_trial', default_value='false',
+                              description='true: the diffusion planner on the car, a trial '
+                                          '(planner:=diffusion only), at max_speed 0.5 m/s '
+                                          'at most (empty: 0.5). docs/car-day.md'),
+        DeclareLaunchArgument('diffusion_provider', default_value='CPUExecutionProvider',
+                              description="with diffusion_trial: ONNX Runtime's engine "
+                                          '(TensorrtExecutionProvider, CUDAExecutionProvider '
+                                          'on the Orin; the CPU if they fail)'),
+        DeclareLaunchArgument('diffusion_python', default_value='',
+                              description="with diffusion_trial: the model worker's Python "
+                                          "(empty: Pixi's learn environment; on the Orin, "
+                                          "one with JetPack's ONNX Runtime for the GPU)"),
         DeclareLaunchArgument('gps', default_value='true',
                               description='false: no GPS anywhere (odometry only), whatever '
                                           'the machine file says'),

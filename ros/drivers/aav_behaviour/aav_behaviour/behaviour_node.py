@@ -1,0 +1,255 @@
+"""
+behaviour: why the car should slow, and a speed cap on Nav2 that slows it (a trial).
+
+Subscribes  /perception/stop_sign/distance  geometry_msgs/PointStamped: a sign, in its
+                                    camera's frame at the picture's stamp (kept in odom)
+            /perception/stop_sign, /safety/stop_hold/lock, /safety/geofence/lock,
+            /safety/sensor_watchdog/lock, /safety/estop   std_msgs/Bool: the locks
+            /safety/geofence/state   std_msgs/String: NEAR and why
+            /safety/geofence/fence   geometry_msgs/PolygonStamped (map, transient local)
+            /plan                    nav_msgs/Path (map): the goal's and the fence's distance
+            /localization/odom/local   nav_msgs/Odometry: the speed, and its age
+            /localization/odom/global  nav_msgs/Odometry: where the car is on /plan
+            /sensors/lidar/scan      sensor_msgs/LaserScan (base_link, best effort): the lane
+            /navigate_to_pose/_action/status  action_msgs/GoalStatusArray: a goal running,
+                                     or aborted (goal_status_topics: each navigator
+                                     action's, Nav2's or ours, navigator:=)
+            /tf, /tf_static          the sign's camera in odom
+Publishes   /drivers/nav/speed_limit   nav2_msgs/SpeedLimit, 20 Hz: absolute m/s, 0.0 = no
+                                     limit (controller_server's speed_limit_topic with
+                                     behaviour:=true)
+            /drivers/nav/behaviour/state   diagnostic_msgs/DiagnosticStatus, 5 Hz: state,
+                                     reason, cap_mps, left_m, warnings
+
+The maths is behaviour.py (no ROS); the stopping law is aav_description stop_law.py, from
+the car model's numbers. It isn't a driver: no cmd_vel, no twist_mux slot. It only ever
+asks Nav2 to go slower; the locks make every final stop, and it never clears one.
+navigation.launch.py behaviour:=true starts it (default false: the stock path).
+"""
+
+import math
+import signal
+
+from aav_behaviour.behaviour import (along_until, Behaviour, diagnostic, lane_ahead,
+                                     path_left, Settings, Stop, World)
+from aav_description.car_model import ActuatorConfig, speed_loop_profile
+from aav_description.stop_law import from_car_model
+from aav_safety.geofence import Polygon
+from action_msgs.msg import GoalStatus, GoalStatusArray
+from diagnostic_msgs.msg import DiagnosticStatus, KeyValue
+from geometry_msgs.msg import PointStamped, PolygonStamped
+from nav2_msgs.msg import SpeedLimit
+from nav_msgs.msg import Odometry, Path
+import rclpy
+from rclpy.duration import Duration
+from rclpy.executors import ExternalShutdownException
+from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, qos_profile_sensor_data, QoSProfile, ReliabilityPolicy
+from rclpy.time import Time
+from sensor_msgs.msg import LaserScan
+from std_msgs.msg import Bool, Header, String
+from tf2_geometry_msgs import do_transform_point
+import tf2_ros
+
+LOCK_TOPICS = {'stop_sign': '/perception/stop_sign', 'stop_zone': '/safety/stop_hold/lock',
+               'geofence': '/safety/geofence/lock', 'sensors': '/safety/sensor_watchdog/lock',
+               'estop': '/safety/estop'}
+RUNNING = (GoalStatus.STATUS_ACCEPTED, GoalStatus.STATUS_EXECUTING, GoalStatus.STATUS_CANCELING)
+
+
+class BehaviourNode(Node):
+
+    def __init__(self):
+        super().__init__('behaviour')
+        # plan_timeout 25 s: within 8 m of the goal the to-pose tree keeps its path for up
+        # to 20 s without replanning (navigate_to_pose_car.xml), so /plan goes quiet there.
+        p = {name: self.declare_parameter(name, default).value for name, default in (
+            ('base_speed', 1.0), ('floor', 0.3), ('accel', 0.5), ('fall', 2.0),
+            ('ask_after', 30.0), ('max_deceleration', 2.0), ('max_jerk', 2.0),
+            ('vehicle_yaml', ''), ('speed_loop', 'default'),
+            ('stop_distance_m', 4.7), ('front', 2.0), ('half_width', 0.6),
+            ('stop_gap', 1.0), ('near_depth', 2.5), ('plan_timeout', 25.0),
+            ('rate_hz', 20.0), ('state_rate_hz', 5.0), ('obstacles', True),
+            # Each navigator action's status (navigation.launch.py: Nav2's or ours,
+            # navigator:=): a goal running on any of them.
+            ('goal_status_topics', ['/navigate_to_pose/_action/status']))}
+        self.p = p
+        if p['vehicle_yaml']:
+            car = ActuatorConfig.from_vehicle_yaml(p['vehicle_yaml'])
+        else:
+            from aav_description import vehicle
+            car = ActuatorConfig.from_vehicle_yaml(vehicle.config_path())
+        curve = from_car_model(car, p['max_deceleration'], p['max_jerk'],
+                               loop=speed_loop_profile(p['speed_loop']))
+        self.machine = Behaviour(curve, Settings(
+            base=p['base_speed'], floor=p['floor'], accel=p['accel'], fall=p['fall'],
+            ask_after=p['ask_after']))
+        self.get_logger().info(
+            f'{curve.describe()}; cap {p["floor"]:g}-{p["base_speed"]:g} m/s on '
+            '/drivers/nav/speed_limit')
+
+        self.tf = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.TransformListener(self.tf, self)
+        self.locks = {}
+        for name, topic in LOCK_TOPICS.items():
+            self.create_subscription(Bool, topic,
+                                     lambda m, n=name: self.locks.__setitem__(n, m.data), 10)
+        self.near = False
+        self.create_subscription(String, '/safety/geofence/state',
+                                 lambda m: setattr(self, 'near', m.data.startswith('NEAR')), 10)
+        latched = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL,
+                             reliability=ReliabilityPolicy.RELIABLE)
+        self.fence = None
+        self.create_subscription(PolygonStamped, '/safety/geofence/fence', self.on_fence, latched)
+        self.plan, self.plan_time = [], -math.inf
+        self.create_subscription(Path, '/plan', self.on_plan, 10)
+        self.speed, self.odom_time = None, -math.inf
+        self.create_subscription(Odometry, '/localization/odom/local', self.on_local, 10)
+        self.pose = None
+        self.create_subscription(Odometry, '/localization/odom/global', self.on_global, 10)
+        self.ahead = math.inf          # the nearest thing in the lane, x in base_link (m)
+        if p['obstacles']:
+            self.create_subscription(LaserScan, '/sensors/lidar/scan', self.on_scan,
+                                     qos_profile_sensor_data)
+        self.sign, self.sign_time = None, -math.inf   # (x, y) in odom; the camera's frame
+        self.create_subscription(PointStamped, '/perception/stop_sign/distance', self.on_sign,
+                                 10)
+        self.goal_active, self.aborted, self.seen_aborted = False, False, set()
+        self.running = {}       # topic -> a goal running there
+        for topic in p['goal_status_topics']:
+            self.create_subscription(GoalStatusArray, topic,
+                                     lambda msg, t=topic: self.on_status(msg, t), 10)
+
+        self.limit = self.create_publisher(SpeedLimit, '/drivers/nav/speed_limit', 10)
+        self.state = self.create_publisher(DiagnosticStatus, '/drivers/nav/behaviour/state', 10)
+        self.decision = None
+        self.said = set()
+        self.create_timer(1.0 / p['rate_hz'], self.tick)
+        self.create_timer(1.0 / p['state_rate_hz'], self.publish_state)
+
+    def now(self) -> float:
+        return self.get_clock().now().nanoseconds * 1e-9
+
+    # --- inputs ------------------------------------------------------------------------
+
+    def on_fence(self, msg: PolygonStamped):
+        corners = [(p.x, p.y) for p in msg.polygon.points]
+        self.fence = Polygon(corners) if len(corners) >= 3 else None
+
+    def on_plan(self, msg: Path):
+        self.plan = [(s.pose.position.x, s.pose.position.y) for s in msg.poses]
+        self.plan_time = self.now()
+
+    def on_local(self, msg: Odometry):
+        self.speed, self.odom_time = msg.twist.twist.linear.x, self.now()
+
+    def on_global(self, msg: Odometry):
+        self.pose = (msg.pose.pose.position.x, msg.pose.pose.position.y)
+
+    def on_scan(self, msg: LaserScan):
+        self.ahead = lane_ahead(msg.ranges, msg.angle_min, msg.angle_increment,
+                                self.p['front'], self.p['half_width'])
+
+    def on_sign(self, msg: PointStamped):
+        """Keep the sign in odom: a GPS jump moves map, and mustn't move the sign."""
+        try:
+            t = self.tf.lookup_transform('odom', msg.header.frame_id,
+                                         Time.from_msg(msg.header.stamp), Duration(seconds=0.1))
+        except tf2_ros.TransformException:
+            return     # no TF at the picture's stamp: drop the picture
+        point = do_transform_point(msg, t).point
+        self.sign = (point.x, point.y, msg.header.frame_id)
+        self.sign_time = self.now()
+
+    def on_status(self, msg: GoalStatusArray, topic='/navigate_to_pose/_action/status'):
+        self.running[topic] = any(s.status in RUNNING for s in msg.status_list)
+        self.goal_active = any(self.running.values())
+        for s in msg.status_list:
+            key = bytes(s.goal_info.goal_id.uuid)
+            if s.status == GoalStatus.STATUS_ABORTED and key not in self.seen_aborted:
+                self.seen_aborted.add(key)
+                self.aborted = True
+
+    # --- each tick ---------------------------------------------------------------------
+
+    def sign_left(self):
+        """Return the metres from the sign's camera now to the sign, less the stop distance."""
+        if self.sign is None:
+            return None
+        sx, sy, frame = self.sign
+        try:
+            t = self.tf.lookup_transform('odom', frame, Time())
+        except tf2_ros.TransformException:
+            return None
+        rng = math.hypot(sx - t.transform.translation.x, sy - t.transform.translation.y)
+        return rng - self.p['stop_distance_m']
+
+    def stops(self, now):
+        found = []
+        left = self.sign_left()
+        if left is not None and now - self.sign_time < 5.0:
+            found.append(Stop('sign', left))
+        if math.isfinite(self.ahead):
+            found.append(Stop('obstacle', self.ahead - self.p['front'] - self.p['stop_gap']))
+        fresh = self.plan and now - self.plan_time < self.p['plan_timeout']
+        if fresh and self.pose is not None:
+            gx, gy = self.pose
+            if self.goal_active:
+                found.append(Stop('goal', path_left(self.plan, gx, gy)[0]))
+            if self.fence is not None:
+                depth = self.p['near_depth']
+                fence = along_until(self.plan, gx, gy,
+                                    lambda x, y: self.fence.depth(x, y) < depth)
+                if math.isfinite(fence):
+                    found.append(Stop('fence', fence))
+        return found
+
+    def tick(self):
+        now = self.now()
+        world = World(now=now, speed=self.speed, odom_age=now - self.odom_time,
+                      locks=dict(self.locks), near=self.near, stops=self.stops(now),
+                      sign_age=now - self.sign_time, goal_active=self.goal_active,
+                      goal_aborted=self.aborted)
+        self.aborted = False
+        d = self.machine.step(world)
+        if self.decision is None or (d.state, d.reason) != (self.decision.state,
+                                                            self.decision.reason):
+            self.get_logger().info(f'{d.state}{": " + d.reason if d.reason else ""} '
+                                   f'(cap {d.cap:.2f} m/s, left {d.left:.1f} m)')
+        for warning in d.warnings:
+            if warning not in self.said:
+                self.get_logger().warning(warning)
+        self.said = set(d.warnings)
+        self.decision = d
+        self.limit.publish(SpeedLimit(header=self.header(), percentage=False,
+                                      speed_limit=float(d.cap)))
+
+    def header(self):
+        return Header(stamp=self.get_clock().now().to_msg(), frame_id='base_link')
+
+    def publish_state(self):
+        if self.decision is None:
+            return
+        d = self.decision
+        level = (DiagnosticStatus.WARN if d.warnings or d.state == 'ASK'
+                 else DiagnosticStatus.OK)
+        self.state.publish(DiagnosticStatus(
+            level=level, name='behaviour',
+            message=f'{d.state}{": " + d.reason if d.reason else ""}',
+            values=[KeyValue(key=k, value=v) for k, v in diagnostic(d).items()]))
+
+
+def main():
+    rclpy.init()
+    node = None
+    try:
+        node = BehaviourNode()
+        rclpy.spin(node)
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass
+    finally:
+        signal.signal(signal.SIGINT, signal.SIG_IGN)
+        # A clean exit sends nothing: 0.0 mid-approach would jump to cruise.
+        if node is not None:
+            node.destroy_node()
+        rclpy.try_shutdown()

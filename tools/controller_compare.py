@@ -20,6 +20,9 @@ The trials (docs/trials.md):
                     aav_track's trackers (tracker:=), forward only; with --trackers alone,
                     only them: add --controllers rpp mppi for the whole-stack table too
     pixi run measure controllers --runs 3           (each follower 3 times: the mean and spread)
+    pixi run measure controllers --trackers mpc_lag --controllers mppi rpp --lag-scale 2
+                    the car's lags twice what vehicle.yaml says (sim's lag_scale:=2), the
+                    followers none the wiser: how each copes with a slower car
     pixi run measure controllers --amcl             (AMCL beside the EKF, amcl:=true: scored
                     against the truth, as the EKF is)
     pixi run measure controllers --ndt              (NDT beside the EKF, ndt:=true, on the map
@@ -52,11 +55,33 @@ The trials (docs/trials.md):
     pixi run measure controllers --planners hybrid lattice lattice32 --reversing --runs 3
                     the same with reversing on (MPPI follows backwards too; the trackers
                     can't), and lattice32: the lattice on its 32-heading file
+    pixi run measure controllers --planners lattice own --reversing --tours lot campus
+                    our own planner (aav_planner, planner:=own: Nav2's lattice in Rust)
+                    beside Nav2's: before each leg both plan from the same spot on the same
+                    map, and the leg's note gives Nav2's length, time and tightest turn
+    pixi run measure controllers --stacks nav2 own --tours lot obstacle --runs 3
+                    all of Nav2 (bt_navigator, the lattice, Nav2's costmaps, MPPI) against
+                    all of ours (navigator:=own planner:=own costmap:=own
+                    tracker:=mppi_lag: aav_navigator, aav_planner, aav_costmap,
+                    aav_mppi_lag), forward only (mppi_lag can't reverse). Each sends
+                    goals to its own navigator's actions (docs/own-navigator.md)
+    pixi run measure controllers --stacks nav2 own --tours fieldhouse --speed 2.5
+                    the campus route, P4 to the Fieldhouse (453 m, TODO 140): the campus
+                    graph's GPS waypoints, as street_router makes them, sent to each
+                    navigator's follow_gps_waypoints. Nav2's waypoint_follower stops and
+                    faces each one; ours passes them as one through-poses goal
+    pixi run measure controllers --stacks own --smoothers nav2 own --tours lot campus --runs 3
+                    Nav2's velocity smoother against ours (smoother:=own, aav_smoother: the
+                    turn rate from where the wheels can be), behind each follower; the
+                    row "Steering commands ego had to clip" says how often ego held the
+                    wheels back from what it was asked (docs/own-smoother.md)
     pixi run measure controllers --planners lattice diffusion --reversing --tours lot
                     the diffusion trial beside the lattice: each leg's note says how many
                     plans came from the model, how many from the lattice (the guard's
                     fallback) and why, and the guard's refusals by check.
-                    diffusion_nomodel: the same with no model file (every plan the lattice's)
+                    diffusion_nomodel: the same with no model file (every plan the lattice's).
+                    --diffusion-model <.onnx> another model; --diffusion-record <folder>
+                    each plan's inputs, for pixi run diffusion replay
 
 For each tour and controller it:
 1. starts sim.launch.py world:=test_lot gui:=false rviz:=false controller:=<rpp|mppi>
@@ -111,14 +136,16 @@ from ackermann_msgs.msg import AckermannDriveStamped  # noqa: E402
 from action_msgs.msg import GoalStatus  # noqa: E402
 from diagnostic_msgs.msg import DiagnosticStatus  # noqa: E402
 import drive_metrics  # noqa: E402
+from geographic_msgs.msg import GeoPose  # noqa: E402
 from geometry_msgs.msg import PoseWithCovarianceStamped, TwistStamped  # noqa: E402
-from nav2_msgs.action import ComputePathToPose, NavigateToPose  # noqa: E402
+from nav2_msgs.action import ComputePathToPose, FollowGPSWaypoints, NavigateToPose  # noqa: E402
 from nav2_msgs.msg import CollisionMonitorState  # noqa: E402
 from nav_msgs.msg import Odometry, Path  # noqa: E402
 import rclpy  # noqa: E402
 from rclpy.action import ActionClient  # noqa: E402
 from rclpy.node import Node  # noqa: E402
 from rclpy.parameter import Parameter  # noqa: E402
+from robot_localization.srv import FromLL  # noqa: E402
 from std_msgs.msg import Bool, String  # noqa: E402
 from std_srvs.srv import Trigger  # noqa: E402
 import yaml  # noqa: E402
@@ -141,7 +168,22 @@ TOURS = {
         ('along the road', 165.0, -111.0, -40.0),
         ('round the bend', 139.0, -190.0, -100.0),
     ]},
+    # TODO 140: directions on the campus, P4 to the Fieldhouse, as GPS waypoints (route:
+    # from, to, by the campus graph). The leg's goal is the last waypoint, put on the map
+    # by /fromLL when the run starts (None until then).
+    # The fence: a 600 m circle, as docs/routes.md runs it (200 m stops it half way).
+    'fieldhouse': {'obstacle': False, 'world': worlds.CAMPUS, 'route': ('P4', 'Fieldhouse'),
+                   'launch': ['geofence_radius:=600'],
+                   'legs': [('P4 to the Fieldhouse', None, None, None)]},
 }
+# --stacks: every navigation piece Nav2's, or every one ours (forward only: mppi_lag).
+STACKS = {
+    'nav2': ('controller', vehicle.DEFAULT_CONTROLLER,
+             ['planner:=lattice', 'costmap:=nav2', 'navigator:=nav2']),
+    'own': ('tracker', 'mppi_lag',
+            ['planner:=own', 'costmap:=own', 'navigator:=own']),
+}
+STACK_LABELS = {'nav2': 'all-nav2', 'own': 'all-ours'}
 BOX = 1.0               # m: the bench's obstacle, a cube (aav_gazebo models/obstacle)
 UP_TIME = 150.0         # s for Gazebo, the EKF, then Nav2, to come up
 SETTLE = 5.0            # s after that, before the first goal
@@ -153,15 +195,27 @@ MAP_SPEC = os.path.join(ROOT, 'ros', 'drivers', 'aav_navigation', 'maps',
                         'example_lot.spec.yaml')
 COLOURS = {'rpp': '#1f6fb4', 'mppi': '#e8590c', 'pure_pursuit': '#2b8a3e', 'stanley': '#862e9c',
            'lqr': '#c92a2a', 'mpc': '#e67700', 'mpc_full': '#5f3dc4',
+           'mpc_lag': '#087f5b', 'mppi_lag': '#0b7285',
            # --planners: a column is a planner's name when one follower drives them all.
            'hybrid': '#e8590c', 'lattice': '#1f6fb4', 'smac2d': '#2b8a3e',
-           'navfn': '#862e9c', 'theta_star': '#c92a2a', 'lattice32': '#5f3dc4'}
+           'navfn': '#862e9c', 'theta_star': '#c92a2a', 'lattice32': '#5f3dc4',
+           'own': '#0b7285', 'all-nav2': '#1f6fb4', 'all-ours': '#0b7285'}
+# --smoothers: Nav2's smoother keeps the follower's colour; ours is red.
+COLOURS.update({f'{k}+{w}-smoother': (c if w == 'nav2' else '#c92a2a')
+                for k, c in list(COLOURS.items()) for w in vehicle.SMOOTHERS})
 PLAN_TIME = 15.0        # s (wall) for the planner alone to answer, before each leg
 # NDT's map of the test lot (tools/ndt_map.py; maps/ is not in git).
 NDT_MAP = os.path.join(ROOT, 'maps', 'ndt', 'test_lot.pcd')
 NDT_CONFIG = os.path.join(ROOT, 'ros', 'localization', 'aav_ndt', 'config', 'ndt.yaml')
 # The process to time for each kind of follower (its command line, in the run's group).
-PROCESS = {'controller': 'controller_server', 'tracker': 'lib/aav_track/track'}
+PROCESS = {'controller': 'controller_server', 'tracker': 'lib/aav_track/track',
+           # tracker:=mppi_lag runs aav_mppi_lag's Rust node, not aav_track's.
+           'mppi_lag': 'lib/aav_mppi_lag/mppi_lag'}
+
+
+def follower_process(kind, controller):
+    """Return the command-line piece of the process to time for this follower."""
+    return PROCESS['mppi_lag'] if controller == 'mppi_lag' else PROCESS[kind]
 
 
 def seconds(stamp):
@@ -201,13 +255,15 @@ def follower_pid(pgid, name='controller_server'):
 class Recorder(Node):
     """Where the car really is, what Nav2 planned and asked for, and the safety layers."""
 
-    def __init__(self):
+    def __init__(self, navigator=vehicle.DEFAULT_NAVIGATOR):
         # On Gazebo's clock, like every node in the sim.
         super().__init__('controller_compare', parameter_overrides=[
             Parameter('use_sim_time', value=True)])
         self.recording = False
         self.watchdog = True            # False: watchdog:=false, nothing publishes its lock
         self.truth, self.plans, self.steering, self.asked = [], [], [], []
+        self.wanted = []     # the steering angle ego was asked for (drive_metrics.clipped)
+        self.wheelbase = float(vehicle.load()['vehicle']['wheelbase'])
         self.belief, self.amcl, self.loops = [], [], []
         self.ndt, self.ndt_status, self.ndt_fits = [], [], []
         self.voxels = []     # (ms a cloud, cubes) from the voxels trial's status
@@ -240,16 +296,25 @@ class Recorder(Node):
         self.create_subscription(AckermannDriveStamped, '/ego/actuator_cmd', self.on_steering,
                                  10)
         self.create_subscription(TwistStamped, '/cmd_vel_nav', self.on_asked, 10)
+        self.create_subscription(TwistStamped, '/control/cmd_vel', self.on_wanted, 10)
         self.create_subscription(Bool, '/safety/sensor_watchdog/lock', self.on_lock, 10)
         self.create_subscription(String, '/safety/sensor_watchdog/state', self.on_state, 10)
         self.create_subscription(CollisionMonitorState, '/safety/collision_monitor/state',
                                  self.on_monitor, 10)
-        self.nav = ActionClient(self, NavigateToPose, '/navigate_to_pose')
+        # Nav2's navigator's actions, or ours (--stacks own: navigator:=own).
+        self.nav = ActionClient(self, NavigateToPose,
+                                vehicle.navigator_action(navigator, 'navigate_to_pose'))
+        self.gps = ActionClient(self, FollowGPSWaypoints,
+                                vehicle.navigator_action(navigator, 'follow_gps_waypoints'))
+        self.from_ll = self.create_client(FromLL, '/fromLL')
         self.planner = ActionClient(self, ComputePathToPose, '/compute_path_to_pose')
+        # planner:=own: ours (aav_planner), beside planner_server's lattice.
+        self.own_planner = ActionClient(self, ComputePathToPose, vehicle.OWN_PLANNER_ACTION)
         self.clear = self.create_client(Trigger, '/safety/sensor_watchdog/clear')
 
     def start(self):
         self.truth, self.plans, self.steering, self.asked = [], [], [], []
+        self.wanted = []
         self.belief, self.amcl, self.loops = [], [], []
         self.ndt, self.ndt_status, self.ndt_fits = [], [], []
         self.voxels = []
@@ -351,6 +416,11 @@ class Recorder(Node):
         if self.recording:
             self.asked.append((self.now(), msg.twist.linear.x))
 
+    def on_wanted(self, msg):
+        v, w = msg.twist.linear.x, msg.twist.angular.z
+        if self.recording and abs(v) >= drive_metrics.STILL:
+            self.wanted.append((self.now(), math.atan(self.wheelbase * w / v)))
+
     def on_lock(self, msg):
         self.lock = msg.data
         if self.recording and msg.data:
@@ -381,6 +451,30 @@ class Recorder(Node):
         self.spin_for(wall_seconds, future.done)
         return future.result() if future.done() else None
 
+    def send_route(self, waypoints):
+        """Send the navigator GPS waypoints; return its handle, or None if refused."""
+        goal = FollowGPSWaypoints.Goal()
+        for w in waypoints:
+            pose = GeoPose()
+            pose.position.latitude, pose.position.longitude = w.lat, w.lon
+            pose.position.altitude = 0.0
+            pose.orientation.z = math.sin(w.yaw / 2.0)
+            pose.orientation.w = math.cos(w.yaw / 2.0)
+            goal.gps_poses.append(pose)
+        if not self.gps.wait_for_server(timeout_sec=10.0):
+            return None
+        handle = self.wait(self.gps.send_goal_async(goal), 10.0)
+        return handle if handle is not None and handle.accepted else None
+
+    def on_map(self, lat, lon):
+        """Return (x, y) of a lat/lon on the map, from navsat_transform's /fromLL; None."""
+        if not self.from_ll.wait_for_service(timeout_sec=10.0):
+            return None
+        request = FromLL.Request()
+        request.ll_point.latitude, request.ll_point.longitude = lat, lon
+        answer = self.wait(self.from_ll.call_async(request), 10.0)
+        return None if answer is None else (answer.map_point.x, answer.map_point.y)
+
     def send(self, x, y, yaw):
         """Send Nav2 a goal in the map frame; return its handle, or None if refused."""
         goal = NavigateToPose.Goal()
@@ -392,13 +486,15 @@ class Recorder(Node):
         return handle if handle is not None and handle.accepted else None
 
 
-def plan_alone(rec, goal, lock_radius):
+def plan_alone(rec, goal, lock_radius, client=None, name='/compute_path_to_pose'):
     """
     Ask the planner alone for a path from where the car stands; return (planned, notes).
 
     planned is drive_metrics' leg['planned']: the path, the planner's own time, the call's
-    wall time, and the car's full-lock radius. Nothing moves.
+    wall time, and the car's full-lock radius. Nothing moves. client, name: whose action
+    (None: Nav2's /compute_path_to_pose).
     """
+    client = client or rec.planner
     x, y, yaw = goal
     request = ComputePathToPose.Goal()
     request.goal.header.frame_id = 'map'
@@ -408,10 +504,10 @@ def plan_alone(rec, goal, lock_radius):
     request.planner_id = 'GridBased'      # whichever planner:= runs behind it
     request.use_start = False             # from the car, through TF, as bt_navigator asks
     out = {'path': [], 'ms': None, 'wall_ms': None, 'lock_radius': lock_radius}
-    if not rec.planner.wait_for_server(timeout_sec=5.0):
-        return out, ['the planner alone: no /compute_path_to_pose']
+    if not client.wait_for_server(timeout_sec=5.0):
+        return out, [f'the planner alone: no {name}']
     wall0 = time.monotonic()
-    handle = rec.wait(rec.planner.send_goal_async(request), 5.0)
+    handle = rec.wait(client.send_goal_async(request), 5.0)
     if handle is None or not handle.accepted:
         return out, ['the planner alone: refused']
     done = rec.wait(handle.get_result_async(), PLAN_TIME)
@@ -443,16 +539,31 @@ def ready(rec):
 
 
 def drive_leg(rec, pgid, goal, speed, body, obstacle, process='controller_server',
-              amcl=False, ndt=False, lock_radius=None, kiss=False):
+              amcl=False, ndt=False, lock_radius=None, kiss=False, own_planner=False,
+              route=None):
     """
     Send one goal and record it; return (drive_metrics leg, notes).
 
     lock_radius (m, --planners): first ask the planner alone for the leg's path, and score
-    its turns against the car's full lock.
+    its turns against the car's full lock. own_planner (planner:=own): ask ours, then
+    Nav2's lattice (planner_server, still running beside it) for the same leg from the
+    same spot, and say Nav2's numbers in a note: the two on the same map. route: GPS
+    waypoints (a tour's 'route'), sent to follow_gps_waypoints instead of one goal.
     """
     notes = ready(rec)
-    planned = None
-    if lock_radius is not None:
+    planned = planned_nav2 = None
+    if lock_radius is not None and own_planner:
+        planned, more = plan_alone(rec, goal, lock_radius, rec.own_planner,
+                                   vehicle.OWN_PLANNER_ACTION)
+        notes += more
+        planned_nav2, more = plan_alone(rec, goal, lock_radius)
+        notes += [f"Nav2's lattice: {n}" for n in more]
+        nav2 = drive_metrics.plan_row(planned_nav2)
+        if nav2.get('plan_found'):
+            notes.append(f"Nav2's lattice on the same map: {nav2['plan_m']:.1f} m in "
+                         f"{nav2['plan_ms']:.0f} ms, {nav2['plan_cusps']} cusps, tightest "
+                         f"turn {drive_metrics.radius_cell(nav2['plan_tightest_m'])} m")
+    elif lock_radius is not None:
         planned, more = plan_alone(rec, goal, lock_radius)
         notes += more
     x, y, yaw = goal
@@ -463,7 +574,7 @@ def drive_leg(rec, pgid, goal, speed, body, obstacle, process='controller_server
     rec.start()
     start = rec.now()
     reached = False
-    handle = rec.send(x, y, yaw)
+    handle = rec.send_route(route) if route else rec.send(x, y, yaw)
     if handle is None:
         notes.append('Nav2 refused the goal')
     else:
@@ -476,6 +587,12 @@ def drive_leg(rec, pgid, goal, speed, body, obstacle, process='controller_server
         if result.done():
             done = result.result()
             reached = done.status == GoalStatus.STATUS_SUCCEEDED
+            missed = list(getattr(done.result, 'missed_waypoints', []))
+            if missed:
+                # waypoint_follower succeeds with waypoints missed: not there.
+                notes.append(f'{len(missed)} of {len(route)} waypoints missed '
+                             f'({", ".join(str(m.index) for m in missed[:8])})')
+                reached = reached and done.result.missed_waypoints[-1].index != len(route) - 1
             if not reached:
                 why = getattr(done.result, 'error_msg', '') or f'status {done.status}'
                 notes.append(f'Nav2 gave up: {why}')
@@ -499,7 +616,7 @@ def drive_leg(rec, pgid, goal, speed, body, obstacle, process='controller_server
                      f'{ms[int(0.95 * (len(ms) - 1))]:.1f} 95th, {ms[-1]:.1f} worst; '
                      f'{sum(cubes) / len(cubes):.0f} cubes a cloud, {len(ms)} clouds')
     leg = {'truth': rec.truth, 'belief': rec.belief, 'plans': rec.plans,
-           'steering': rec.steering,
+           'steering': rec.steering, 'wanted': rec.wanted,
            'asked': rec.asked, 'start': start, 'end': end, 'goal': goal, 'reached': reached,
            'cpu': (100.0 * (cpu1 - cpu0) / (wall1 - wall0)
                    if None not in (cpu0, cpu1) and wall1 > wall0 else None),
@@ -517,6 +634,8 @@ def drive_leg(rec, pgid, goal, speed, body, obstacle, process='controller_server
         leg['diffusion'] = rec.diffusion
     if planned is not None:
         leg['planned'] = planned
+    if planned_nav2 is not None:
+        leg['planned_nav2'] = planned_nav2
     return leg, notes
 
 
@@ -625,6 +744,21 @@ def stop(launch, grace=30.0):
     return False
 
 
+def campus_route(start, end):
+    """
+    Return (waypoints, the last one): the campus graph's route between two places.
+
+    Cut into GPS waypoints as street_router does (aav_routes; maps/carla/carleton.osm).
+    """
+    from aav_routes import campus_graph, osrm_route
+    site = os.path.join(ROOT, 'ros', 'drivers', 'aav_routes', 'config', 'campus_site.yaml')
+    campus = campus_graph.Campus(site, ROOT)
+    route = campus.route(campus_graph.target(campus.find(start)),
+                         campus_graph.target(campus.find(end)))
+    waypoints = osrm_route.waypoints(route.points)
+    return waypoints, waypoints[-1]
+
+
 def tour_legs(tour, args):
     """Return the tour's legs to drive: all, or only the first --legs."""
     return TOURS[tour]['legs'][:args.legs]
@@ -634,10 +768,19 @@ def followers(args):
     """
     Return [(kind, name, planner, label)]: each follower with each planner, as asked.
 
+    --stacks: [('stack', 'nav2' or 'own', None, 'all-nav2' or 'all-ours')] instead.
+
     Nav2's controllers, then the trial trackers. With --planners alone, the default
     controller (MPPI) drives behind each planner; without --planners, planner is None (the
     launch's own default) and the label is the follower's name, as before.
     """
+    if args.smoothers:
+        # Each follower behind each smoother: a fifth item, and the label says which.
+        plain = followers(argparse.Namespace(**{**vars(args), 'smoothers': None}))
+        return [(*f, word, f'{f[3]}+{word}-smoother') for f in plain
+                for word in args.smoothers]
+    if args.stacks:
+        return [('stack', word, None, STACK_LABELS[word]) for word in args.stacks]
     controllers = args.controllers
     if controllers is None:
         # --trackers alone runs only the trackers; --planners alone, Nav2's default
@@ -691,7 +834,14 @@ def tracker_names(text):
 def session(tour, follower, args, out_dir, body, used, run=1):
     """Start the simulator for one tour and follower, drive its legs, stop it."""
     plan = TOURS[tour]
-    kind, controller, planner, label = follower
+    kind, controller, planner = follower[:3]
+    # --smoothers: (..., smoother, label); otherwise (..., label).
+    label = follower[-1]
+    smoother = follower[4] if len(follower) > 4 else None
+    extra, navigator = [], vehicle.DEFAULT_NAVIGATOR
+    if kind == 'stack':
+        kind, controller, extra = STACKS[follower[1]]
+        navigator = 'own' if follower[1] == 'own' else vehicle.DEFAULT_NAVIGATOR
     tag = f'{label}-{run}' if args.runs > 1 else label
     log_path = os.path.join(out_dir, f'sim-{tour}-{tag}.log')
     command = ['ros2', 'launch', 'aav_bringup', 'sim.launch.py',
@@ -704,6 +854,18 @@ def session(tour, follower, args, out_dir, body, used, run=1):
                f'reversing:={str(args.reversing).lower()}']
     if planner:
         command += planner_launch(planner)
+        if planner.startswith('diffusion'):
+            if args.diffusion_model and planner == 'diffusion':
+                command.append(f'diffusion_model:={os.path.abspath(args.diffusion_model)}')
+            if args.diffusion_smoothing:
+                command.append(f'diffusion_smoothing:={args.diffusion_smoothing}')
+            if args.diffusion_record:
+                # Each plan's inputs, a folder a run, to replay offline (training/replay.py).
+                command.append('diffusion_record:=' + os.path.join(
+                    os.path.abspath(args.diffusion_record), f'{tour}-{tag}'))
+    command += extra + plan.get('launch', []) + (args.launch or [])
+    if smoother:
+        command.append(f'smoother:={smoother}')
     if args.amcl:
         command.append('amcl:=true')
     if args.ndt_ekf:
@@ -724,6 +886,9 @@ def session(tour, follower, args, out_dir, body, used, run=1):
         command.append('obstacle:=true')
     if args.speed:
         command.append(f'sim_speed:={args.speed:g}')
+    if args.lag_scale != 1.0:
+        # Only Gazebo's adapter scales the car's lags (sim.launch.py refuses it otherwise).
+        command += [f'lag_scale:={args.lag_scale:g}', 'simulator:=gazebo']
     domain = private(used)
     print(f'\n== {tour}, {label}' + (f' (run {run} of {args.runs})' if args.runs > 1
                                      else '') +
@@ -737,11 +902,12 @@ def session(tour, follower, args, out_dir, body, used, run=1):
         launch = subprocess.Popen(command, cwd=ROOT, env=dict(os.environ), stdout=log,
                                   stderr=subprocess.STDOUT, start_new_session=True)
         rclpy.init()
-        rec = Recorder()
+        rec = Recorder(navigator)
         rec.watchdog = not args.gps_off
         try:
             up = rec.spin_for(UP_TIME, lambda: rec.last_truth is not None and rec.glob)
-            if not (up and rec.spin_for(UP_TIME, rec.nav.server_is_ready)):
+            server = rec.gps if plan.get('route') else rec.nav
+            if not (up and rec.spin_for(UP_TIME, server.server_is_ready)):
                 print(f'   it never came up: see {log_path}', flush=True)
                 return [(tour, name, label, None, ['never came up'], {'run': run})
                         for name, *_ in tour_legs(tour, args)]
@@ -749,14 +915,26 @@ def session(tour, follower, args, out_dir, body, used, run=1):
             if args.gps_off:
                 # After the EKF's first fix (the wait above): it knows where it started.
                 print(f'   {gps_off(rec)}', flush=True)
+            route = None
+            if plan.get('route'):
+                route, end = campus_route(*plan['route'])
+                goal_xy = rec.on_map(end.lat, end.lon)
+                if goal_xy is None:
+                    print('   no /fromLL: the route has no goal on the map', flush=True)
+                    return [(tour, name, label, None, ['no /fromLL'], {'run': run})
+                            for name, *_ in tour_legs(tour, args)]
             for name, x, y, heading in tour_legs(tour, args):
+                if route:
+                    (x, y), heading = goal_xy, math.degrees(route[-1].yaw)
                 leg, notes = drive_leg(rec, launch.pid, (x, y, math.radians(heading)),
                                        args.speed or 1.0, body, obstacle,
-                                       PROCESS[kind], args.amcl, args.ndt,
-                                       lock if planner else None, args.kiss_icp)
+                                       follower_process(kind, controller), args.amcl,
+                                       args.ndt,
+                                       lock if planner else None, args.kiss_icp,
+                                       planner == 'own', route)
                 row = drive_metrics.summary(leg)
                 # t, x, y, yaw: where the car was, and where the global EKF put it.
-                drawn = {'run': run,
+                drawn = {'run': run, 'goal': [round(x, 2), round(y, 2)],
                          'track': [[round(v, 3) for v in s]
                                    for s in drive_metrics.thin(leg['truth'], TRACK_EVERY)],
                          'belief': [[round(v, 3) for v in s]
@@ -883,6 +1061,11 @@ def report(results, args, started):
         for name, x, y, heading in tour_legs(tour, args):
             legs = [(c, row, notes, drawn.get('run', 1))
                     for t, n, c, row, notes, drawn in results if t == tour and n == name]
+            if x is None:
+                # A route's goal: where its last waypoint fell on the map, in a run.
+                ends = [d['goal'] for t, n, _, _, _, d in results
+                        if t == tour and n == name and d.get('goal')]
+                x, y, heading = (*ends[0], 0.0) if ends else (math.nan, math.nan, math.nan)
             lines += [f'## {tour}: {name} (to {x:g}, {y:g}, facing {heading:g} deg)', '']
             if args.runs == 1:
                 rows = [(c, row) for c, row, _, _ in legs if row is not None]
@@ -930,7 +1113,10 @@ def open_picture(results, tour, args):
         line = [(x, y) for r in runs if r[2] == controller for _, x, y, *_ in r[5]['track']]
         tracks.append((f'{controller}: where the car went', COLOURS.get(controller, 'black'),
                        [line], False))
-    marks = [(x, y, name) for name, x, y, _ in tour_legs(tour, args)]
+    # A route's goal is only known once a run asked /fromLL: from its first leg.
+    marks = [(x, y, name) for name, x, y, _ in tour_legs(tour, args) if x is not None]
+    marks += [(r[5]['goal'][0], r[5]['goal'][1], r[1]) for r in runs[:1]
+              if r[5].get('goal') and not marks]
     xs = [p[0] for _, _, lines, _ in tracks for p in lines[0]] + [m[0] for m in marks]
     ys = [p[1] for _, _, lines, _ in tracks for p in lines[0]] + [m[1] for m in marks]
     return drive_metrics.svg((min(xs) - 5, min(ys) - 5, max(xs) + 5, max(ys) + 5), tracks, (),
@@ -976,11 +1162,22 @@ def main():
                         help="Nav2's followers (default: both, unless --trackers is given)")
     parser.add_argument('--trackers', nargs='+', type=tracker_names, default=None,
                         help='the trial trackers (aav_track, docs/trials.md): pure_pursuit, '
-                             'stanley, lqr, mpc, mpc_full; spaces or commas between. Forward only')
+                             'stanley, lqr, mpc, mpc_full, mpc_lag; spaces or commas between. '
+                             'Forward only')
     parser.add_argument('--planners', nargs='+', type=planner_names, default=None,
                         help="Nav2's planners (planner:=): " + ', '.join(PLANNER_WORDS) +
                              ' (lattice32: the lattice on its 32-heading file); each '
                              'behind MPPI unless --controllers or --trackers say')
+    parser.add_argument('--stacks', nargs='+', choices=list(STACKS), default=None,
+                        help="every navigation piece Nav2's (nav2) or ours (own: "
+                             'navigator, planner, costmap, mppi_lag); forward only')
+    parser.add_argument('--smoothers', nargs='+', choices=list(vehicle.SMOOTHERS),
+                        default=None,
+                        help="each follower behind Nav2's velocity smoother (nav2) and/or "
+                             'ours (own: aav_smoother, smoother:=)')
+    parser.add_argument('--launch', nargs='+', default=None, metavar='NAME:=VALUE',
+                        help='more sim.launch.py arguments for every run, such as '
+                             'lidar:=false (to find what a failure needs)')
     parser.add_argument('--runs', type=int, default=1,
                         help='drive each follower this many times (default 1; 3 for a real '
                              'comparison: the mean and spread)')
@@ -1007,6 +1204,10 @@ def main():
                         default=[t for t in TOURS if 'world' not in TOURS[t]])
     parser.add_argument('--speed', type=float, default=None,
                         help="m/s, up to 5: sim_speed:= (the car's own top speed: 1.0)")
+    parser.add_argument('--lag-scale', type=float, default=1.0,
+                        help="the car's throttle, brake and steering lags times this "
+                             "(sim's lag_scale:=, in Gazebo): the followers still read "
+                             "vehicle.yaml's")
     parser.add_argument('--reversing', action='store_true',
                         help="let Nav2 reverse (reversing:=true; the car's own default is "
                              'false until H5); forward only otherwise')
@@ -1014,12 +1215,27 @@ def main():
                         help="only each tour's first N legs (each starts where the last ended)")
     parser.add_argument('--plans', action='store_true',
                         help='save every plan of each leg in results.json, not just its first')
+    parser.add_argument('--diffusion-model', default=None,
+                        help='with --planners diffusion: this model (.onnx) instead of '
+                             'models/diffusion/planner.onnx')
+    parser.add_argument('--diffusion-smoothing', choices=('gear', 'average'), default=None,
+                        help="with --planners diffusion: how the model's paths are smoothed "
+                             '(gear, the default; average: 2 Nov)')
+    parser.add_argument('--diffusion-record', default=None,
+                        help="with --planners diffusion: save each plan's inputs in this "
+                             'folder (a subfolder a run), to replay offline: '
+                             'pixi run diffusion replay')
     parser.add_argument('--out', help='where the results go (default: log/controller-compare/)')
     args = parser.parse_args()
     if args.trackers:
         args.trackers = list(dict.fromkeys(t for names in args.trackers for t in names))
     if args.planners:
         args.planners = list(dict.fromkeys(p for names in args.planners for p in names))
+    if args.stacks and (args.trackers or args.controllers or args.planners):
+        parser.error('--stacks sets the follower and planner: leave out --trackers, '
+                     '--controllers and --planners')
+    if args.stacks and args.reversing:
+        parser.error("--stacks drive forwards only (mppi_lag can't reverse)")
     if args.trackers and args.reversing:
         parser.error('--trackers drive forwards only: leave out --reversing')
     if args.runs < 1:
@@ -1039,15 +1255,16 @@ def main():
         for follower in followers(args):
             for run in range(1, args.runs + 1):
                 results += session(tour, follower, args, out_dir, body, used, run)
+    # The numbers first: a report that fails must not lose them.
+    with open(os.path.join(out_dir, 'results.json'), 'w') as f:
+        json.dump([{'tour': t, 'leg': n, 'controller': c, 'row': row, 'notes': notes, **drawn}
+                   for t, n, c, row, notes, drawn in results], f, indent=1, default=str)
     text = report(results, args, started)
     with open(os.path.join(out_dir, 'results.md'), 'w') as f:
         f.write(text)
     for tour in args.tours:
         with open(os.path.join(out_dir, f'{tour}.svg'), 'w') as f:
             f.write(picture(results, tour, args))
-    with open(os.path.join(out_dir, 'results.json'), 'w') as f:
-        json.dump([{'tour': t, 'leg': n, 'controller': c, 'row': row, 'notes': notes, **drawn}
-                   for t, n, c, row, notes, drawn in results], f, indent=1, default=str)
     print('\n' + text + f'\nSaved in {out_dir}', flush=True)
     return 0 if all(row and row['reached'] for _, _, _, row, _, _ in results) else 1
 

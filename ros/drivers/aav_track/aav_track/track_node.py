@@ -14,13 +14,18 @@ Publishes   cmd_vel_nav                 geometry_msgs/TwistStamped (Twist with s
                                         speed policy (speed.py), or mpc_full's own plan
             drivers/nav/track/status    diagnostic_msgs/DiagnosticStatus, every tick: the
                                         tracker, loop time, missed ticks, cross track, steering
+            drivers/nav/lag_aware       std_msgs/Bool, latched (transient local, depth 1):
+                                        true while the tracker models the car's lags itself
+                                        (mpc_lag), so ego's lead stays off; false otherwise,
+                                        and false as the node stops. Sent at start and on
+                                        each live swap
 Serves      nothing else; calls nothing.
 Parameters  tracker can be changed while it runs, only with live_swap:=true (sim.launch.py
             sets it; the car never): `ros2 param set /track tracker lqr`. The new tracker
             is built between ticks (one thread), takes the path and its place on it,
             starts its steering from the last command, and the loop statistics reset.
 
-navigation.launch.py tracker:=pure_pursuit|stanley|lqr|mpc|mpc_full starts it, and renames
+navigation.launch.py tracker:=pure_pursuit|stanley|lqr|mpc|mpc_full|mpc_lag starts it; renames
 controller_server's own action follow_path_unused, so bt_navigator's FollowPath comes here.
 Everything after cmd_vel_nav (the smoother, collision_monitor, twist_mux's slot 20, the
 locks) is unchanged. The checks are Nav2's own (checks.py, with nav2.yaml's numbers):
@@ -43,6 +48,7 @@ from aav_description import vehicle as vehicle_file
 from aav_ego.vehicle_model import from_config
 from aav_track import trackers
 from aav_track.checks import GoalCheck, ProgressCheck
+from aav_track.lag_model import CarParams
 from aav_track.path import moved, Path, wrap
 from aav_track.speed import SpeedPolicy
 from diagnostic_msgs.msg import DiagnosticStatus, KeyValue
@@ -54,8 +60,10 @@ import rclpy
 from rclpy.action import ActionServer, CancelResponse, GoalResponse
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
+from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from rclpy.task import Future
 from rclpy.time import Time
+from std_msgs.msg import Bool
 import tf2_ros
 
 # Each tracker's own parameters (config/track.yaml), as <tracker>.<name>.
@@ -69,6 +77,9 @@ TRACKER_PARAMS = {
     # lateral_accel) and vehicle.yaml's max_accel: the same as the shared policy's.
     'mpc_full': {'ds': 0.3, 'horizon': 30, 'q': [1.0, 2.0, 0.05], 'r': 0.2, 'r_rate': 1.0,
                  'q_speed': 0.2},
+    # The lags themselves come from vehicle.yaml's actuators: section (lag_model.CarParams).
+    'mpc_lag': {'horizon': 30, 'q': [1.0, 2.0, 0.05], 'r': 0.2, 'r_rate': 1.0,
+                'q_speed': 0.5, 'r_speed': 0.5, 'latency': 0.1, 'speed_loop': 'default'},
 }
 Code = FollowPath.Result
 
@@ -100,7 +111,8 @@ class Track(Node):
             ('tracker', 'pure_pursuit'), ('rate_hz', 20.0),
             ('odom_topic', '/localization/odom/local'), ('odom_frame', 'odom'),
             ('odom_timeout', 1.0), ('transform_tolerance', 0.5), ('stamped', True),
-            ('cruise_speed', 1.0), ('acceleration', 1.0), ('max_brake', 3.0),
+            ('cruise_speed', 1.0), ('acceleration', 1.0), ('deceleration', 2.0),
+            ('max_brake', 3.0),
             ('lateral_accel', 1.0),
             ('lookahead_min', 1.5), ('lookahead_max', 4.0), ('lookahead_time', 1.5),
             ('xy_goal_tolerance', 1.0), ('yaw_goal_tolerance', 0.75),
@@ -140,6 +152,10 @@ class Track(Node):
         self.pub = self.create_publisher(TwistStamped if self.stamped else Twist,
                                          'cmd_vel_nav', 10)
         self.status = self.create_publisher(DiagnosticStatus, 'drivers/nav/track/status', 10)
+        latched = QoSProfile(depth=1, durability=DurabilityPolicy.TRANSIENT_LOCAL,
+                             reliability=ReliabilityPolicy.RELIABLE)
+        self.lag_aware = self.create_publisher(Bool, 'drivers/nav/lag_aware', latched)
+        self.say_lag_aware()
         self.create_subscription(Odometry, p['odom_topic'], self.on_odom, 10)
         self.server = ActionServer(
             self, FollowPath, 'follow_path', execute_callback=self.execute,
@@ -161,13 +177,28 @@ class Track(Node):
         if name == 'pure_pursuit':
             own = {'lookahead_min': p['lookahead_min'], 'lookahead_max': p['lookahead_max'],
                    'lookahead_time': p['lookahead_time']}
-        if name in trackers.MODEL_TRACKERS:
+        if name in trackers.MODEL_TRACKERS + trackers.LAG_TRACKERS:
             own['period'] = 1.0 / p['rate_hz']
-        if name == 'mpc_full':
+        if name in ('mpc_full', 'mpc_lag'):
             own.update(cruise=p['cruise_speed'], accel=p['acceleration'],
                        max_brake=p['max_brake'], lateral_accel=p['lateral_accel'])
-        model = from_config(vehicle_file.load()) if name in trackers.MODEL_TRACKERS else None
+        if name == 'mpc_lag':
+            own['decel'] = p['deceleration']
+        model = None
+        if name in trackers.MODEL_TRACKERS:
+            model = from_config(vehicle_file.load())
+        elif name in trackers.LAG_TRACKERS:
+            model = CarParams.from_vehicle(vehicle_file.load())
         return trackers.make(name, self.limits, model, **own)
+
+    def say_lag_aware(self, aware=None):
+        """Tell ego (latched) whether this tracker cancels the lags itself."""
+        if aware is None:
+            aware = self.tracker.lag_aware
+        try:
+            self.lag_aware.publish(Bool(data=bool(aware)))
+        except Exception:             # the context already shut down (Ctrl-C): nothing to tell
+            pass
 
     def on_parameters(self, params):
         """Refuse a new tracker unless live_swap is on; otherwise swap to it at once."""
@@ -201,6 +232,7 @@ class Track(Node):
         if lag is not None:
             lag.angle = self.steer
         self.tracker = new
+        self.say_lag_aware()
         self.missed, self.loop_max, self.last_tick = 0, 0.0, None
         self.get_logger().info(f'tracker swapped live: {old.name} -> {new.name}'
                                f'{" mid-path" if job is not None else ""}')
@@ -367,6 +399,7 @@ def main(args=None):
     except (KeyboardInterrupt, ExternalShutdownException):
         pass
     finally:
+        node.say_lag_aware(False)       # lag-aware mode ends with the node
         node.destroy_node()
         rclpy.try_shutdown()
 

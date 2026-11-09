@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MPPI that knows the lag · AAV 2026–27</title>
+<link rel="stylesheet" href="style.css">
+</head><body>
+<!-- Generated from docs/mppi-lag.md by tools/build_docs.py. Edit the markdown, not this file. -->
+<header class="bar"><div class="kicker">AAV 2026–27 · AUTONOMY STACK</div>
+<h1>MPPI that knows the lag</h1>
+<div class="meta">10 min read · 9 sections</div></header>
+<nav class="menu"><a href="index.html">Start here</a>
+<a href="overview.html">Overview</a>
+<a href="release-notes.html">Release notes</a>
+<a href="getting-started.html">Getting started</a>
+<a href="first-day.html">Your first day</a>
+<a href="git.html">Git</a>
+<a href="how-it-fits.html">How it fits</a>
+<a href="start-up.html">Bottom-up</a>
+<a href="team.html">Starting points</a>
+<a href="packages.html">Packages</a>
+<a href="modules.html">Every module</a>
+<a href="work.html">Work</a>
+<a href="plan.html">The plan</a>
+<a href="features.html">Features</a>
+<a href="release-0.2.html">The 0.2 guide</a>
+<a href="whats-new.html">What&#x27;s new</a>
+<a href="audit-friday.html">Audit, 16 Oct</a>
+<a href="audit-questions.html">Audit questions</a>
+<a href="car-evening.html">Tonight: drive as is</a>
+<a href="car-day.html">Car day</a>
+<a href="car-setup.html">Car setup</a>
+<a href="rollout.html">Rolling out on the car</a>
+<a href="tests.html">Every test</a>
+<a href="know-the-car.html">Know the car</a>
+<span class="sep">Learn:</span>
+<a href="measure-the-car.html">Measure the car</a>
+<a href="decisions.html">Decisions</a>
+<a href="infrastructure.html">Infrastructure</a>
+<a href="learn-car.html">The car, box by box</a>
+<a href="learn-journey.html">A command&#x27;s journey</a>
+<a href="faq.html">Questions</a>
+<a href="glossary.html">Glossary</a>
+<a href="learn-sensors.html">Learn: sensors</a>
+<a href="learn-gps.html">Learn: GPS</a>
+<a href="learn-localization.html">Learn: localization</a>
+<a href="learn-speed.html">Learn: speed</a>
+<a href="learn-lidar.html">Learn: lidar</a>
+<a href="learn-control.html">Learn: control</a>
+<a href="controllers.html">Controllers</a>
+<a href="campus.html">The campus</a>
+<span class="sep">Reference:</span>
+<a href="maps-and-position.html">Maps and position</a>
+<a href="learn-nav2.html">Learn: Nav2</a>
+<a href="learn-can.html">Learn: CAN</a>
+<a href="status.html">Status</a>
+<a href="howto-driver.html">Build a driver</a>
+<a href="costmaps.html">Costmaps</a>
+<a href="path-followers.html">Path followers</a>
+<a href="switches.html">Switches</a>
+<a href="trials.html">Trials</a>
+<a class="here" href="mppi-lag.html">MPPI with lag</a>
+<a href="own-costmap.html">Our own costmap</a>
+<a href="own-planner.html">Our own planner</a>
+<a href="own-navigator.html">Our own navigator</a>
+<a href="own-smoother.html">Our own velocity smoother</a>
+<a href="stopping.html">How the car stops</a>
+<a href="a-to-b.html">A to B</a>
+<a href="routes.html">Street routes</a>
+<a href="perception.html">Perception</a>
+<a href="perception-and-hud-map.html">Perception options</a>
+<a href="camera-pipeline.html">Camera pipeline</a>
+<a href="camera-calibration.html">Camera calibration</a>
+<a href="proposal.html">Proposal draft</a>
+<a href="team-todo.html">Team tasks</a>
+<a href="older-code.html">Older code</a>
+<a href="ros2.html">ROS 2</a>
+<a href="languages.html">Languages</a>
+<a href="run.html">Run it</a>
+<a href="mac.html">Your Mac</a>
+<a href="foxglove.html">Watch from a laptop</a>
+<a href="simulation.html">Simulation</a>
+<a href="sim-and-car.html">Sim and the car</a>
+<a href="full-simulation.html">Full simulation</a>
+<a href="own-simulator.html">Our own simulator</a>
+<a href="own-simulator-cameras.html">Our simulator&#x27;s cameras</a>
+<a href="carla.html">CARLA</a>
+<a href="bench.html">Bench mode</a>
+<a href="actuator-tests.html">Actuator tests</a>
+<a href="hardware-debug.html">Hardware debug</a>
+<a href="learn-state-space.html">Learn: state space</a>
+<a href="vehicle-model.html">The car as a linear model</a>
+<a href="car-model.html">One car model</a>
+<a href="ghost-obstacles.html">Ghost obstacles</a>
+<a href="geofence.html">The geofence</a>
+<a href="sources-and-targets.html">Sources and targets</a>
+<a href="mcp.html">AI apps (MCP)</a>
+<a href="plain-english.html">Plain English</a>
+<a href="model-comparison.html">Newer models</a>
+<a href="firmware.html">Firmware</a>
+<a href="can-plan.html">CAN plan</a>
+<a href="rust-firmware.html">Rust firmware</a>
+<a href="esp32-bench.html">ESP32 first flash</a>
+<a href="esp32-safety.html">ESP32 safety rules</a>
+<a href="esp32-cpp-parity.html">ESP32 C++ parity</a>
+<a href="platforms.html">Platforms</a>
+<a href="bandwidth.html">Bandwidth</a>
+<a href="car-install.html">From a USB stick</a>
+<a href="car-screens.html">The two screens</a>
+<a href="car-photos.html">Car photos</a>
+<a href="conventions.html">Conventions</a>
+<a href="naming.html">Topic areas</a>
+<a href="interfaces.html">Topics</a>
+<a href="car_measurements.html">Car numbers</a>
+<a href="hud.html">HUD</a></nav>
+<main>
+<nav class="toc"><span>On this page:</span><a href="#how-it-fits">How it fits</a><a href="#the-model">The model</a><a href="#what-differs-from-nav2s-mppi">What differs from Nav2&#x27;s MPPI</a><a href="#results-without-ros">Results without ROS</a><a href="#speed">Speed</a><a href="#in-gazebo">In Gazebo</a><a href="#lag_aware-so-ego-doesnt-cancel-the-lag-twice">lag_aware: so ego doesn&#x27;t cancel the lag twice</a><a href="#run-it">Run it</a><a href="#what-is-missing">What is missing</a></nav>
+<div class="lead"><p>Ben, 7 Nov (0.3): <strong>"have the algorithms know about lag"</strong>.</p>
+<p>Nav2's MPPI plans as if the car obeys at once. It can't take our lag model without a C++
+plugin, and we write no C++. So MPPI is <strong>ported to Rust</strong>, with the lag in its model.
+Nav2 still plans the path; ours follows it. It is a <strong>trial</strong>, beside Nav2's MPPI.</p>
+<blockquote>
+<p><strong>The short version</strong></p>
+<ul>
+<li><strong>Switch:</strong> <code>tracker:=mppi_lag</code> (with <code>reversing:=false</code>). Package <code>aav_mppi_lag</code>.</li>
+<li><strong>Same MPPI:</strong> Nav2's sampling, critics, softmax and smoothing, nav2.yaml's numbers.</li>
+<li><strong>New model:</strong> ego's ramps, the spine's speed loop, the pedals' and steering's lags.</li>
+<li><strong>Without ROS:</strong> it predicts the car <strong>70 times better</strong> (8 mm off over 2.8 s, against 0.56 m).</li>
+<li><strong>On very slow actuators</strong> it keeps the path (0.1 m) where the lag-free MPPI <strong>loses it</strong>.</li>
+<li><strong>At vehicle.yaml's guesses</strong> both stay within a few cm: the lag is small there.</li>
+<li><strong>Fast:</strong> 1.7 ms a tick on an M4 Max (2000 samples x 56 steps); about 10 ms on the Orin.</li>
+<li><strong>Gazebo:</strong> not a fair test yet: on a loaded computer the odometry stalled and it gave up
+  (<a href="#in-gazebo">below</a>); while driving it was closer to the path (0.13 m against 0.20 m).</li>
+</ul>
+</blockquote></div>
+<section class="card"><h2 id="how-it-fits">How it fits</h2>
+<pre class="highlight"><code>planner (Nav2) ──path──▶ bt_navigator ──FollowPath──▶ mppi_lag ──cmd_vel_nav──▶ smoother
+                                                         ▲          ──▶ collision_monitor
+            odometry, /vehicle/steering, throttle, brake ┘          ──▶ twist_mux ──▶ ego</code></pre>
+<p>The same place as <code>aav_track</code>'s trackers: controller_server's <code>follow_path</code> is renamed
+<code>follow_path_unused</code>. Everything after <code>cmd_vel_nav</code> is unchanged: the safety chain too.</p>
+</section>
+<section class="card"><h2 id="the-model">The model</h2>
+<p>Each sample is rolled out through this, step by step:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Stage</th>
+<th>What it does</th>
+<th>From</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ego</td>
+<td>speed ramps at 1.0 up, 2.0 down m/s²; steering at 0.6 rad/s; holds the steering under 0.05 m/s</td>
+<td>ego.yaml</td>
+</tr>
+<tr>
+<td>speed loop</td>
+<td>the spine's PI: throttle from the speed error, brake past a coast band, a hold brake at a stop</td>
+<td>spine-core's <code>default</code> (as Gazebo's <code>SpeedLoop</code>)</td>
+</tr>
+<tr>
+<td>dead times</td>
+<td>each demand waits floor(t / dt + 0.5) steps</td>
+<td>vehicle.yaml (0 until measured)</td>
+</tr>
+<tr>
+<td>throttle, brake</td>
+<td>first-order lag, exact: level += (u - level)(1 - e^(-dt/lag))</td>
+<td><code>throttle_lag</code>, <code>brake_lag</code></td>
+</tr>
+<tr>
+<td>speed</td>
+<td>max_accel x throttle - max_brake x brake - drag x v; never reverses</td>
+<td><code>max_accel</code>, <code>max_brake</code>, <code>drag</code></td>
+</tr>
+<tr>
+<td>steering</td>
+<td>deadband (on the motor's setpoint), motor at most <code>steer_rate</code>, linkage lag, + offset, full lock</td>
+<td><code>steer_*</code></td>
+</tr>
+<tr>
+<td>pose</td>
+<td>bicycle with the new speed and steering, at the mid-step heading</td>
+<td><code>wheelbase</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Where each sample starts:</strong> the pose and speed (odometry), ego's output, the measured
+steering, throttle and brake (while fresh), and <strong>the commands already sent that are
+still in their dead time</strong>. Nav2's starts from the pose and speed alone.</p>
+<h3 id="the-trait-where-the-shared-car-model-plugs-in">The trait: where the shared car model plugs in</h3>
+<p>Another 0.3 job builds a shared crate, <code>car-model</code> (<code>ros/bringup/aav_description/car-model</code>).
+<code>LagModel</code> already follows its rules (the four rows above). Until it merges, the model sits
+behind a trait (<code>crates/mppi-lag/src/model.rs</code>); at the merge, that crate implements it.</p>
+<pre class="highlight"><code class="language-rust">pub trait CarModel: Sync {
+    type State: Clone + Send + Sync + Debug;
+    fn at_rest(&amp;self, pose: Pose, speed: f64) -&gt; Self::State;
+    fn step(&amp;self, state: &amp;mut Self::State, command: Command, dt: f64);
+    fn observe(&amp;self, state: &amp;mut Self::State, seen: &amp;Observation);
+    fn pose(&amp;self, state: &amp;Self::State) -&gt; Pose;
+    fn speed(&amp;self, state: &amp;Self::State) -&gt; f64;
+    fn steering(&amp;self, state: &amp;Self::State) -&gt; f64;
+    fn wheelbase(&amp;self) -&gt; f64;
+    fn lag_aware(&amp;self) -&gt; bool;
+}</code></pre>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Model</th>
+<th>What</th>
+<th>Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LagModel</code></td>
+<td>the spec above (the car behind ego)</td>
+<td><code>model: lag</code>, the default</td>
+</tr>
+<tr>
+<td><code>IdealModel</code></td>
+<td>obeys at once (Nav2's assumption)</td>
+<td><code>model: ideal</code>: the same MPPI without the lag, for comparison</td>
+</tr>
+<tr>
+<td><code>Driven&lt;M&gt;</code></td>
+<td>ego's ramps in front of any model</td>
+<td>always</td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="what-differs-from-nav2s-mppi">What differs from Nav2's MPPI</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th></th>
+<th>Nav2</th>
+<th>Ours</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Samples</td>
+<td>(vx, wz), each step clipped to ax, az</td>
+<td>(speed, steering), clipped to the range only</td>
+<td>ego's ramps are in the model; Nav2's clipping drifts samples slower</td>
+</tr>
+<tr>
+<td>Noise</td>
+<td>white</td>
+<td><strong>correlated</strong>, AR(1) 0.8</td>
+<td>see below</td>
+</tr>
+<tr>
+<td>Sent</td>
+<td>element 1</td>
+<td>element 0</td>
+<td>the dead times already hold what was sent</td>
+</tr>
+<tr>
+<td>Critics</td>
+<td>the eight in nav2.yaml</td>
+<td>the same eight, same weights</td>
+<td>PathAngle forward mode only</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="why-the-noise-is-correlated">Why the noise is correlated</h3>
+<p>Through a lagging steering, white noise averages away: every sample drives alike, and
+MPPI learns nothing. Without ROS, on a slow car (steering 0.5 rad/s, 0.3 s lag, 0.2 s
+dead time), an S-curve (2 x 16 m) at 1 m/s, mean distance off the path (measured
+with the first, forward-Euler version of the model):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Noise</th>
+<th>Lag-aware MPPI</th>
+<th>Lag-free MPPI</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>white (Nav2's)</td>
+<td><strong>lost the path</strong> (5.6 m off)</td>
+<td>0.033 m</td>
+</tr>
+<tr>
+<td>correlated 0.8</td>
+<td>0.036 m</td>
+<td>0.018 m</td>
+</tr>
+</tbody>
+</table></div>
+<p>So ours samples smooth wiggles (colored-noise MPPI). <code>noise_correlation: 0.0</code> gives Nav2's.</p>
+</section>
+<section class="card"><h2 id="results-without-ros">Results without ROS</h2>
+<p>A pretend car: ego and the lag model, stepped every 0.01 s. MPPI at 20 Hz, 1000 samples.
+<code>cargo test --release -p mppi-lag --test closed_loop -- --nocapture</code>.</p>
+<p><strong>Prediction</strong> (2.8 s ahead, weaving):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Car</th>
+<th>Lag model</th>
+<th>Lag-free</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>vehicle.yaml</td>
+<td>0.022 m</td>
+<td>0.446 m</td>
+</tr>
+<tr>
+<td>slow</td>
+<td><strong>0.008 m</strong></td>
+<td>0.559 m</td>
+</tr>
+<tr>
+<td>very slow</td>
+<td><strong>0.004 m</strong></td>
+<td>0.708 m</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Tracking</strong> (mean / worst distance off the path):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Path, car</th>
+<th>Lag-aware</th>
+<th>Lag-free</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>circle r 5 m, vehicle.yaml, 1 m/s</td>
+<td>0.015 / 0.028 m</td>
+<td>0.015 / 0.031 m</td>
+</tr>
+<tr>
+<td>S 2 x 16 m, vehicle.yaml, 2 m/s</td>
+<td>0.035 / 0.087 m</td>
+<td>0.024 / 0.052 m</td>
+</tr>
+<tr>
+<td>S 2 x 16 m, slow car, 2 m/s</td>
+<td>0.041 / 0.097 m</td>
+<td>0.021 / 0.077 m</td>
+</tr>
+<tr>
+<td>corner r 4 m, <strong>very slow</strong> car, 2 m/s</td>
+<td><strong>0.023 / 0.101 m</strong></td>
+<td>0.248 / <strong>1.467 m</strong></td>
+</tr>
+<tr>
+<td>S 2 x 16 m, <strong>very slow</strong> car, 2 m/s</td>
+<td><strong>0.049 / 0.103 m</strong></td>
+<td><strong>lost it</strong> (4.1 / 8.0 m)</td>
+</tr>
+<tr>
+<td>S 2 x 16 m, <strong>very slow</strong> car, 3 m/s</td>
+<td><strong>0.048 / 0.107 m</strong></td>
+<td><strong>lost it</strong> (3.5 / 7.3 m)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The slow car: steering 0.5 rad/s, 0.3 s lag, 0.2 s dead time. The very slow car: steering 0.3 rad/s, 0.5 s linkage lag, 0.3 s steering and 0.2 s pedal
+dead times.</p>
+<p><strong>Honestly:</strong> at vehicle.yaml's guesses (0.1 s lags, no dead times) the lag is small, and
+the lag-free MPPI tracks as well or 1-2 cm better (on the slow car too), but 2-4 s
+slower over each route. The lag model pays off
+when the actuators are slow. The real numbers come from tests 3.10-3.12 and 4.1-4.5.</p>
+</section>
+<section class="card"><h2 id="speed">Speed</h2>
+<p><code>cargo run --release -p mppi-lag --example timing</code> (all eight critics, a costmap):</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Threads</th>
+<th>2000 x 56</th>
+<th>1000 x 56</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>16 (M4 Max)</td>
+<td>1.7 ms</td>
+<td>0.9 ms</td>
+</tr>
+<tr>
+<td>4 (the default)</td>
+<td>3.1 ms</td>
+<td></td>
+</tr>
+<tr>
+<td>1</td>
+<td>12.7 ms</td>
+<td>6.3 ms</td>
+</tr>
+</tbody>
+</table></div>
+<p>The tick is 50 ms. <strong>Orin, estimated, not measured:</strong> its A78AE cores are about 3 times
+slower than an M4's, so about 10 ms on 4 threads, 40 ms on one.</p>
+</section>
+<section class="card"><h2 id="in-gazebo">In Gazebo</h2>
+<p>The test lot's first leg ("a left turn", 22 m), <code>pixi run measure controllers --tours lot
+--legs 1</code>, 7 Nov, on an M4 Max <strong>shared with other jobs (load 20 to 45)</strong>:</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Run</th>
+<th>Follower</th>
+<th>Reached</th>
+<th>Driven</th>
+<th>Off the path, mean</th>
+<th>Tick, mean / worst</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>mppi_lag</code></td>
+<td>no: Gazebo stalled 2.3 s, the geofence latched</td>
+<td>13.5 m</td>
+<td><strong>0.13 m</strong></td>
+<td>2.5 / 13.3 ms</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Nav2's MPPI</td>
+<td><strong>yes, in 70 s</strong></td>
+<td>22.1 m</td>
+<td>0.20 m (worst 0.62)</td>
+<td>(C++, not logged)</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>mppi_lag</code></td>
+<td>no: Nav2 gave up</td>
+<td>2.3 m</td>
+<td>0.27 m</td>
+<td>10.3 / 41.1 ms</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>mppi_lag</code></td>
+<td>no: Nav2 gave up</td>
+<td>7.4 m</td>
+<td><strong>0.13 m</strong></td>
+<td>10.0 / 16.5 ms</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Honestly: not a fair comparison yet.</strong> Under that load the odometry stopped for 0.6 to
+3.7 s at a time (the sensor watchdog's STALE lines, in every run, Nav2's too).</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>On a gap in the odometry</th>
+<th>Does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>mppi_lag</code> (as <code>aav_track</code>)</td>
+<td>gives up the path after 1 s (<code>odom_timeout</code>); Nav2 retries, then gives up</td>
+</tr>
+<tr>
+<td>Nav2's controller_server</td>
+<td>reads the pose from <code>/tf</code> without an age check, and drives on</td>
+</tr>
+</tbody>
+</table></div>
+<p>While it drove, <code>mppi_lag</code> stayed closer to the path (0.13 m against 0.20 m). Run it again
+on a quiet computer, the whole tour, both followers, before calling a winner.</p>
+</section>
+<section class="card"><h2 id="lag_aware-so-ego-doesnt-cancel-the-lag-twice">lag_aware: so ego doesn't cancel the lag twice</h2>
+<p>Ego's lead (0.3) cancels lag for drivers that don't know about it. It must turn off while
+a lag-aware driver drives.</p>
+<p>Ego's contract: <code>/drivers/&lt;slot&gt;/lag_aware</code>, <code>std_msgs/Bool</code>, reliable, transient local,
+depth 1. This drives through Nav2's slot: <code>/drivers/nav/lag_aware</code>.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>When</th>
+<th>Says</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>start, exit</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td>a path starts (<code>model: lag</code>)</td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td>the path ends</td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>model: ideal</code></td>
+<td>always <code>false</code></td>
+</tr>
+</tbody>
+</table></div>
+</section>
+<section class="card"><h2 id="run-it">Run it</h2>
+<pre class="highlight"><code class="language-sh">pixi run sim world:=test_lot reversing:=false tracker:=mppi_lag
+pixi run measure controllers --trackers mppi_lag --controllers mppi --tours lot
+cd ros/drivers/aav_mppi_lag &amp;&amp; cargo test --release -p mppi-lag</code></pre>
+</section>
+<section class="card"><h2 id="what-is-missing">What is missing</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Missing</th>
+<th>Next</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>The shared car-model crate</td>
+<td>implement <code>CarModel</code> with it at merge</td>
+</tr>
+<tr>
+<td>The car's real lags</td>
+<td>tests 3.10-3.12, 4.1-4.5; then these runs again</td>
+</tr>
+<tr>
+<td>The Orin's tick</td>
+<td>measured on the Orin</td>
+</tr>
+<tr>
+<td>Reversing</td>
+<td>forward only, as every tracker</td>
+</tr>
+<tr>
+<td>ego's jerk limit, sideways slow-down</td>
+<td>not modelled (off at our speeds)</td>
+</tr>
+<tr>
+<td>A fair Gazebo run</td>
+<td>the whole lot tour on a quiet computer, both followers</td>
+</tr>
+<tr>
+<td>A gap in odometry</td>
+<td>gives up after 1 s, as <code>aav_track</code>; Nav2's MPPI drives on: decide which is right</td>
+</tr>
+<tr>
+<td>A live swap</td>
+<td>it is its own node: <code>tracker:=</code> at launch only</td>
+</tr>
+</tbody>
+</table></div>
+<p>Code: <a href="../../ros/drivers/aav_mppi_lag/README.md"><code>ros/drivers/aav_mppi_lag</code></a>. Ported from
+Nav2 (Apache-2.0): <a href="../../ros/drivers/aav_mppi_lag/PROVENANCE.md">PROVENANCE</a>.</p></section>
+<nav class="prevnext"><a class="prev" href="trials.html"><small>Previous</small>← Trials</a>
+<a class="next" href="own-costmap.html"><small>Next</small>Our own costmap →</a></nav>
+</main>
+<footer>Source: <code>docs/mppi-lag.md</code>. Edit it, then run <code>pixi run docs</code>.</footer>
+</body></html>

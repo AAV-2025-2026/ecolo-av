@@ -9,6 +9,7 @@ use std::{collections::HashMap, time::Instant};
 pub use crate::watchdog::Alarm;
 
 use crate::{
+    ahead,
     config::{HudConfig, Topic},
     gate::{self, Verdict},
     gps::Fix,
@@ -69,6 +70,14 @@ pub enum Update {
     Watchdog(String),
     /// The output mux's gate: "OPEN - ...", "WAIT - ..." or "STOP - ...".
     OutputMux(String),
+    /// The squiggly line's bold line: ego's trace, base_link.
+    Trace(Vec<ahead::Point>),
+    /// Its faint line: the plan ahead, base_link (empty: no plan).
+    PlanAhead(Vec<ahead::Point>),
+    /// Its stop bar.
+    StopPoint(ahead::StopMark),
+    /// Its numbers.
+    Ahead(ahead::Summary),
 }
 
 impl Update {
@@ -83,6 +92,10 @@ impl Update {
             Self::Picture(_) | Self::BadPicture(_) => Some(Topic::Camera),
             Self::Watchdog(_) => Some(Topic::Watchdog),
             Self::OutputMux(_) => Some(Topic::OutputMux),
+            Self::Trace(_) => Some(Topic::Trace),
+            Self::PlanAhead(_) => Some(Topic::PlanAhead),
+            Self::StopPoint(_) => Some(Topic::StopPoint),
+            Self::Ahead(_) => Some(Topic::Ahead),
             // Latched, sent once: its age says nothing about the data.
             Self::Estop(_) | Self::Source(_) => None,
         }
@@ -108,6 +121,8 @@ pub struct HudState {
     pub watchdog: Option<String>,
     /// The output mux's last state.
     pub output_mux: Option<String>,
+    /// The squiggly line, as last heard (hud_core::ahead).
+    pub ahead: ahead::Ahead,
     new_picture: Option<Picture>,
     last_seen: HashMap<Topic, LastSeen>,
 }
@@ -141,6 +156,10 @@ impl HudState {
             Update::Source(a) => self.origins.apply(a),
             Update::Watchdog(w) => self.watchdog = Some(w),
             Update::OutputMux(g) => self.output_mux = Some(g),
+            Update::Trace(t) => self.ahead.trace = t,
+            Update::PlanAhead(p) => self.ahead.plan = p,
+            Update::StopPoint(s) => self.ahead.stop = Some(s),
+            Update::Ahead(s) => self.ahead.summary = Some(s),
         }
     }
 

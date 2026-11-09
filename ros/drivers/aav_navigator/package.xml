@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>aav_navigator</name>
+  <version>0.1.0</version>
+  <description>Our own navigator in Rust (rclrs): what Nav2's bt_navigator, our behaviour trees and waypoint_follower do for the car (plan, follow, replan, keep the path on the final approach, recover: clear costmaps, wait, back up, give up; through-poses; waypoints and GPS waypoints through navsat_transform's datum). A trial beside Nav2's (navigation.launch.py navigator:=own): it serves NavigateToPose, NavigateThroughPoses, FollowWaypoints and FollowGPSWaypoints under /drivers/nav/navigator/.</description>
+  <maintainer email="aav-team@todo.invalid">AAV 2026-27 team</maintainer>
+  <!-- Its logic follows Nav2's bt_navigator, behaviour trees and waypoint_follower, Apache-2.0 (PROVENANCE.md). -->
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- rclrs links rcl; ros-env compiles the Rust message code these packages ship. -->
+  <depend>rcl</depend>
+  <depend>builtin_interfaces</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>geographic_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>nav2_msgs</depend>
+  <depend>tf2_msgs</depend>
+  <depend>diagnostic_msgs</depend>
+  <depend>action_msgs</depend>
+  <depend>unique_identifier_msgs</depend>
+  <!-- navsat.yaml: the datum (aav_localization's config). -->
+  <exec_depend>aav_localization</exec_depend>
+
+  <test_depend>ament_cmake_test</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

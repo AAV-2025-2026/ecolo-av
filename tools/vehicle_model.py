@@ -26,10 +26,10 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'ros' / 'ego' / 'aav_ego'))
-sys.path.insert(0, str(ROOT / 'ros' / 'sim' / 'aav_gazebo'))
+sys.path.insert(0, str(ROOT / 'ros' / 'bringup' / 'aav_description'))
 
-from aav_ego import vehicle_model as vm  # noqa: E402, I100
-from aav_gazebo import actuator_model as am  # noqa: E402
+from aav_description import car_model as am  # noqa: E402, I100
+from aav_ego import vehicle_model as vm  # noqa: E402
 import numpy as np  # noqa: E402
 
 VEHICLE_YAML = ROOT / 'ros/bringup/aav_description/config/vehicle.yaml'
@@ -278,7 +278,7 @@ def lqi_constants(model, weights=None):
     rust += ['    };']
     python = ', '.join(f'{k}={v!r}' for k, v in numbers.items())
     return (f'// LQI for {w} (tau {g.design_lag:g} s, tick {g.tick:g} s)\n'
-            + '\n'.join(rust) + f'\n\n# actuator_model.py\nLQI_MODEL = LqiConfig({python})')
+            + '\n'.join(rust) + f'\n\n# car_model.py\nLQI_MODEL = LqiConfig({python})')
 
 
 def replace_cfg(cfg, **changes):

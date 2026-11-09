@@ -8,6 +8,7 @@ some arguments, and looks at what it would start. Nothing starts: no ROS, no dev
 import importlib.util
 import os
 
+from aav_description import vehicle
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchContext
 from launch.actions import IncludeLaunchDescription
@@ -583,3 +584,10 @@ def test_the_car_day_stack_is_the_defaults():
     assert nav.get('amcl', 'false') == 'false'
     loc = included(started(CAR, machine='orin'))['localization.launch.py']
     assert loc.get('ndt_ekf', 'false') == 'false' and loc.get('kiss_ekf', 'false') == 'false'
+
+
+def test_the_diffusion_trial_speed_is_below_egos_own_cap():
+    ego = os.path.join(get_package_share_directory('aav_ego'), 'config', 'ego.yaml')
+    with open(ego) as f:
+        cap = float(yaml.safe_load(f)['ego']['ros__parameters']['max_speed'])
+    assert 0.0 < vehicle.DIFFUSION_TRIAL_SPEED <= cap

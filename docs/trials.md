@@ -20,7 +20,9 @@ and is **scored on the same routes**. It becomes the default only once it wins.
 > - **KISS-ICP** (`aav_kiss_icp`, stock, MIT): lidar odometry, scored against `ekf_local`, never in an EKF yet. `kiss_icp:=true`. 30 Oct, one run: **0.04 m per 100 m** over the lot tour, against ekf_local's 0.33; about 1 ms a scan; once the ground was cut out. [Results](#30-oct-kiss-icp-beside-ekf_local-one-run-mppi-the-lot-tour). Design: `docs/designs/2026-10-30_kiss-icp.md`.
 > - **KISS-ICP into the local EKF** (`kiss_ekf:=true`), 1 Nov: its twist beside the wheels and IMU. Gazebo, 5 runs: **no clear win yet** (ekf_local 0.30-1.27 m per 100 m with it, 0.44-1.91 without; the spread is the Mac's load). Its covariance is now measured. [Results](#kiss-icp-into-the-local-ekf-1-nov).
 > - **The diffusion planner** (`planner:=diffusion`, `aav_diffusion_planner`), 2 Nov: a model draws 16 paths, a guard checks them, the lattice's path if none passes or it's late. Gazebo, 2 runs: **every leg**, 178 and 182 s a tour (the lattice 186 and 188 s); **63 % of plans from the model**, 37 % the lattice's (17 % late, 20 % no sample passed). [Results](#diffusion-2-nov-a-model-draws-the-lattice-guards).
+> - **Diffusion for 0.3**, 7-8 Nov: the guard refused the model mostly for turns (G5) and, at the U-turn's cusp, headings (G6). Each gear smoothed on its own, more U-turn data, the map encoded once: offline **77 → 87 %** of plans with a passing sample, G5 refusals **2,197 → 850**. In the simulator, 3 runs each: **77 → 88 %** of plans from the model (92 % in a fourth), the U-turn **40 → 72 %**, every leg, 171-175 s a tour against the lattice's 180-185 s. Allowed on the car as a gated trial (0.5 m/s). [Results](#diffusion-7-8-nov-the-u-turn-the-orin-the-car).
 > - **3 Nov, everything for 0.2** (Gazebo, 3 runs each): every switch drives a leg; diffusion every leg, **73 %** of plans from the model; NDT into the EKF **17 → 1.8 cm**, every leg; voxels slower, and once drove through the post. **No default changed.** [Results](#3-nov-everything-for-02).
+> - **7 Nov, the lag-aware MPC** (`tracker:=mpc_lag`): plans steering and speed through the car's own lags (the shared car model); tells ego to keep its lead off. Pretend car: no speed overshoot (others 14 %), and with the lags doubled the U-turn at 2 m/s off by **0.17 m** (MPC 0.36, LQR 0.27). **Our simulator, 3 runs: 6 of 12 legs** (MPPI 8, RPP 9, the Rust `mppi_lag` 11): best on the legs it drives, but it never made the U-turn by the building: it doesn't read the costmap. [Results](#lag-aware-mpc-7-nov-mpc_lag).
 > - The design: `docs/designs/2026-10-29_trials.md`.
 
 ## What is on trial
@@ -31,6 +33,7 @@ and is **scored on the same routes**. It becomes the default only once it wins.
 | LQR steering, gains by speed and bend, with a preview | our pure pursuit | `tracker:=lqr` |
 | MPC steering, within the steering's limits | our pure pursuit | `tracker:=mpc` |
 | MPC speed and steering together (sets its own speed) | MPC, MPPI | `tracker:=mpc_full` |
+| MPC through the car's lags (sets its own speed; lag-aware) | MPPI, RPP, MPC | `tracker:=mpc_lag` |
 | our pure pursuit (the control) | Nav2's RPP and MPPI | `tracker:=pure_pursuit` |
 | AMCL | the global EKF | `amcl:=true` |
 | NDT on a saved lidar map | the global EKF, and AMCL | `ndt:=true` (after `pixi run ndt-map drive`) |
@@ -40,7 +43,7 @@ and is **scored on the same routes**. It becomes the default only once it wins.
 | State Lattice planner, our primitives | Hybrid-A* | `planner:=lattice` (`lattice_headings:=32`: the 32-heading file) |
 | Smac 2D, NavFn, Theta* planners (ignore the turning circle: sim and bench only) | Hybrid-A* | `planner:=smac2d`, `navfn`, `theta_star` |
 | The lidar as 0.25 m cubes over the fitted road (`aav_voxels`) | the flat scan (`lidar_scan`) | `voxels:=true` |
-| A diffusion model draws the path, a guard checks it, the lattice behind it (`aav_diffusion_planner`) | the lattice | `planner:=diffusion` (after `pixi install --locked -e learn`, `pixi run diffusion data`, `pixi run diffusion train`) |
+| A diffusion model draws the path, a guard checks it, the lattice behind it (`aav_diffusion_planner`; on the car only with `diffusion_trial:=true`, 0.5 m/s) | the lattice | `planner:=diffusion` (after `pixi install --locked -e learn`, `pixi run diffusion data`, `pixi run diffusion train`) |
 
 ## Where a tracker sits
 
@@ -522,6 +525,166 @@ U-turn was the planner's clockwise loop, to the south wall.
    value slowing for the U-turn at 1 m/s (a cost on the steering's rate per second)?
 3. The planner's growing loops: replan less often in a U-turn, or keep the old path?
 
+## Lag-aware MPC, 7 Nov (`mpc_lag`)
+
+Ben, 7 Nov: "have the algorithms know about lag". Two parts: ego gets a **lead** that
+cancels the lag for every driver (another branch), and this tracker knows the lag
+itself. Only one may cancel it, or the car gets twice the correction.
+
+### What it knows
+
+```
+set speed ──> spine's PI ──> throttle, brake (lags) ──> speed (drag)
+steering  ──> dead time ──> motor (0.8 rad/s) ──> linkage (lag) ──> wheels ──> the car
+```
+
+| It models | From |
+|---|---|
+| the spine's speed loop (`default` or `smooth`) | spine-core's gains (`car_model`'s `SpeedLoop`) |
+| throttle and brake lags, drag, full brake | `vehicle.yaml` `actuators:` |
+| steering motor's rate, deadband, linkage lag, offset | `vehicle.yaml` `actuators:` |
+| dead times, and the commands already sent | `*_dead_time` (0 until measured), plus `latency` 0.1 s |
+| the car | the kinematic bicycle, in the path's frame |
+
+`latency` is the ROS chain's own delay (ego's 50 Hz ramp, the 20 Hz hold, the adapter).
+Without it the pretend car's U-turn at 2 m/s was off by 0.14 m; with it, 0.09 m.
+
+### How it plans (every 50 ms)
+
+1. Estimate the state: pose and speed measured; throttle, brake, motor, wheels and the
+   speed loop's integral from what it sent.
+2. Run last tick's plan through the model; linearise it (one numpy call a step).
+3. One QP (our OSQP-style solver), 1.5 s ahead, in steering **and** set speed.
+4. Send the first steering and set speed.
+
+**Hard limits:** full lock, the steering rate (the tighter of ego and the motor), the
+set speed's rise and fall (the smoother's 1.0 and 2.0 m/s²), 0 to cruise. **Soft:** the
+speed under the bend's and the goal's limit.
+
+### It tells ego (the `lag_aware` contract)
+
+`/drivers/nav/lag_aware` (`std_msgs/Bool`, reliable, transient local, depth 1): **true**
+while `mpc_lag` is the tracker, **false** for every other tracker and when the node stops.
+Nav2's MPPI and RPP publish nothing: ego keeps its lead on (`lag_lead: auto`). Ego's
+contract (merged 7 Nov); the Rust MPPI (`mppi_lag`) says it on the same topic.
+
+### Results: the pretend car (ego, then Gazebo's actuator model)
+
+Worst off the path (m). "x2": the car's lags twice what the trackers were told.
+
+| Drive | Lags | pure pursuit | LQR | MPC | `mpc_full` | **`mpc_lag`** |
+|---|---|---:|---:|---:|---:|---:|
+| U-turn, 2 m/s | x1 | 0.38 | **0.08** | 0.09 | 0.12 | 0.09 |
+| U-turn, 2 m/s | x2 | 0.34 | 0.27 | 0.36 | **0.10** | 0.17 |
+| U-turn, 2 m/s | x3 | 0.31 | 0.70 | 0.70 | **0.30** | 0.50 |
+| U-turn, 1 m/s | x1 | 0.12 | 0.07 | **0.03** | 0.10 | 0.04 |
+| U-turn, 1 m/s | x2 | 0.10 | 0.05 | 0.10 | 0.07 | 0.05 |
+| 8 m bend, 3 m/s | x1 | 0.16 | 0.03 | 0.02 | 0.03 | **0.02** |
+| 8 m bend, 3 m/s | x2 | 0.13 | 0.04 | 0.04 | 0.02 | **0.02** |
+| Top speed (set: 1 m/s) | x1 | 1.14 | 1.14 | 1.14 | 1.15 | **1.00** |
+
+What it shows:
+
+- **Speed:** only `mpc_lag` sees the speed loop's 14 % overshoot coming, and eases
+  the set speed in. No overshoot at any lag.
+- **Steering, lags as told:** as good as MPC and LQR; no better.
+- **Lags doubled:** better than MPC and LQR (0.17 against 0.36 and 0.27 m), but
+  `mpc_full` is better still: it plans over distance and slows itself to swing.
+- **Lags tripled:** it falls behind `mpc_full` and pure pursuit. A model it trusts
+  that is wrong by 3x hurts: the car-day numbers (TODO 52b) matter.
+
+### Time
+
+| Where | Mean | Worst |
+|---|---:|---:|
+| Pretend car, Ben's Mac quiet | 7 ms | 16 ms |
+| Our simulator, the lot tour (8 Nov, load ~12) | **5 ms** | 14-19 ms (60 once); 0-1 ticks missed a leg |
+| Gazebo, Mac at load 30-50 (7 Nov) | 14-20 ms | 64-230 ms; up to 516 ticks missed a leg |
+| Pretend car, Mac at load 39 | 34 ms | 250 ms |
+| The Orin (estimate: 2-3 times slower in Python) | 15-20 ms | 40-50 ms |
+
+It does about 4 times the old MPC's work a tick, so a busy computer hurts it more.
+
+The tick is 50 ms. In Python it fits on average, but its worst ticks on the Orin
+would be close to a whole tick. **It should move to Rust** before it drives the car
+(CLAUDE.md: Rust where it pays off), with the shared car model's Rust twin: the same
+QP there is well under 1 ms.
+
+### Results: our simulator (8 Nov, the lot tour, 3 runs each)
+
+Our Rust simulator (the default since 8 Nov) runs the shared car model, so the car
+answers exactly as `mpc_lag` predicts. `log/own-nominal/`, not in git.
+
+| | MPPI (Nav2) | RPP (Nav2) | `mppi_lag` (Rust) | **`mpc_lag`** |
+|---|---:|---:|---:|---:|
+| Legs reached | 8/12 | 9/12 | **11/12** | 6/12 |
+| Off the path, mean (m) | 0.13 | **0.12** | 0.16 | 0.14 |
+| Off the path, worst (m) | **0.60** | 0.66 | 1.63 | 0.66 |
+| Sway (m/s², lower is calmer) | **0.038** | 0.086 | 0.054 | 0.097 |
+| Left turn, time (s, mean of 3) | 27 | 28 | 34 | **25** |
+| Left turn, worst off the path (m) | 0.40 | 0.44 | 0.64 | **0.33** |
+
+Leg by leg, `mpc_lag`:
+
+| Leg | Runs reached | Why not |
+|---|---|---|
+| a left turn | 3 of 3 | |
+| round the building | 3 of 3 | |
+| turn back (the U-turn in the 14 m lane) | **0 of 3** | it held the path (0.47 m worst, as MPPI's 0.49), but the path ran by the building: collision_monitor stopped the car, and the planner then refused to start ("Start occupied") |
+| home | 0 of 3 | never started: the leg before had stranded the car |
+
+What it shows:
+
+- **Where it drives, it drives well:** the quickest and closest on the left turn, 5 ms
+  a tick, no speed overshoot.
+- **The U-turn is everyone's weak spot here** (MPPI 1 of 3, RPP 1 of 3, `mppi_lag` 2 of
+  3), but `mpc_lag` lost all three. Our trackers follow the path and never read the
+  costmap; MPPI keeps off obstacles, and RPP slows near them. `mpc_lag` needs the same
+  before it can win the lot tour.
+
+### Results: Gazebo, a loaded Mac (7 Nov, one run each)
+
+Every follower lost legs to the sensor watchdog: at load 30-50 (other agents' builds
+and simulators) the IMU, odometry and GPS went stale and stopped Nav2. These measure
+the Mac more than the followers; kept for the record.
+
+| Lags | MPPI | RPP | MPC | `mpc_lag` |
+|---|---:|---:|---:|---:|
+| as told: legs reached | 1/4 | 0/4 | 2/4 | 2/4 |
+| as told: off the path, worst (m) | 0.50 | 1.65 | 2.16 | 1.88 |
+| doubled (`lag_scale:=2`): legs reached | 0/4 | 2/4 | 3/4 | 2/4 |
+| doubled: off the path, worst (m) | 3.39 | 1.66 | 0.50 | 0.48 |
+
+### Results: Gazebo, a quiet Mac (8 Nov, one run each)
+
+`simulator:=gazebo` (the doubled lags need Gazebo's adapter). `log/gz-nominal-c/`,
+`log/gz-doubled-c/`, `log/gz-doubled-d/` (not in git).
+
+| Lags | | MPPI (Nav2) | RPP (Nav2) | `mppi_lag` | **`mpc_lag`** |
+|---|---|---:|---:|---:|---:|
+| as told | legs reached | 2/4 | 2/4 | (never came up) | **4/4** |
+| as told | off the path, worst (m) | 0.61 | 0.87 | - | **0.60** |
+| doubled | legs reached | **3/4** | **3/4** | 2/4 | 2/4 |
+| doubled | off the path, worst (m) | 1.17 | 0.76 | **0.58** | 0.60 |
+
+- With the lags as told, `mpc_lag` was the only follower to drive the whole tour, the
+  U-turn included.
+- With them doubled it lost the U-turn (collision_monitor stopped it by the building)
+  and then home; it stayed on the path (0.60 m worst).
+- One run each: a hint, not a verdict. In our simulator the same U-turn beat every
+  aav_track tracker (`mpc`, `pure_pursuit` and `mpc_lag` all 2 of 3 legs, 8 Nov): they
+  follow the planner's path and don't read the costmap.
+
+### Not done yet
+
+- The LQI speed loop (`speed_loop:=lqi`) isn't modelled; `mpc_lag` doesn't follow
+  `speed_loop:=` on its own (set `mpc_lag.speed_loop`).
+- Today's car runs the ESP32's open speed loop, not the spine's PI: not modelled.
+- Dead times act on the set speed, not after the speed loop (an approximation; they are 0
+  until measured).
+- The plan runs `lag_model.py`, the shared car model's maths on arrays (for speed);
+  a test keeps it equal to `car_model.step` to 1e-9. The estimate runs `car_model` itself.
+
 ## Planners, 29 Oct: hybrid, lattice and smac2d
 
 What each planner is: [Controllers, Planners](controllers.md#planners).
@@ -716,6 +879,100 @@ With no model (`diffusion_nomodel`): 156 of 156 plans the lattice's, every leg, 
 - **Next** (design steps 4-5): train on the reversing cusps (more U-turn-shaped data),
   guidance away from obstacles, fewer steps on the Orin's GPU (TensorRT), then re-rank by
   how fast MPPI drove them.
+
+## Diffusion, 7-8 Nov: the U-turn, the Orin, the car
+
+Ben, 7 Nov: "We want diffusion." What changed and why: the design's
+[As built, 0.3](designs/2026-11-02_diffusion-planner.md#as-built-03-7-8-nov). The guard's
+checks did not change.
+
+```bash
+pixi run diffusion data --first 800 --maps 400 --uturn 0.6 --out models/diffusion/data_uturn
+pixi run diffusion train --data models/diffusion/data models/diffusion/data_uturn --suffixes 3 --epochs 40
+pixi run measure controllers --planners diffusion --reversing --tours lot \
+    --diffusion-model <.onnx> --diffusion-smoothing <gear|average> --diffusion-record <folder>
+pixi run diffusion replay <folder> --model <.onnx>
+```
+
+| | Before (the 0.2 recipe) | After (0.3) |
+|---|---|---|
+| Data | 44,644 teacher paths, 800 maps | the same + 21,420 on 400 maps, 60 % U-turns |
+| Training | 30 epochs, 94,347 examples, 25 min (MPS) | 40 epochs, 196,124 examples, about 65 min (MPS, the Mac shared) |
+| Smoothing | one average over the whole path | each gear's run on its own; a wider second try for G5/G6 only |
+| Sampler | the map encoded 16 times | once |
+
+### Offline: 300 held-back plans, 16 samples each
+
+| | Before | After |
+|---|---:|---:|
+| Samples that pass | 38 % | **63 %** |
+| Plans with a passing sample | 77 % | **87 %** |
+| G5 turns | 2,197 | **850** |
+| G4 collisions | 1,152 | 1,053 |
+| G6 heading | 725 | **451** |
+| G8 length | 96 | 111 |
+| G1, G2, G3, G7 | 0-3 | 0-2 |
+
+### In the simulator: the lot tour, reversing on, MPPI (8 Nov)
+
+Our own simulator (`next-0.3`'s default), Ben's Mac, one simulator at a time
+(`lockf /tmp/aav-sim.lock`), before and after taken in turns; load 7-15. Runs:
+`log/controller-compare/agent106-*` (not in git).
+
+| | Lattice (the default) | Before (0.2 recipe) | **After (0.3)** |
+|---|---:|---:|---:|
+| Legs finished | 12 of 12 | 12 of 12 | **12 of 12** (and 4 of 4 after the merge) |
+| Tour time, each run (s) | 182, 185, 180 | 180, 175, 180 | **171, 175, 175** (175) |
+| **Plans from the model** | - | 307 of 397 (**77 %**): 80, 73, 79 % | 343 of 389 (**88 %**): 84, 89, 92 % (92 %) |
+| The U-turn ("turn back"), from the model | - | 47 of 117 (**40 %**) | 81 of 112 (**72 %**) (80 %) |
+| The lattice's: refused (no sample passed) | - | 67 (17 %) | **25 (6 %)** |
+| The lattice's: late (over 150 ms) | - | 14 (3.5 %) | 13 (3.3 %) |
+| The lattice's: no model answer | - | 9 | 8 |
+| Samples that passed | - | 57 % | **86 %** |
+| Refused by G5 / G6 / G4 / G8 (samples) | - | 2,120 / 761 / 556 / 46 | **300 / 208 / 254 / 251** |
+| Model and guard, mean | - | 108 ms | 104 ms |
+| Tightest planned turn (full lock 2.86 m) | 3.27 m | 3.06 m | 3.06 m |
+
+**The same plans, replayed** (`pixi run diffusion replay`, the 405 plans the "before"
+runs recorded, through each model): plans with a passing sample **82 → 91 %**; the
+U-turn's **43 → 71 %**; G5 2,204 → 435, G6 828 → 250, G4 637 → 388, **G8 75 → 401**.
+
+### What it shows
+
+- **88 % of plans from the model** over three runs (84, 89, 92 %), 92 % in a fourth
+  after the merge: the 90 % target is reached on a quiet machine, not yet on average.
+  What's left: 6 % refused, 3 % late, 2 % no answer.
+- **The U-turn: 40 → 72 %** from the model, and its leg 44-51 s against the lattice's 51-56 s.
+- **Faster than the default**: 171-175 s a tour against the lattice's 180-185 s, every leg,
+  never a plan tighter than full lock.
+- **G8 (length) rose** (46 → 251 samples): the U-turn data taught longer swings; the
+  guard refuses them, and the next sample usually passes. Worth a look before more data.
+
+
+### The time a plan (`pixi run measure diffusion`)
+
+Ben's Mac (M4 Max), 8 Nov, the CPU, others' simulators and builds running (load 17),
+30 made-up plans on a lot with boxes, the 0.3 model:
+
+| Part | Mean | 95th | Worst | Budget (the Orin) |
+|---|---:|---:|---:|---:|
+| Crop | 0.7 | 1.1 | 1.1 | 2 |
+| Model (16 samples, 10 steps) | 82.6 | 125.9 | 129.7 | 50 |
+| Guard | 11.6 | 21.2 | 22.4 | 10 |
+| Total | 94.9 | 141.1 | 142.8 | 100 (stop 150) |
+
+The FP16 file on the CPU: the same (84.9 ms the model): FP16 pays only on a GPU. Core ML
+loads the 0.3 export but can't run it: the worker drops to the CPU. **The Orin: not
+measured** (car day A12 runs this script there, CPU then TensorRT).
+
+### The guard and the time
+
+- **The guard's refusals fell where the fault was**: G5 to 39 %, G6 to 62 % of before;
+  G4 (collisions) barely moved: the model still cuts some corners, and the guard still
+  refuses them.
+- **No check was loosened**: every path that reaches MPPI passed G1-G8 as on 2 Nov.
+- **Time** is the other half of the fallback: inside the 150 ms stop on a loaded Mac, but
+  over the Orin's 100 ms budget on a CPU. The Orin needs its GPU (TensorRT).
 
 ## Voxels, 30 Oct: the lidar as cubes
 
