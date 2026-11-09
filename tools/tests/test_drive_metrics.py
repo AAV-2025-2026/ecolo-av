@@ -654,3 +654,13 @@ def test_the_best_ride_reached_every_goal_then_swayed_least():
     never = m.comfort([None, None])
     ranked = sorted([never, failed, rough, smooth], key=m.comfort_order)
     assert ranked == [smooth, rough, failed, never]
+
+
+def test_clipped_counts_ego_held_back_from_what_it_was_asked():
+    wanted = [(0.0, 0.1), (0.05, 0.1), (0.10, 0.4)]
+    # On the ask; one tick to read the new ask (not clipped); then rate-limited (clipped).
+    steering = [(0.02, 0.11), (0.11, 0.1), (0.14, 0.2), (0.16, 0.3)]
+    assert m.clipped(steering, wanted) == pytest.approx(2 / 4)
+    # Asks over 0.5 s old don't count; nothing asked: NaN.
+    assert math.isnan(m.clipped([(2.0, 0.0)], wanted))
+    assert math.isnan(m.clipped(steering, []))

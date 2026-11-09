@@ -70,6 +70,11 @@ The trials (docs/trials.md):
                     graph's GPS waypoints, as street_router makes them, sent to each
                     navigator's follow_gps_waypoints. Nav2's waypoint_follower stops and
                     faces each one; ours passes them as one through-poses goal
+    pixi run measure controllers --stacks own --smoothers nav2 own --tours lot campus --runs 3
+                    Nav2's velocity smoother against ours (smoother:=own, aav_smoother: the
+                    turn rate from where the wheels can be), behind each follower; the
+                    row "Steering commands ego had to clip" says how often ego held the
+                    wheels back from what it was asked (docs/own-smoother.md)
     pixi run measure controllers --planners lattice diffusion --reversing --tours lot
                     the diffusion trial beside the lattice: each leg's note says how many
                     plans came from the model, how many from the lattice (the guard's
@@ -195,6 +200,9 @@ COLOURS = {'rpp': '#1f6fb4', 'mppi': '#e8590c', 'pure_pursuit': '#2b8a3e', 'stan
            'hybrid': '#e8590c', 'lattice': '#1f6fb4', 'smac2d': '#2b8a3e',
            'navfn': '#862e9c', 'theta_star': '#c92a2a', 'lattice32': '#5f3dc4',
            'own': '#0b7285', 'all-nav2': '#1f6fb4', 'all-ours': '#0b7285'}
+# --smoothers: Nav2's smoother keeps the follower's colour; ours is red.
+COLOURS.update({f'{k}+{w}-smoother': (c if w == 'nav2' else '#c92a2a')
+                for k, c in list(COLOURS.items()) for w in vehicle.SMOOTHERS})
 PLAN_TIME = 15.0        # s (wall) for the planner alone to answer, before each leg
 # NDT's map of the test lot (tools/ndt_map.py; maps/ is not in git).
 NDT_MAP = os.path.join(ROOT, 'maps', 'ndt', 'test_lot.pcd')
@@ -254,6 +262,8 @@ class Recorder(Node):
         self.recording = False
         self.watchdog = True            # False: watchdog:=false, nothing publishes its lock
         self.truth, self.plans, self.steering, self.asked = [], [], [], []
+        self.wanted = []     # the steering angle ego was asked for (drive_metrics.clipped)
+        self.wheelbase = float(vehicle.load()['vehicle']['wheelbase'])
         self.belief, self.amcl, self.loops = [], [], []
         self.ndt, self.ndt_status, self.ndt_fits = [], [], []
         self.voxels = []     # (ms a cloud, cubes) from the voxels trial's status
@@ -286,6 +296,7 @@ class Recorder(Node):
         self.create_subscription(AckermannDriveStamped, '/ego/actuator_cmd', self.on_steering,
                                  10)
         self.create_subscription(TwistStamped, '/cmd_vel_nav', self.on_asked, 10)
+        self.create_subscription(TwistStamped, '/control/cmd_vel', self.on_wanted, 10)
         self.create_subscription(Bool, '/safety/sensor_watchdog/lock', self.on_lock, 10)
         self.create_subscription(String, '/safety/sensor_watchdog/state', self.on_state, 10)
         self.create_subscription(CollisionMonitorState, '/safety/collision_monitor/state',
@@ -303,6 +314,7 @@ class Recorder(Node):
 
     def start(self):
         self.truth, self.plans, self.steering, self.asked = [], [], [], []
+        self.wanted = []
         self.belief, self.amcl, self.loops = [], [], []
         self.ndt, self.ndt_status, self.ndt_fits = [], [], []
         self.voxels = []
@@ -403,6 +415,11 @@ class Recorder(Node):
     def on_asked(self, msg):
         if self.recording:
             self.asked.append((self.now(), msg.twist.linear.x))
+
+    def on_wanted(self, msg):
+        v, w = msg.twist.linear.x, msg.twist.angular.z
+        if self.recording and abs(v) >= drive_metrics.STILL:
+            self.wanted.append((self.now(), math.atan(self.wheelbase * w / v)))
 
     def on_lock(self, msg):
         self.lock = msg.data
@@ -599,7 +616,7 @@ def drive_leg(rec, pgid, goal, speed, body, obstacle, process='controller_server
                      f'{ms[int(0.95 * (len(ms) - 1))]:.1f} 95th, {ms[-1]:.1f} worst; '
                      f'{sum(cubes) / len(cubes):.0f} cubes a cloud, {len(ms)} clouds')
     leg = {'truth': rec.truth, 'belief': rec.belief, 'plans': rec.plans,
-           'steering': rec.steering,
+           'steering': rec.steering, 'wanted': rec.wanted,
            'asked': rec.asked, 'start': start, 'end': end, 'goal': goal, 'reached': reached,
            'cpu': (100.0 * (cpu1 - cpu0) / (wall1 - wall0)
                    if None not in (cpu0, cpu1) and wall1 > wall0 else None),
@@ -757,6 +774,11 @@ def followers(args):
     controller (MPPI) drives behind each planner; without --planners, planner is None (the
     launch's own default) and the label is the follower's name, as before.
     """
+    if args.smoothers:
+        # Each follower behind each smoother: a fifth item, and the label says which.
+        plain = followers(argparse.Namespace(**{**vars(args), 'smoothers': None}))
+        return [(*f, word, f'{f[3]}+{word}-smoother') for f in plain
+                for word in args.smoothers]
     if args.stacks:
         return [('stack', word, None, STACK_LABELS[word]) for word in args.stacks]
     controllers = args.controllers
@@ -812,7 +834,10 @@ def tracker_names(text):
 def session(tour, follower, args, out_dir, body, used, run=1):
     """Start the simulator for one tour and follower, drive its legs, stop it."""
     plan = TOURS[tour]
-    kind, controller, planner, label = follower
+    kind, controller, planner = follower[:3]
+    # --smoothers: (..., smoother, label); otherwise (..., label).
+    label = follower[-1]
+    smoother = follower[4] if len(follower) > 4 else None
     extra, navigator = [], vehicle.DEFAULT_NAVIGATOR
     if kind == 'stack':
         kind, controller, extra = STACKS[follower[1]]
@@ -839,6 +864,8 @@ def session(tour, follower, args, out_dir, body, used, run=1):
                 command.append('diffusion_record:=' + os.path.join(
                     os.path.abspath(args.diffusion_record), f'{tour}-{tag}'))
     command += extra + plan.get('launch', []) + (args.launch or [])
+    if smoother:
+        command.append(f'smoother:={smoother}')
     if args.amcl:
         command.append('amcl:=true')
     if args.ndt_ekf:
@@ -1144,6 +1171,10 @@ def main():
     parser.add_argument('--stacks', nargs='+', choices=list(STACKS), default=None,
                         help="every navigation piece Nav2's (nav2) or ours (own: "
                              'navigator, planner, costmap, mppi_lag); forward only')
+    parser.add_argument('--smoothers', nargs='+', choices=list(vehicle.SMOOTHERS),
+                        default=None,
+                        help="each follower behind Nav2's velocity smoother (nav2) and/or "
+                             'ours (own: aav_smoother, smoother:=)')
     parser.add_argument('--launch', nargs='+', default=None, metavar='NAME:=VALUE',
                         help='more sim.launch.py arguments for every run, such as '
                              'lidar:=false (to find what a failure needs)')
