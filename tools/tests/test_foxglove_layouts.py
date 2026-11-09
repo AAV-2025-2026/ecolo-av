@@ -98,7 +98,7 @@ def test_the_cockpit_swaps_the_tracker_through_its_parameter_service():
     assert param['name'] == 'tracker'
     assert param['value']['type'] == 4                 # PARAMETER_STRING
     assert param['value']['string_value'] in ('pure_pursuit', 'stanley', 'lqr', 'mpc',
-                                              'mpc_full')
+                                              'mpc_full', 'mpc_lag')
 
 
 def test_the_launch_switches_script_reads_a_topic_every_run_has():

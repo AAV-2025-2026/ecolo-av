@@ -192,9 +192,9 @@ topics:
     note: Latched (reliable, transient local, depth 1). true - this driver leads for the car's lag and dead times itself (a lag-aware tracker, such as aav_track's MPC or the Rust MPPI), so ego's own lead (lag_lead) turns off while its commands drive; false or never sent - ego may lead (docs/vehicle-model.md). Publish true when the lag-aware mode starts and false when it ends, once each (latched), and stamp every cmd_vel with now - ego knows whose command it obeys by matching /control/cmd_vel (twist_mux passes the winner's message on unchanged) against each lag-aware driver's last commands (stamp and twist), so a message re-stamped on the way can't match. ego watches the drivers in its lag_aware_drivers parameter (ego.yaml - scripted, point, nav, ai). No publisher yet.
   /drivers/nav/lag_aware:
     type: std_msgs/msg/Bool
-    pub: []
+    pub: [mppi_lag, track]
     sub: [ego]
-    note: Latched (reliable, transient local, depth 1). true - this driver leads for the car's lag and dead times itself (a lag-aware tracker, such as aav_track's MPC or the Rust MPPI), so ego's own lead (lag_lead) turns off while its commands drive; false or never sent - ego may lead (docs/vehicle-model.md). Publish true when the lag-aware mode starts and false when it ends, once each (latched), and stamp every cmd_vel with now - ego knows whose command it obeys by matching /control/cmd_vel (twist_mux passes the winner's message on unchanged) against each lag-aware driver's last commands (stamp and twist), so a message re-stamped on the way can't match. ego watches the drivers in its lag_aware_drivers parameter (ego.yaml - scripted, point, nav, ai). No publisher yet - aav_track's lag-aware trackers and the Rust MPPI driver will (both drive through Nav2, so this slot). Nav2 republishes their command (velocity_smoother, collision_monitor) with its own stamps; ego matches what reaches /drivers/nav/cmd_vel, so the whole Nav2 slot counts as lag-aware while this is true.
+    note: Latched (reliable, transient local, depth 1). true - this driver leads for the car's lag and dead times itself (a lag-aware tracker, such as aav_track's MPC or the Rust MPPI), so ego's own lead (lag_lead) turns off while its commands drive; false or never sent - ego may lead (docs/vehicle-model.md). Publish true when the lag-aware mode starts and false when it ends, once each (latched), and stamp every cmd_vel with now - ego knows whose command it obeys by matching /control/cmd_vel (twist_mux passes the winner's message on unchanged) against each lag-aware driver's last commands (stamp and twist), so a message re-stamped on the way can't match. ego watches the drivers in its lag_aware_drivers parameter (ego.yaml - scripted, point, nav, ai). Publishers (both drive through Nav2, so this slot) - aav_track's track node - true while its tracker models the lags itself (tracker:=mpc_lag, docs/trials.md), false for every other tracker, sent at start, on each live swap, and false as it stops; aav_mppi_lag's mppi_lag (tracker:=mppi_lag) - false at start, true when it starts following a path with model lag, false when the path ends and when it exits, always false with model ideal. Absent with Nav2's own controllers (no lag in their model). Nav2 republishes their command (velocity_smoother, collision_monitor) with its own stamps; ego matches what reaches /drivers/nav/cmd_vel, so the whole Nav2 slot counts as lag-aware while this is true.
   /drivers/ai/lag_aware:
     type: std_msgs/msg/Bool
     pub: []
@@ -867,7 +867,7 @@ topics:
     type: geometry_msgs/msg/TwistStamped
     pub: [controller_server, behavior_server, track, mppi_lag]
     sub: [velocity_smoother]
-    note: Nav2's own name, inside Nav2 - the path follower's command, before the velocity smoother, collision_monitor and /drivers/nav/cmd_vel. controller_server publishes it (tracker:=none, the default), or aav_track's track node with a trial tracker on (tracker:=pure_pursuit|stanley|lqr|mpc|mpc_full, docs/trials.md), or aav_mppi_lag's mppi_lag node (tracker:=mppi_lag, docs/mppi-lag.md); never both - the tracker takes /follow_path and controller_server's is renamed /follow_path_unused. behavior_server's Wait and DriveOnHeading too.
+    note: Nav2's own name, inside Nav2 - the path follower's command, before the velocity smoother, collision_monitor and /drivers/nav/cmd_vel. controller_server publishes it (tracker:=none, the default), or aav_track's track node with a trial tracker on (tracker:=pure_pursuit|stanley|lqr|mpc|mpc_full|mpc_lag, docs/trials.md), or aav_mppi_lag's mppi_lag node (tracker:=mppi_lag, docs/mppi-lag.md); never both - the tracker takes /follow_path and controller_server's is renamed /follow_path_unused. behavior_server's Wait and DriveOnHeading too.
   /drivers/nav/diffusion/status:
     type: diagnostic_msgs/msg/DiagnosticStatus
     pub: [diffusion_planner]
@@ -889,11 +889,6 @@ topics:
     pub: [behaviour]
     sub: []
     note: Only with behaviour:=true, 5 Hz - for the screens. name behaviour; message STATE and why; level OK, or WARN with a warning or in ASK. values state (DRIVE, APPROACH, STOPPED, WAIT, GO, ASK), reason (sign, obstacle, fence, goal, a lock's name, the e-stop), cap_mps (what /drivers/nav/speed_limit carries), left_m (to the binding stop's final stop, inf for none), warnings (sign passed, no lock; sign lost; odometry stale).
-  /drivers/nav/lag_aware:
-    type: std_msgs/msg/Bool
-    pub: [mppi_lag]
-    sub: []
-    note: Does the nav slot's driver plan for the actuators' lag right now? Reliable, transient local, depth 1 (ego's lag_aware contract, /drivers/<slot>/lag_aware - ego's lag_aware_drivers list has nav). aav_mppi_lag's mppi_lag (tracker:=mppi_lag) says false at start, true when it starts following a path with model lag, false when the path ends (succeeded, aborted, cancelled) and when it exits; always false with model ideal. Absent with Nav2's own controllers (no lag in their model). Ego's lead (0.3) turns off while it is true, so the lag isn't cancelled twice.
 
   # --- our own costmaps (aav_costmap, a trial beside Nav2's: docs/own-costmap.md) ---
   /drivers/nav/costmap/local:
@@ -1057,7 +1052,7 @@ actions:
   /follow_path:
     type: nav2_msgs/action/FollowPath
     server: controller_server
-    note: bt_navigator's FollowPath - follow one planned path (replaced every second as the planner replans). Served by controller_server (MPPI or RPP) with tracker:=none, the default; with tracker:=pure_pursuit|stanley|lqr|mpc|mpc_full by aav_track's track node instead (tracker:=mppi_lag - aav_mppi_lag's mppi_lag), and controller_server's own is renamed /follow_path_unused (a launch remapping - rcl_action resolves action names with the node's remappings). The same goal checks either way - nav2.yaml's xy_goal_tolerance and yaw_goal_tolerance, and its progress checker.
+    note: bt_navigator's FollowPath - follow one planned path (replaced every second as the planner replans). Served by controller_server (MPPI or RPP) with tracker:=none, the default; with tracker:=pure_pursuit|stanley|lqr|mpc|mpc_full|mpc_lag by aav_track's track node instead (tracker:=mppi_lag - aav_mppi_lag's mppi_lag), and controller_server's own is renamed /follow_path_unused (a launch remapping - rcl_action resolves action names with the node's remappings). The same goal checks either way - nav2.yaml's xy_goal_tolerance and yaw_goal_tolerance, and its progress checker.
   /compute_path_to_pose:
     type: nav2_msgs/action/ComputePathToPose
     server: planner_server

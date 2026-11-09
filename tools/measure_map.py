@@ -124,6 +124,7 @@ NOT_ON_THE_ROUTE = {
     'vehicle.encoder_counts_per_rev': 'count the spokes on the encoder wheel',
     'vehicle.speed_wheels': 'look: which wheels carry the speed sensors (TODO 49b)',
     'actuators': 'tests 3.10-3.12 and 4.1-4.5 (docs/tests.md)',
+    'brake': "car day A7, rows 6-8: on stands, in the brake actuator's program (docs/car-day.md)",
     'sensors.*.rpy': 'section 5: pointing, tilt, lean',
 }
 

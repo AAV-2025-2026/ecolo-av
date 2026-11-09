@@ -39,9 +39,10 @@ dead times and lags), so it is a prediction to check against a run, not a plan.
 
 from __future__ import annotations
 
+import bisect
 from dataclasses import dataclass, replace
 import math
-from typing import Optional, Tuple
+from typing import Optional, Sequence, Tuple
 
 from aav_description.car_model import (ActuatorConfig, CarState, Command, SpeedLoop,
                                        SpeedLoopConfig, step)
@@ -177,16 +178,47 @@ def stop_point(cfg: ActuatorConfig, speed: float, ramp: float,
     """
     if speed <= 0.0 or ramp <= 0.0 or dt <= 0.0:
         raise ValueError('speed, ramp and dt must be above 0')
+    return _stop(cfg, speed, lambda t, target: max(0.0, target - ramp * dt), loop, dt, settle,
+                 timeout)
+
+
+def stop_following(cfg: ActuatorConfig, speed: float,
+                   commands: Sequence[Tuple[float, float]],
+                   loop: SpeedLoopConfig = SpeedLoopConfig(), dt: float = 0.01,
+                   settle: float = 8.0, timeout: float = 30.0) -> Tuple[float, float]:
+    """
+    Return (metres, seconds) the car model goes following `commands` until it stands still.
+
+    stop_point's question for a recorded slowing: `commands` are (time s, set speed m/s),
+    oldest first, from the moment the set speed starts to fall (the first one's time is
+    0 s); each holds until the next, the last for ever. The car first holds `speed` for
+    `settle` s, as in stop_point.
+    """
+    if speed <= 0.0 or dt <= 0.0:
+        raise ValueError('speed and dt must be above 0')
+    if not commands:
+        raise ValueError('stop_following needs at least one command')
+    start = commands[0][0]
+    times = [t - start for t, _ in commands]
+
+    def target(t, _):
+        return commands[max(0, bisect.bisect_right(times, t) - 1)][1]
+
+    return _stop(cfg, speed, target, loop, dt, settle, timeout)
+
+
+def _stop(cfg, speed, target_at, loop, dt, settle, timeout):
+    """Hold `speed`, then follow target_at(t, last target) until stopped: (metres, seconds)."""
     sl = SpeedLoop(loop)
     state = replace(CarState(), v=speed,
-                    throttle_level=min(1.0, cfg.drag * speed / cfg.max_accel))
+                    throttle_level=min(1.0, cfg.drag * speed / (cfg.max_accel * cfg.share)))
     for _ in range(int(settle / dt)):
         state = step(cfg, state, Command(speed=speed), dt, sl)
     x0, t, target = state.x, 0.0, speed
     while t < timeout:
-        target = max(0.0, target - ramp * dt)
+        target = target_at(t, target)
         state = step(cfg, state, Command(speed=target), dt, sl)
         t += dt
-        if target == 0.0 and abs(state.v) < 0.01:
+        if target <= 0.0 and abs(state.v) < 0.01:
             break
     return state.x - x0, t

@@ -20,6 +20,9 @@ The trials (docs/trials.md):
                     aav_track's trackers (tracker:=), forward only; with --trackers alone,
                     only them: add --controllers rpp mppi for the whole-stack table too
     pixi run measure controllers --runs 3           (each follower 3 times: the mean and spread)
+    pixi run measure controllers --trackers mpc_lag --controllers mppi rpp --lag-scale 2
+                    the car's lags twice what vehicle.yaml says (sim's lag_scale:=2), the
+                    followers none the wiser: how each copes with a slower car
     pixi run measure controllers --amcl             (AMCL beside the EKF, amcl:=true: scored
                     against the truth, as the EKF is)
     pixi run measure controllers --ndt              (NDT beside the EKF, ndt:=true, on the map
@@ -184,7 +187,8 @@ TRACK_EVERY = 0.5       # s between the saved track's points
 MAP_SPEC = os.path.join(ROOT, 'ros', 'drivers', 'aav_navigation', 'maps',
                         'example_lot.spec.yaml')
 COLOURS = {'rpp': '#1f6fb4', 'mppi': '#e8590c', 'pure_pursuit': '#2b8a3e', 'stanley': '#862e9c',
-           'lqr': '#c92a2a', 'mpc': '#e67700', 'mpc_full': '#5f3dc4', 'mppi_lag': '#0b7285',
+           'lqr': '#c92a2a', 'mpc': '#e67700', 'mpc_full': '#5f3dc4',
+           'mpc_lag': '#087f5b', 'mppi_lag': '#0b7285',
            # --planners: a column is a planner's name when one follower drives them all.
            'hybrid': '#e8590c', 'lattice': '#1f6fb4', 'smac2d': '#2b8a3e',
            'navfn': '#862e9c', 'theta_star': '#c92a2a', 'lattice32': '#5f3dc4',
@@ -844,6 +848,9 @@ def session(tour, follower, args, out_dir, body, used, run=1):
         command.append('obstacle:=true')
     if args.speed:
         command.append(f'sim_speed:={args.speed:g}')
+    if args.lag_scale != 1.0:
+        # Only Gazebo's adapter scales the car's lags (sim.launch.py refuses it otherwise).
+        command += [f'lag_scale:={args.lag_scale:g}', 'simulator:=gazebo']
     domain = private(used)
     print(f'\n== {tour}, {label}' + (f' (run {run} of {args.runs})' if args.runs > 1
                                      else '') +
@@ -1117,7 +1124,8 @@ def main():
                         help="Nav2's followers (default: both, unless --trackers is given)")
     parser.add_argument('--trackers', nargs='+', type=tracker_names, default=None,
                         help='the trial trackers (aav_track, docs/trials.md): pure_pursuit, '
-                             'stanley, lqr, mpc, mpc_full; spaces or commas between. Forward only')
+                             'stanley, lqr, mpc, mpc_full, mpc_lag; spaces or commas between. '
+                             'Forward only')
     parser.add_argument('--planners', nargs='+', type=planner_names, default=None,
                         help="Nav2's planners (planner:=): " + ', '.join(PLANNER_WORDS) +
                              ' (lattice32: the lattice on its 32-heading file); each '
@@ -1154,6 +1162,10 @@ def main():
                         default=[t for t in TOURS if 'world' not in TOURS[t]])
     parser.add_argument('--speed', type=float, default=None,
                         help="m/s, up to 5: sim_speed:= (the car's own top speed: 1.0)")
+    parser.add_argument('--lag-scale', type=float, default=1.0,
+                        help="the car's throttle, brake and steering lags times this "
+                             "(sim's lag_scale:=, in Gazebo): the followers still read "
+                             "vehicle.yaml's")
     parser.add_argument('--reversing', action='store_true',
                         help="let Nav2 reverse (reversing:=true; the car's own default is "
                              'false until H5); forward only otherwise')

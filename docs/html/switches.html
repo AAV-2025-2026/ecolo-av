@@ -219,6 +219,11 @@ the U-turn. The real car takes only <code>hybrid</code> or <code>lattice</code> 
 <td>10 of 12</td>
 </tr>
 <tr>
+<td><code>tracker:=mpc_lag</code></td>
+<td>ours: MPC that knows the car is late, and plans for it (7 Nov)</td>
+<td>our simulator, 8 Nov: 6 of 12 (no U-turn by the building; <a href="trials.html#lag-aware-mpc-7-nov-mpc_lag">trials</a>)</td>
+</tr>
+<tr>
 <td><code>tracker:=mppi_lag</code></td>
 <td>ours: Nav2's MPPI in Rust, knowing the steering and pedals lag (<a href="mppi-lag.html">page</a>)</td>
 <td>7 Nov, a loaded computer: 0.13 m off the path while it drove (Nav2's MPPI 0.20 m), but it gave up when the odometry stalled; <a href="mppi-lag.html#in-gazebo">not fair yet</a></td>
@@ -302,6 +307,9 @@ KISS-ICP needs its own environment once: <code>pixi install --locked -e kiss</co
 </tr>
 </tbody>
 </table></div>
+<p><code>tracker:=mpc_lag</code> predicts the speed loop it is told about: <code>default</code> or <code>smooth</code> (its
+<code>mpc_lag.speed_loop</code> setting in <code>track.yaml</code>; it doesn't follow <code>speed_loop:=</code> on its own,
+and doesn't model <code>lqi</code> yet).</p>
 </section>
 <section class="card"><h2 id="the-world-and-the-rest">The world and the rest</h2>
 <div class="table-wrap"><table>
@@ -327,6 +335,10 @@ KISS-ICP needs its own environment once: <code>pixi install --locked -e kiss</co
 <tr>
 <td><code>sim_speed:=3</code></td>
 <td>a top speed above the car's 1 m/s, in Gazebo only</td>
+</tr>
+<tr>
+<td><code>lag_scale:=2</code></td>
+<td>the car's throttle, brake and steering lags twice what <code>vehicle.yaml</code> says; every driver still reads <code>vehicle.yaml</code> (a robustness test; with <code>simulator:=gazebo</code> only)</td>
 </tr>
 <tr>
 <td><code>geofence:=false</code></td>

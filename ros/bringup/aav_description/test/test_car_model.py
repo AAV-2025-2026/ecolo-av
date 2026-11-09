@@ -29,6 +29,25 @@ def test_from_vehicle_yaml_reads_the_wheelbase_and_the_steering_limit():
     assert cfg.wheelbase == 1.561
     assert cfg.max_steering == 0.5
     assert cfg.throttle_dead_time == 0.0   # commented out in vehicle.yaml: not measured
+    assert (cfg.mass, cfg.payload) == (181.0, 0.0)   # vehicle: mass; payload is a run's own
+
+
+def test_a_loaded_car_speeds_up_and_stops_slower_by_its_share():
+    empty, loaded = ActuatorConfig(), ActuatorConfig(payload=90.5)
+    assert loaded.share == pytest.approx(181.0 / 271.5)
+    assert empty.share == 1.0
+
+    def stop(cfg):
+        state = CarState(v=2.0)
+        while state.v > 0.0:
+            state = step(cfg, state, Command(brake=1.0), 0.01)
+        return state.x
+
+    # Mostly braking: the distance grows nearly as 1 / share.
+    assert stop(loaded) > 1.3 * stop(empty)
+    fast = drive(empty, Command(throttle=1.0), 1.0)[-1].v
+    slow = drive(loaded, Command(throttle=1.0), 1.0)[-1].v
+    assert slow < 0.75 * fast
 
 
 def test_delay_line_gives_the_value_from_n_steps_ago():

@@ -51,8 +51,17 @@ spine_sim on vehicle/sim/wheels and vehicle/sim/steering; spine_bridge publishes
 car's /vehicle/* from the spine's CAN frames. Exactly one backend still takes ego's
 commands: spine_bridge. If spine_sim goes quiet for cmd_timeout s, the car brakes fully.
 
+A heavier car (docs/stopping.md, "A heavier car"): payload (kg aboard, live) makes the
+modelled car push and brake less (car_model's share), whoever drives it. adaptive_brake
+(live; not with spine or esp32, whose firmware decides the brake) puts the adaptive brake
+(aav_description adaptive_brake.py, vehicle.yaml's `brake:` limits) between the speed
+loop and the brake, as it would sit on the car: below ego and every safety lock.
+
 Parameters  actuator_model (true), speed_loop (default: the actuator model's speed loop
-            profile, 'default', 'smooth' or 'lqi': TODO 27, 3), spine (false), rate_hz (50),
+            profile, 'default', 'smooth' or 'lqi': TODO 27, 3), payload (0 kg, live),
+            adaptive_brake (false, live), lag_scale (1.0: the
+            throttle's, brake's and steering's lags times this, to test a follower against
+            a car slower than vehicle.yaml says; only the model's), spine (false), rate_hz (50),
             cmd_timeout (0.2 s), wheelbase,
             wheel_radius, rendered (the world renders sensors), cameras (it draws the
             cameras: rendered unless simulator:=own), radar, lidar (what
@@ -65,10 +74,12 @@ that renders the radar stand-in (gazebo.launch.py). Gazebo's ground-truth pose i
 passed on: gz_bridge carries it to /vehicle/sim/truth, for checks only.
 """
 
+from dataclasses import replace
 import math
 import signal
 
 from aav_description import vehicle
+from aav_description.adaptive_brake import AdaptiveBrake, BrakeLimits
 from aav_gazebo import faults, sources, wheels
 from aav_gazebo.actuator_model import (ActuatorConfig, Actuators, Demand, Ideal,
                                        speed_loop_profile)
@@ -78,7 +89,7 @@ from aav_interfaces.msg import WheelSpeeds
 from ackermann_msgs.msg import AckermannDriveStamped
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
-from rcl_interfaces.msg import SetParametersResult
+from rcl_interfaces.msg import ParameterDescriptor, SetParametersResult
 import rclpy
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
@@ -118,6 +129,15 @@ class GazeboAdapter(Node):
         rate = self.declare_parameter('rate_hz', 50.0).value
         car = vehicle.load()
         config = ActuatorConfig.from_vehicle(car)
+        lag_scale = float(self.declare_parameter('lag_scale', 1.0).value)
+        if not 0.0 < lag_scale <= 10.0:
+            raise ValueError(f'lag_scale must be in (0, 10], not {lag_scale}')
+        if lag_scale != 1.0:
+            config = replace(config, throttle_lag=lag_scale * config.throttle_lag,
+                             brake_lag=lag_scale * config.brake_lag,
+                             steer_lag=lag_scale * config.steer_lag)
+            self.get_logger().warning(f"the actuators' lags x{lag_scale:g} (lag_scale): "
+                                      'a car slower than vehicle.yaml says')
         self.spine = self.declare_parameter('spine', False).value
         self.esp32 = self.declare_parameter('esp32', False).value
         if self.spine and self.esp32:
@@ -129,6 +149,8 @@ class GazeboAdapter(Node):
             raise ValueError('spine:=true and esp32:=true drive the actuator model: '
                              'actuator_model must be true')
         profile = self.declare_parameter('speed_loop', 'default').value
+        self.config = config
+        self.brake_limits = BrakeLimits.from_vehicle(car)
         if modelled:
             self.model = Actuators(config, speed_loop_profile(profile))
             self.get_logger().info(f'the actuator model, from vehicle.yaml: {config}; '
@@ -181,9 +203,50 @@ class GazeboAdapter(Node):
         self.faults = {'odom': [faults.Fault('odom'), faults.Fault('odom')]}
         for sensor in self.faults:
             self.declare_parameter(f'fault.{sensor}', 'ok')
+        # Whole numbers too: `ros2 param set /gazebo_adapter payload 90`.
+        whole = ParameterDescriptor(dynamic_typing=True)
+        self.set_load(float(self.declare_parameter('payload', 0.0, whole).value),
+                      bool(self.declare_parameter('adaptive_brake', False).value))
         self.add_on_set_parameters_callback(self.on_fault)
 
+    def load_problem(self, payload, adaptive):
+        """Return why this payload or adaptive brake can't be had, or None."""
+        if (payload, adaptive) != (0.0, False) and not isinstance(self.model, Actuators):
+            return 'payload and adaptive_brake need the actuator model (actuator_model:=true)'
+        if not 0.0 <= payload <= 1000.0:
+            return f'payload must be 0 to 1000 kg, not {payload}'
+        if adaptive and self.outputs:
+            return ("adaptive_brake is the speed loop's: with spine or esp32 the firmware "
+                    'decides the brake')
+        return None
+
+    def set_load(self, payload, adaptive):
+        """Put payload kg aboard the modelled car; the adaptive brake on or off."""
+        why = self.load_problem(payload, adaptive)
+        if why:
+            raise ValueError(why)
+        if not isinstance(self.model, Actuators):
+            return
+        self.model.cfg = replace(self.config, payload=payload)
+        if adaptive and self.model.brake_loop is None:
+            # It expects the empty car: the load is what it finds out.
+            self.model.brake_loop = AdaptiveBrake(self.config, self.brake_limits)
+        elif not adaptive:
+            self.model.brake_loop = None
+        self.get_logger().info(
+            f'{payload:g} kg aboard (its brakes and motor at {100 * self.model.cfg.share:.0f} %'
+            f' of the empty car\'s); the adaptive brake {"on" if adaptive else "off"}')
+
     def on_fault(self, params):
+        load = {p.name: p.value for p in params if p.name in ('payload', 'adaptive_brake')}
+        if load:
+            payload = float(load.get('payload', self.get_parameter('payload').value))
+            adaptive = bool(load.get('adaptive_brake',
+                                     self.get_parameter('adaptive_brake').value))
+            why = self.load_problem(payload, adaptive)
+            if why:
+                return SetParametersResult(successful=False, reason=why)
+            self.set_load(payload, adaptive)
         for p in params:
             if not p.name.startswith('fault.'):
                 continue
