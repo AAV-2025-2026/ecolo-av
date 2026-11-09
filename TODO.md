@@ -38,7 +38,7 @@ Ben, 7 Nov: "we really want the ego to have a mathematical model for steering, b
 | 128 | **ego's lag lead** (`lag_lead: auto`, sim only), off under a lag-aware driver (`/drivers/<slot>/lag_aware`) | ✅ 7 Nov, sim. ⬜ `on` for the car after tests 3.10-3.12, 4.1-4.5 |
 | 129 | **ego's trace** (`/ego/trace`, 2 s, `base_link`) | ✅ 7 Nov; the HUD and the developer window draw it (136). ⬜ drivers match it to their plan |
 | 136 | **The squiggly line** ([page](docs/hud.md#the-squiggly-line-ahead)): ego's trace (bold, green / amber / red by the gap to the plan), the plan (faint), the stop bar from `/ego/stop_point` (the car model, full brake now), the room to the goal or an obstacle; on the HUD (AHEAD) and the developer window (key T), pretend data too | ✅ 7 Nov built. ⬜ stop lines (no topic yet); the line drawn on the camera picture (Q22); the car's real numbers (tests 3.10-3.12, 4.1-4.5) |
-| 130 | The lag-aware drivers publish `/drivers/nav/lag_aware`: `aav_track`'s MPC, the Rust MPPI | ⬜ their agents |
+| 130 | The lag-aware drivers publish `/drivers/nav/lag_aware`: `aav_track`'s MPC, the Rust MPPI | ✅ 7 Nov: both (rows 131, 132) |
 
 ## 0.3: how the car stops, and the behaviour planner (7 Nov)
 
@@ -75,6 +75,7 @@ Ben, 7 Nov: "have the algorithms know about lag". MPPI out of Nav2 into our own 
 | # | Task | Status |
 |---|---|---|
 | 131 | **MPPI that knows the lag** (`aav_mppi_lag`, `tracker:=mppi_lag`, [page](docs/mppi-lag.md)): Nav2's MPPI and its eight critics in Rust, on a lag model behind a `CarModel` trait (the shared car model's rules); `/drivers/nav/lag_aware` true while it drives, for ego's lead | ✅ 7 Nov built, tested without ROS. ⬜ Gazebo against Nav2's MPPI on a quiet computer (7 Nov's runs: the odometry stalled under load and it gave up; the page). ⬜ at merge: the shared `car-model` crate behind `CarModel` (its rules matched already). ⬜ the car's real lags (tests 3.10-3.12, 4.1-4.5), then the same runs again; the Orin's tick time (estimated, not measured) |
+| 132 | **The lag-aware MPC** (`tracker:=mpc_lag`, [results](docs/trials.md#lag-aware-mpc-7-nov-mpc_lag)): steering and set speed planned through the spine's speed loop, throttle, brake, the steering motor's rate and linkage, dead times and the commands already sent; one QP a tick, on the shared car model (`car_model`: its numbers, speed loops and estimate; `lag_model.step` is its maths on arrays, held to it within 1e-9). Says `/drivers/nav/lag_aware` (latched) so ego's lead stays off. `lag_scale:=2` (Gazebo) for the robustness test | 🟡 built and scored. Pretend car: no speed overshoot; lags x2, the 2 m/s U-turn 0.17 m off (MPC 0.36). Our simulator, lot tour, 3 runs: **6 of 12 legs** (MPPI 8, RPP 9, `mppi_lag` 11): the quickest and closest on the legs it drives, 5 ms a tick, but 0 of 3 on the U-turn by the building (collision_monitor stops it on the planner's path; no aav_track tracker reads the costmap: mpc and pure pursuit fail it too). Gazebo, 1 run: lags as told **4 of 4** (MPPI 2, RPP 2); doubled 2 of 4 (MPPI 3, RPP 3). Left: keep off obstacles (costmap cost in the QP, or slow near them, as RPP); move to Rust before the car (worst tick near 50 ms on the Orin, estimated); model the LQI and the ESP32's open loop |
 
 ## Saturday 7 November: the hardware debug plan
 

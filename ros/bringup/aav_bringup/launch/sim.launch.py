@@ -141,6 +141,10 @@ bench's argument names:
                       (docs/ghost-obstacles.md)
   actuator_model:=false  the old instant car instead of the actuator model (gazebo_adapter;
                       vehicle.yaml's actuators:), to compare the two
+  lag_scale:=2        the actuator model's throttle, brake and steering lags twice
+                      vehicle.yaml's, while every driver still reads vehicle.yaml: how a
+                      follower copes with a car slower than it was told (1.0: as written).
+                      Gazebo's adapter only (simulator:=gazebo)
   simulator:=own      the default (8 Nov): our own Rust simulator (aav_simulator,
                       docs/own-simulator.md) in gz sim's place: the same worlds, topics
                       and rates, the lidar and radar by ray casting, the cameras by Bevy
@@ -221,6 +225,10 @@ def launch_setup(context):
     kiss_icp = arg('kiss_icp').lower() == 'true' or kiss_ekf
     gazebo_share = FindPackageShare('aav_gazebo').perform(context)
     simulator = worlds.check_simulator(arg('simulator'))
+    if float(arg('lag_scale')) != 1.0 and simulator != 'gazebo':
+        # Only Gazebo's adapter scales the lags; our simulator would silently ignore it.
+        raise ValueError('lag_scale:= needs simulator:=gazebo (our simulator has no '
+                         'lag_scale yet)')
     world_path = worlds.world_file(gazebo_share, world)
     # The lidar and radar where the world has them; the cameras only where they're drawn.
     sensors = worlds.has_sensors(world_path)
@@ -258,6 +266,7 @@ def launch_setup(context):
                 lidar=arg('lidar'), radar=arg('radar'), chase_camera=arg('chase_camera'),
                 actuator_model=arg('actuator_model'), speed_loop=arg('speed_loop'),
                 payload=arg('payload'), adaptive_brake=arg('adaptive_brake'),
+                lag_scale=arg('lag_scale'),
                 faults=flag['faults'],
                 spine=arg('spine'), arm=arg('arm'), bridge=arg('bridge'),
                 esp32=arg('esp32'), esp32_loop=arg('esp32_loop'), simulator=simulator),
@@ -452,6 +461,9 @@ def generate_launch_description():
         DeclareLaunchArgument('actuator_model', default_value='true',
                               description="the actuators as vehicle.yaml's actuators: say; "
                                           "false: Gazebo's old instant car"),
+        DeclareLaunchArgument('lag_scale', default_value='1.0',
+                              description="the actuator model's lags times this (a "
+                                          'robustness test; the drivers keep vehicle.yaml)'),
         DeclareLaunchArgument('speed_loop', default_value='default',
                               description="the speed loop's profile: default (today's gains)"
                                           ', smooth (TODO 27) or lqi (TODO 3)'),

@@ -29,3 +29,15 @@ track:
       r: 0.2                  # on the command's distance from the bend's own steering
       r_rate: 1.0             # on each step's change of command
       q_speed: 0.2            # on (v^2 / cruise^2 - 1)^2: how much it minds going slower
+    mpc_lag:                  # steering and set speed through the car's lags (vehicle.yaml's
+                              # actuators: section); its limits are the policy's and ego's
+      horizon: 30             # ticks: 1.5 s at 20 Hz
+      q: [1.0, 2.0, 0.05]     # on e_y (m), e_theta (rad), wheels - r (rad)
+      r: 0.2                  # on the command's distance from the bend's own steering
+      r_rate: 1.0             # on each tick's change of steering command
+      q_speed: 0.5            # on (v - the speed limit there)^2: how much it minds going slower
+      r_speed: 0.5            # on each tick's change of set speed
+      latency: 0.1            # s the ROS chain adds before the actuators (ego's 50 Hz ramp, the
+                              # 20 Hz hold, the adapter): whole ticks, added to the dead times
+      speed_loop: default     # the spine's speed loop it predicts: default or smooth (as
+                              # sim.launch.py speed_loop:=; lqi isn't modelled)

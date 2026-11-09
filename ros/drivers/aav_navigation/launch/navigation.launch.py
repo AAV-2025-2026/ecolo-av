@@ -66,7 +66,8 @@ Trials (docs/trials.md), each beside the default and scored by pixi run measure 
                           still uses it), its /plan renamed /drivers/nav/planner/nav2_plan.
                           It plans on the global costmap costmap:= picks. car.launch.py
                           refuses it (docs/own-planner.md)
-  tracker:=pure_pursuit|stanley|lqr|mpc|mpc_full  aav_track's track node follows the path instead
+  tracker:=pure_pursuit|stanley|lqr|mpc|mpc_full|mpc_lag
+                          aav_track's track node follows the path instead
                           (tracker:=mppi_lag: aav_mppi_lag's mppi_lag node, Nav2's MPPI
                           with the actuators' lag; docs/mppi-lag.md)
                           of controller_server: it serves follow_path (bt_navigator's

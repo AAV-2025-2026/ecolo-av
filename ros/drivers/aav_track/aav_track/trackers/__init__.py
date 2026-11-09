@@ -2,7 +2,8 @@
 The trial trackers: one small class each, no ROS (CLAUDE.md: keep the maths out of ROS).
 
 ```python
-tracker = make('lqr', limits, model)   # model: aav_ego VehicleModel (lqr, mpc)
+tracker = make('lqr', limits, model)   # model: aav_ego VehicleModel (lqr, mpc, mpc_full),
+                                       # aav_track.lag_model CarParams (mpc_lag)
 tracker.reset(path)                    # a new path, in odom (aav_track.path.Path)
 cmd = tracker.step(state, dt)          # Command(steer, speed_cap=None, debug={})
 ```
@@ -14,6 +15,7 @@ cmd = tracker.step(state, dt)          # Command(steer, speed_cap=None, debug={}
 | `lqr` | `lqr.py` | -K x on [e_y, e_theta, delta], gains scheduled by speed, + feed-forward |
 | `mpc` | `mpc.py` | a 1.5 s plan of steering commands, within the steering's limits |
 | `mpc_full` | `mpc_full.py` | a 9 m plan of speed and steering together (its own speed) |
+| `mpc_lag` | `mpc_lag.py` | 1.5 s of steering and set speed through the lags (lag-aware) |
 
 Every tracker keeps its command within full lock and the steering rate (`Limits`); the
 node then turns it into (v, w = v tan(steer) / L) with the one speed policy (`speed.py`).
@@ -70,6 +72,9 @@ class Tracker:
     """The interface: reset(path), step(state, dt)."""
 
     name = ''
+    # True: it models the car's lags itself, so ego's lead must stay off while it drives
+    # (the node says so on /drivers/nav/lag_aware).
+    lag_aware = False
 
     def __init__(self, limits: Limits):
         self.limits = limits
@@ -113,18 +118,28 @@ class SteerLag:
         return self.angle
 
 
-# The trackers that need the vehicle model.
+# The trackers that need aav_ego's VehicleModel; and those that need lag_model.CarParams.
 MODEL_TRACKERS = ('lqr', 'mpc', 'mpc_full')
+LAG_TRACKERS = ('mpc_lag',)
 
 
 def make(name: str, limits: Limits, model=None, **params) -> Tracker:
-    """Return the tracker called `name`; MODEL_TRACKERS need `model` (aav_ego VehicleModel)."""
+    """
+    Return the tracker called `name`.
+
+    MODEL_TRACKERS need `model` as aav_ego's VehicleModel; LAG_TRACKERS as lag_model.CarParams.
+    """
     if name == 'pure_pursuit':
         from aav_track.trackers.pure_pursuit import PurePursuit
         return PurePursuit(limits, **params)
     if name == 'stanley':
         from aav_track.trackers.stanley import Stanley
         return Stanley(limits, **params)
+    if name in LAG_TRACKERS:
+        if model is None:
+            raise ValueError(f'{name} needs the car with its lags (lag_model.CarParams)')
+        from aav_track.trackers.mpc_lag import MPCLag
+        return MPCLag(limits, model, **params)
     if name in MODEL_TRACKERS:
         if model is None:
             raise ValueError(f'{name} needs the vehicle model')
@@ -136,5 +151,5 @@ def make(name: str, limits: Limits, model=None, **params) -> Tracker:
             return MPCFull(limits, model, **params)
         from aav_track.trackers.mpc import MPC
         return MPC(limits, model, **params)
-    raise ValueError(f'no tracker called {name!r}: pure_pursuit, stanley, lqr, mpc or '
-                     'mpc_full')
+    raise ValueError(f'no tracker called {name!r}: pure_pursuit, stanley, lqr, mpc, '
+                     'mpc_full or mpc_lag')

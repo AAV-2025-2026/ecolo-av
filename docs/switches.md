@@ -45,6 +45,7 @@ the U-turn. The real car takes only `hybrid` or `lattice` (it refuses `diffusion
 | `tracker:=lqr` | ours: a formula for the best steering each moment | 10 of 12 |
 | `tracker:=mpc` | ours: try the next 1.5 s of steering, keep the best | **12 of 12** |
 | `tracker:=mpc_full` | ours: MPC that plans the speed too | 10 of 12 |
+| `tracker:=mpc_lag` | ours: MPC that knows the car is late, and plans for it (7 Nov) | our simulator, 8 Nov: 6 of 12 (no U-turn by the building; [trials](trials.md#lag-aware-mpc-7-nov-mpc_lag)) |
 | `tracker:=mppi_lag` | ours: Nav2's MPPI in Rust, knowing the steering and pedals lag ([page](mppi-lag.md)) | 7 Nov, a loaded computer: 0.13 m off the path while it drove (Nav2's MPPI 0.20 m), but it gave up when the odometry stalled; [not fair yet](mppi-lag.md#in-gazebo) |
 
 Our trackers drive forward only: give them `reversing:=false` (the menu does).
@@ -79,6 +80,10 @@ KISS-ICP needs its own environment once: `pixi install --locked -e kiss`.
 | `speed_loop:=lqi` | no overshoot, settles in 4-5 s |
 | `speed_loop:=smooth` | the PI with a smooth stop |
 
+`tracker:=mpc_lag` predicts the speed loop it is told about: `default` or `smooth` (its
+`mpc_lag.speed_loop` setting in `track.yaml`; it doesn't follow `speed_loop:=` on its own,
+and doesn't model `lqi` yet).
+
 ## The world and the rest
 
 | Switch | What |
@@ -87,6 +92,7 @@ KISS-ICP needs its own environment once: `pixi install --locked -e kiss`.
 | `simulator:=gazebo` | Gazebo plays the world, not our simulator (the default since 8 Nov: [page](own-simulator.md)) |
 | `reversing:=false` | Nav2 drives forward only |
 | `sim_speed:=3` | a top speed above the car's 1 m/s, in Gazebo only |
+| `lag_scale:=2` | the car's throttle, brake and steering lags twice what `vehicle.yaml` says; every driver still reads `vehicle.yaml` (a robustness test; with `simulator:=gazebo` only) |
 | `geofence:=false` | no geofence (it's on by default) |
 | `lidar:=false`, `radar:=false` | sensors off |
 | `voxels:=true` | Nav2 sees the lidar as 0.25 m cubes, not a flat scan (a trial: [Trials](trials.md#voxels-30-oct-the-lidar-as-cubes)) |

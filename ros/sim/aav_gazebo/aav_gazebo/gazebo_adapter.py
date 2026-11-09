@@ -59,7 +59,9 @@ loop and the brake, as it would sit on the car: below ego and every safety lock.
 
 Parameters  actuator_model (true), speed_loop (default: the actuator model's speed loop
             profile, 'default', 'smooth' or 'lqi': TODO 27, 3), payload (0 kg, live),
-            adaptive_brake (false, live), spine (false), rate_hz (50),
+            adaptive_brake (false, live), lag_scale (1.0: the
+            throttle's, brake's and steering's lags times this, to test a follower against
+            a car slower than vehicle.yaml says; only the model's), spine (false), rate_hz (50),
             cmd_timeout (0.2 s), wheelbase,
             wheel_radius, rendered (the world renders sensors), cameras (it draws the
             cameras: rendered unless simulator:=own), radar, lidar (what
@@ -127,6 +129,15 @@ class GazeboAdapter(Node):
         rate = self.declare_parameter('rate_hz', 50.0).value
         car = vehicle.load()
         config = ActuatorConfig.from_vehicle(car)
+        lag_scale = float(self.declare_parameter('lag_scale', 1.0).value)
+        if not 0.0 < lag_scale <= 10.0:
+            raise ValueError(f'lag_scale must be in (0, 10], not {lag_scale}')
+        if lag_scale != 1.0:
+            config = replace(config, throttle_lag=lag_scale * config.throttle_lag,
+                             brake_lag=lag_scale * config.brake_lag,
+                             steer_lag=lag_scale * config.steer_lag)
+            self.get_logger().warning(f"the actuators' lags x{lag_scale:g} (lag_scale): "
+                                      'a car slower than vehicle.yaml says')
         self.spine = self.declare_parameter('spine', False).value
         self.esp32 = self.declare_parameter('esp32', False).value
         if self.spine and self.esp32:
