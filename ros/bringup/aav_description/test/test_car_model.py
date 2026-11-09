@@ -141,4 +141,8 @@ def test_the_shared_vectors_are_up_to_date():
     for case in saved['cases']:
         cfg = ActuatorConfig(**case['config'])
         got = gen.run(cfg, case['speed_loop'], case['dt'], case['commands'])
-        assert got == case['states'], f"{case['name']}: run car-model/gen_vectors.py"
+        # Same to the last few bits: an ARM libm may round exp() differently from a Mac's.
+        assert len(got) == len(case['states']), case['name']
+        for row, want in zip(got, case['states']):
+            assert row == pytest.approx(want, rel=1e-12, abs=1e-15), \
+                f"{case['name']}: run car-model/gen_vectors.py"
