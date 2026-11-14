@@ -1,4 +1,6 @@
 """
+A package the car install skips must have nothing in the workspace depending on it.
+
 tools/car_install.sh skips some packages on the car (SKIP_PACKAGES, e.g. aav_hud) unless
 --all is given: the screens are the dash's, not every computer's. colcon then fails any
 workspace package that DEPENDS on a skipped one, because it can't source the skipped
@@ -11,9 +13,9 @@ exercises the default skip path; this test does, against the package.xml graph, 
 dependency on a skipped package is caught before it breaks the car build.
 """
 
+from pathlib import Path
 import re
 import xml.etree.ElementTree as ET
-from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CAR_INSTALL = ROOT / 'tools' / 'car_install.sh'
@@ -29,7 +31,7 @@ def skip_packages():
 
 
 def workspace_packages():
-    """name -> set of its dependency names, for every package.xml under ros/."""
+    """Map each package name to its dependency names, for every package.xml under ros/."""
     pkgs = {}
     for px in sorted(ROOT.glob('ros/**/package.xml')):
         root = ET.parse(px).getroot()
@@ -61,5 +63,5 @@ def test_skipped_packages_have_no_workspace_dependents():
         'dependents (colcon cannot source the skipped package):\n'
         + '\n'.join(f'  {s}  <- depended on by: {", ".join(deps)}'
                     for s, deps in offenders.items())
-        + '\nFix: drop the dependency in the dependent\'s package.xml, or stop skipping the '
+        + "\nFix: drop the dependency in the dependent's package.xml, or stop skipping the "
           'package in tools/car_install.sh (SKIP_PACKAGES).')
