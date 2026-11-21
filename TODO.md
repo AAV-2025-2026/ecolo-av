@@ -210,7 +210,8 @@ needs the car, a part, or an answer. 157, 158 and 173 are in "What is next".
 | Question | Today |
 |---|---|
 | 122: should reversing on long drives cost more, or stay short? | Nav2 backed a long way to a goal behind it (5 Nov) |
-| The brake after boot, the steering on an e-stop, a brake on the RC gear switch | one constant each in `spine-core` |
+| The brake after boot, the steering on an e-stop | one constant each in `spine-core` |
+| The RC's left stick as brake band, forward and reverse; the RC outranking the computer in normal mode; the failsafe on CH6 (21 Nov) | built in the firmware, not yet agreed or flashed ([firmware](docs/firmware.md#the-rc-transmitter-arsh-21-nov)) |
 | `ROS_DOMAIN_ID` for the car and every laptop | 0-101 safe; never above 232 |
 | The spine's arming rules: boot latched, arm on a 0 → 1 edge | Proposed |
 | The GPS driver | `ublox_gps`, Tentative |
