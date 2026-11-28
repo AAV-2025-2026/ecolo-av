@@ -355,7 +355,7 @@ Every behaviour of `aav_umod_esp32`, and where it is now. ⚠️ = different: th
 | Frame: 13 bytes, 3 × f32 LE, sum checksum | `ros2_handler.cpp` | `legacy-link::Frame` | same with `link-v1`; ⚠️ the default is version 2: 17 bytes, the Orin's counter, flags, a CRC-8 (above) |
 | Resync: bad sum drops one byte | `ros2_handler.cpp` | `legacy-link::Parser` | same |
 | Values outside -1..1 turned down, DAC ramps to 0 | `ros2_handler.cpp` | `LegacyLink`: the last command, throttle 0 | same |
-| Steering: 1950 + s × 1950 (s ≤ 0) or × 1550; clamped 400..3500 | `ros2_handler.cpp`, `setSteer()` | `Frame::targets`, then radians, then the same target | same target; ⚠️ reached at 0.6 rad/s (spine-core's steering rate limit), not at once |
+| Steering: 1950 + s × 1950 (s ≤ 0) or × 1550; clamped 400..3500 | `ros2_handler.cpp`, `setSteer()` | `Frame::targets`, then radians, then the same target | same target; ⚠️ reached at 2.2 rad/s (`STEER_RATE`, the motor's own speed, 27 Nov), not at once |
 | Brake: accel < -0.05 → clamp(\|a\| × 3500, 400, 3500), DAC cut at once | `ros2_handler.cpp` | `Frame::targets` → `DirectCmd` | same |
 | Throttle: \|v\| < 0.03 → ramp to 0; else DAC \|v\| × 700, direction from the sign | `ros2_handler.cpp` | `Frame::targets` → `DirectCmd` | same code; ⚠️ ramp up 600 codes/s (C++: 6 a frame = 300/s at 50 Hz), down at once (C++: 12 a frame) |
 | Direction pin set before the throttle, even while it runs | `ros2_handler.cpp` | `spine-board`: only with the DAC at 0 | ⚠️ safer: fixes bug 5 |
@@ -364,7 +364,7 @@ Every behaviour of `aav_umod_esp32`, and where it is now. ⚠️ = different: th
 | After a timeout, frames drive again at once | — | latched until a stop frame | ⚠️ new |
 | RC override: CH6 (index 5) between 1500 and 2200 | `main.cpp` | `ibus::RcMap::TODAY` | same; ⚠️ with `uplink`, three positions: computer, RC via ROS, RC direct ([above](#the-rcs-three-modes-todo-48-proposed)) |
 | RC sticks: CH3 throttle, CH4 steering, CH5 gear: forward < 1200 < brake < 1800 < reverse | `rc_handler.cpp` | `RcMap::TODAY`: CH3's whole travel (forward, a ±20 % middle with the throttle off, reverse), CH2 the stop and the give, CH5 not read | ⚠️ changed on purpose, 21 and 22 Nov (`docs/firmware.md`, "The RC transmitter") |
-| RC throttle: stick × 1023, capped at 700 (the top third of the stick does nothing) | `rc_handler.cpp` | a fixed 1.0 m/s (`MAX_SPEED`), 0.5 back (`MAX_REVERSE_SPEED`), open loop from code 265, where the wheels start to turn (Arsh, 26 Nov), up to 410 (338 back; `throttle_cap_code`) | ⚠️ changed on purpose: before 26 Nov it gave 233 and 117, under the wheels' start, and the car didn't move |
+| RC throttle: stick × 1023, capped at 700 (the top third of the stick does nothing) | `rc_handler.cpp` | a fixed 1.0 m/s (`MAX_SPEED`), 0.5 back (`MAX_REVERSE_SPEED`), open loop from where the wheels start to turn, code 475 forward and 525 back (Arsh, 27 Nov), up to 550 (554 back; `throttle_cap_code`) | ⚠️ changed on purpose: 233, then 410, were under the wheels' start, and the car didn't move (#51) |
 | RC gear on brake: DAC ramps down, brake full | `rc_handler.cpp` | the right stick pulled down: the brake full on at once (Arsh and Ben, 22 Nov) | same, from the right stick |
 | RC stick released in forward or reverse: coast, brake released | `rc_handler.cpp` | speed to 0, then the hold brake (0.3) | ⚠️ |
 | RC sticks out of range: safe stop, steering centred | `rc_handler.cpp` | RC drives, asks for 0 speed, straight wheels | ⚠️ |
@@ -392,7 +392,7 @@ Questions 1 and 2 are wiring: the hardware lead's to answer.
 | 1 | Where U7 (the CAN transceiver) reaches the ESP32 (the hardware lead) | GPIO 25/26, a guess |
 | 2 | The e-stop's spare contact: which pin, normally closed? (Q6, the hardware lead) | not read |
 | 3 | `IDLE_BRAKE` on this board: keep the C++'s full brake, or spine-core's 0? | full brake |
-| 4 | Steering rate limit on the UART link: keep 0.6 rad/s, or pass targets at once like the C++? | 0.6 rad/s |
+| 4 | Steering rate limit on the UART link: keep 0.6 rad/s, or pass targets at once like the C++? | 2.2 rad/s, the motor's own speed (27 Nov): the C++'s feel, still capped |
 | 5 | Throttle ramp: 600 codes/s up (twice the C++'s on the UART link) | 600/s |
 | 6 | The RC changes above: a released stick, reverse speed (the gear's brake position: decided 6 Nov, `FullBrake`) | spine-core's defaults |
 | 7 | `FULL_THROTTLE_SPEED` 3.0 m/s, the same guess as `legacy.yaml` (Q4) | 3.0 |
